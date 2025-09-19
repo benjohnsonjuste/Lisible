@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
-import { auth } from "@/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../firebaseConfig";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
-      if (!u) window.location.href = "/login";
-      else setUser(u);
-    });
+    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsubscribe();
   }, []);
 
-  if (!user) return <p>Chargement...</p>;
+  if (!user) {
+    return <p>Chargement...</p>;
+  }
 
   return (
     <div style={{ padding: "20px" }}>
@@ -20,3 +20,4 @@ export default function Dashboard() {
       <p>Bienvenue {user.email}</p>
     </div>
   );
+}
