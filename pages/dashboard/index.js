@@ -1,23 +1,19 @@
-import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebaseConfig";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsubscribe();
+    if (!auth.currentUser) router.push("/login");
   }, []);
 
-  if (!user) {
-    return <p>Chargement...</p>;
-  }
-
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Dashboard</h1>
-      <p>Bienvenue {user.email}</p>
+    <div style={{ maxWidth: "900px", margin: "auto", padding: "40px" }}>
+      <h1>Bienvenue dans votre dashboard</h1>
+      <p>Vous pouvez gérer vos textes, voir vos stats et suivre vos abonnés.</p>
+      <a href="/dashboard/new-post">➕ Publier un nouveau texte</a>
     </div>
   );
 }
