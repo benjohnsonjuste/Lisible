@@ -1,11 +1,15 @@
 export default function Footer() {
   return (
-    <footer style={{
-      textAlign: "center",
-      padding: "10px",
-      background: "#f0f0f0",
-      marginTop: "20px"
-    }}>
+    <footer
+      style={{
+        textAlign: "center",
+        padding: "15px",
+        marginTop: "20px",
+        backgroundColor: "#f8f8f8",
+        color: "#333",
+      }}
+    >
       © {new Date().getFullYear()} Lisible. Tous droits réservés.
     </footer>
   );
+}
