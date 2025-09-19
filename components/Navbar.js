@@ -6,11 +6,19 @@ export default function Navbar() {
       style={{
         display: "flex",
         justifyContent: "space-between",
-        padding: "15px",
-        backgroundColor: "#eee",
+        alignItems: "center",
+        padding: "15px 30px",
+        background: "#f5f5f5",
+        borderBottom: "1px solid #ddd",
       }}
     >
-      <div style={{ display: "flex", gap: "15px" }}>
+      <div>
+        <Link href="/" style={{ fontWeight: "bold", fontSize: "1.2rem" }}>
+          Lisible
+        </Link>
+      </div>
+      <div style={{ display: "flex", gap: "20px" }}>
+        <Link href="/">Accueil</Link>
         <Link href="/bibliotheque">Bibliothèque</Link>
         <Link href="/contact">Contact</Link>
         <Link href="/login">Connexion</Link>
