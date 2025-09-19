@@ -23,7 +23,7 @@ export default function Home() {
       {/* 🌟 AVANTAGES */}
       <section style={{ display: "grid", gap: "20px", maxWidth: "900px", margin: "0 auto" }}>
         <div style={cardStyle}>
-          <h2>📖 Pour les Lecteurs</h2>
+          <h2>Pour les Lecteurs</h2>
           <p>
             Découvrez de nouveaux talents, abonnez-vous à vos auteurs préférés et
             suivez facilement leurs nouvelles publications.
@@ -31,7 +31,7 @@ export default function Home() {
         </div>
 
         <div style={cardStyle}>
-          <h2>✍️ Pour les Auteurs</h2>
+          <h2>Pour les Auteurs</h2>
           <p>
             Publiez vos textes facilement, construisez une communauté et débloquez
             la monétisation dès <b>250 abonnés</b>.
@@ -39,7 +39,7 @@ export default function Home() {
         </div>
 
         <div style={cardStyle}>
-          <h2>📊 Suivi Automatique</h2>
+          <h2>Suivi Automatique</h2>
           <p>
             Lisible compte automatiquement les vues de vos textes et vous donne des
             statistiques précises sur vos lecteurs.
