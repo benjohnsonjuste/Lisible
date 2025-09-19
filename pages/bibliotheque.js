@@ -1,18 +1,20 @@
-import PostCard from "@/components/PostCard";
+import React from "react";
+import PostCard from "../components/PostCard";
 
 export default function Bibliotheque() {
-  const mockPosts = [
-    { id: "1", title: "Premier poème", excerpt: "Ceci est un extrait." },
-    { id: "2", title: "Deuxième poème", excerpt: "Un autre extrait." }
+  const posts = [
+    { id: 1, title: "Premier texte", author: "Jean Dupont" },
+    { id: 2, title: "Deuxième texte", author: "Marie Claire" },
   ];
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>Bibliothèque</h1>
-      <div style={{ display: "grid", gap: "20px" }}>
-        {mockPosts.map((post) => (
+      <div style={{ display: "grid", gap: "10px" }}>
+        {posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
     </div>
   );
+}
