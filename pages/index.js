@@ -8,9 +8,7 @@ export default function Home() {
         Bienvenue sur <span style={{ color: "#0070f3" }}>Lisible</span>
       </h1>
       <p style={{ fontSize: "1.2rem", maxWidth: "700px", margin: "0 auto 30px" }}>
-        Lisible est la plateforme moderne où auteurs et lecteurs se connectent.
-        Publiez vos textes, développez votre audience, suivez vos auteurs préférés
-        et soutenez la littérature de demain.
+        Lisible est la plateforme moderne où auteurs et lecteurs se connectent. Produite par le label littéraire La Belle Littéraire, Lisible vous permet de publier vos textes, développer votre audience, suivre vos auteurs préférés et soutenir la littérature de demain.
       </p>
 
       {/* ✅ CTA */}
@@ -25,24 +23,21 @@ export default function Home() {
         <div style={cardStyle}>
           <h2>Pour les Lecteurs</h2>
           <p>
-            Découvrez de nouveaux talents, abonnez-vous à vos auteurs préférés et
-            suivez facilement leurs nouvelles publications.
+            Découvrez de nouveaux talents, abonnez-vous à vos auteurs préférés et suivez facilement leurs nouvelles publications. Pas besoin de vous inscrire.
           </p>
         </div>
 
         <div style={cardStyle}>
           <h2>Pour les Auteurs</h2>
           <p>
-            Publiez vos textes facilement, construisez une communauté et débloquez
-            la monétisation dès <b>250 abonnés</b>.
+            Publiez vos textes facilement, construisez une communauté et débloquez la monétisation dès <b>250 abonnés. Inscrivez-vous pour partager librement.</b>.
           </p>
         </div>
 
         <div style={cardStyle}>
           <h2>Suivi Automatique</h2>
           <p>
-            Lisible compte automatiquement les vues de vos textes et vous donne des
-            statistiques précises sur vos lecteurs.
+            Lisible compte automatiquement les vues de vos textes et vous donne des statistiques précises sur vos lecteurs et la plateforme ne détient aucun droit sur vos œuvres.
           </p>
         </div>
       </section>
