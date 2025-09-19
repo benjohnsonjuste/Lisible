@@ -1,37 +1,10 @@
-import { useRouter } from "next/router";
-
 export default function PostCard({ post }) {
-  const router = useRouter();
-
-  if (!post) return null;
-
   return (
-    <div
-      onClick={() => router.push(`/post/${post.id}`)}
-      style={{
-        border: "1px solid #ddd",
-        borderRadius: "12px",
-        padding: "15px",
-        margin: "10px 0",
-        cursor: "pointer",
-        backgroundColor: "#fff",
-      }}
-    >
-      {post.image && (
-        <img
-          src={post.image}
-          alt={post.title}
-          style={{
-            width: "100%",
-            height: "180px",
-            objectFit: "cover",
-            borderRadius: "8px",
-            marginBottom: "10px",
-          }}
-        />
-      )}
+    <div style={{ border: "1px solid #ddd", borderRadius: 6, padding: 16, marginBottom: 16, width: "100%", boxSizing: "border-box" }}>
       <h3>{post.title}</h3>
-      <p>{post.excerpt}</p>
+      {post.imageURL && <img src={post.imageURL} alt={post.title} style={{ width: "100%", borderRadius: 6, marginBottom: 8 }} />}
+      <p>{post.content}</p>
+      <small>{post.views} vues • {post.likes} likes</small>
     </div>
   );
 }
