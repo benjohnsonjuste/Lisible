@@ -25,30 +25,27 @@ export default function Home() {
         </p>
 
         <div className="grid md:grid-cols-2 gap-12 mt-8 text-left px-4 md:px-0">
-          {/* Bienfaits de la lecture */}
           <div className="bg-gray-50 p-6 rounded-xl shadow-md">
             <h3 className="text-2xl font-semibold mb-4">Bienfaits de la lecture</h3>
             <ul className="list-disc list-inside text-gray-700 space-y-2">
-              <li>Stimule l’imagination et la créativité</li>
+              <li>Stimule l'imagination et la créativité</li>
               <li>Améliore la concentration et la mémoire</li>
               <li>Découverte de nouveaux horizons et cultures</li>
-              <li>Renforce la compréhension et l’esprit critique</li>
+              <li>Renforce la compréhension et l'esprit critique</li>
             </ul>
           </div>
 
-          {/* Bienfaits de l’écriture */}
           <div className="bg-gray-50 p-6 rounded-xl shadow-md">
-            <h3 className="text-2xl font-semibold mb-4">Bienfaits de l’écriture</h3>
+            <h3 className="text-2xl font-semibold mb-4">Bienfaits de l'écriture</h3>
             <ul className="list-disc list-inside text-gray-700 space-y-2">
-              <li>Permet de s’exprimer et de libérer ses idées</li>
+              <li>Permet de s'exprimer et de libérer ses idées</li>
               <li>Aide à structurer sa pensée et améliorer son style</li>
-              <li>Favorise l’estime de soi et la confiance</li>
+              <li>Favorise l'estime de soi et la confiance</li>
               <li>Peut générer des revenus dès 250 abonnés</li>
             </ul>
           </div>
         </div>
 
-        {/* Avantages pour lecteurs et auteurs */}
         <div className="mt-16 text-left px-4 md:px-0 space-y-6">
           <h3 className="text-2xl font-semibold">Intérêts pour les lecteurs</h3>
           <p className="text-gray-700 leading-relaxed">
