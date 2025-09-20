@@ -1,5 +1,14 @@
 // pages/api/uploadAvatar.js
 import { google } from "googleapis";
+import { getFirestore, doc, updateDoc } from "firebase-admin/firestore";
+import admin from "firebase-admin";
+
+// Initialiser Firebase Admin si pas encore fait
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)),
+  });
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -7,30 +16,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { code, imageBase64, fileName } = req.body;
+    const { code, imageBase64, fileName, userId } = req.body;
 
-    if (!code || !imageBase64) {
-      return res.status(400).json({ error: "Code OAuth ou image manquante" });
+    if (!code || !imageBase64 || !userId) {
+      return res.status(400).json({ error: "Données manquantes (code, image, userId)" });
     }
 
-    // 1️⃣ Initialiser OAuth2 client
+    // 1️⃣ Configurer OAuth2
     const oauth2Client = new google.auth.OAuth2(
-      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI // doit être identique à celui défini dans Google Cloud
+      process.env.GOOGLE_REDIRECT_URI
     );
 
-    // 2️⃣ Échanger le code contre un token
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
-    // 3️⃣ Préparer le fichier à envoyer
     const drive = google.drive({ version: "v3", auth: oauth2Client });
     const buffer = Buffer.from(imageBase64, "base64");
 
     const fileMetadata = {
       name: fileName || "avatar.jpg",
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID], // dossier dédié aux avatars
+      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
     };
 
     const media = {
@@ -38,34 +45,38 @@ export default async function handler(req, res) {
       body: BufferToStream(buffer),
     };
 
-    // 4️⃣ Upload sur Drive
-    const response = await drive.files.create({
+    // 2️⃣ Upload sur Drive
+    const uploaded = await drive.files.create({
       resource: fileMetadata,
       media,
-      fields: "id, webViewLink, webContentLink",
+      fields: "id",
     });
 
-    const fileId = response.data.id;
+    const fileId = uploaded.data.id;
 
-    // Rendre le fichier public (optionnel)
+    // 3️⃣ Rendre public
     await drive.permissions.create({
       fileId,
-      requestBody: {
-        role: "reader",
-        type: "anyone",
-      },
+      requestBody: { role: "reader", type: "anyone" },
     });
 
     const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
 
+    // 4️⃣ Sauvegarde dans Firestore
+    const db = getFirestore();
+    await updateDoc(doc(db, "users", userId), {
+      avatar: publicUrl,
+      updatedAt: new Date(),
+    });
+
     return res.status(200).json({ success: true, url: publicUrl });
   } catch (error) {
     console.error("Erreur uploadAvatar :", error);
-    return res.status(500).json({ error: "Échec de l'upload" });
+    return res.status(500).json({ error: "Échec de l'upload ou de l'enregistrement Firestore" });
   }
 }
 
-// Utilitaire : convertir Buffer en ReadableStream
+// Convertir Buffer en stream
 function BufferToStream(buffer) {
   const { Readable } = require("stream");
   const stream = new Readable();
