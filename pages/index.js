@@ -13,17 +13,15 @@ export default function HomePage() {
           La plateforme où vous pouvez lire, publier et partager vos textes en toute simplicité.
         </p>
         <div className="flex gap-4">
-          <Link
-            href="/bibliotheque"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Découvrir la bibliothèque
+          <Link href="/bibliotheque">
+            <a className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              Découvrir la bibliothèque
+            </a>
           </Link>
-          <Link
-            href="/register"
-            className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
-          >
-            Créer un compte
+          <Link href="/register">
+            <a className="px-6 py-3 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition">
+              Créer un compte
+            </a>
           </Link>
         </div>
       </section>
