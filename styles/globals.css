@@ -26,7 +26,7 @@ body {
 /* Logo */
 .navbar-logo {
   font-weight: bold;
-  font-size: 1.4rem;
+  font-size: 2.1rem;
   color: #1877f2;
 }
 
@@ -52,8 +52,8 @@ body {
 .menu-panel {
   position: fixed;
   top: 0;
-  right: -280px;
-  width: 260px;
+  right: 100px;
+  width: 100px;
   height: 100%;
   background: #fff;
   box-shadow: -2px 0 6px rgba(0,0,0,0.15);
