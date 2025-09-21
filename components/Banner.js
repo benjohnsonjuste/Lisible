@@ -11,12 +11,12 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2">
           {/* ✅ Image optimisée avec next/image */}
           <Image
-            src="/logo.png" // placé dans /public
+            src="/logo.png"
             alt="Lisible"
-            width={40} // largeur en pixels
-            height={40} // hauteur en pixels
+            width={40}
+            height={40}
             className="rounded-md"
-            priority // charge rapidement (utile pour le logo)
+            priority
           />
           <span className="text-xl font-bold">Lisible</span>
         </Link>
@@ -57,4 +57,4 @@ export default function Navbar() {
       )}
     </nav>
   );
-          }
+}
