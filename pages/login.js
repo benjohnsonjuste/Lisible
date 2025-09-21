@@ -1,86 +1,48 @@
-// pages/login.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { auth, db, googleProvider } from "../firebaseConfig";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import Layout from "../components/Layout";
+import { auth } from "../firebaseConfig"; // Assurez-vous que Firebase est bien configuré
+import { signInWithEmailAndPassword } from "firebase/auth";
+import Link from "next/link";
 
 export default function Login() {
   const router = useRouter();
-  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Connexion / Inscription par email
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        router.push("/dashboard"); // Redirection automatique si déjà connecté
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
+    setLoading(true);
     try {
-      if (isRegister) {
-        // Créer un nouvel utilisateur
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-          name,
-          email,
-          createdAt: new Date(),
-        });
-      } else {
-        // Connexion existante
-        await signInWithEmailAndPassword(auth, email, password);
-      }
-      router.push("/dashboard"); // redirection vers dashboard
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/dashboard"); // Redirection après connexion réussie
     } catch (err) {
-      setError(err.message);
+      alert(err.message);
+      console.error(err);
     }
-  };
-
-  // Connexion avec Google
-  const handleGoogleLogin = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      // Ajouter l'utilisateur à Firestore s'il n'existe pas déjà
-      await setDoc(doc(db, "users", user.uid), {
-        name: user.displayName,
-        email: user.email,
-        createdAt: new Date(),
-      }, { merge: true });
-
-      router.push("/dashboard");
-    } catch (err) {
-      setError(err.message);
-    }
+    setLoading(false);
   };
 
   return (
-    <Layout>
-      <div className="max-w-md mx-auto mt-16 p-6 bg-white shadow-lg rounded-lg">
-        <h2 className="text-2xl font-bold mb-6 text-center">
-          {isRegister ? "S'inscrire" : "Connexion"}
-        </h2>
-        {error && <p className="text-red-600 mb-4">{error}</p>}
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-center text-gray-700">Connexion</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <input
-              type="text"
-              placeholder="Nom complet"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border border-gray-300 px-4 py-2 rounded"
-              required
-            />
-          )}
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
             required
           />
           <input
@@ -88,33 +50,24 @@ export default function Login() {
             placeholder="Mot de passe"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
             required
           />
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
-            {isRegister ? "S'inscrire" : "Se connecter"}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
+          >
+            {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
-
-        <p className="text-center mt-4">
-          {isRegister ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
-          <span
-            className="text-blue-600 cursor-pointer"
-            onClick={() => setIsRegister(!isRegister)}
-          >
-            {isRegister ? "Connexion" : "S'inscrire"}
-          </span>
+        <p className="text-sm text-center text-gray-600">
+          Pas encore inscrit ?{" "}
+          <Link href="/register">
+            <a className="text-blue-600 hover:text-blue-700">S'inscrire</a>
+          </Link>
         </p>
-
-        <hr className="my-6" />
-
-        <button
-          onClick={handleGoogleLogin}
-          className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition flex items-center justify-center gap-2"
-        >
-          Se connecter avec Google
-        </button>
       </div>
-    </Layout>
+    </div>
   );
 }
