@@ -1,5 +1,38 @@
-node_modules
-.next
-out
+# Dépendances
+/node_modules
+
+# Build et production
+/.next
+/out
+
+# Fichiers système
 .DS_Store
-.env
+Thumbs.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environnements
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache
+.next/cache
+
+# VSCode
+.vscode/
+
+# Ignore coverage reports
+coverage/
+
+# ⚠️ Autoriser les images et autres fichiers statiques dans public/
+!public/**/*.png
+!public/**/*.jpg
+!public/**/*.jpeg
+!public/**/*.gif
+!public/**/*.svg
