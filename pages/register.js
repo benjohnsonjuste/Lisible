@@ -1,51 +1,55 @@
-// pages/register.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { auth, db } from "../firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import Layout from "../components/Layout";
+import Link from "next/link";
 
 export default function Register() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = async (e) => {
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        router.push("/dashboard"); // Redirection si déjà connecté
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
+    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Ajouter l'utilisateur dans Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      await updateProfile(userCredential.user, { displayName: name });
+      await setDoc(doc(db, "users", userCredential.user.uid), {
         name,
-        email,
-        createdAt: new Date(),
+        email
       });
-
-      router.push("/dashboard");
+      router.push("/dashboard"); // Redirection après inscription
     } catch (err) {
-      setError(err.message);
+      alert(err.message);
+      console.error(err);
     }
+    setLoading(false);
   };
 
   return (
-    <Layout>
-      <div className="max-w-md mx-auto mt-16 p-6 bg-white shadow-lg rounded-lg">
-        <h2 className="text-2xl font-bold mb-6 text-center">S'inscrire</h2>
-        {error && <p className="text-red-600 mb-4">{error}</p>}
-        <form onSubmit={handleRegister} className="space-y-4">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-center text-gray-700">S'inscrire</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="Nom complet"
+            placeholder="Nom"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
             required
           />
           <input
@@ -53,7 +57,7 @@ export default function Register() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
             required
           />
           <input
@@ -61,27 +65,24 @@ export default function Register() {
             placeholder="Mot de passe"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 px-4 py-2 rounded"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
             required
           />
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+            disabled={loading}
+            className="w-full py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
           >
-            S'inscrire
+            {loading ? "Inscription..." : "S'inscrire"}
           </button>
         </form>
-
-        <p className="text-center mt-4">
-          Déjà un compte ?{" "}
-          <span
-            className="text-blue-600 cursor-pointer"
-            onClick={() => router.push("/login")}
-          >
-            Connexion
-          </span>
+        <p className="text-sm text-center text-gray-600">
+          Déjà inscrit ?{" "}
+          <Link href="/login">
+            <a className="text-blue-600 hover:text-blue-700">Se connecter</a>
+          </Link>
         </p>
       </div>
-    </Layout>
+    </div>
   );
 }
