@@ -1,9 +1,7 @@
 // pages/register.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { auth, db } from "../firebaseConfig";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { auth, db, createUserWithEmailAndPassword, updateProfile, setDoc, doc } from "../firebaseConfig";
 import Link from "next/link";
 
 export default function Register() {
@@ -20,7 +18,7 @@ export default function Register() {
     return () => unsubscribe();
   }, [router]);
 
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -29,8 +27,7 @@ export default function Register() {
       await setDoc(doc(db, "users", userCredential.user.uid), { name, email });
       router.push("/dashboard");
     } catch (err) {
-      alert(err.message);
-      console.error(err);
+      alert("Erreur : " + err.message);
     }
     setLoading(false);
   };
@@ -38,8 +35,10 @@ export default function Register() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-center text-gray-700">S'inscrire</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-2xl font-bold text-center text-gray-700">
+          S'inscrire
+        </h2>
+        <form onSubmit={handleRegister} className="space-y-4">
           <input
             type="text"
             placeholder="Nom"
