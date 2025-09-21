@@ -1,8 +1,7 @@
-// components/ServiceCard.js
 export default function ServiceCard({ icon, title, description }) {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-300 text-center">
-      <div className="flex justify-center mb-4">{icon}</div>
+    <div className="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center text-center">
+      {icon && <img src={icon} alt={title} className="h-16 w-16 mb-4" />}
       <h3 className="text-xl font-semibold mb-2">{title}</h3>
       <p className="text-gray-600">{description}</p>
     </div>
