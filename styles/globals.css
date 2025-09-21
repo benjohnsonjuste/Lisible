@@ -1,98 +1,78 @@
-/* globals.css */
-
-/* Import Tailwind base, components, utilities */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Styles globaux personnalisés */
-
-/* Police et typographie */
+/* Style de base */
 body {
-  @apply font-sans text-gray-800 bg-white;
+  font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
 }
 
-/* Images responsive */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
+.navbar {
+  background-color: #333;
+  color: white;
+  padding: 10px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-/* Liens */
-a {
-  @apply text-blue-600 hover:text-blue-700 transition-colors;
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+.nav-links li {
+  margin: 0;
+}
+
+.nav-links a {
+  color: white;
   text-decoration: none;
+  font-size: 16px;
 }
 
-/* Titres */
-h1, h2, h3, h4, h5, h6 {
-  @apply font-bold text-gray-900;
-  margin-top: 0;
-  margin-bottom: 0.5rem;
+.nav-links a:hover {
+  text-decoration: underline;
 }
 
-/* Paragraphes */
-p {
-  @apply text-gray-700 leading-relaxed mb-4;
+.search-form {
+  display: flex;
+  gap: 5px;
 }
 
-/* Sections */
-section {
-  @apply my-12;
+.search-form input {
+  padding: 5px;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
 }
 
-/* Boutons principaux */
-button, .btn {
-  @apply bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg shadow hover:bg-blue-700 transition-colors;
+.search-form button {
+  padding: 5px;
+  font-size: 14px;
+  background-color: #555;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
-/* Formulaires */
-input, textarea, select {
-  @apply border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full;
-  margin-bottom: 1rem;
+.search-form button:hover {
+  background-color: #777;
 }
 
-/* Footer */
-footer {
-  @apply bg-gray-100 py-6 text-center text-gray-700;
-}
+/* Responsivité */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+  }
 
-/* Responsive text scaling for banners */
-.banner-title {
-  @apply text-4xl md:text-6xl font-bold text-white text-center;
-}
-
-.banner-subtitle {
-  @apply text-lg md:text-2xl text-white mt-4 text-center;
-}
-
-/* Navigation */
-nav a {
-  @apply px-3 py-2 rounded-md text-gray-800 hover:bg-gray-100 transition;
-}
-
-/* Grid layout adjustments */
-.grid {
-  @apply gap-6;
-}
-
-/* Utilities supplémentaires */
-.mt-16 {
-  margin-top: 4rem;
-}
-
-.max-w-6xl {
-  max-width: 72rem;
-}
-
-.max-w-4xl {
-  max-width: 56rem;
-}
-
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
+  .search-form {
+    width: 100%;
+  }
 }
