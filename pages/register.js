@@ -1,3 +1,4 @@
+// pages/register.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { auth, db } from "../firebaseConfig";
@@ -13,10 +14,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
-        router.push("/dashboard"); // Redirection si déjà connecté
-      }
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) router.push("/dashboard");
     });
     return () => unsubscribe();
   }, [router]);
@@ -27,11 +26,8 @@ export default function Register() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        name,
-        email
-      });
-      router.push("/dashboard"); // Redirection après inscription
+      await setDoc(doc(db, "users", userCredential.user.uid), { name, email });
+      router.push("/dashboard");
     } catch (err) {
       alert(err.message);
       console.error(err);
