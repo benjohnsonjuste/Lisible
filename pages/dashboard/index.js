@@ -1,8 +1,8 @@
-// pages/dashboard.js
+// pages/dashboard/index.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import Layout from "../components/Layout";
-import { auth, db } from "../firebaseConfig";
+import Layout from "../../components/Layout";
+import { auth, db } from "../../firebaseConfig";
 import { signOut } from "firebase/auth";
 import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
@@ -13,12 +13,15 @@ export default function Dashboard() {
   const [newContent, setNewContent] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Vérifier l'authentification de l'utilisateur
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           setUserData({ uid: user.uid, ...userDoc.data() });
+        } else {
+          router.push("/login");
         }
       } else {
         router.push("/login");
@@ -28,11 +31,13 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
+  // Déconnexion
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
   };
 
+  // Publication d'un nouveau texte
   const handlePublish = async (e) => {
     e.preventDefault();
     if (!newTitle || !newContent) return alert("Veuillez remplir tous les champs.");
@@ -43,7 +48,7 @@ export default function Dashboard() {
         title: newTitle,
         content: newContent,
         authorId: userData.uid,
-        authorName: userData.name,
+        authorName: userData.name || "Anonyme",
         createdAt: serverTimestamp(),
       });
       setNewTitle("");
@@ -67,6 +72,7 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto mt-12 p-6 bg-white rounded-lg shadow-lg">
+        {/* En-tête */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Bienvenue, {userData.name}</h1>
           <button
@@ -77,7 +83,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Informations du compte */}
+        {/* Informations utilisateur */}
         <div className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">Informations du compte</h2>
           <p><strong>Email :</strong> {userData.email}</p>
@@ -101,7 +107,7 @@ export default function Dashboard() {
               onChange={(e) => setNewContent(e.target.value)}
               rows={6}
               className="border border-gray-300 rounded px-4 py-2"
-            ></textarea>
+            />
             <button
               type="submit"
               disabled={loading}
