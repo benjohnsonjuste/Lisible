@@ -5,72 +5,51 @@ import ServiceCard from "../components/ServiceCard";
 export default function Home() {
   return (
     <Layout>
-      {/* Bannière de couverture */}
       <Banner
         title="Bienvenue sur Lisible"
-        subtitle="Un espace pour publier, lire et partager vos écrits"
+        subtitle="Publiez, lisez et partagez vos écrits en toute simplicité"
         imageUrl="/couverture.jpg"
       />
 
-      {/* Section services */}
       <section className="max-w-6xl mx-auto p-6 mt-12 grid md:grid-cols-3 gap-8">
         <ServiceCard
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6l4 2" />
+            </svg>
+          }
           title="Publier facilement"
-          description="Publiez vos textes simplement et gratuitement."
+          description="Publiez vos textes gratuitement en quelques clics."
         />
         <ServiceCard
-          title="Monétisation à partir de 250 abonnés"
-          description="Gagnez de l’argent avec vos œuvres et suivez vos gains."
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.1 0-2 .9-2 2v4h4v-4c0-1.1-.9-2-2-2z" />
+            </svg>
+          }
+          title="Monétisation"
+          description="Gagnez de l’argent dès 250 abonnés."
         />
         <ServiceCard
-          title="Statistiques & Abonnés"
-          description="Suivez vos lectures, vos abonnés et votre audience en temps réel."
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          }
+          title="Statistiques"
+          description="Suivez vos lecteurs et votre audience en temps réel."
         />
       </section>
 
-      {/* Présentation détaillée */}
-      <section className="max-w-4xl mx-auto p-6 mt-16 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6">
-          Lire. Écrire. Partager.
-        </h2>
-        <p className="text-gray-700 leading-relaxed text-lg mb-6">
-          Lisible est une plateforme innovante produite par le label littéraire{" "}
-          <strong>La Belle Littéraire</strong>, connue pour ses concours et festivals littéraires à l’échelle internationale.
-          Nous connectons lecteurs et auteurs dans un espace moderne, interactif et rémunérateur.
-        </p>
-
-        <p className="text-gray-700 leading-relaxed text-lg mb-4">
-          <strong>Pour les lecteurs :</strong> profitez d’une lecture 100 % gratuite, suivez vos auteurs préférés
-          et découvrez des œuvres uniques chaque jour.
-        </p>
-
-        <p className="text-gray-700 leading-relaxed text-lg mb-4">
-          <strong>Pour les auteurs :</strong> publiez vos œuvres librement, suivez vos statistiques et
-          commencez à monétiser vos écrits à partir de <strong>250 abonnés</strong>.
-          Ni Lisible ni sa maison-mère, La Belle Littéraire, ne gardent de droits sur vos créations.
-        </p>
-
-        <p className="text-gray-700 leading-relaxed text-lg">
-          Les statistiques et abonnements vous permettent d’optimiser votre visibilité,
-          d’améliorer votre contenu et d’augmenter vos revenus. 
-        </p>
-      </section>
-
-      {/* Appel à l’action */}
-      <section className="max-w-4xl mx-auto p-6 mt-12 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6">
-          Chers auteurs, lancez-vous !
-        </h2>
-        <p className="text-gray-700 leading-relaxed text-lg mb-8">
-          Rejoignez Lisible dès aujourd’hui et commencez à partager vos œuvres avec le monde entier.
-        </p>
+      <div className="text-center mt-12">
+        <p className="text-lg font-medium mb-4">Chers auteurs, lancez-vous !</p>
         <a
-          href="/register"
-          className="inline-block bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-md"
+          href="/login"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-md transition"
         >
           S'inscrire
         </a>
-      </section>
+      </div>
     </Layout>
   );
-}
+            }
