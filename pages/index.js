@@ -1,56 +1,76 @@
 import Layout from "../components/Layout";
+import Banner from "../components/Banner";
+import ServiceCard from "../components/ServiceCard";
 
 export default function Home() {
   return (
     <Layout>
-      {/* Image de couverture */}
-      <div className="relative w-full h-[70vh]">
-        <img
-          src="https://drive.google.com/uc?export=view&id=1p8jDVQpk9oDnG4WV6cydFEc6GsqKVyP0"
-          alt="Couverture"
-          className="object-cover w-full h-full"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80 flex items-center justify-center">
-          <h1 className="text-4xl md:text-6xl text-white font-bold text-center">
-            Bienvenue sur Lisible
-          </h1>
-        </div>
-      </div>
+      {/* Bannière de couverture */}
+      <Banner
+        title="Bienvenue sur Lisible"
+        subtitle="Un espace pour publier, lire et partager vos écrits"
+        imageUrl="/couverture.jpg" // ✅ image mise dans /public/couverture.jpg
+      />
 
-      {/* Présentation */}
-      <section className="max-w-4xl mx-auto p-6 mt-10 text-center">
-        <h2 className="text-3xl font-bold mb-6">Lire. Écrire. Partager.</h2>
-        <p className="text-gray-700 leading-relaxed text-lg mb-4">
-          Lisible connecte les lecteurs et les auteurs. Découvrez des textes
-          inspirants, suivez vos auteurs préférés et publiez vos propres écrits.
-          Notre objectif est de créer un espace littéraire moderne, interactif
-          et rémunérateur pour les créateurs.
+      {/* Section services */}
+      <section className="max-w-6xl mx-auto p-6 mt-12 grid md:grid-cols-3 gap-8">
+        <ServiceCard
+          title="Publier facilement"
+          description="Publiez vos textes simplement et gratuitement."
+        />
+        <ServiceCard
+          title="Monétisation à partir de 250 abonnés"
+          description="Gagnez de l’argent avec vos œuvres et suivez vos gains."
+        />
+        <ServiceCard
+          title="Statistiques & Abonnés"
+          description="Suivez vos lectures, vos abonnés et votre audience en temps réel."
+        />
+      </section>
+
+      {/* Présentation détaillée */}
+      <section className="max-w-4xl mx-auto p-6 mt-16 text-center">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">
+          Lire. Écrire. Partager.
+        </h2>
+        <p className="text-gray-700 leading-relaxed text-lg mb-6">
+          Lisible est une plateforme innovante produite par le label littéraire{" "}
+          <strong>La Belle Littéraire</strong>, connue pour ses concours et festivals littéraires à l’échelle internationale.
+          Nous connectons lecteurs et auteurs dans un espace moderne, interactif et rémunérateur.
         </p>
+
         <p className="text-gray-700 leading-relaxed text-lg mb-4">
-          Pour les lecteurs : profitez de la lecture gratuite, suivez vos auteurs
-          préférés et découvrez des œuvres uniques.
+          <strong>Pour les lecteurs :</strong> profitez d’une lecture 100 % gratuite, suivez vos auteurs préférés
+          et découvrez des œuvres uniques chaque jour.
         </p>
+
         <p className="text-gray-700 leading-relaxed text-lg mb-4">
-          Pour les auteurs : monétisez vos œuvres à partir de 250 abonnés,
-          suivez vos statistiques, vos abonnés et vos lectures. Lisible et sa
-          maison mère, La Belle Littéraire, ne gardent aucun droit sur vos
-          œuvres.
+          <strong>Pour les auteurs :</strong> publiez vos œuvres librement, suivez vos statistiques et
+          commencez à monétiser vos écrits à partir de <strong>250 abonnés</strong>.
+          Ni Lisible ni sa maison-mère, La Belle Littéraire, ne gardent de droits sur vos créations.
+        </p>
+
+        <p className="text-gray-700 leading-relaxed text-lg">
+          Les statistiques et abonnements vous permettent d’optimiser votre visibilité,
+          d’améliorer votre contenu et d’augmenter vos revenus. 
         </p>
       </section>
 
-      {/* Appel à l'action pour les auteurs */}
-      <section className="max-w-4xl mx-auto p-6 mt-10 text-center">
-        <h2 className="text-3xl font-bold mb-6">Chers auteurs, lancez-vous !</h2>
-        <p className="text-gray-700 leading-relaxed text-lg mb-6">
-          Rejoignez Lisible dès aujourd'hui et commencez à partager vos œuvres avec le monde.
+      {/* Appel à l’action */}
+      <section className="max-w-4xl mx-auto p-6 mt-12 text-center">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6">
+          Chers auteurs, lancez-vous !
+        </h2>
+        <p className="text-gray-700 leading-relaxed text-lg mb-8">
+          Rejoignez Lisible dès aujourd’hui et commencez à partager vos œuvres avec le monde entier.
         </p>
         <a
           href="/register"
-          className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-block bg-blue-600 text-white font-semibold px-8 py-4 rounded-xl hover:bg-blue-700 transition-colors shadow-md"
         >
           S'inscrire
         </a>
       </section>
     </Layout>
   );
-}
+            }
