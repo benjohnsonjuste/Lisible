@@ -1,57 +1,40 @@
 // components/Navbar.js
-import Link from 'next/link';
-import { useState } from 'react';
+import { useState } from "react";
+import Link from "next/link";
 
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const menuItems = [
-    { name: 'Accueil', href: '/' },
-    { name: 'À propos', href: '/qui-sommes-nous' },
-    { name: 'S\'inscrire', href: '/register' },
-    { name: 'Services', href: '/services' },
-    { name: 'Contact', href: '/contact' },
-    { name: 'Termes et conditions', href: '/terms' },
-  ];
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+    <nav className="fixed top-0 w-full bg-white shadow-md z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-        {/* Barre d'outils horizontale */}
-        <div className="flex items-center space-x-6">
+        {/* Menu principal */}
+        <div className="flex items-center gap-6">
           <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="text-xl font-semibold text-gray-700 md:hidden"
+            className="md:hidden px-3 py-2 border rounded text-gray-700 hover:bg-gray-100"
+            onClick={() => setMenuOpen(!menuOpen)}
           >
             ☰
           </button>
-
           <Link href="/bibliotheque">
-            <a className="text-lg font-semibold text-gray-700 hover:text-blue-600 transition">Bibliothèque</a>
+            <a className="text-gray-800 font-semibold hover:text-blue-600">Bibliothèque</a>
           </Link>
-
           <Link href="/login">
-            <a className="text-lg font-semibold text-gray-700 hover:text-blue-600 transition">Connexion</a>
+            <a className="text-gray-800 font-semibold hover:text-blue-600">Connexion</a>
           </Link>
         </div>
 
-        {/* Menu déroulant */}
-        <div
-          className={`absolute top-16 left-0 w-full bg-white shadow-md md:relative md:top-0 md:flex md:items-center md:space-x-6 md:bg-transparent md:shadow-none ${
-            isMenuOpen ? 'block' : 'hidden'
-          }`}
-        >
-          {menuItems.map((item) => (
-            <Link key={item.href} href={item.href}>
-              <a
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-2 text-lg font-semibold text-gray-700 hover:text-blue-600 transition md:inline-block md:px-0 md:py-0"
-              >
-                {item.name}
-              </a>
-            </Link>
-          ))}
-        </div>
+        {/* Liens secondaires dans le menu burger */}
+        {menuOpen && (
+          <div className="absolute top-full left-0 w-full bg-white shadow-md md:hidden px-6 py-4 flex flex-col gap-3">
+            <Link href="/"><a className="hover:text-blue-600">Accueil</a></Link>
+            <Link href="/register"><a className="hover:text-blue-600">S'inscrire</a></Link>
+            <Link href="/services"><a className="hover:text-blue-600">Services</a></Link>
+            <Link href="/about"><a className="hover:text-blue-600">À propos</a></Link>
+            <Link href="/contact"><a className="hover:text-blue-600">Contact</a></Link>
+            <Link href="/terms"><a className="hover:text-blue-600">Termes et conditions</a></Link>
+          </div>
+        )}
       </div>
     </nav>
   );
