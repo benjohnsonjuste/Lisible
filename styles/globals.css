@@ -2,18 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom global styles */
 html, body {
-  @apply m-0 p-0 font-sans bg-gray-50 text-gray-900;
+  padding: 0;
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #f9fafb;
 }
 
 a {
-  @apply text-blue-600 hover:text-blue-800;
+  text-decoration: none;
+  color: inherit;
 }
 
-h1, h2, h3, h4 {
-  @apply font-bold;
+* {
+  box-sizing: border-box;
 }
 
-section {
-  @apply my-12;
+/* Scrollbar stylée */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
 }
