@@ -1,11 +1,20 @@
 // components/Layout.js
-import Navbar from "./Navbar";
+import NavbarMobile from "./Navbar"; // ton Navbar renommé en NavbarMobile
+import Footer from "./Footer";
 
 export default function Layout({ children }) {
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <main className="mt-[56px]">{children}</main>
+      {/* Barre de navigation fixe */}
+      <NavbarMobile />
+
+      {/* Décalage pour éviter que le contenu passe sous la navbar */}
+      <main className="flex-1 pt-[56px]">
+        {children}
+      </main>
+
+      {/* Footer toujours en bas */}
+      <Footer />
     </div>
   );
 }
