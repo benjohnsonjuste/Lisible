@@ -2,13 +2,12 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function NavbarMobile() {
+export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const menuItems = [
-    { name: "Accueil", href: "/index" },
+    { name: "Accueil", href: "/" },
     { name: "À propos", href: "/qui-sommes-nous" },
     { name: "S'inscrire", href: "/register" },
     { name: "Services", href: "/services" },
@@ -18,35 +17,35 @@ export default function NavbarMobile() {
 
   return (
     <>
+      {/* Barre principale */}
       <nav className="navbar-mobile">
-        <Link href="/">
-          <a className="navbar-logo">Lisible</a>
-        </Link>
-
-        <div className="navbar-actions">
-          <Link href="/bibliotheque">
-            <a className="navbar-btn">Bibliothèque</a>
+        <div className="navbar-actions-left">
+          <button className="navbar-btn" onClick={toggleMenu}>☰</button>
+          <Link href="/bibliotheque" className="navbar-btn">
+            Bibliothèque
           </Link>
-          <Link href="/login">
-            <a className="navbar-btn">Connexion</a>
+          <Link href="/login" className="navbar-btn">
+            Connexion
           </Link>
-          <button className="navbar-btn" onClick={toggleMenu}>
-            ☰
-          </button>
         </div>
       </nav>
 
-      {/* Backdrop */}
+      {/* Fond sombre */}
       <div
         className={`menu-backdrop ${menuOpen ? "open" : ""}`}
         onClick={toggleMenu}
       />
 
-      {/* Panneau du menu */}
+      {/* Menu latéral */}
       <div className={`menu-panel ${menuOpen ? "open" : ""}`}>
         {menuItems.map((item) => (
-          <Link key={item.href} href={item.href}>
-            <a onClick={toggleMenu}>{item.name}</a>
+          <Link
+            key={item.href}
+            href={item.href}
+            className="menu-link"
+            onClick={() => setMenuOpen(false)}
+          >
+            {item.name}
           </Link>
         ))}
       </div>
