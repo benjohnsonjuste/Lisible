@@ -1,9 +1,9 @@
-export default function ServiceCard({ icon, title, description }) {
+export default function ServiceCard({ title, description, icon }) {
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 flex flex-col items-center text-center">
-      {icon && <img src={icon} alt={title} className="h-16 w-16 mb-4" />}
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center text-center hover:shadow-xl transition-shadow">
+      {icon && <div className="mb-4 text-4xl">{icon}</div>}
+      <h3 className="text-xl sm:text-2xl font-semibold mb-2">{title}</h3>
+      <p className="text-gray-600 text-sm sm:text-base">{description}</p>
     </div>
   );
 }
