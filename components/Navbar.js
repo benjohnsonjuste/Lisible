@@ -8,7 +8,7 @@ export default function NavbarMobile() {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   const menuItems = [
-    { name: "Accueil", href: "/" },
+    { name: "Accueil", href: "/index" },
     { name: "À propos", href: "/qui-sommes-nous" },
     { name: "S'inscrire", href: "/register" },
     { name: "Services", href: "/services" },
@@ -25,10 +25,10 @@ export default function NavbarMobile() {
 
         <div className="navbar-actions">
           <Link href="/bibliotheque">
-            <a className="navbar-btn">📚</a>
+            <a className="navbar-btn">Bibliothèque</a>
           </Link>
           <Link href="/login">
-            <a className="navbar-btn">🔑</a>
+            <a className="navbar-btn">Connexion</a>
           </Link>
           <button className="navbar-btn" onClick={toggleMenu}>
             ☰
