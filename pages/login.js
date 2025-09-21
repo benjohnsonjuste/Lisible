@@ -1,7 +1,7 @@
+// pages/login.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { auth } from "../firebaseConfig"; // Assurez-vous que Firebase est bien configuré
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, signInWithEmailAndPassword } from "../firebaseConfig";
 import Link from "next/link";
 
 export default function Login() {
@@ -11,23 +11,20 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
-        router.push("/dashboard"); // Redirection automatique si déjà connecté
-      }
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) router.push("/dashboard");
     });
     return () => unsubscribe();
   }, [router]);
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard"); // Redirection après connexion réussie
+      router.push("/dashboard");
     } catch (err) {
-      alert(err.message);
-      console.error(err);
+      alert("Erreur : " + err.message);
     }
     setLoading(false);
   };
@@ -35,8 +32,10 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-center text-gray-700">Connexion</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-2xl font-bold text-center text-gray-700">
+          Connexion
+        </h2>
+        <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
             placeholder="Email"
@@ -62,7 +61,7 @@ export default function Login() {
           </button>
         </form>
         <p className="text-sm text-center text-gray-600">
-          Pas encore inscrit ?{" "}
+          Pas encore de compte ?{" "}
           <Link href="/register">
             <a className="text-blue-600 hover:text-blue-700">S'inscrire</a>
           </Link>
