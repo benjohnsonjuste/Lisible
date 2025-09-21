@@ -1,4 +1,6 @@
 /* globals.css */
+
+/* Style de base */
 body {
   margin: 0;
   padding: 0;
@@ -7,7 +9,7 @@ body {
   color: #18191a;
 }
 
-/* Navbar */
+/* ----- NAVBAR ----- */
 .navbar-mobile {
   position: fixed;
   top: 0;
@@ -26,21 +28,27 @@ body {
 /* Logo */
 .navbar-logo {
   font-weight: bold;
-  font-size: 2.1rem;
+  font-size: 1.8rem;
   color: #1877f2;
+  text-decoration: none;
 }
 
-/* Boutons de droite */
-.navbar-actions {
+/* Actions (droite de la navbar) */
+.navbar-actions,
+.navbar-actions-left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
 .navbar-btn {
-  font-size: 1.4rem;
+  font-size: 1rem;
   cursor: pointer;
   color: #333;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  text-decoration: none;
   transition: color 0.2s ease-in-out;
 }
 
@@ -48,12 +56,13 @@ body {
   color: #1877f2;
 }
 
-/* Menu déroulant */
+/* ----- MENU DÉROULANT ----- */
 .menu-panel {
   position: fixed;
   top: 0;
-  right: 100px;
-  width: 100px;
+  right: -100%; /* complètement caché par défaut */
+  width: 250px;
+  max-width: 80%;
   height: 100%;
   background: #fff;
   box-shadow: -2px 0 6px rgba(0,0,0,0.15);
@@ -73,12 +82,19 @@ body {
   font-size: 1rem;
   border-bottom: 1px solid #eee;
   color: #333;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+.menu-panel a:hover {
+  color: #1877f2;
 }
 
 .menu-panel a:last-child {
   border-bottom: none;
 }
 
+/* Fond assombri quand le menu est ouvert */
 .menu-backdrop {
   position: fixed;
   inset: 0;
@@ -87,6 +103,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease-in-out;
+  z-index: 1500;
 }
 
 .menu-backdrop.open {
