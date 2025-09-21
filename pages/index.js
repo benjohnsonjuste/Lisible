@@ -9,7 +9,7 @@ export default function Home() {
       <Banner
         title="Bienvenue sur Lisible"
         subtitle="Un espace pour publier, lire et partager vos écrits"
-        imageUrl="/couverture.jpg" // ✅ image mise dans /public/couverture.jpg
+        imageUrl="/couverture.jpg"
       />
 
       {/* Section services */}
@@ -73,4 +73,4 @@ export default function Home() {
       </section>
     </Layout>
   );
-            }
+        }
