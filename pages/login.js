@@ -1,7 +1,7 @@
-// pages/login.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { auth, signInWithEmailAndPassword } from "../firebaseConfig";
+import { auth } from "../firebaseConfig";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 
 export default function Login() {
@@ -11,7 +11,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) router.push("/dashboard");
     });
     return () => unsubscribe();
@@ -62,8 +62,8 @@ export default function Login() {
         </form>
         <p className="text-sm text-center text-gray-600">
           Pas encore de compte ?{" "}
-          <Link href="/register">
-            <a className="text-blue-600 hover:text-blue-700">S'inscrire</a>
+          <Link href="/register" className="text-blue-600 hover:text-blue-700">
+            S'inscrire
           </Link>
         </p>
       </div>
