@@ -8,7 +8,7 @@ export default function HomePage() {
       {/* ====== IMAGE DE COUVERTURE ====== */}
       <section className="relative w-full h-screen">
         <img
-          src="/cover.jpg" // placer votre image de couverture dans /public
+          src="/couverture.jpg" // placer votre image de couverture dans /public
           alt="Couverture Lisible"
           className="cover-image"
         />
