@@ -4,7 +4,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, up
 import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-// ⚡ Remplace ces valeurs par celles de ton projet Firebase
+// Remplace ces valeurs par celles de ton projet Firebase
 const firebaseConfig = {
   apiKey: "TON_API_KEY",
   authDomain: "TON_PROJET.firebaseapp.com",
