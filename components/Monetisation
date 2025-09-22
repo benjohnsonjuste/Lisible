@@ -1,0 +1,14 @@
+import MetricsCard from './MetricsCard';
+
+export default function Monetisation({ subscribers, views }) {
+  const isUnlocked = subscribers >= 250;
+  const revenue = (views / 1000) * 0.2;
+
+  return (
+    <MetricsCard
+      title={isUnlocked ? `Revenus: $${revenue.toFixed(2)}` : 'Monétisation verrouillée'}
+      value={subscribers}
+      icon={isUnlocked ? '💰' : '🔒'}
+    />
+  );
+}
