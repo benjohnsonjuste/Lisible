@@ -1,0 +1,33 @@
+// Firebase Storage Security Rules - Lisible
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // 📂 Dossier profils : /profiles/{userId}/avatar.jpg
+    match /profiles/{userId}/{allPaths=**} {
+      allow read: if true; // lecture publique (affichage avatars)
+      allow write: if request.auth != null
+        && request.auth.uid == userId; // seul l'utilisateur peut écrire sa propre image
+    }
+
+    // 📂 Dossier bio-images : /bio/{userId}/{filename}
+    match /bio/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
+    // 📂 Dossier textes (si tu ajoutes des couvertures ou PDF)
+    match /texts/{authorId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == authorId;
+    }
+
+    // Tout le reste est interdit
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
