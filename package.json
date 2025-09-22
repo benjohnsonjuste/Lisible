@@ -1,23 +1,23 @@
 {
   "name": "lisible",
   "version": "1.0.0",
-  "description": "Plateforme de lecture en streaming, Lisible",
-  "main": "src/main.jsx",
+  "private": true,
+  "description": "Plateforme de lecture et d'écriture Lisible",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "firebase": "^10.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.14.1"
+    "next": "13.5.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "firebase": "^10.0.0"
   },
   "devDependencies": {
     "tailwindcss": "^3.3.2",
     "postcss": "^8.4.21",
-    "autoprefixer": "^10.4.14",
-    "@vitejs/plugin-react": "^4.0.0"
+    "autoprefixer": "^10.4.14"
   }
 }
