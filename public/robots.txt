@@ -2,5 +2,3 @@ User-agent: *
 Disallow: /dashboard
 Disallow: /login
 Disallow: /register
-
-Sitemap: /sitemap.xml
