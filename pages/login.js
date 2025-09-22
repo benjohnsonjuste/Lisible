@@ -1,7 +1,14 @@
+// pages/login.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { auth, signInWithEmailAndPassword } from "../firebaseConfig";
 import Link from "next/link";
+import {
+  auth,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "../firebaseConfig";
 
 export default function Login() {
   const router = useRouter();
@@ -9,76 +16,111 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Redirection si déjà connecté
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) router.push("/dashboard"); // Redirection si déjà connecté
+      if (user) router.push("/dashboard");
     });
     return () => unsubscribe();
   }, [router]);
 
+  // Connexion classique
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard"); // Redirection après connexion
+      router.push("/dashboard");
     } catch (err) {
       alert("Erreur : " + err.message);
     }
     setLoading(false);
   };
 
+  // Mot de passe oublié
+  const handleForgotPassword = async () => {
+    if (!email) return alert("Entrez votre email avant de réinitialiser.");
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("Email de réinitialisation envoyé !");
+    } catch (err) {
+      alert("Erreur : " + err.message);
+    }
+  };
+
+  // Connexion via Google
+  const handleGoogleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      router.push("/dashboard");
+    } catch (err) {
+      alert("Erreur Google : " + err.message);
+    }
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
-      {/* Boîte de dialogue */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-10 relative">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="w-full max-w-md p-8 bg-white shadow-2xl rounded-2xl">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Connexion
         </h2>
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          {/* Champ Email */}
-          <div className="relative">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="peer w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
+        {/* Formulaire de connexion */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="email"
+            placeholder="Adresse email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
 
-          {/* Champ Mot de passe */}
-          <div className="relative">
-            <input
-              type="password"
-              placeholder="Mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="peer w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            required
+          />
 
-          {/* Bouton de connexion */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            {loading ? "Connexion..." : "Se connecter"}
+            {loading ? "Chargement..." : "Se connecter"}
           </button>
         </form>
 
+        {/* Connexion Google */}
+        <button
+          onClick={handleGoogleSignIn}
+          className="w-full mt-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+        >
+          Continuer avec Google
+        </button>
+
+        {/* Mot de passe oublié */}
+        <button
+          onClick={handleForgotPassword}
+          className="mt-3 text-sm text-blue-600 hover:underline block text-center"
+        >
+          Mot de passe oublié ?
+        </button>
+
         {/* Lien vers inscription */}
-        <p className="text-center text-gray-500 mt-6">
+        <p className="text-center text-gray-600 mt-4">
           Pas encore de compte ?{" "}
           <Link href="/register">
-            <a className="text-blue-600 font-medium hover:underline">S'inscrire</a>
+            <span className="text-blue-600 hover:underline cursor-pointer">
+              Créer un compte
+            </span>
           </Link>
         </p>
       </div>
     </div>
   );
-                }
+              }
