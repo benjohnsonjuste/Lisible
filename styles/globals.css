@@ -1,29 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Header cover */
-.header-cover {
-  background-image: url('/couverture.jpg');
-  background-size: cover;
-  background-position: center;
-  height: clamp(220px, 35vh, 420px);
-  position: relative;
-}
-
-/* Title over cover */
-.site-title {
-  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
-}
-.site-subtitle {
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
-}
-
-/* Containers */
-.container {
-  max-width: 1100px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f9f9f9;
 }
