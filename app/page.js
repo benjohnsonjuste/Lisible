@@ -7,7 +7,7 @@ export default function Home() {
   const router = useRouter();
 
   const handleAuthorSignup = () => {
-    router.push("/register"); // redirige vers la page d'inscription des auteurs
+    router.push("/register");
   };
 
   return (
@@ -71,9 +71,10 @@ export default function Home() {
       <section className="bg-orange-50 p-8 rounded-lg shadow-md text-center">
         <h2 className="text-2xl font-semibold mb-3">Avantages d'être auteur sur Lisible</h2>
         <p className="text-gray-700 mb-6">
-          Créez votre profil d’auteur, publiez vos histoires, connectez-vous avec une communauté active de lecteurs passionnés et monétiser votre plume juste en écrivant.
+          Créez votre profil d’auteur, publiez vos histoires, connectez-vous avec une communauté active de lecteurs passionnés et monétisez votre plume juste en écrivant.
         </p>
         <button
+          type="button"
           onClick={handleAuthorSignup}
           className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
         >
