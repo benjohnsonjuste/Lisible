@@ -1,9 +1,0 @@
-{
-  "name": "Lisible",
-  "short_name": "Lisible",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "description": "Plateforme de lecture en streaming"
-}
