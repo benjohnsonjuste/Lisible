@@ -1,7 +1,8 @@
 "use client";
+
 import React from "react";
 import { useRouter } from "next/navigation";
-import AuthDialog from "../../components/AuthDialog";
+import AuthDialog from "@/components/AuthDialog";
 
 export default function LoginPage() {
   const router = useRouter();
