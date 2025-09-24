@@ -1,3 +1,5 @@
+"use client"; // ⚠ Important pour que useState fonctionne
+
 import React, { useState } from "react";
 
 export default function AuthDialog() {
