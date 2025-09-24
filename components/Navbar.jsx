@@ -15,8 +15,9 @@ export default function Navbar() {
         Lisible
       </Link>
       <div className="space-x-4">
-        <Link href="/dashboard">Dashboard</Link>
-        <Link href="/login">Login</Link>
+        <Link href="/dashboard">Mon compte</Link>
+
+        <Link href="/login">Connexion</Link>
         <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded">
           Déconnexion
         </button>
