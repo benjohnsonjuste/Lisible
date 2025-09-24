@@ -1,18 +1,14 @@
-import "../styles/globals.css";
-import Navbar from "@/components/Navbar";
+import './globals.css';
 
 export const metadata = {
-  title: "Lisible",
-  description: "Soutenir la littérature de demain"
+  title: 'Mon Projet',
+  description: 'Application Next.js avec Tailwind',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
-      <body>
-        <Navbar />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
-  )
+  );
 }
