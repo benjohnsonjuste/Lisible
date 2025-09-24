@@ -1,42 +1,26 @@
 "use client";
+
 import Link from "next/link";
-import { useState, useEffect } from "react";
 import { auth } from "@/firebase/firebaseConfig";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 
 export default function Navbar() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    return onAuthStateChanged(auth, u => setUser(u));
-  }, []);
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   return (
-    <nav className="bg-white shadow">
-      <div className="container flex items-center justify-between py-3">
-        <Link href="/">
-          <div className="flex items-center space-x-3">
-            <img src="/favicon.ico" alt="L" className="w-8 h-8" />
-            <div>
-              <div className="font-bold">Lisible</div>
-              <div className="text-xs text-gray-500">Soutenir la littérature de demain</div>
-            </div>
-          </div>
-        </Link>
-
-        <div className="flex items-center space-x-4">
-          <Link href="/"><a className="text-gray-700">Accueil</a></Link>
-          <Link href="/dashboard"><a className="text-gray-700">Dashboard</a></Link>
-          {user ? (
-            <>
-              <img src={user.photoURL || "/avatar.png"} alt="avatar" className="w-8 h-8 rounded-full" />
-              <button onClick={() => signOut(auth)} className="text-sm text-red-600">Déconnexion</button>
-            </>
-          ) : (
-            <Link href="/"><a className="text-sm text-blue-600">Connexion</a></Link>
-          )}
-        </div>
+    <nav className="flex justify-between items-center bg-gray-800 p-4 text-white">
+      <Link href="/" className="font-bold text-lg">
+        Lisible
+      </Link>
+      <div className="space-x-4">
+        <Link href="/dashboard">Dashboard</Link>
+        <Link href="/login">Login</Link>
+        <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded">
+          Déconnexion
+        </button>
       </div>
     </nav>
   );
-}
+        }
