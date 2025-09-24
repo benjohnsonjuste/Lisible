@@ -1,8 +1,14 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import './globals.css';
 
-/* Styles personnalisés éventuels */
-body {
-  @apply bg-gray-50 text-gray-900;
+export const metadata = {
+  title: 'Lisible',
+  description: 'Application de lecture en streaming',
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="fr">
+      <body className="bg-gray-50 text-gray-900">{children}</body>
+    </html>
+  );
 }
