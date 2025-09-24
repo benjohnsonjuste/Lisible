@@ -1,34 +1,20 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/firebase/firebaseConfig";
-import MetricsCard from "@/components/MetricsCard";
+// app/dashboard/page.js
+import DashboardHeader from "@/components/DashboardHeader";
+import AuthorStats from "@/components/AuthorStats";
+import MonetizationLock from "@/components/MonetizationLock";
 import PublishingForm from "@/components/PublishingForm";
+import AuthorTextsList from "@/components/AuthorTextsList";
 
-export default function Dashboard() {
-  const [user, setUser] = useState(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (!currentUser) {
-        router.push("/login");
-      } else {
-        setUser(currentUser);
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
-
-  if (!user) return <p>Chargement...</p>;
+export default function DashboardPage() {
+  const authorId = "author123"; // À remplacer par l'ID de l'utilisateur connecté
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Tableau de bord</h1>
-      <MetricsCard />
-      <PublishingForm />
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <DashboardHeader />
+      <AuthorStats authorId={authorId} />
+      <MonetizationLock followers={230} /> {/* Simulé : à connecter à Firestore */}
+      <PublishingForm authorId={authorId} />
+      <AuthorTextsList authorId={authorId} />
     </div>
   );
 }
