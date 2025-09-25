@@ -1,20 +1,14 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: 'dist'
+  },
   server: {
     port: 4028,
-    host: "0.0.0.0",
-    strictPort: true,
-  },
-  build: {
-    outDir: "dist",
-    chunkSizeWarningLimit: 2000,
-  },
-  resolve: {
-    alias: {
-      "@": "/src",
-    },
-  },
+    host: '0.0.0.0'
+  }
 });
