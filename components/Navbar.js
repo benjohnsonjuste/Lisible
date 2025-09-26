@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { auth } from "@/lib/firebaseConfig";
 import { signOut } from "firebase/auth";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function Navbar() {
   const router = useRouter();
@@ -29,31 +30,25 @@ export default function Navbar() {
   return (
     <header className="bg-white shadow">
       <div className="container-lg flex items-center justify-between py-4 px-4">
-        {/* Icône Home à la place de "Lisible" */}
-        <Link href="/">
-          <img
-            src="/home.svg"
-            alt="Accueil"
-            className="w-8 h-8 cursor-pointer"
-          />
+        {/* Icône Home */}
+        <Link href="/" legacyBehavior>
+          <a>
+            <Image src="/home.svg" alt="Accueil" width={32} height={32} className="cursor-pointer" />
+          </a>
         </Link>
 
         {/* Menu avec icônes */}
         <nav className="flex items-center gap-6">
-          <Link href="/bibliotheque">
-            <img
-              src="/bibliotheque.svg"
-              alt="Bibliothèque"
-              className="w-8 h-8 cursor-pointer hover:scale-110 transition"
-            />
+          <Link href="/bibliotheque" legacyBehavior>
+            <a>
+              <Image src="/bibliotheque.svg" alt="Bibliothèque" width={32} height={32} className="hover:scale-110 transition" />
+            </a>
           </Link>
 
-          <Link href="/dashboard">
-            <img
-              src="/dashboard.svg"
-              alt="Dashboard"
-              className="w-8 h-8 cursor-pointer hover:scale-110 transition"
-            />
+          <Link href="/dashboard" legacyBehavior>
+            <a>
+              <Image src="/dashboard.svg" alt="Dashboard" width={32} height={32} className="hover:scale-110 transition" />
+            </a>
           </Link>
 
           {user ? (
@@ -62,19 +57,13 @@ export default function Navbar() {
               className="cursor-pointer"
               title="Déconnexion"
             >
-              <img
-                src="/logout.svg"
-                alt="Déconnexion"
-                className="w-8 h-8 hover:scale-110 transition"
-              />
+              <Image src="/logout.svg" alt="Déconnexion" width={32} height={32} className="hover:scale-110 transition" />
             </button>
           ) : (
-            <Link href="/login">
-              <img
-                src="/login.svg"
-                alt="Connexion"
-                className="w-8 h-8 cursor-pointer hover:scale-110 transition"
-              />
+            <Link href="/login" legacyBehavior>
+              <a>
+                <Image src="/login.svg" alt="Connexion" width={32} height={32} className="hover:scale-110 transition" />
+              </a>
             </Link>
           )}
         </nav>
