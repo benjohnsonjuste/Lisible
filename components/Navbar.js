@@ -32,7 +32,7 @@ export default function Navbar() {
         {/* Icône Home à la place de "Lisible" */}
         <Link href="/">
           <img
-            src="/assets/icons/home.svg"
+            src="/home.svg"
             alt="Accueil"
             className="w-8 h-8 cursor-pointer"
           />
@@ -42,7 +42,7 @@ export default function Navbar() {
         <nav className="flex items-center gap-6">
           <Link href="/bibliotheque">
             <img
-              src="/assets/icons/bibliotheque.svg"
+              src="/bibliotheque.svg"
               alt="Bibliothèque"
               className="w-8 h-8 cursor-pointer hover:scale-110 transition"
             />
@@ -50,7 +50,7 @@ export default function Navbar() {
 
           <Link href="/dashboard">
             <img
-              src="/assets/icons/dashboard.svg"
+              src="/dashboard.svg"
               alt="Dashboard"
               className="w-8 h-8 cursor-pointer hover:scale-110 transition"
             />
@@ -63,7 +63,7 @@ export default function Navbar() {
               title="Déconnexion"
             >
               <img
-                src="/assets/icons/logout.svg"
+                src="/logout.svg"
                 alt="Déconnexion"
                 className="w-8 h-8 hover:scale-110 transition"
               />
@@ -71,7 +71,7 @@ export default function Navbar() {
           ) : (
             <Link href="/login">
               <img
-                src="/assets/icons/login.svg"
+                src="/login.svg"
                 alt="Connexion"
                 className="w-8 h-8 cursor-pointer hover:scale-110 transition"
               />
