@@ -31,14 +31,13 @@ export default function Navbar(){
       <div className="container-lg flex items-center justify-between py-4">
         <Link href="/"><a className="text-2xl font-bold">Lisible</a></Link>
         <nav className="flex items-center gap-4">
-          <Link href="/bibliotheque"><a className="text-sm text-gray-700">Bibliothèque</a></Link>
-          <Link href="/dashboard"><a className="text-sm text-gray-700">Dashboard</a></Link>
+          <Link href="/bibliotheque"><a className="text-2x1 font-bold">Bibliothèque</a></Link>
+          <Link href="/dashboard"><a className="text-2x1 font-bold">Dashboard</a></Link>
           {user ? (
-            <button onClick={handleLogout} className="btn btn-primary">Déconnexion</button>
+            <button onClick={handleLogout} className="text-2x1 font-bold">Déconnexion</button>
           ) : (
             <>
-              <Link href="/login"><a className="text-sm">Connexion</a></Link>
-              <Link href="/register"><a className="btn btn-primary">Inscription</a></Link>
+              <Link href="/login"><a className="text-2x1 font-bold">Connexion</a></Link>
             </>
           )}
         </nav>
