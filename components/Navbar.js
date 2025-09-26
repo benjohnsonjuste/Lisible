@@ -1,7 +1,7 @@
 // components/Navbar.js
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { auth } from "@/firebase/firebaseConfig";
+import { auth } from "@/lib/firebaseConfig";
 import { signOut } from "firebase/auth";
 import { useState, useEffect } from "react";
 
