@@ -1,6 +1,6 @@
 // components/AuthorStats.js
 import { useEffect, useState } from "react";
-import { db } from "@/firebase/firebaseConfig";
+import { db } from "@/lib/firebaseConfig";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 
 export default function AuthorStats({ authorId }){
