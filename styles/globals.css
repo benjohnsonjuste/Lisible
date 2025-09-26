@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* global fonts, colours and layout */
+:root{
+  --bg:#f8fafc;
+  --text:#0f172a;
+  --muted:#64748b;
+  --accent:#0ea5a4;
+}
+html,body,#__next{
+  height:100%;
+}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  margin:0;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* header cover image */
+.header-cover{
+  width:100%;
+  height:40vh;
+  max-height:420px;
+  object-fit:cover;
+}
+
+/* container sizes similar to previous */
+.container-lg{ max-width:1200px; margin:0 auto; padding:1rem; }
+.container-md{ max-width:900px; margin:0 auto; padding:1rem; }
+
+/* buttons */
+.btn{
+  display:inline-block;
+  padding:.5rem 1rem;
+  border-radius:.5rem;
+}
+.btn-primary{ background:var(--accent); color:white; }
