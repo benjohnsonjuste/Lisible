@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { auth } from "@/firebase/firebaseConfig";
+import { auth } from "@/lib/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import AuthorStats from "@/components/AuthorStats";
 import MonetizationLock from "@/components/MonetizationLock";
