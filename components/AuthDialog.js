@@ -1,7 +1,7 @@
 // components/AuthDialog.js
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { auth, db } from "@/firebase/firebaseConfig";
+import { auth, db } from "@/lib/firebaseConfig";
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
