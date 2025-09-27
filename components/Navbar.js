@@ -11,12 +11,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const u = auth.currentUser;
-      setUser(u);
-    } catch (e) {
-      console.error(e);
-    }
+    setUser(auth.currentUser);
   }, []);
 
   const handleLogout = async () => {
@@ -28,9 +23,13 @@ export default function Navbar() {
     }
   };
 
-  // Toggle menu latéral
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  // Fonction pour fermer le menu au clic sur un lien
+  const handleMenuClick = () => {
+    setIsMenuOpen(false);
   };
 
   return (
@@ -40,7 +39,6 @@ export default function Navbar() {
           <button onClick={toggleMenu} className="cursor-pointer">
             <Image src="menu-68.svg" alt="Menu" width={32} height={32} />
           </button>
-          {/* Icône Home */}
           <Link href="/" legacyBehavior>
             <a>
               <Image
@@ -48,7 +46,7 @@ export default function Navbar() {
                 alt="Accueil"
                 width={32}
                 height={32}
-               className="cursor-pointer"
+                className="cursor-pointer"
               />
             </a>
           </Link>
@@ -59,7 +57,8 @@ export default function Navbar() {
                   src="library-12-1.svg"
                   alt="Bibliothèque"
                   width={32}
-                  height={32}                className="hover:scale-110 transition"
+                  height={32}
+                  className="hover:scale-110 transition"
                 />
               </a>
             </Link>
@@ -69,20 +68,23 @@ export default function Navbar() {
                   src="dashboard-87.svg"
                   alt="Dashboard"
                   width={32}
-                  height={32}                 className="hover:scale-110 transition"
+                  height={32}
+                  className="hover:scale-110 transition"
                 />
               </a>
             </Link>
             {user ? (
               <button
-                onClick={handleLogout}                className="cursor-pointer"
+                onClick={handleLogout}
+                className="cursor-pointer"
                 title="Déconnexion"
               >
                 <Image
                   src="logout-38.svg"
                   alt="Déconnexion"
                   width={32}
-                  height={32}                  className="hover:scale-110 transition"
+                  height={32}
+                  className="hover:scale-110 transition"
                 />
               </button>
             ) : (
@@ -92,7 +94,8 @@ export default function Navbar() {
                     src="sign-in-139.svg"
                     alt="Connexion"
                     width={32}
-                    height={32}                   className="hover:scale-110 transition"
+                    height={32}
+                    className="hover:scale-110 transition"
                   />
                 </a>
               </Link>
@@ -100,6 +103,7 @@ export default function Navbar() {
           </nav>
         </div>
       </header>
+
       <div
         className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 z-40 ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -117,7 +121,10 @@ export default function Navbar() {
           <ul className="space-y-4">
             <li>
               <Link href="/auteurs" legacyBehavior>
-                <a className="flex items-center gap-3 hover:text-blue-600">
+                <a
+                  onClick={handleMenuClick}
+                  className="flex items-center gap-3 hover:text-blue-600"
+                >
                   <Image src="auteurs.svg" alt="Auteurs" width={24} height={24} />
                   Auteurs
                 </a>
@@ -126,7 +133,10 @@ export default function Navbar() {
 
             <li>
               <Link href="/lisible-club" legacyBehavior>
-                <a className="flex items-center gap-3 hover:text-blue-600">
+                <a
+                  onClick={handleMenuClick}
+                  className="flex items-center gap-3 hover:text-blue-600"
+                >
                   <Image src="communaute.svg" alt="Lisible Club" width={24} height={24} />
                   Lisible Club
                 </a>
@@ -135,7 +145,10 @@ export default function Navbar() {
 
             <li>
               <Link href="/evenements" legacyBehavior>
-                <a className="flex items-center gap-3 hover:text-blue-600">
+                <a
+                  onClick={handleMenuClick}
+                  className="flex items-center gap-3 hover:text-blue-600"
+                >
                   <Image src="evenements.svg" alt="Événements" width={24} height={24} />
                   Événements
                 </a>
@@ -144,7 +157,10 @@ export default function Navbar() {
 
             <li>
               <Link href="/terms" legacyBehavior>
-                <a className="flex items-center gap-3 hover:text-blue-600">
+                <a
+                  onClick={handleMenuClick}
+                  className="flex items-center gap-3 hover:text-blue-600"
+                >
                   <Image src="product-terms.svg" alt="Conditions d'utilisation" width={24} height={24} />
                   Conditions d'utilisation
                 </a>
@@ -153,7 +169,10 @@ export default function Navbar() {
 
             <li>
               <Link href="/contact" legacyBehavior>
-                <a className="flex items-center gap-3 hover:text-blue-600">
+                <a
+                  onClick={handleMenuClick}
+                  className="flex items-center gap-3 hover:text-blue-600"
+                >
                   <Image src="message.svg" alt="Contact" width={24} height={24} />
                   Contact
                 </a>
@@ -162,6 +181,7 @@ export default function Navbar() {
           </ul>
         </div>
       </div>
+
       {isMenuOpen && (
         <div
           onClick={toggleMenu}
