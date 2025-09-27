@@ -7,16 +7,18 @@ import AuthorStats from "@/components/AuthorStats";
 import MonetizationLock from "@/components/MonetizationLock";
 import PublishingForm from "@/components/PublishingForm";
 import AuthorTextsList from "@/components/AuthorTextsList";
-import MonetisationRealTime from
-"@/components/MonetisationRealTime";
+import MonetisationRealTime from "@/components/MonetisationRealTime";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // État pour le chargement
+  const [loading, setLoading] = useState(true);
+  const [followers, setFollowers] = useState(0); // Stocker le nombre d'abonnés
   const router = useRouter();
 
+  // Vérification de l'état d'authentification
   useEffect(() => {
-    // Écoute les changements d'état de l'authentification
+    if (!router.isReady) return;
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         router.push("/login");
@@ -29,26 +31,28 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  // Affichage pendant le chargement initial
+  // Affichage pendant le chargement
   if (loading) {
     return <p className="text-center mt-8 text-gray-500">Chargement...</p>;
   }
 
-  // Si l'utilisateur n'est pas authentifié (redirigé)
-  if (!user) {
-    return null; // Empêche le rendu de la page
-  }
+  // Si l'utilisateur n'est pas authentifié
+  if (!user) return null;
 
   return (
     <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Tableau de bord</h1>
 
-      {/* Statistiques de l'auteur */}
-      <AuthorStats authorId={user.uid} />
+      {/* Statistiques de l'auteur - récupère le nombre de followers */}
+      <AuthorStats authorId={user.uid} onFollowersUpdate={setFollowers} />
 
-      {/* Monétisation (par défaut followers à 0, peut être relié à AuthorStats) */}
+      {/* Monétisation */}
       <div className="my-6">
-        <MonetizationLock followers={0} />
+        {followers >= 250 ? (
+          <MonetisationRealTime authorId={user.uid} />
+        ) : (
+          <MonetizationLock followers={followers} />
+        )}
       </div>
 
       {/* Formulaire de publication */}
