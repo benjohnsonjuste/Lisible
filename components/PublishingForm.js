@@ -1,49 +1,131 @@
-// components/PublishingForm.js
 import { useState } from "react";
 import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-export default function PublishingForm({ authorId }){
-  const [title,setTitle]=useState("");
-  const [content,setContent]=useState("");
-  const [image,setImage]=useState(null);
-  const [loading,setLoading]=useState(false);
+export default function PublishingForm({ authorId }) {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [image, setImage] = useState(null);
+  const [genre, setGenre] = useState(""); // Nouveau : genre obligatoire
+  const [character, setCharacter] = useState(""); // Nouveau : caractère facultatif
+  const [loading, setLoading] = useState(false);
 
-  const publish = async ()=>{
+  const publish = async () => {
+    if (!title.trim() || !content.trim()) {
+      alert("Le titre et le contenu sont obligatoires.");
+      return;
+    }
+
+    if (!genre) {
+      alert("Veuillez choisir un genre pour votre texte.");
+      return;
+    }
+
     setLoading(true);
-    try{
+    try {
       let imageUrl = "/no_image.png";
-      if(image){
+      if (image) {
         const storageRef = ref(storage, `texts/${authorId}/${Date.now()}_${image.name}`);
         await uploadBytes(storageRef, image);
         imageUrl = await getDownloadURL(storageRef);
       }
+
+      // Enregistrement dans Firestore avec genre et caractère
       await addDoc(collection(db, "texts"), {
         authorId,
         title,
         content,
+        genre,        // sauvegarde du genre
+        character,    // sauvegarde du caractère
         imageUrl,
         views: 0,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
-      setTitle(""); setContent(""); setImage(null);
-      alert("Texte publié");
-    }catch(e){
+
+      // Réinitialiser le formulaire
+      setTitle("");
+      setContent("");
+      setImage(null);
+      setGenre("");
+      setCharacter("");
+
+      alert("Texte publié avec succès !");
+    } catch (e) {
       console.error(e);
-      alert("Erreur publication");
-    }finally{
+      alert("Erreur lors de la publication. Veuillez réessayer.");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded shadow mb-6">
-      <h3 className="text-lg font-bold mb-3">Publier un nouveau texte</h3>
-      <input value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="Titre" className="w-full border p-2 rounded mb-2"/>
-      <textarea value={content} onChange={(e)=>setContent(e.target.value)} placeholder="Contenu" className="w-full border p-2 rounded mb-2 h-40"/>
-      <input type="file" accept="image/*" onChange={(e)=>setImage(e.target.files[0])} className="mb-3"/>
-      <button onClick={publish} disabled={loading} className="btn btn-primary">{loading ? "Publication..." : "Publier"}</button>
+    <div className="bg-white p-6 rounded shadow mb-6 max-w-xl mx-auto">
+      <h3 className="text-lg font-bold mb-4">Publier un nouveau texte</h3>
+
+      {/* Champ Titre */}
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Titre"
+        className="w-full border p-2 rounded mb-3"
+      />
+
+      {/* Champ Contenu */}
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Contenu"
+        className="w-full border p-2 rounded mb-3 h-40"
+      />
+
+      {/* Sélection du genre (obligatoire) */}
+      <label className="block mb-1 font-medium">Genre <span className="text-red-500">*</span></label>
+      <select
+        value={genre}
+        onChange={(e) => setGenre(e.target.value)}
+        className="w-full border p-2 rounded mb-3"
+      >
+        <option value="">-- Choisir un genre --</option>
+        <option value="poesie">Poésie</option>
+        <option value="nouvelle">Nouvelle</option>
+        <option value="conte">Conte</option>
+        <option value="roman">Roman</option>
+      </select>
+
+      {/* Sélection du caractère (facultatif) */}
+      <label className="block mb-1 font-medium">Caractère (facultatif)</label>
+      <select
+        value={character}
+        onChange={(e) => setCharacter(e.target.value)}
+        className="w-full border p-2 rounded mb-3"
+      >
+        <option value="">-- Aucun --</option>
+        <option value="engage">Engagé</option>
+        <option value="couleur_locale">Couleur locale</option>
+        <option value="romanesque">Romanesque</option>
+        <option value="erotique">Érotique</option>
+        <option value="satyrique">Satyrique</option>
+        <option value="lyrique">Lyrique</option>
+      </select>
+
+      {/* Champ Image */}
+      <label className="block mb-1 font-medium">Image (facultatif)</label>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImage(e.target.files[0])}
+        className="mb-4"
+      />
+
+      {/* Bouton de publication */}
+      <button
+        onClick={publish}
+        disabled={loading}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:bg-gray-400"
+      >
+        {loading ? "Publication en cours..." : "Publier"}
+      </button>
     </div>
   );
 }
