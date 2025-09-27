@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebaseConfig";
 import { doc, collection, onSnapshot, query, where, updateDoc } from "firebase/firestore";
-import MonetizationRealtime from "@/components/MonetizationRealtime"; // ton composant monétisation
+import MonetizationRealtime from "@/components/MonetisationRealtime"; // ton composant monétisation
 import Link from "next/link";
 
 export default function Dashboard() {
