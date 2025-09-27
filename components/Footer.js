@@ -40,21 +40,7 @@ export default function Footer() {
             />
           </Link>
 
-          {/* Lien Instagram (à remplacer par le vrai quand tu l'auras) */}
-          <Link
-            href="https://www.instagram.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Instagram de La Belle Littéraire"
-          >
-            <Image
-              src="/instagram.png"
-              alt="Instagram"
-              width={30}
-              height={30}
-              className="hover:opacity-80 transition"
-            />
-          </Link>
+          
         </div>
       </div>
     </footer>
