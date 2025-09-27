@@ -1,138 +1,86 @@
 import { useState } from "react";
-import { db, storage } from "@/lib/firebaseConfig";
+import { db } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function PublishingForm({ authorId }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [image, setImage] = useState(null);
-  const [genre, setGenre] = useState("");
-  const [character, setCharacter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const publish = async () => {
-    console.log("Début de la publication...");
-    console.log("AuthorId:", authorId);
-
-    if (!authorId) {
-      alert("Utilisateur non identifié. Veuillez vous reconnecter.");
-      return;
-    }
+  const handlePublish = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
     if (!title.trim() || !content.trim()) {
-      alert("Le titre et le contenu sont obligatoires.");
+      setError("Le titre et le contenu sont obligatoires.");
+      setLoading(false);
       return;
     }
-
-    if (!genre) {
-      alert("Veuillez choisir un genre pour votre texte.");
-      return;
-    }
-
-    setLoading(true);
 
     try {
-      let imageUrl = "/no_image.png";
-
-      if (image) {
-        console.log("Upload de l'image...");
-        const safeFileName = encodeURIComponent(image.name);
-        const imageRef = ref(storage, `texts/${authorId}/${Date.now()}_${safeFileName}`);
-        await uploadBytes(imageRef, image);
-        imageUrl = await getDownloadURL(imageRef);
-        console.log("Image uploadée :", imageUrl);
-      }
-
-      console.log("Ajout du texte dans Firestore...");
-
-      await addDoc(collection(db, "texts"), {
-        authorId,
+      // 1. Données communes pour les deux collections
+      const newText = {
         title: title.trim(),
         content: content.trim(),
-        genre,
-        character: character.trim(),
-        imageUrl,
-        views: 0,
-        likes: 0,
-        likedBy: [],
+        authorId,
         createdAt: serverTimestamp(),
-      });
+      };
 
-      console.log("Texte ajouté avec succès !");
-      alert("Texte publié avec succès !");
+      // 2. Publier dans la collection publique "bibliotheque"
+      const publicRef = collection(db, "bibliotheque");
+      await addDoc(publicRef, newText);
 
-      // Réinitialisation du formulaire
+      // 3. Publier dans la collection privée de l'auteur "auteurs/{authorId}/textes"
+      const authorRef = collection(db, "auteurs", authorId, "textes");
+      await addDoc(authorRef, newText);
+
+      // 4. Réinitialiser le formulaire
       setTitle("");
       setContent("");
-      setImage(null);
-      setGenre("");
-      setCharacter("");
-    } catch (e) {
-      console.error("Erreur lors de la publication :", e);
-      alert("Erreur lors de la publication. Consulte la console.");
+      alert("Texte publié avec succès !");
+    } catch (err) {
+      console.error("Erreur lors de la publication :", err);
+      setError("Impossible de publier le texte. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded shadow mb-6 max-w-xl mx-auto">
-      <h3 className="text-lg font-bold mb-4">Publier un nouveau texte</h3>
+    <form
+      onSubmit={handlePublish}
+      className="bg-white p-4 rounded-2xl shadow-md space-y-4"
+    >
+      <h2 className="text-xl font-semibold">Publier un texte</h2>
+
+      {error && <p className="text-red-500">{error}</p>}
+
       <input
+        type="text"
+        placeholder="Titre du texte"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Titre"
-        className="w-full border p-2 rounded mb-3"
+        className="w-full p-2 border rounded-md"
       />
+
       <textarea
+        placeholder="Écrivez votre texte ici..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Contenu"
-        className="w-full border p-2 rounded mb-3 h-40"
+        className="w-full p-2 border rounded-md h-40"
       />
-      <label className="block mb-1 font-medium">
-        Genre <span className="text-red-500">*</span>
-      </label>
-      <select
-        value={genre}
-        onChange={(e) => setGenre(e.target.value)}
-        className="w-full border p-2 rounded mb-3"
-      >
-        <option value="">-- Choisir un genre --</option>
-        <option value="poesie">Poésie</option>
-        <option value="nouvelle">Nouvelle</option>
-        <option value="conte">Conte</option>
-        <option value="roman">Roman</option>
-      </select>
-      <label className="block mb-1 font-medium">Caractère (facultatif)</label>
-      <select
-        value={character}
-        onChange={(e) => setCharacter(e.target.value)}
-        className="w-full border p-2 rounded mb-3"
-      >
-        <option value="">-- Aucun --</option>
-        <option value="engage">Engagé</option>
-        <option value="couleur_locale">Couleur locale</option>
-        <option value="romanesque">Romanesque</option>
-        <option value="erotique">Érotique</option>
-        <option value="satyrique">Satyrique</option>
-        <option value="lyrique">Lyrique</option>
-      </select>
-      <label className="block mb-1 font-medium">Image (facultatif)</label>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImage(e.target.files[0])}
-        className="mb-4"
-      />
+
       <button
-        onClick={publish}
+        type="submit"
         disabled={loading}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:bg-gray-400"
+        className={`w-full p-2 rounded-md text-white ${
+          loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+        }`}
       >
         {loading ? "Publication en cours..." : "Publier"}
       </button>
-    </div>
+    </form>
   );
 }
