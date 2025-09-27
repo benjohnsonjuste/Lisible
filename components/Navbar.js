@@ -125,7 +125,7 @@ export default function Navbar() {
             </li>
 
             <li>
-              <Link href="/club" legacyBehavior>
+              <Link href="/lisible-club" legacyBehavior>
                 <a className="flex items-center gap-3 hover:text-blue-600">
                   <Image src="communaute.svg" alt="Lisible Club" width={24} height={24} />
                   Lisible Club
