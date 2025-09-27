@@ -32,7 +32,7 @@ export default function Footer() {
             aria-label="Facebook de La Belle Littéraire"
           >
             <Image
-              src="/facebook.png"
+              src="/facebook-130.png"
               alt="Facebook"
               width={30}
               height={30}
