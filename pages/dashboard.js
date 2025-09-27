@@ -8,6 +8,7 @@ import MonetizationLock from "@/components/MonetizationLock";
 import PublishingForm from "@/components/PublishingForm";
 import AuthorTextsList from "@/components/AuthorTextsList";
 import MonetisationRealTime from "@/components/MonetisationRealTime";
+import AuthorProfileForm from "@/components/AuthorProfileForm"
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
