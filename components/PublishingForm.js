@@ -1,4 +1,3 @@
-// components/PublishingForm.js
 import { useState } from "react";
 import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -13,6 +12,9 @@ export default function PublishingForm({ authorId }) {
   const [loading, setLoading] = useState(false);
 
   const publish = async () => {
+    console.log("Début de la publication...");
+    console.log("AuthorId:", authorId);
+
     if (!authorId) {
       alert("Utilisateur non identifié. Veuillez vous reconnecter.");
       return;
@@ -33,20 +35,23 @@ export default function PublishingForm({ authorId }) {
     try {
       let imageUrl = "/no_image.png";
 
-      // Upload de l'image si elle existe
       if (image) {
-        const imageRef = ref(storage, `texts/${authorId}/${Date.now()}_${image.name}`);
+        console.log("Upload de l'image...");
+        const safeFileName = encodeURIComponent(image.name);
+        const imageRef = ref(storage, `texts/${authorId}/${Date.now()}_${safeFileName}`);
         await uploadBytes(imageRef, image);
         imageUrl = await getDownloadURL(imageRef);
+        console.log("Image uploadée :", imageUrl);
       }
 
-      // Envoi du texte à Firestore
+      console.log("Ajout du texte dans Firestore...");
+
       await addDoc(collection(db, "texts"), {
         authorId,
         title: title.trim(),
         content: content.trim(),
         genre,
-        character,
+        character: character.trim(),
         imageUrl,
         views: 0,
         likes: 0,
@@ -54,16 +59,18 @@ export default function PublishingForm({ authorId }) {
         createdAt: serverTimestamp(),
       });
 
-      // Réinitialiser le formulaire
+      console.log("Texte ajouté avec succès !");
+      alert("Texte publié avec succès !");
+
+      // Réinitialisation du formulaire
       setTitle("");
       setContent("");
       setImage(null);
       setGenre("");
       setCharacter("");
-      alert("Texte publié avec succès !");
     } catch (e) {
       console.error("Erreur lors de la publication :", e);
-      alert("Erreur lors de la publication. Veuillez réessayer.");
+      alert("Erreur lors de la publication. Consulte la console.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +91,9 @@ export default function PublishingForm({ authorId }) {
         placeholder="Contenu"
         className="w-full border p-2 rounded mb-3 h-40"
       />
-      <label className="block mb-1 font-medium">Genre <span className="text-red-500">*</span></label>
+      <label className="block mb-1 font-medium">
+        Genre <span className="text-red-500">*</span>
+      </label>
       <select
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
