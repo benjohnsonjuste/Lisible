@@ -1,24 +1,43 @@
 import { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebaseConfig";
-import { collection, query, where, onSnapshot, updateDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  updateDoc,
+  doc as firestoreDoc,
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function MessagesAuteur() {
-  const user = auth.currentUser;
+  const [user, setUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
+  // Vérifie l'état de l'utilisateur connecté
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Écoute les messages de l'auteur connecté
   useEffect(() => {
     if (!user) return;
 
-    // Requête pour écouter les messages destinés à l'auteur connecté
     const q = query(collection(db, "messages"), where("authorId", "==", user.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map((messageDoc) => ({
+        id: messageDoc.id,
+        ...messageDoc.data(),
+      }));
       setMessages(data);
 
-      // Calcul du nombre de messages non lus
-      const unread = data.filter(msg => msg.read === false).length;
+      // Compte les messages non lus
+      const unread = data.filter((msg) => msg.read === false).length;
       setUnreadCount(unread);
     });
 
@@ -28,7 +47,7 @@ export default function MessagesAuteur() {
   // Marquer un message comme lu
   const markAsRead = async (msgId) => {
     try {
-      const msgRef = doc(db, "messages", msgId);
+      const msgRef = firestoreDoc(db, "messages", msgId);
       await updateDoc(msgRef, { read: true });
     } catch (e) {
       console.error("Erreur lors du marquage comme lu :", e);
@@ -47,7 +66,7 @@ export default function MessagesAuteur() {
         )}
       </div>
 
-      {/* Menu des messages */}
+      {/* Menu déroulant des messages */}
       {open && (
         <div className="absolute right-0 mt-3 w-72 bg-white border shadow-lg rounded-lg z-50">
           <h3 className="p-3 font-bold border-b">Messages</h3>
@@ -55,18 +74,25 @@ export default function MessagesAuteur() {
             {messages.length === 0 ? (
               <p className="p-3 text-gray-500 text-sm">Aucun message.</p>
             ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`p-3 border-b cursor-pointer ${msg.read ? "bg-gray-50" : "bg-blue-50"}`}
-                  onClick={() => markAsRead(msg.id)}
-                >
-                  <p className="text-sm">{msg.content}</p>
-                  <span className="text-xs text-gray-500">
-                    {new Date(msg.createdAt.seconds * 1000).toLocaleString()}
-                  </span>
-                </div>
-              ))
+              messages.map((msg) => {
+                const date =
+                  msg.createdAt?.seconds
+                    ? new Date(msg.createdAt.seconds * 1000).toLocaleString()
+                    : "Date inconnue";
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`p-3 border-b cursor-pointer ${
+                      msg.read ? "bg-gray-50" : "bg-blue-50"
+                    }`}
+                    onClick={() => markAsRead(msg.id)}
+                  >
+                    <p className="text-sm">{msg.content}</p>
+                    <span className="text-xs text-gray-500">{date}</span>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
