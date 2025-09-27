@@ -8,12 +8,12 @@ import MonetizationLock from "@/components/MonetizationLock";
 import PublishingForm from "@/components/PublishingForm";
 import AuthorTextsList from "@/components/AuthorTextsList";
 import MonetisationRealTime from "@/components/MonetisationRealTime";
-import AuthorProfileForm from "@/components/AuthorProfileForm"
+import AuthorProfileForm from "@/components/AuthorProfileForm";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [followers, setFollowers] = useState(0); // Stocker le nombre d'abonnés
+  const [followers, setFollowers] = useState(0);
   const router = useRouter();
 
   // Vérification de l'état d'authentification
@@ -32,37 +32,41 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  // Affichage pendant le chargement
-  if (loading) {
-    return <p className="text-center mt-8 text-gray-500">Chargement...</p>;
-  }
-
-  // Si l'utilisateur n'est pas authentifié
+  if (loading) return <p className="text-center mt-8 text-gray-500">Chargement...</p>;
   if (!user) return null;
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
+    <div className="max-w-4xl mx-auto p-4 space-y-8">
       <h1 className="text-2xl font-bold mb-6">Tableau de bord</h1>
 
-      {/* Statistiques de l'auteur - récupère le nombre de followers */}
-      <AuthorStats authorId={user.uid} onFollowersUpdate={setFollowers} />
+      {/* Section 1 : Profil auteur */}
+      <section className="bg-gray-50 p-4 rounded-2xl shadow">
+        <AuthorProfileForm authorId={user.uid} />
+      </section>
 
-      {/* Monétisation */}
-      <div className="my-6">
+      {/* Section 2 : Statistiques */}
+      <section className="bg-gray-50 p-4 rounded-2xl shadow">
+        <AuthorStats authorId={user.uid} onFollowersUpdate={setFollowers} />
+      </section>
+
+      {/* Section 3 : Monétisation */}
+      <section className="bg-gray-50 p-4 rounded-2xl shadow">
         {followers >= 250 ? (
           <MonetisationRealTime authorId={user.uid} />
         ) : (
           <MonetizationLock followers={followers} />
         )}
-      </div>
+      </section>
 
-      {/* Formulaire de publication */}
-      <PublishingForm authorId={user.uid} />
+      {/* Section 4 : Formulaire de publication */}
+      <section className="bg-gray-50 p-4 rounded-2xl shadow">
+        <PublishingForm authorId={user.uid} />
+      </section>
 
-      {/* Liste des textes publiés */}
-      <div className="mt-8">
+      {/* Section 5 : Liste des textes */}
+      <section className="bg-gray-50 p-4 rounded-2xl shadow">
         <AuthorTextsList authorId={user.uid} />
-      </div>
+      </section>
     </div>
   );
 }
