@@ -1,5 +1,4 @@
-import EventRegistrationForm from "@/components/EventRegistrationForm";
-import TextSubmissionForm from "@/components/TextSubmissionForm";
+import FoireInscriptionForm from "@/components/FoireInscriptionForm";
 
 export default function FoireVirtuelle() {
   const eventId = "foire-virtuelle";
