@@ -143,21 +143,14 @@ export default function Navbar() {
             </li>
 
             <li>
-              <Link href="/conditions" legacyBehavior>
+              <Link href="/terms" legacyBehavior>
                 <a className="flex items-center gap-3 hover:text-blue-600">
                   <Image src="product-terms.svg" alt="Conditions d'utilisation" width={24} height={24} />
                   Conditions d'utilisation
                 </a>
               </Link>
             </li>
-            <li>
-              <Link href="/apropos" legacyBehavior>
-                <a className="flex items-center gap-3 hover:text-blue-600">
-                  <Image src="about-us-20.svg" alt="À propos de nous" width={24} height={24} />
-                  À propos de nous
-                </a>
-              </Link>
-            </li>
+
             <li>
               <Link href="/contact" legacyBehavior>
                 <a className="flex items-center gap-3 hover:text-blue-600">
