@@ -7,11 +7,9 @@ export default function Home() {
       <img
         src="/logo.png"
         alt="Couverture Lisible"
-        className="w-full max-h-96 object-cover rounded-lg mb-8"
+        className="w-full max-h-70 object-cover rounded-lg mb-8"
       />
-
-      {/* Titre et slogan */}
-      <h1 className="text-5xl font-bold mb-4">Lisible</h1>
+      <h1 className="text-5xl font-bold mb-4">Bienvenue sur Lisible</h1>
       <p className="text-lg text-gray-700 mb-8">
         Plateforme de lecture en streaming produite par le label littéraire <strong>La Belle Littéraire</strong>.
       </p>
