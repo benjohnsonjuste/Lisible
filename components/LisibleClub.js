@@ -105,7 +105,7 @@ export default function LisibleClub() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Lisible Club</h1>
+      <h1 className="text-3xl font-bold mb-4">Nouveau post</h1>
 
       {/* Publier sur le mur */}
       <div className="bg-white p-4 rounded shadow mb-6">
