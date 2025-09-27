@@ -44,7 +44,7 @@ export default function Navbar() {
           <Link href="/" legacyBehavior>
             <a>
               <Image
-                src="homepage-65.svg"
+                src="homepage-53.svg"
                 alt="Accueil"
                 width={32}
                 height={32}
