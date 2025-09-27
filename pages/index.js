@@ -5,11 +5,11 @@ export default function Home() {
     <div className="max-w-4xl mx-auto text-center px-4 py-8 space-y-8">
       {/* Image de couverture */}
       <img
-        src="/logo.png"
+        src="/favicon.ico"
         alt="Couverture Lisible"
         className="w-full max-h-70 object-cover rounded-lg mb-8"
       />
-      <h1 className="text-5xl font-bold mb-4">Bienvenue sur Lisible</h1>
+      <h1 className="text-2xl font-bold mb-4">Bienvenue sur Lisible</h1>
       <p className="text-lg text-gray-700 mb-8">
         Plateforme de lecture en streaming produite par le label littéraire <strong>La Belle Littéraire</strong>.
       </p>
