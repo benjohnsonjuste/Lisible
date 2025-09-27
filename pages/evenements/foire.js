@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
-import LivreCard from "@/components/events/LivreCard";
+import LivreCard from "@/components/LivreCard";
 
 export default function Foire() {
   const [livres, setLivres] = useState([]);
