@@ -39,7 +39,7 @@ export default function MessagesAuteur() {
     <div className="relative">
       {/* Cloche de notification */}
       <div className="cursor-pointer relative" onClick={() => setOpen(!open)}>
-        <img src="/bell.svg" alt="Notifications" className="w-8 h-8" />
+        <img src="/notification.svg" alt="Notifications" className="w-8 h-8" />
         {unreadCount > 0 && (
           <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
             {unreadCount}
