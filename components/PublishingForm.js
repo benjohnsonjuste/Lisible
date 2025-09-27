@@ -13,28 +13,38 @@ export default function PublishingForm({ authorId }) {
   const [loading, setLoading] = useState(false);
 
   const publish = async () => {
+    if (!authorId) {
+      alert("Utilisateur non identifié. Veuillez vous reconnecter.");
+      return;
+    }
+
     if (!title.trim() || !content.trim()) {
       alert("Le titre et le contenu sont obligatoires.");
       return;
     }
+
     if (!genre) {
       alert("Veuillez choisir un genre pour votre texte.");
       return;
     }
 
     setLoading(true);
+
     try {
       let imageUrl = "/no_image.png";
+
+      // Upload de l'image si elle existe
       if (image) {
-        const storageRef = ref(storage, `texts/${authorId}/${Date.now()}_${image.name}`);
-        await uploadBytes(storageRef, image);
-        imageUrl = await getDownloadURL(storageRef);
+        const imageRef = ref(storage, `texts/${authorId}/${Date.now()}_${image.name}`);
+        await uploadBytes(imageRef, image);
+        imageUrl = await getDownloadURL(imageRef);
       }
 
+      // Envoi du texte à Firestore
       await addDoc(collection(db, "texts"), {
         authorId,
-        title,
-        content,
+        title: title.trim(),
+        content: content.trim(),
         genre,
         character,
         imageUrl,
@@ -44,6 +54,7 @@ export default function PublishingForm({ authorId }) {
         createdAt: serverTimestamp(),
       });
 
+      // Réinitialiser le formulaire
       setTitle("");
       setContent("");
       setImage(null);
@@ -51,7 +62,7 @@ export default function PublishingForm({ authorId }) {
       setCharacter("");
       alert("Texte publié avec succès !");
     } catch (e) {
-      console.error(e);
+      console.error("Erreur lors de la publication :", e);
       alert("Erreur lors de la publication. Veuillez réessayer.");
     } finally {
       setLoading(false);
