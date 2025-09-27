@@ -1,142 +1,118 @@
-import { useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebaseConfig";
-import { collection, doc, query, where, getDocs, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import Link from "next/link";
+// components/PublishingForm.js
+import { useState } from "react";
+import { db, storage } from "@/lib/firebaseConfig";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-export default function AuthorPage({ authorId }) {
-  const [author, setAuthor] = useState(null);
-  const [texts, setTexts] = useState([]);
-  const [subscribed, setSubscribed] = useState(false);
-  const user = auth.currentUser;
+export default function PublishingForm({ authorId }) {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [image, setImage] = useState(null);
+  const [genre, setGenre] = useState("");
+  const [character, setCharacter] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Charger les infos de l'auteur
-  useEffect(() => {
-    const fetchAuthor = async () => {
-      const docRef = doc(db, "authors", authorId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setAuthor({ id: docSnap.id, ...docSnap.data() });
-        // Vérifier si l'utilisateur est déjà abonné
-        if (user && docSnap.data().subscribers?.includes(user.uid)) {
-          setSubscribed(true);
-        }
-      }
-    };
-    fetchAuthor();
-  }, [authorId, user]);
-
-  // Charger les textes de l'auteur
-  useEffect(() => {
-    const fetchTexts = async () => {
-      const q = query(collection(db, "texts"), where("authorId", "==", authorId));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setTexts(data);
-    };
-    fetchTexts();
-  }, [authorId]);
-
-  // S'abonner / Se désabonner
-  const toggleSubscribe = async () => {
-    if (!user) {
-      alert("Veuillez vous connecter pour vous abonner.");
+  const publish = async () => {
+    if (!title.trim() || !content.trim()) {
+      alert("Le titre et le contenu sont obligatoires.");
       return;
     }
-    const authorRef = doc(db, "authors", authorId);
+    if (!genre) {
+      alert("Veuillez choisir un genre pour votre texte.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      if (subscribed) {
-        // Se désabonner
-        await updateDoc(authorRef, { subscribers: arrayRemove(user.uid) });
-        setSubscribed(false);
-      } else {
-        // S'abonner
-        await updateDoc(authorRef, { subscribers: arrayUnion(user.uid) });
-        setSubscribed(true);
+      let imageUrl = "/no_image.png";
+      if (image) {
+        const storageRef = ref(storage, `texts/${authorId}/${Date.now()}_${image.name}`);
+        await uploadBytes(storageRef, image);
+        imageUrl = await getDownloadURL(storageRef);
       }
+
+      await addDoc(collection(db, "texts"), {
+        authorId,
+        title,
+        content,
+        genre,
+        character,
+        imageUrl,
+        views: 0,
+        likes: 0,
+        likedBy: [],
+        createdAt: serverTimestamp(),
+      });
+
+      setTitle("");
+      setContent("");
+      setImage(null);
+      setGenre("");
+      setCharacter("");
+      alert("Texte publié avec succès !");
     } catch (e) {
       console.error(e);
-      alert("Erreur lors de la mise à jour de l'abonnement.");
+      alert("Erreur lors de la publication. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (!author) return <p>Chargement de l'auteur...</p>;
-
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      {/* Infos de l'auteur */}
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8 bg-white p-6 rounded shadow">
-        <img
-          src={author.photoURL || "/logo.png"}
-          alt={author.fullName || "Auteur"}
-          className="w-32 h-32 rounded-full object-cover"
-        />
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{author.fullName}</h1>
-          {author.bio && <p className="mt-2 text-gray-600">{author.bio}</p>}
-          <div className="mt-4 flex gap-4 items-center">
-            <span>Abonnés : <strong>{author.subscribers?.length || 0}</strong></span>
-            <button
-              onClick={toggleSubscribe}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-            >
-              <img
-                src={
-                  subscribed
-                    ? "/user-follow-line-1.svg"
-                    : "/follow-109.svg"
-                }
-                alt={subscribed ? "Abonné(e)" : "S'abonner"}
-                className="w-5 h-5"
-              />
-              <span>{subscribed ? "Abonné(e)" : "S'abonner"}</span>
-            </button>
-            {author.email && (
-              <a
-                href={`mailto:${author.email}`}
-                className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded"
-              >
-                <img src="/message.svg" alt="Email" className="w-5 h-5" />
-                Envoyer un e-mail
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Textes de l'auteur */}
-      <h2 className="text-2xl font-bold mb-4">Textes publiés</h2>
-      {texts.length === 0 ? (
-        <p>Aucun texte publié par cet auteur.</p>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          {texts.map(t => (
-            <div key={t.id} className="bg-white p-4 rounded shadow hover:shadow-lg transition">
-              <div className="mb-3">
-                <img
-                  src={t.imageUrl || "/no_image.png"}
-                  alt={t.title}
-                  className="w-full h-40 object-cover rounded"
-                />
-              </div>
-              <h3 className="text-xl font-semibold">{t.title}</h3>
-              <p className="text-sm text-gray-500">{t.genre} {t.character && `- ${t.character}`}</p>
-              <div className="mt-2 text-gray-600 text-sm">
-                J'aime : <strong>{t.likes || 0}</strong>
-              </div>
-              <Link href={`/bibliotheque/${t.id}`}>
-                <a className="text-blue-600 mt-3 inline-block hover:underline">Lire plus</a>
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="bg-white p-6 rounded shadow mb-6 max-w-xl mx-auto">
+      <h3 className="text-lg font-bold mb-4">Publier un nouveau texte</h3>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Titre"
+        className="w-full border p-2 rounded mb-3"
+      />
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Contenu"
+        className="w-full border p-2 rounded mb-3 h-40"
+      />
+      <label className="block mb-1 font-medium">Genre <span className="text-red-500">*</span></label>
+      <select
+        value={genre}
+        onChange={(e) => setGenre(e.target.value)}
+        className="w-full border p-2 rounded mb-3"
+      >
+        <option value="">-- Choisir un genre --</option>
+        <option value="poesie">Poésie</option>
+        <option value="nouvelle">Nouvelle</option>
+        <option value="conte">Conte</option>
+        <option value="roman">Roman</option>
+      </select>
+      <label className="block mb-1 font-medium">Caractère (facultatif)</label>
+      <select
+        value={character}
+        onChange={(e) => setCharacter(e.target.value)}
+        className="w-full border p-2 rounded mb-3"
+      >
+        <option value="">-- Aucun --</option>
+        <option value="engage">Engagé</option>
+        <option value="couleur_locale">Couleur locale</option>
+        <option value="romanesque">Romanesque</option>
+        <option value="erotique">Érotique</option>
+        <option value="satyrique">Satyrique</option>
+        <option value="lyrique">Lyrique</option>
+      </select>
+      <label className="block mb-1 font-medium">Image (facultatif)</label>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImage(e.target.files[0])}
+        className="mb-4"
+      />
+      <button
+        onClick={publish}
+        disabled={loading}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:bg-gray-400"
+      >
+        {loading ? "Publication en cours..." : "Publier"}
+      </button>
     </div>
   );
-}
-
-// Récupérer l'id de l'auteur depuis l'URL
-export async function getServerSideProps(context) {
-  return {
-    props: { authorId: context.params.id },
-  };
 }
