@@ -11,6 +11,7 @@ export default function InstallPrompt() {
       setDeferredPrompt(e);
       setShowBanner(true);
 
+      // ⏳ Masquer automatiquement après 10 secondes
       timerRef.current = setTimeout(() => setShowBanner(false), 10000);
     };
 
@@ -38,28 +39,34 @@ export default function InstallPrompt() {
     setShowBanner(false);
   };
 
-  const handleClose = () => {
-    setShowBanner(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-  };
-
   if (!showBanner) return null;
 
   return (
-    <div className="fixed top-0 left-0 w-full bg-blue-600 text-white shadow-lg p-4 z-50 flex justify-between items-center animate-slideDown">
-      <div className="font-semibold text-lg">📱 Installer Lisible</div>
-      <div className="flex gap-2">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-md z-50">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-2xl p-4 flex items-center justify-between animate-slideDown border border-blue-400">
+        {/* Icône et texte */}
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-full p-2 shadow-lg">
+            <img
+              src="/icon-192.png"
+              alt="Lisible logo"
+              className="w-8 h-8"
+            />
+          </div>
+          <div>
+            <p className="font-bold text-lg">Installer Lisible</p>
+            <p className="text-sm opacity-90">
+              Ajoutez Lisible à votre écran d'accueil pour un accès rapide.
+            </p>
+          </div>
+        </div>
+
+        {/* Bouton installer */}
         <button
           onClick={handleInstallClick}
-          className="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold shadow hover:bg-gray-100 transition"
+          className="bg-white text-blue-700 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-gray-100 transition-all duration-300 shadow"
         >
           Installer
-        </button>
-        <button
-          onClick={handleClose}
-          className="bg-gray-50 text-blue-100 px-3 py-2 rounded-lg font-bold hover:bg-gray-50 transition"
-        >
-          ×
         </button>
       </div>
     </div>
