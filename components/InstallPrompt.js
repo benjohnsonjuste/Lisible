@@ -22,10 +22,10 @@ export default function InstallPrompt() {
       setShowBanner(true);
       playBeep();
 
-      // Auto-fermeture après 30 secondes
+      // Auto-fermeture après 10 secondes
       timerRef.current = setTimeout(() => {
         setShowBanner(false);
-      }, 30000);
+      }, 10000);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
