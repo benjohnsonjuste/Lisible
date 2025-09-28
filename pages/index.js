@@ -7,9 +7,9 @@ export default function Home() {
       <img
         src="/favicon.ico"
         alt="Couverture Lisible"
-        className="w-full max-h-30 object-cover rounded-lg mb-8"
+        className="w-full max-h-10 object-cover rounded-lg mb-8"
       />
-      <h1 className="text-2xl font-bold mb-4">Bienvenue sur Lisible</h1>
+      <h1 className="text-3xl font-bold mb-4">Bienvenue sur Lisible</h1>
       <p className="text-lg text-gray-700 mb-8">
         Plateforme de lecture en streaming produite par le label littéraire <strong>La Belle Littéraire</strong>.
       </p>
@@ -36,7 +36,7 @@ export default function Home() {
          Commencez à publier sur Lisible dès maintenant.
        </p>
       <div className="text-center mt-8">
-        <Link href="/signup">
+        <Link href="/register">
           <a className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition">
             S'inscrire
           </a>
