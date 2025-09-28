@@ -22,26 +22,6 @@ export default function Footer() {
           22 rue A. Lazarre, Delmas, Haïti
         </p>
 
-        {/* Réseaux sociaux avec images locales */}
-        <div className="flex justify-center space-x-4 mt-4">
-          {/* Lien Facebook officiel */}
-          <Link
-            href="https://www.facebook.com/LaBelleLitteraire?mibextid=ZbWKwL"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Facebook de La Belle Littéraire"
-          >
-            <Image
-              src="/facebook-130.svg"
-              alt="Facebook"
-              width={30}
-              height={30}
-              className="hover:opacity-80 transition"
-            />
-          </Link>
-
-          
-        </div>
       </div>
     </footer>
   );
