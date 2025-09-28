@@ -1,3 +1,4 @@
+// components/LisibleClub.js
 import { useEffect, useState, useRef } from "react";
 import { db, auth, storage } from "@/lib/firebaseConfig";
 import {
@@ -9,7 +10,7 @@ import {
   serverTimestamp,
   updateDoc,
   arrayUnion,
-  doc
+  doc,
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
@@ -23,43 +24,42 @@ export default function LisibleClub() {
   const [streaming, setStreaming] = useState(false);
   const [streamType, setStreamType] = useState("video");
 
-  // 🔹 Auth
+  // 🔹 Auth : récupérer l'utilisateur connecté
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
     return () => unsubscribe();
   }, []);
 
-  // 🔹 Fetch posts
+  // 🔹 Charger les posts depuis Firestore
   const fetchPosts = async () => {
-    const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err) {
+      console.error("Erreur fetchPosts:", err);
+    }
   };
 
   useEffect(() => {
     if (user) fetchPosts();
   }, [user]);
 
-  // 🔹 Notifications live (côté client uniquement)
+  // 🔹 Notifications live
   useEffect(() => {
     if (!user || typeof window === "undefined") return;
-
-    import("@/lib/firebaseMessagingClient").then(async (messagingModule) => {
-      const { getFCMToken, onMessageListener } = messagingModule;
-
+    import("@/lib/firebaseMessagingClient").then(async ({ getFCMToken, onMessageListener }) => {
       const token = await getFCMToken();
       if (token) {
         await updateDoc(doc(db, "userTokens", user.uid), { token }, { merge: true });
       }
-
-      onMessageListener(payload => {
-        alert(`Live en direct : ${payload.notification?.body}`);
-      });
+      onMessageListener(payload => alert(`Live en direct : ${payload.notification?.body}`));
     });
   }, [user]);
 
-  // 🔹 Publish post
+  // 🔹 Publier post
   const publishPost = async () => {
+    if (!user) return alert("Vous devez être connecté pour publier");
     if (!content && !media) return alert("Ajoutez du texte ou un média");
 
     let mediaUrl = null;
@@ -82,46 +82,43 @@ export default function LisibleClub() {
       likes: 0,
       likedBy: [],
       comments: [],
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
     });
 
     setContent("");
     setMedia(null);
-    fetchPosts();
+    await fetchPosts();
   };
 
   // 🔹 Like
-  const likePost = async (post) => {
+  const likePost = async post => {
     if (!post.likedBy.includes(user.uid)) {
       const postRef = doc(db, "clubPosts", post.id);
       await updateDoc(postRef, {
         likes: post.likes + 1,
-        likedBy: arrayUnion(user.uid)
+        likedBy: arrayUnion(user.uid),
       });
       fetchPosts();
     }
   };
 
-  // 🔹 Comment
+  // 🔹 Commenter
   const commentPost = async (postId, text) => {
     if (!text) return;
     const postRef = doc(db, "clubPosts", postId);
     await updateDoc(postRef, {
-      comments: arrayUnion({ uid: user.uid, text, createdAt: serverTimestamp() })
+      comments: arrayUnion({ uid: user.uid, text, createdAt: serverTimestamp() }),
     });
     fetchPosts();
   };
 
-  // 🔹 Live
+  // 🔹 Live vidéo/audio
   const startStream = async () => {
     try {
-      const constraints =
-        streamType === "video" ? { video: true, audio: true } : { audio: true };
+      const constraints = streamType === "video" ? { video: true, audio: true } : { audio: true };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
       if (streamType === "video") videoRef.current.srcObject = stream;
       else audioRef.current.srcObject = stream;
-
       setStreaming(true);
     } catch {
       alert("Impossible d'accéder au micro ou à la caméra.");
@@ -197,14 +194,21 @@ export default function LisibleClub() {
             {post.content && <p>{post.content}</p>}
             {post.mediaUrl && (
               <>
-                {post.mediaUrl.endsWith(".mp4") ? <video src={post.mediaUrl} controls className="w-full rounded" /> :
-                 post.mediaUrl.endsWith(".mp3") ? <audio src={post.mediaUrl} controls className="w-full" /> :
-                 <img src={post.mediaUrl} alt="media" className="w-full rounded" />}
+                {post.mediaUrl.endsWith(".mp4") ? (
+                  <video src={post.mediaUrl} controls className="w-full rounded" />
+                ) : post.mediaUrl.endsWith(".mp3") ? (
+                  <audio src={post.mediaUrl} controls className="w-full" />
+                ) : (
+                  <img src={post.mediaUrl} alt="media" className="w-full rounded" />
+                )}
               </>
             )}
             <div className="flex items-center gap-3 mt-2">
-              <button onClick={() => likePost(post)} disabled={post.likedBy?.includes(user.uid)}
-                      className={`flex items-center gap-1 ${post.likedBy?.includes(user.uid) ? "opacity-50 cursor-not-allowed" : ""}`}>
+              <button
+                onClick={() => likePost(post)}
+                disabled={post.likedBy?.includes(user.uid)}
+                className={`flex items-center gap-1 ${post.likedBy?.includes(user.uid) ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
                 <img src="/like.svg" alt="J'aime" className="w-5 h-5" />
                 <span>{post.likes || 0}</span>
               </button>
