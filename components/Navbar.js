@@ -42,7 +42,7 @@ export default function Navbar() {
           <Link href="/" legacyBehavior>
             <a>
               <Image
-                src="homepage-53.svg"
+                src="home-home-6.svg"
                 alt="Accueil"
                 width={32}
                 height={32}
@@ -65,7 +65,7 @@ export default function Navbar() {
             <Link href="/dashboard" legacyBehavior>
               <a>
                 <Image
-                  src="dashboard-87.svg"
+                  src="dashboard-85.svg"
                   alt="Dashboard"
                   width={32}
                   height={32}
