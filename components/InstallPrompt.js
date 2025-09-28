@@ -5,22 +5,11 @@ export default function InstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
   const timerRef = useRef(null);
 
-  // Fonction pour jouer un bip sonore
-  const playBeep = () => {
-    const audio = new Audio(
-      "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA="
-    );
-    audio.play().catch(() => {
-      console.warn("Le son n'a pas pu être joué automatiquement.");
-    });
-  };
-
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowBanner(true);
-      playBeep();
 
       // Auto-fermeture après 10 secondes
       timerRef.current = setTimeout(() => {
@@ -42,11 +31,11 @@ export default function InstallPrompt() {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
 
-    if (outcome === "accepted") {
-      console.log("✅ L'utilisateur a installé l'application.");
-    } else {
-      console.log("❌ L'utilisateur a refusé l'installation.");
-    }
+    console.log(
+      outcome === "accepted"
+        ? "✅ L'utilisateur a installé l'application."
+        : "❌ L'utilisateur a refusé l'installation."
+    );
 
     setDeferredPrompt(null);
     setShowBanner(false);
