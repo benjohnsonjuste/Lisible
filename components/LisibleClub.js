@@ -1,4 +1,3 @@
-// components/LisibleClub.js
 import { useEffect, useState, useRef } from "react";
 import { db, auth, storage } from "@/lib/firebaseConfig";
 import {
@@ -24,21 +23,17 @@ export default function LisibleClub() {
   const [streaming, setStreaming] = useState(false);
   const [streamType, setStreamType] = useState("video");
 
-  // 🔹 Auth : récupérer l'utilisateur connecté
+  // 🔹 Auth
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
     return () => unsubscribe();
   }, []);
 
-  // 🔹 Charger les posts depuis Firestore
+  // 🔹 Charger les posts
   const fetchPosts = async () => {
-    try {
-      const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
-      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    } catch (err) {
-      console.error("Erreur fetchPosts:", err);
-    }
+    const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
   };
 
   useEffect(() => {
@@ -50,9 +45,7 @@ export default function LisibleClub() {
     if (!user || typeof window === "undefined") return;
     import("@/lib/firebaseMessagingClient").then(async ({ getFCMToken, onMessageListener }) => {
       const token = await getFCMToken();
-      if (token) {
-        await updateDoc(doc(db, "userTokens", user.uid), { token }, { merge: true });
-      }
+      if (token) await updateDoc(doc(db, "userTokens", user.uid), { token }, { merge: true });
       onMessageListener(payload => alert(`Live en direct : ${payload.notification?.body}`));
     });
   }, [user]);
@@ -66,11 +59,8 @@ export default function LisibleClub() {
     if (media) {
       const storageRef = ref(storage, `club/${user.uid}/${Date.now()}_${media.name}`);
       const uploadTask = uploadBytesResumable(storageRef, media);
-      await new Promise((resolve, reject) => {
-        uploadTask.on("state_changed", null, reject, async () => {
-          mediaUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve();
-        });
+      mediaUrl = await new Promise((resolve, reject) => {
+        uploadTask.on("state_changed", null, reject, async () => resolve(await getDownloadURL(uploadTask.snapshot.ref)));
       });
     }
 
@@ -87,7 +77,7 @@ export default function LisibleClub() {
 
     setContent("");
     setMedia(null);
-    await fetchPosts();
+    fetchPosts();
   };
 
   // 🔹 Like
@@ -102,7 +92,7 @@ export default function LisibleClub() {
     }
   };
 
-  // 🔹 Commenter
+  // 🔹 Comment
   const commentPost = async (postId, text) => {
     if (!text) return;
     const postRef = doc(db, "clubPosts", postId);
@@ -112,7 +102,7 @@ export default function LisibleClub() {
     fetchPosts();
   };
 
-  // 🔹 Live vidéo/audio
+  // 🔹 Live vidéo/audio avec demande d'autorisation
   const startStream = async () => {
     try {
       const constraints = streamType === "video" ? { video: true, audio: true } : { audio: true };
@@ -121,7 +111,7 @@ export default function LisibleClub() {
       else audioRef.current.srcObject = stream;
       setStreaming(true);
     } catch {
-      alert("Impossible d'accéder au micro ou à la caméra.");
+      alert("Impossible d'accéder au micro ou à la caméra. Autorisez l'accès pour diffuser en direct.");
     }
   };
 
