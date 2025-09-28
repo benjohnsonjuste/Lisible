@@ -1,41 +1,30 @@
 // pages/api/upload.js
-import { getGoogleDrive } from "@/lib/googleDrive";
+
+import { getGoogleDrive } from '@/lib/googleDrive';
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
+  if (req.method === 'POST') {
+    try {
+      const drive = await getGoogleDrive();
+      const { fileName, fileContent } = req.body;
 
-  try {
-    const drive = getGoogleDrive();
-    const folderId = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID;
+      const response = await drive.files.create({
+        requestBody: {
+          name: fileName,
+          mimeType: 'application/octet-stream',
+        },
+        media: {
+          mimeType: 'application/octet-stream',
+          body: Buffer.from(fileContent, 'base64'), // si contenu encodé en base64
+        },
+      });
 
-    const { fileName, fileData } = req.body;
-
-    const buffer = Buffer.from(fileData, "base64");
-
-    const fileMetadata = {
-      name: fileName,
-      parents: [folderId],
-    };
-
-    const media = {
-      mimeType: "application/octet-stream",
-      body: buffer,
-    };
-
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media,
-      fields: "id, name",
-    });
-
-    return res.status(200).json({
-      message: "Fichier uploadé avec succès",
-      file: response.data,
-    });
-  } catch (error) {
-    console.error("Erreur upload Google Drive:", error);
-    return res.status(500).json({ error: "Erreur serveur" });
+      res.status(200).json({ success: true, fileId: response.data.id });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  } else {
+    res.status(405).json({ message: 'Method not allowed' });
   }
 }
