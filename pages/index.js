@@ -5,9 +5,9 @@ export default function Home() {
     <div className="max-w-4xl mx-auto text-center px-4 py-8 space-y-8">
       {/* Image de couverture */}
       <img
-        src="/favicon.ico"
+        src="/poster_2025-09-28-031039.png"
         alt="Couverture Lisible"
-        className="w-full max-h-10 object-cover rounded-lg mb-8"
+        className="w-full max-h-40 object-cover rounded-lg mb-8"
       />
       <h1 className="text-3xl font-bold mb-4">Bienvenue sur Lisible</h1>
       <p className="text-lg text-gray-700 mb-8">
