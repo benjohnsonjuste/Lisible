@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { db, auth, storage } from "@/lib/firebaseConfig";
+import { db, auth, storage, messaging } from "@/lib/firebaseConfig";
 import {
   collection,
   addDoc,
@@ -12,6 +12,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getToken, onMessage } from "firebase/messaging";
 
 export default function LisibleClub() {
   const [user, setUser] = useState(null);
@@ -27,9 +28,25 @@ export default function LisibleClub() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((u) => {
       setUser(u);
+      if (u) registerFCMToken(u.uid);
     });
     return () => unsubscribe();
   }, []);
+
+  // 🔹 Enregistrer le token FCM de l'utilisateur
+  const registerFCMToken = async (uid) => {
+    try {
+      const token = await getToken(messaging, { vapidKey: "TA_CLE_VAPID_PUBLIC" });
+      if (token) {
+        await updateDoc(doc(db, "userTokens", uid), { token }, { merge: true });
+      }
+      onMessage(messaging, (payload) => {
+        alert(`Live en direct : ${payload.notification.body}`);
+      });
+    } catch (e) {
+      console.error("Erreur FCM :", e);
+    }
+  };
 
   // 🔹 Charger les posts depuis Firestore
   const fetchPosts = async () => {
@@ -55,7 +72,6 @@ export default function LisibleClub() {
 
     try {
       let mediaUrl = null;
-
       if (media) {
         const storageRef = ref(storage, `club/${user.uid}/${Date.now()}_${media.name}`);
         const uploadTask = uploadBytesResumable(storageRef, media);
@@ -115,6 +131,32 @@ export default function LisibleClub() {
     fetchPosts();
   };
 
+  // 🔹 Envoyer notification live à tous
+  const notifyLive = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "userTokens"));
+      const tokens = snapshot.docs.map((doc) => doc.data().token).filter(Boolean);
+      if (!tokens.length) return;
+
+      await fetch("https://fcm.googleapis.com/fcm/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "key=TA_CLE_SERVEUR_FIREBASE",
+        },
+        body: JSON.stringify({
+          notification: {
+            title: "Live en direct sur Lisible 🎥",
+            body: `${user.displayName || "Un auteur"} est en direct (${streamType}) !`,
+          },
+          registration_ids: tokens,
+        }),
+      });
+    } catch (e) {
+      console.error("Erreur notification live :", e);
+    }
+  };
+
   // 🔹 Live vidéo/audio
   const startStream = async () => {
     try {
@@ -126,6 +168,17 @@ export default function LisibleClub() {
       else audioRef.current.srcObject = stream;
 
       setStreaming(true);
+
+      // Ajouter live Firestore
+      await addDoc(collection(db, "liveStreams"), {
+        authorId: user.uid,
+        authorName: user.displayName || "Auteur inconnu",
+        streamType,
+        startedAt: serverTimestamp(),
+      });
+
+      // Envoyer notification à tous
+      await notifyLive();
     } catch (error) {
       console.error(error);
       alert("Impossible d'accéder au micro ou à la caméra.");
