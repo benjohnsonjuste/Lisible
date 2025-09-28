@@ -57,9 +57,9 @@ export default function InstallPrompt() {
         </button>
         <button
           onClick={handleClose}
-          className="bg-gray-200 text-blue-600 px-3 py-2 rounded-lg font-bold hover:bg-gray-300 transition"
+          className="bg-gray-50 text-blue-100 px-3 py-2 rounded-lg font-bold hover:bg-gray-50 transition"
         >
-          ✖
+          ×
         </button>
       </div>
     </div>
