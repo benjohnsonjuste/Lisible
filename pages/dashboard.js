@@ -8,7 +8,6 @@ import MonetizationLock from "@/components/MonetizationLock";
 import PublishingForm from "@/components/PublishingForm";
 import AuthorTextsList from "@/components/AuthorTextsList";
 import MonetisationRealTime from "@/components/MonetisationRealTime";
-import AuthorProfileForm from "@/components/AuthorProfileForm";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -16,7 +15,7 @@ export default function Dashboard() {
   const [followers, setFollowers] = useState(0);
   const router = useRouter();
 
-  // Vérification de l'état d'authentification
+  // 🔹 Vérification de l'état d'authentification
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -39,17 +38,12 @@ export default function Dashboard() {
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <h1 className="text-2xl font-bold mb-6">Tableau de bord</h1>
 
-      {/* Section 1 : Profil auteur */}
-      <section className="bg-gray-50 p-4 rounded-2xl shadow">
-        <AuthorProfileForm authorId={user.uid} />
-      </section>
-
-      {/* Section 2 : Statistiques */}
+      {/* Section 1 : Statistiques */}
       <section className="bg-gray-50 p-4 rounded-2xl shadow">
         <AuthorStats authorId={user.uid} onFollowersUpdate={setFollowers} />
       </section>
 
-      {/* Section 3 : Monétisation */}
+      {/* Section 2 : Monétisation */}
       <section className="bg-gray-50 p-4 rounded-2xl shadow">
         {followers >= 250 ? (
           <MonetisationRealTime authorId={user.uid} />
@@ -58,12 +52,12 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* Section 4 : Formulaire de publication */}
+      {/* Section 3 : Formulaire de publication */}
       <section className="bg-gray-50 p-4 rounded-2xl shadow">
         <PublishingForm authorId={user.uid} />
       </section>
 
-      {/* Section 5 : Liste des textes */}
+      {/* Section 4 : Liste des textes */}
       <section className="bg-gray-50 p-4 rounded-2xl shadow">
         <AuthorTextsList authorId={user.uid} />
       </section>
