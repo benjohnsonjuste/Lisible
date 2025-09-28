@@ -7,7 +7,7 @@ export default function Home() {
       <img
         src="/poster_2025-09-28-031039.png"
         alt="Couverture Lisible"
-        className="w-full max-h-40 object-cover rounded-lg mb-8"
+        className="w-full max-h-60 object-cover rounded-lg mb-8"
       />
       <h1 className="text-3xl font-bold mb-4">Bienvenue sur Lisible</h1>
       <p className="text-lg text-gray-700 mb-8">
