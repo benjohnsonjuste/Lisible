@@ -12,15 +12,22 @@ export default function LisibleClubDashboard({ author }) {
 
   const handlePost = async (e) => {
     e.preventDefault();
+    if (!author) {
+      alert("Vous devez être connecté pour publier !");
+      return;
+    }
+
     setLoading(true);
 
     try {
       let mediaUrl = "";
 
-      // 🔹 Si c'est un média, upload sur Firebase Storage
+      // 🔹 Upload du média (image, vidéo, audio)
       if (file && type !== "text") {
-        const storageRef = ref(storage, `clubPosts/${author.id}/${Date.now()}_${file.name}`);
+        const folder = type.includes("live") ? "live" : "media";
+        const storageRef = ref(storage, `clubPosts/${folder}/${author.id}/${Date.now()}_${file.name}`);
         const uploadTask = uploadBytesResumable(storageRef, file);
+
         mediaUrl = await new Promise((resolve, reject) => {
           uploadTask.on(
             "state_changed",
@@ -31,7 +38,7 @@ export default function LisibleClubDashboard({ author }) {
         });
       }
 
-      // 🔹 Préparer le post
+      // 🔹 Structure de la publication
       const newPost = {
         authorId: author.id,
         authorName: author.name,
@@ -40,23 +47,25 @@ export default function LisibleClubDashboard({ author }) {
         description: description.trim(),
         createdAt: serverTimestamp(),
         likes: 0,
+        views: 0,
+        isLive: type === "live_video" || type === "live_audio",
       };
 
-      // 🔹 Enregistrer dans Firestore
+      // 🔹 Sauvegarde dans Firestore
       await addDoc(collection(db, "clubPosts"), newPost);
 
-      // 🔹 Notification automatique
+      // 🔹 Envoi de la notification
       await fetch("/api/sendNotification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: `${author.name} a publié sur Lisible Club`,
-          body: description || "Découvrez ce nouveau contenu !",
+          body: description || "Découvrez ce nouveau contenu en direct !",
           type,
         }),
       });
 
-      // Reset
+      // 🔹 Réinitialisation du formulaire
       setContent("");
       setFile(null);
       setDescription("");
@@ -64,7 +73,7 @@ export default function LisibleClubDashboard({ author }) {
 
       alert("Publication réussie !");
     } catch (err) {
-      console.error("Erreur lors de la publication :", err);
+      console.error("❌ Erreur lors de la publication :", err);
       alert("Impossible de publier, réessayez.");
     } finally {
       setLoading(false);
@@ -75,6 +84,7 @@ export default function LisibleClubDashboard({ author }) {
     <form onSubmit={handlePost} className="bg-white p-6 rounded-2xl shadow-lg space-y-4">
       <h2 className="text-xl font-bold">Publier sur Lisible Club</h2>
 
+      {/* Sélection du type de contenu */}
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -88,12 +98,14 @@ export default function LisibleClubDashboard({ author }) {
         <option value="live_audio">Direct Audio</option>
       </select>
 
+      {/* Zone de texte ou upload de fichier */}
       {type === "text" ? (
         <textarea
           placeholder="Écrivez votre texte ici..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
           className="w-full p-2 border rounded-md h-32"
+          required
         />
       ) : (
         <input
@@ -107,9 +119,11 @@ export default function LisibleClubDashboard({ author }) {
           }
           onChange={(e) => setFile(e.target.files[0])}
           className="w-full p-2 border rounded-md"
+          required
         />
       )}
 
+      {/* Légende */}
       <input
         type="text"
         placeholder="Légende ou description"
@@ -118,6 +132,7 @@ export default function LisibleClubDashboard({ author }) {
         className="w-full p-2 border rounded-md"
       />
 
+      {/* Bouton publier */}
       <button
         type="submit"
         disabled={loading}
