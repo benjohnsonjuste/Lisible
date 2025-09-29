@@ -9,10 +9,11 @@ export default function LisibleClubDashboard({ author }) {
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fileKey, setFileKey] = useState(Date.now()); // pour réinitialiser l'input file
 
   const handlePost = async (e) => {
     e.preventDefault();
-    if (!author) {
+    if (!author || !author.id) {
       alert("Vous devez être connecté pour publier !");
       return;
     }
@@ -22,10 +23,13 @@ export default function LisibleClubDashboard({ author }) {
     try {
       let mediaUrl = "";
 
-      // 🔹 Upload du média (image, vidéo, audio)
       if (file && type !== "text") {
         const folder = type.includes("live") ? "live" : "media";
-        const storageRef = ref(storage, `clubPosts/${folder}/${author.id}/${Date.now()}_${file.name}`);
+        const storageRef = ref(
+          storage,
+          `clubPosts/${folder}/${author.id}/${Date.now()}_${file.name}`
+        );
+
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         mediaUrl = await new Promise((resolve, reject) => {
@@ -38,42 +42,40 @@ export default function LisibleClubDashboard({ author }) {
         });
       }
 
-      // 🔹 Structure de la publication
       const newPost = {
         authorId: author.id,
-        authorName: author.name,
+        authorName: author.name || "",
         type,
         content: type === "text" ? content.trim() : mediaUrl,
-        description: description.trim(),
+        description: description.trim() || "",
         createdAt: serverTimestamp(),
         likes: 0,
         views: 0,
         isLive: type === "live_video" || type === "live_audio",
       };
 
-      // 🔹 Sauvegarde dans Firestore
       await addDoc(collection(db, "clubPosts"), newPost);
 
-      // 🔹 Envoi de la notification
+      // Notification
       await fetch("/api/sendNotification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: `${author.name} a publié sur Lisible Club`,
-          body: description || "Découvrez ce nouveau contenu en direct !",
+          title: `${author.name || "Un auteur"} a publié sur Lisible Club`,
+          body: description || "Découvrez ce nouveau contenu !",
           type,
         }),
       });
 
-      // 🔹 Réinitialisation du formulaire
       setContent("");
       setFile(null);
+      setFileKey(Date.now()); // réinitialise l'input file
       setDescription("");
       setType("text");
 
       alert("Publication réussie !");
     } catch (err) {
-      console.error("❌ Erreur lors de la publication :", err);
+      console.error("Erreur lors de la publication :", err);
       alert("Impossible de publier, réessayez.");
     } finally {
       setLoading(false);
@@ -81,10 +83,12 @@ export default function LisibleClubDashboard({ author }) {
   };
 
   return (
-    <form onSubmit={handlePost} className="bg-white p-6 rounded-2xl shadow-lg space-y-4">
+    <form
+      onSubmit={handlePost}
+      className="bg-white p-6 rounded-2xl shadow-lg space-y-4"
+    >
       <h2 className="text-xl font-bold">Publier sur Lisible Club</h2>
 
-      {/* Sélection du type de contenu */}
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -98,7 +102,6 @@ export default function LisibleClubDashboard({ author }) {
         <option value="live_audio">Direct Audio</option>
       </select>
 
-      {/* Zone de texte ou upload de fichier */}
       {type === "text" ? (
         <textarea
           placeholder="Écrivez votre texte ici..."
@@ -109,6 +112,7 @@ export default function LisibleClubDashboard({ author }) {
         />
       ) : (
         <input
+          key={fileKey}
           type="file"
           accept={
             type === "image"
@@ -123,7 +127,6 @@ export default function LisibleClubDashboard({ author }) {
         />
       )}
 
-      {/* Légende */}
       <input
         type="text"
         placeholder="Légende ou description"
@@ -132,7 +135,6 @@ export default function LisibleClubDashboard({ author }) {
         className="w-full p-2 border rounded-md"
       />
 
-      {/* Bouton publier */}
       <button
         type="submit"
         disabled={loading}
