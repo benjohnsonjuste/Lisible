@@ -3,13 +3,13 @@ import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
-export default function LisibleClubDashboard({ author }) {
+export default function LisibleClubDashboard({ author, onNewPost }) {
   const [type, setType] = useState("text");
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fileKey, setFileKey] = useState(Date.now()); // pour réinitialiser l'input file
+  const [fileKey, setFileKey] = useState(Date.now());
 
   const handlePost = async (e) => {
     e.preventDefault();
@@ -31,7 +31,6 @@ export default function LisibleClubDashboard({ author }) {
         );
 
         const uploadTask = uploadBytesResumable(storageRef, file);
-
         mediaUrl = await new Promise((resolve, reject) => {
           uploadTask.on(
             "state_changed",
@@ -56,7 +55,7 @@ export default function LisibleClubDashboard({ author }) {
 
       await addDoc(collection(db, "clubPosts"), newPost);
 
-      // Notification
+      // Notification via API
       await fetch("/api/sendNotification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,9 +66,13 @@ export default function LisibleClubDashboard({ author }) {
         }),
       });
 
+      // Appel de la fonction de notification visuelle
+      if (onNewPost) onNewPost();
+
+      // Réinitialisation du formulaire
       setContent("");
       setFile(null);
-      setFileKey(Date.now()); // réinitialise l'input file
+      setFileKey(Date.now());
       setDescription("");
       setType("text");
 
@@ -89,6 +92,7 @@ export default function LisibleClubDashboard({ author }) {
     >
       <h2 className="text-xl font-bold">Publier sur Lisible Club</h2>
 
+      {/* Sélection du type de publication */}
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -102,6 +106,7 @@ export default function LisibleClubDashboard({ author }) {
         <option value="live_audio">Direct Audio</option>
       </select>
 
+      {/* Zone de texte ou input file */}
       {type === "text" ? (
         <textarea
           placeholder="Écrivez votre texte ici..."
@@ -127,6 +132,7 @@ export default function LisibleClubDashboard({ author }) {
         />
       )}
 
+      {/* Description */}
       <input
         type="text"
         placeholder="Légende ou description"
@@ -135,6 +141,7 @@ export default function LisibleClubDashboard({ author }) {
         className="w-full p-2 border rounded-md"
       />
 
+      {/* Bouton publier */}
       <button
         type="submit"
         disabled={loading}
