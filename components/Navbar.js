@@ -110,7 +110,7 @@ export default function Navbar() {
           <ul className="space-y-4">
             {[
               { href: "/auteurs", label: "Auteurs", icon: "auteurs.svg" },
-              { href: "/LisibleClub", label: "Lisible Club", icon: "communaute.svg" },
+              { href: "/lisibleclub", label: "Lisible Club", icon: "communaute.svg" },
               { href: "/evenements", label: "Événements", icon: "evenements.svg" },
               { href: "/terms", label: "Conditions d'utilisation", icon: "product-terms.svg" },
               { href: "/contact", label: "Contact", icon: "message.svg" },
