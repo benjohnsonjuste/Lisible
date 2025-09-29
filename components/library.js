@@ -1,3 +1,5 @@
+"use client"; // pour rendre côté client et utiliser Firebase Auth
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { db, auth } from "@/lib/firebaseConfig";
@@ -67,7 +69,9 @@ export default function Library() {
       return;
     }
 
-    if (text.likedBy?.includes(user.uid)) {
+    const likedByArray = Array.isArray(text.likedBy) ? text.likedBy : [];
+
+    if (likedByArray.includes(user.uid)) {
       alert("Vous avez déjà aimé ce texte.");
       return;
     }
@@ -82,7 +86,7 @@ export default function Library() {
       setTexts((prev) =>
         prev.map((t) =>
           t.id === text.id
-            ? { ...t, likes: (t.likes || 0) + 1, likedBy: [...(t.likedBy || []), user.uid] }
+            ? { ...t, likes: (t.likes || 0) + 1, likedBy: [...likedByArray, user.uid] }
             : t
         )
       );
