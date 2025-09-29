@@ -6,21 +6,35 @@ export default function LisibleClubViewer() {
   const [posts, setPosts] = useState([]);
 
   useEffect(() => {
+    // 🔹 On crée une query Firestore pour récupérer les posts triés par date décroissante
     const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
+
+    // 🔹 On s'abonne aux changements en temps réel
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const data = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          ...d,
+          createdAt: d.createdAt?.toDate?.() || new Date(), // conversion timestamp -> Date
+        };
+      });
+      setPosts(data);
     });
-    return () => unsubscribe();
+
+    return () => unsubscribe(); // clean-up lors du démontage du composant
   }, []);
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6 max-w-3xl mx-auto py-6">
       <h2 className="text-2xl font-bold mb-4">Lisible Club</h2>
+
+      {posts.length === 0 && <p className="text-gray-500">Aucune publication pour l'instant.</p>}
 
       {posts.map((post) => (
         <div key={post.id} className="p-4 border rounded-xl bg-white shadow">
           <h3 className="font-semibold text-lg mb-2">{post.authorName}</h3>
-          <p className="text-gray-700 mb-3">{post.description}</p>
+          {post.description && <p className="text-gray-700 mb-3">{post.description}</p>}
 
           {post.type === "text" && (
             <p className="whitespace-pre-line">{post.content}</p>
@@ -44,7 +58,7 @@ export default function LisibleClubViewer() {
             </audio>
           )}
 
-          {/* 🔹 Direct vidéo */}
+          {/* Direct vidéo */}
           {post.type === "live_video" && post.isLive && (
             <div className="relative">
               <video controls autoPlay className="w-full rounded-lg border-2 border-red-500">
@@ -57,7 +71,7 @@ export default function LisibleClubViewer() {
             </div>
           )}
 
-          {/* 🔹 Direct audio */}
+          {/* Direct audio */}
           {post.type === "live_audio" && post.isLive && (
             <div className="relative">
               <audio controls autoPlay className="w-full">
@@ -71,7 +85,7 @@ export default function LisibleClubViewer() {
           )}
 
           <div className="text-sm text-gray-500 mt-2">
-            Publié le {new Date(post.createdAt?.seconds * 1000).toLocaleString()}
+            Publié le {post.createdAt.toLocaleString()}
           </div>
         </div>
       ))}
