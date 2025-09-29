@@ -68,10 +68,10 @@ export default function InstallPrompt() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="fixed top-4 left-1/2 z-50"
-      style={{ transform: `translateX(-50%) translateX(${translateX}px)` }}
+      className="fixed top-4 left-0 right-0 z-50 px-4"
+      style={{ transform: `translateX(${translateX}px)` }}
     >
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-2xl p-4 flex items-center justify-between max-w-md w-[95%] animate-slideDown border border-blue-400">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl p-4 flex items-center justify-between w-full animate-slideDown border border-blue-400">
         {/* Icône et texte */}
         <div className="flex items-center gap-3">
           <div className="bg-black rounded-full p-2 shadow-lg">
