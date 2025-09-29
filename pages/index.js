@@ -5,7 +5,7 @@ export default function Home() {
     <div className="max-w-4xl mx-auto text-center px-4 py-8 space-y-8 bg-gray-900 text-gray-100 rounded-lg shadow-lg">
       {/* Image de couverture */}
       <img
-        src="/poster_2025-09-28-061034.png"
+        src="/poster_2025-09-29-040111.png"
         alt="Couverture Lisible"
         className="w-full max-h-48 object-cover rounded-lg mb-6"
       />
