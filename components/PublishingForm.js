@@ -5,14 +5,16 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 
 export default function PublishingForm() {
-  const [user, setUser] = useState(null); // 🔹 Récupérer automatiquement l'auteur connecté
+  const [user, setUser] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [illustration, setIllustration] = useState(null);
+  const [file, setFile] = useState(null);
+  const [type, setType] = useState("text"); // "text" ou "image"
+  const [genre, setGenre] = useState(""); // Poésie, Roman, Nouvelle, Essai, Article
+  const [caractere, setCaractere] = useState(""); // Engagé, Romantique, Érotique, Couleur locale, Mélancolique, Satyrique
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 🔹 Vérifier l'utilisateur connecté
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -24,106 +26,137 @@ export default function PublishingForm() {
     e.preventDefault();
     setError(null);
 
-    if (!user) {
-      setError("Vous devez être connecté pour publier un texte.");
-      return;
+    if (!user) return setError("Veuillez vous connecter pour publier.");
+
+    if (!title.trim() || (!content.trim() && !file)) {
+      return setError("Le titre et le contenu (texte ou image) sont obligatoires.");
     }
 
-    if (!title.trim() || !content.trim()) {
-      setError("Le titre et le contenu sont obligatoires.");
-      return;
-    }
+    if (!genre) return setError("Veuillez sélectionner un genre.");
+    if (!caractere) return setError("Veuillez sélectionner un caractère.");
 
     setLoading(true);
 
     try {
-      let illustrationUrl = null;
+      let contentUrl = content;
 
-      // 🔹 Upload de l'image si elle existe
-      if (illustration) {
+      // 🔹 Upload de l'image si type = image
+      if (type === "image" && file) {
         const storageRef = ref(
           storage,
-          `textIllustrations/${user.uid}/${Date.now()}_${illustration.name}`
+          `bibliotheque/${user.uid}/${Date.now()}_${file.name}`
         );
-        const uploadTask = uploadBytesResumable(storageRef, illustration);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
-        illustrationUrl = await new Promise((resolve, reject) => {
+        contentUrl = await new Promise((resolve, reject) => {
           uploadTask.on(
             "state_changed",
             null,
             (err) => reject(err),
-            async () => {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(url);
-            }
+            async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
           );
         });
       }
 
-      const newText = {
+      const newDoc = {
         title: title.trim(),
-        content: content.trim(),
-        illustrationUrl: illustrationUrl || null,
+        content: type === "text" ? content.trim() : contentUrl,
+        type,
+        genre,
+        caractere,
+        illustrationUrl: type === "image" ? contentUrl : null,
         authorId: user.uid,
         authorName: user.displayName || "Auteur inconnu",
         createdAt: serverTimestamp(),
       };
 
-      // 🔹 Vérifier la collection publique
-      const publicRef = collection(db, "bibliotheque");
-      await addDoc(publicRef, newText);
+      // 🔹 Ajouter uniquement dans la collection "bibliotheque"
+      await addDoc(collection(db, "bibliotheque"), newDoc);
 
-      // 🔹 Vérifier la collection privée
-      const authorRef = collection(db, "auteurs", user.uid, "textes");
-      await addDoc(authorRef, newText);
-
-      // 🔹 Réinitialiser le formulaire
+      // Reset
       setTitle("");
       setContent("");
-      setIllustration(null);
-      alert("✅ Texte publié avec succès !");
+      setFile(null);
+      setType("text");
+      setGenre("");
+      setCaractere("");
+
+      alert("✅ Publication réussie !");
     } catch (err) {
       console.error("Erreur lors de la publication :", err);
-      setError(`Impossible de publier le texte : ${err.message}`);
+      setError("Impossible de publier. Réessayez.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!user) {
-    return <p className="text-center text-red-500">Veuillez vous connecter pour publier un texte.</p>;
-  }
+  if (!user) return <p className="text-center text-red-500">Connectez-vous pour publier.</p>;
 
   return (
-    <form
-      onSubmit={handlePublish}
-      className="bg-white p-4 rounded-2xl shadow-md space-y-4"
-    >
-      <h2 className="text-xl font-semibold">Publier un texte</h2>
+    <form onSubmit={handlePublish} className="bg-white p-6 rounded-2xl shadow-md space-y-4">
+      <h2 className="text-xl font-bold">Publier dans la bibliothèque</h2>
 
       {error && <p className="text-red-500">{error}</p>}
 
       <input
         type="text"
-        placeholder="Titre du texte"
+        placeholder="Titre"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full p-2 border rounded-md"
       />
 
-      <textarea
-        placeholder="Écrivez votre texte ici..."
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="w-full p-2 border rounded-md h-40"
-      />
-
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setIllustration(e.target.files[0])}
+      <select
+        value={type}
+        onChange={(e) => setType(e.target.value)}
         className="w-full p-2 border rounded-md"
-      />
+      >
+        <option value="text">Texte</option>
+        <option value="image">Image</option>
+      </select>
+
+      {type === "text" ? (
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Écrivez votre texte ici..."
+          className="w-full p-2 border rounded-md h-32"
+        />
+      ) : (
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setFile(e.target.files[0])}
+          className="w-full p-2 border rounded-md"
+        />
+      )}
+
+      <select
+        value={genre}
+        onChange={(e) => setGenre(e.target.value)}
+        className="w-full p-2 border rounded-md"
+      >
+        <option value="">Sélectionner le genre</option>
+        <option value="Poésie">Poésie</option>
+        <option value="Roman">Roman</option>
+        <option value="Nouvelle">Nouvelle</option>
+        <option value="Essai">Essai</option>
+        <option value="Article">Article</option>
+      </select>
+
+      <select
+        value={caractere}
+        onChange={(e) => setCaractere(e.target.value)}
+        className="w-full p-2 border rounded-md"
+      >
+        <option value="">Sélectionner le caractère</option>
+        <option value="Engagé">Engagé</option>
+        <option value="Romantique">Romantique</option>
+        <option value="Érotique">Érotique</option>
+        <option value="Couleur locale">Couleur locale</option>
+        <option value="Mélancolique">Mélancolique</option>
+        <option value="Satyrique">Satyrique</option>
+      </select>
 
       <button
         type="submit"
