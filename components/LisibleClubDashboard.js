@@ -1,3 +1,5 @@
+"use client"; // si utilisé dans Next.js 14+
+
 import { useState } from "react";
 import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -13,7 +15,7 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
 
   const handlePost = async (e) => {
     e.preventDefault();
-    if (!author || !author.id) {
+    if (!author?.id) {
       alert("Vous devez être connecté pour publier !");
       return;
     }
@@ -66,13 +68,13 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         }),
       });
 
-      // Appel de la fonction de notification visuelle
-      if (onNewPost) onNewPost();
+      // Notification visuelle
+      onNewPost?.();
 
-      // Réinitialisation du formulaire
+      // Réinitialisation formulaire
       setContent("");
       setFile(null);
-      setFileKey(Date.now());
+      setFileKey(Date.now()); // réinitialise input file
       setDescription("");
       setType("text");
 
@@ -86,13 +88,9 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
   };
 
   return (
-    <form
-      onSubmit={handlePost}
-      className="bg-white p-6 rounded-2xl shadow-lg space-y-4"
-    >
+    <form onSubmit={handlePost} className="bg-white p-6 rounded-2xl shadow-lg space-y-4">
       <h2 className="text-xl font-bold">Publier sur Lisible Club</h2>
 
-      {/* Sélection du type de publication */}
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -106,7 +104,6 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         <option value="live_audio">Direct Audio</option>
       </select>
 
-      {/* Zone de texte ou input file */}
       {type === "text" ? (
         <textarea
           placeholder="Écrivez votre texte ici..."
@@ -122,17 +119,16 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
           accept={
             type === "image"
               ? "image/*"
-              : type === "video" || type === "live_video"
+              : type.includes("video")
               ? "video/*"
               : "audio/*"
           }
           onChange={(e) => setFile(e.target.files[0])}
           className="w-full p-2 border rounded-md"
-          required
+          required={type !== "text"}
         />
       )}
 
-      {/* Description */}
       <input
         type="text"
         placeholder="Légende ou description"
@@ -141,7 +137,6 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         className="w-full p-2 border rounded-md"
       />
 
-      {/* Bouton publier */}
       <button
         type="submit"
         disabled={loading}
