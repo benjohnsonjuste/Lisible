@@ -3,7 +3,10 @@ import { useEffect, useState, useRef } from "react";
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [translateX, setTranslateX] = useState(0);
   const timerRef = useRef(null);
+  const bannerRef = useRef(null);
+  const startX = useRef(0);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -11,7 +14,6 @@ export default function InstallPrompt() {
       setDeferredPrompt(e);
       setShowBanner(true);
 
-      // ⏳ Masquer automatiquement après 10 secondes
       timerRef.current = setTimeout(() => setShowBanner(false), 10000);
     };
 
@@ -39,16 +41,48 @@ export default function InstallPrompt() {
     setShowBanner(false);
   };
 
+  // Début du swipe
+  const handleTouchStart = (e) => {
+    startX.current = e.touches ? e.touches[0].clientX : e.clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+    const deltaX = currentX - startX.current;
+    setTranslateX(deltaX);
+  };
+
+  const handleTouchEnd = () => {
+    if (Math.abs(translateX) > 100) {
+      // Si le swipe dépasse 100px, cacher le banner
+      setShowBanner(false);
+    } else {
+      // Sinon revenir en position
+      setTranslateX(0);
+    }
+  };
+
   if (!showBanner) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-md z-50">
+    <div
+      ref={bannerRef}
+      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-md z-50"
+      style={{ transform: `translateX(${translateX}px) translateY(-50%) translateX(-50%)` }}
+      onMouseDown={handleTouchStart}
+      onMouseMove={handleTouchMove}
+      onMouseUp={handleTouchEnd}
+      onMouseLeave={handleTouchEnd}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-2xl p-4 flex items-center justify-between animate-slideDown border border-blue-400">
         {/* Icône et texte */}
         <div className="flex items-center gap-3">
           <div className="bg-white rounded-full p-2 shadow-lg">
             <img
-              src="/icon-192.png"
+              src="/favicon.ico"
               alt="Lisible logo"
               className="w-8 h-8"
             />
@@ -56,7 +90,7 @@ export default function InstallPrompt() {
           <div>
             <p className="font-bold text-lg">Installer Lisible</p>
             <p className="text-sm opacity-90">
-              Ajoutez Lisible à votre écran d'accueil pour un accès rapide.
+              Télécharger Lisible pour un accès rapide.
             </p>
           </div>
         </div>
