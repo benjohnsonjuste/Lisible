@@ -7,14 +7,14 @@ import { onAuthStateChanged } from "firebase/auth";
 export default function PublishingForm() {
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState(""); // Contenu texte
-  const [illustration, setIllustration] = useState(null); // Image facultative
-  const [genre, setGenre] = useState(""); // Poésie, Roman, Nouvelle, Essai, Article
-  const [caractere, setCaractere] = useState(""); // Engagé, Romantique, etc.
+  const [content, setContent] = useState("");
+  const [illustration, setIllustration] = useState(null);
+  const [genre, setGenre] = useState("");
+  const [caractere, setCaractere] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Vérifie si l'utilisateur est connecté
+  // 🔹 Écoute Firebase Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -22,7 +22,7 @@ export default function PublishingForm() {
     return () => unsubscribe();
   }, []);
 
-  // Fonction de publication
+  // 🔹 Publication
   const handlePublish = async (e) => {
     e.preventDefault();
     setError(null);
@@ -39,7 +39,6 @@ export default function PublishingForm() {
     try {
       let illustrationUrl = null;
 
-      // 🔹 Si une image est fournie, on l'upload sur Firebase Storage
       if (illustration) {
         const storageRef = ref(
           storage,
@@ -57,7 +56,6 @@ export default function PublishingForm() {
         });
       }
 
-      // 🔹 Enregistrer la publication dans Firestore
       const newDoc = {
         title: title.trim(),
         content: content.trim(),
@@ -103,16 +101,15 @@ export default function PublishingForm() {
 
       {error && <p className="text-red-500">{error}</p>}
 
-      {/* Titre */}
       <input
         type="text"
         placeholder="Titre du texte"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full p-2 border rounded-md"
+        required
       />
 
-      {/* Contenu texte */}
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
@@ -120,7 +117,6 @@ export default function PublishingForm() {
         className="w-full p-2 border rounded-md h-32"
       />
 
-      {/* Image facultative */}
       <input
         type="file"
         accept="image/*"
@@ -128,11 +124,11 @@ export default function PublishingForm() {
         className="w-full p-2 border rounded-md"
       />
 
-      {/* Genre */}
       <select
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
         className="w-full p-2 border rounded-md"
+        required
       >
         <option value="">Sélectionner le genre</option>
         <option value="Poésie">Poésie</option>
@@ -142,11 +138,11 @@ export default function PublishingForm() {
         <option value="Article">Article</option>
       </select>
 
-      {/* Caractère */}
       <select
         value={caractere}
         onChange={(e) => setCaractere(e.target.value)}
         className="w-full p-2 border rounded-md"
+        required
       >
         <option value="">Sélectionner le caractère</option>
         <option value="Engagé">Engagé</option>
@@ -157,7 +153,6 @@ export default function PublishingForm() {
         <option value="Satyrique">Satyrique</option>
       </select>
 
-      {/* Bouton Publier */}
       <button
         type="submit"
         disabled={loading}
