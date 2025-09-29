@@ -99,6 +99,8 @@ export default function Library() {
             className="border p-2 rounded"
           >
             <option value="all">Tout</option>
+           <option value="essai">Essai</option>
+           <option value="article">Article</option>
             <option value="poesie">Poésie</option>
             <option value="nouvelle">Nouvelle</option>
             <option value="conte">Conte</option>
