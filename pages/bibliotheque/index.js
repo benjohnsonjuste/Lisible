@@ -118,10 +118,10 @@ export default function Library() {
             <option value="all">Tout</option>
             <option value="engage">Engagé</option>
             <option value="couleur_locale">Couleur locale</option>
-            <option value="romanesque">Romanesque</option>
+            <option value="romantique">Romantique</option>
             <option value="erotique">Érotique</option>
             <option value="satyrique">Satyrique</option>
-            <option value="lyrique">Lyrique</option>
+            <option value="melancolique">Mélancolique</option>
           </select>
         </div>
       </div>
