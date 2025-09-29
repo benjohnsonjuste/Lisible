@@ -132,7 +132,7 @@ export default function Navbar() {
             </li>
 
             <li>
-              <Link href="/lisible-club" legacyBehavior>
+              <Link href="/LisibleClub" legacyBehavior>
                 <a
                   onClick={handleMenuClick}
                   className="flex items-center gap-3 hover:text-blue-600"
