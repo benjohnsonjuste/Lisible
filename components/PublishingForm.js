@@ -7,14 +7,14 @@ import { onAuthStateChanged } from "firebase/auth";
 export default function PublishingForm() {
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [file, setFile] = useState(null);
-  const [type, setType] = useState("text"); // "text" ou "image"
+  const [content, setContent] = useState(""); // Contenu texte
+  const [illustration, setIllustration] = useState(null); // Image facultative
   const [genre, setGenre] = useState(""); // Poésie, Roman, Nouvelle, Essai, Article
-  const [caractere, setCaractere] = useState(""); // Engagé, Romantique, Érotique, Couleur locale, Mélancolique, Satyrique
+  const [caractere, setCaractere] = useState(""); // Engagé, Romantique, etc.
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Vérifie si l'utilisateur est connecté
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -22,33 +22,32 @@ export default function PublishingForm() {
     return () => unsubscribe();
   }, []);
 
+  // Fonction de publication
   const handlePublish = async (e) => {
     e.preventDefault();
     setError(null);
 
     if (!user) return setError("Veuillez vous connecter pour publier.");
-
-    if (!title.trim() || (!content.trim() && !file)) {
-      return setError("Le titre et le contenu (texte ou image) sont obligatoires.");
-    }
-
+    if (!title.trim()) return setError("Le titre est obligatoire.");
+    if (!content.trim() && !illustration)
+      return setError("Ajoutez un texte et/ou une image d'illustration.");
     if (!genre) return setError("Veuillez sélectionner un genre.");
     if (!caractere) return setError("Veuillez sélectionner un caractère.");
 
     setLoading(true);
 
     try {
-      let contentUrl = content;
+      let illustrationUrl = null;
 
-      // 🔹 Upload de l'image si type = image
-      if (type === "image" && file) {
+      // 🔹 Si une image est fournie, on l'upload sur Firebase Storage
+      if (illustration) {
         const storageRef = ref(
           storage,
-          `bibliotheque/${user.uid}/${Date.now()}_${file.name}`
+          `bibliotheque/${user.uid}/illustrations/${Date.now()}_${illustration.name}`
         );
-        const uploadTask = uploadBytesResumable(storageRef, file);
+        const uploadTask = uploadBytesResumable(storageRef, illustration);
 
-        contentUrl = await new Promise((resolve, reject) => {
+        illustrationUrl = await new Promise((resolve, reject) => {
           uploadTask.on(
             "state_changed",
             null,
@@ -58,26 +57,24 @@ export default function PublishingForm() {
         });
       }
 
+      // 🔹 Enregistrer la publication dans Firestore
       const newDoc = {
         title: title.trim(),
-        content: type === "text" ? content.trim() : contentUrl,
-        type,
+        content: content.trim(),
+        illustrationUrl: illustrationUrl || null,
         genre,
         caractere,
-        illustrationUrl: type === "image" ? contentUrl : null,
         authorId: user.uid,
         authorName: user.displayName || "Auteur inconnu",
         createdAt: serverTimestamp(),
       };
 
-      // 🔹 Ajouter uniquement dans la collection "bibliotheque"
       await addDoc(collection(db, "bibliotheque"), newDoc);
 
-      // Reset
+      // Réinitialiser le formulaire
       setTitle("");
       setContent("");
-      setFile(null);
-      setType("text");
+      setIllustration(null);
       setGenre("");
       setCaractere("");
 
@@ -90,47 +87,48 @@ export default function PublishingForm() {
     }
   };
 
-  if (!user) return <p className="text-center text-red-500">Connectez-vous pour publier.</p>;
+  if (!user)
+    return (
+      <p className="text-center text-red-500">
+        Connectez-vous pour publier vos textes.
+      </p>
+    );
 
   return (
-    <form onSubmit={handlePublish} className="bg-white p-6 rounded-2xl shadow-md space-y-4">
+    <form
+      onSubmit={handlePublish}
+      className="bg-white p-6 rounded-2xl shadow-md space-y-4"
+    >
       <h2 className="text-xl font-bold">Publier dans la bibliothèque</h2>
 
       {error && <p className="text-red-500">{error}</p>}
 
+      {/* Titre */}
       <input
         type="text"
-        placeholder="Titre"
+        placeholder="Titre du texte"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full p-2 border rounded-md"
       />
 
-      <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
+      {/* Contenu texte */}
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Écrivez votre texte ici (facultatif si vous ajoutez une image)..."
+        className="w-full p-2 border rounded-md h-32"
+      />
+
+      {/* Image facultative */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setIllustration(e.target.files[0])}
         className="w-full p-2 border rounded-md"
-      >
-        <option value="text">Texte</option>
-        <option value="image">Image</option>
-      </select>
+      />
 
-      {type === "text" ? (
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Écrivez votre texte ici..."
-          className="w-full p-2 border rounded-md h-32"
-        />
-      ) : (
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files[0])}
-          className="w-full p-2 border rounded-md"
-        />
-      )}
-
+      {/* Genre */}
       <select
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
@@ -144,6 +142,7 @@ export default function PublishingForm() {
         <option value="Article">Article</option>
       </select>
 
+      {/* Caractère */}
       <select
         value={caractere}
         onChange={(e) => setCaractere(e.target.value)}
@@ -158,6 +157,7 @@ export default function PublishingForm() {
         <option value="Satyrique">Satyrique</option>
       </select>
 
+      {/* Bouton Publier */}
       <button
         type="submit"
         disabled={loading}
