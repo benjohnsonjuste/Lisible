@@ -45,7 +45,7 @@ export default function NotificationBell() {
       onClick={() => router.push("/notifications")}
     >
       {/* Icône cloche */}
-      <Bell className="w-6 h-6 text-white" />
+      <Bell className="w-8 h-8 text-white hover:text-blue-300 transition" />
 
       {/* Badge rouge si notifications non lues */}
       {count > 0 && (
