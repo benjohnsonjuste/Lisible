@@ -5,7 +5,6 @@ export default function InstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
   const [translateX, setTranslateX] = useState(0);
   const timerRef = useRef(null);
-  const bannerRef = useRef(null);
   const startX = useRef(0);
 
   useEffect(() => {
@@ -18,7 +17,6 @@ export default function InstallPrompt() {
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -41,7 +39,6 @@ export default function InstallPrompt() {
     setShowBanner(false);
   };
 
-  // Début du swipe
   const handleTouchStart = (e) => {
     startX.current = e.touches ? e.touches[0].clientX : e.clientX;
   };
@@ -54,10 +51,8 @@ export default function InstallPrompt() {
 
   const handleTouchEnd = () => {
     if (Math.abs(translateX) > 100) {
-      // Si le swipe dépasse 100px, cacher le banner
       setShowBanner(false);
     } else {
-      // Sinon revenir en position
       setTranslateX(0);
     }
   };
@@ -66,9 +61,6 @@ export default function InstallPrompt() {
 
   return (
     <div
-      ref={bannerRef}
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-md z-50"
-      style={{ transform: `translateX(${translateX}px) translateY(-50%) translateX(-50%)` }}
       onMouseDown={handleTouchStart}
       onMouseMove={handleTouchMove}
       onMouseUp={handleTouchEnd}
@@ -76,21 +68,21 @@ export default function InstallPrompt() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      className="fixed inset-0 flex items-center justify-center z-50"
     >
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-2xl p-4 flex items-center justify-between animate-slideDown border border-blue-400">
+      <div
+        className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-2xl shadow-2xl p-4 flex items-center justify-between max-w-md w-[95%] animate-slideDown border border-blue-400"
+        style={{ transform: `translateX(${translateX}px)` }}
+      >
         {/* Icône et texte */}
         <div className="flex items-center gap-3">
-          <div className="bg-white rounded-full p-2 shadow-lg">
-            <img
-              src="/favicon.ico"
-              alt="Lisible logo"
-              className="w-8 h-8"
-            />
+          <div className="bg-black rounded-full p-2 shadow-lg">
+            <img src="/favicon.ico" alt="Lisible logo" className="w-8 h-8" />
           </div>
           <div>
             <p className="font-bold text-lg">Installer Lisible</p>
             <p className="text-sm opacity-90">
-              Télécharger Lisible pour un accès rapide.
+              Installer Lisible pour un accès rapide.
             </p>
           </div>
         </div>
