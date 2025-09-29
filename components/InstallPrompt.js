@@ -13,10 +13,11 @@ export default function InstallPrompt() {
       setDeferredPrompt(e);
       setShowBanner(true);
 
-      timerRef.current = setTimeout(() => setShowBanner(false), 10000);
+      timerRef.current = setTimeout(() => setShowBanner(false), 10000); // 10 secondes
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -68,10 +69,10 @@ export default function InstallPrompt() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50"
-      style={{ transform: `translateX(${translateX}px)` }} // Correction pour utiliser transform correctement
+      className="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-lg"
+      style={{ transform: `translateX(${translateX}px)` }}
     >
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl p-4 flex items-center justify-between max-w-md w-full animate-slideDown border border-blue-400">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl p-4 flex items-center justify-between animate-slideDown border border-blue-400">
         {/* Icône et texte */}
         <div className="flex items-center gap-3">
           <div className="bg-black rounded-full p-2 shadow-lg">
