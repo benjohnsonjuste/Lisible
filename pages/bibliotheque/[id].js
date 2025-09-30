@@ -1,14 +1,13 @@
-import { useRouter } from "next/router";
-import Link from "next/link";
+"use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { db } from "@/lib/firebaseConfig";
-import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
-export default function TextDetails() {
+export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
   const [text, setText] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
@@ -16,63 +15,21 @@ export default function TextDetails() {
     const fetchText = async () => {
       const docRef = doc(db, "bibliotheque", id);
       const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-
-        // Incrémenter les vues
-        await updateDoc(docRef, {
-          views: increment(1),
-        });
-
-        setText({ id: docSnap.id, ...data });
-      } else {
-        setText(null);
-      }
-
-      setLoading(false);
+      if (docSnap.exists()) setText({ id: docSnap.id, ...docSnap.data() });
+      else setText(null);
     };
 
     fetchText();
   }, [id]);
 
-  if (loading) return <p className="text-center mt-10">Chargement...</p>;
-
-  if (!text)
-    return (
-      <div className="text-center mt-10">
-        <p className="text-red-500">Texte introuvable.</p>
-        <Link href="/bibliotheque" className="text-blue-600 hover:underline">
-          ← Retour à la bibliothèque
-        </Link>
-      </div>
-    );
+  if (!text) return <p className="text-center mt-6">Chargement...</p>;
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <Link href="/bibliotheque" className="text-blue-600 hover:underline">
-        ← Retour à la bibliothèque
-      </Link>
-
-      <h1 className="text-3xl font-bold mt-4">{text.title}</h1>
-      <p className="text-gray-500">par {text.authorName || "Anonyme"}</p>
-
-      {text.illustrationUrl && (
-        <img
-          src={text.illustrationUrl}
-          alt={text.title}
-          className="w-full rounded-lg mt-4"
-        />
-      )}
-
-      <div className="mt-6 bg-white p-4 rounded-lg shadow whitespace-pre-line">
-        {text.content}
-      </div>
-
-      <div className="mt-4 text-sm text-gray-500 flex justify-between">
-        <span>Vues : {text.views || 0}</span>
-        <span>Likes : {text.likes || 0}</span>
-      </div>
+      <h1 className="text-3xl font-bold mb-2">{text.title}</h1>
+      <p className="text-gray-500 mb-4">par {text.authorName}</p>
+      {text.illustrationUrl && <img src={text.illustrationUrl} alt="" className="mb-4 rounded" />}
+      <p className="text-gray-800 whitespace-pre-line">{text.content}</p>
     </div>
   );
 }
