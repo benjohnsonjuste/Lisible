@@ -1,4 +1,4 @@
-"use client"; // si utilisé dans Next.js 14+
+"use client"; // nécessaire pour Firebase et Next.js côté client
 
 import { useState } from "react";
 import { db, storage } from "@/lib/firebaseConfig";
@@ -11,10 +11,15 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [fileKey, setFileKey] = useState(Date.now());
+  const [fileKey, setFileKey] = useState(Date.now()); // pour reset input file
 
+  /**
+   * Gestion de la publication
+   */
   const handlePost = async (e) => {
     e.preventDefault();
+
+    // Vérification utilisateur connecté
     if (!author?.id) {
       alert("Vous devez être connecté pour publier !");
       return;
@@ -25,6 +30,7 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
     try {
       let mediaUrl = "";
 
+      // 🔹 Upload du fichier si nécessaire
       if (file && type !== "text") {
         const folder = type.includes("live") ? "live" : "media";
         const storageRef = ref(
@@ -33,31 +39,38 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         );
 
         const uploadTask = uploadBytesResumable(storageRef, file);
+
         mediaUrl = await new Promise((resolve, reject) => {
           uploadTask.on(
             "state_changed",
             null,
             reject,
-            async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
+            async () => {
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              resolve(url);
+            }
           );
         });
       }
 
+      // 🔹 Structure du post
       const newPost = {
         authorId: author.id,
-        authorName: author.name || "",
+        authorName: author.name || "Anonyme",
         type,
         content: type === "text" ? content.trim() : mediaUrl,
         description: description.trim() || "",
         createdAt: serverTimestamp(),
         likes: 0,
         views: 0,
+        likedBy: [],
         isLive: type === "live_video" || type === "live_audio",
       };
 
+      // 🔹 Envoi dans Firestore
       await addDoc(collection(db, "clubPosts"), newPost);
 
-      // Notification via API
+      // 🔹 Notification via API interne (optionnel)
       await fetch("/api/sendNotification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,13 +81,13 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         }),
       });
 
-      // Notification visuelle
-      onNewPost?.();
+      // 🔹 Callback pour rafraîchir la liste côté parent
+      if (onNewPost) onNewPost();
 
-      // Réinitialisation formulaire
+      // 🔹 Réinitialisation du formulaire
       setContent("");
       setFile(null);
-      setFileKey(Date.now()); // réinitialise input file
+      setFileKey(Date.now()); // reset input file
       setDescription("");
       setType("text");
 
@@ -88,9 +101,13 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
   };
 
   return (
-    <form onSubmit={handlePost} className="bg-white p-6 rounded-2xl shadow-lg space-y-4">
+    <form
+      onSubmit={handlePost}
+      className="bg-white p-6 rounded-2xl shadow-lg space-y-4"
+    >
       <h2 className="text-xl font-bold">Publier sur Lisible Club</h2>
 
+      {/* Type de publication */}
       <select
         value={type}
         onChange={(e) => setType(e.target.value)}
@@ -104,6 +121,7 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         <option value="live_audio">Direct Audio</option>
       </select>
 
+      {/* Champ texte ou fichier */}
       {type === "text" ? (
         <textarea
           placeholder="Écrivez votre texte ici..."
@@ -129,14 +147,16 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
         />
       )}
 
+      {/* Description du post */}
       <input
         type="text"
-        placeholder="Légende ou description"
+        placeholder="Légende ou description (facultatif)"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         className="w-full p-2 border rounded-md"
       />
 
+      {/* Bouton de publication */}
       <button
         type="submit"
         disabled={loading}
@@ -144,7 +164,7 @@ export default function LisibleClubDashboard({ author, onNewPost }) {
           loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
         }`}
       >
-        {loading ? "Publication..." : "Publier"}
+        {loading ? "Publication en cours..." : "Publier"}
       </button>
     </form>
   );
