@@ -17,9 +17,10 @@ export default function PublishingForm() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
 
   /**
-   * 🔹 Écoute l'état d'authentification Firebase
+   * 🔹 Suivi de l'état d'authentification Firebase
    */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -29,13 +30,14 @@ export default function PublishingForm() {
   }, []);
 
   /**
-   * 🔹 Gestion de la publication dans Firestore
+   * 🔹 Gestion de la publication d'un texte
    */
   const handlePublish = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage("");
 
-    // Vérifications basiques
+    // Vérifications de base
     if (!user) return setError("Veuillez vous connecter pour publier.");
     if (!title.trim()) return setError("Le titre est obligatoire.");
     if (!content.trim() && !illustration)
@@ -48,9 +50,7 @@ export default function PublishingForm() {
     try {
       let illustrationUrl = null;
 
-      /**
-       * 🔹 Upload de l'image si présente
-       */
+      // 🔹 Upload de l'image si présente
       if (illustration) {
         const storageRef = ref(
           storage,
@@ -72,32 +72,30 @@ export default function PublishingForm() {
         });
       }
 
-      /**
-       * 🔹 Envoi dans Firestore
-       */
-      const newDoc = {
+      // 🔹 Envoi du texte dans Firestore
+      await addDoc(collection(db, "bibliotheque"), {
         title: title.trim(),
         content: content.trim(),
         illustrationUrl: illustrationUrl || null,
         genre,
         caractere,
+        likes: 0,
+        views: 0,
         authorId: user.uid,
         authorName: user.displayName || "Auteur inconnu",
         createdAt: serverTimestamp(),
-      };
+      });
 
-      await addDoc(collection(db, "bibliotheque"), newDoc);
-
-      /**
-       * 🔹 Réinitialisation du formulaire
-       */
+      // 🔹 Réinitialisation du formulaire
       setTitle("");
       setContent("");
       setIllustration(null);
       setGenre("");
       setCaractere("");
 
-      alert("✅ Publication réussie !");
+      // 🔹 Affichage du message de succès
+      setSuccessMessage("✅ Publication réussie !");
+      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (err) {
       console.error("Erreur lors de la publication :", err);
       setError("Impossible de publier. Réessayez.");
@@ -107,7 +105,7 @@ export default function PublishingForm() {
   };
 
   /**
-   * 🔹 Affichage si utilisateur non connecté
+   * 🔹 Si utilisateur non connecté
    */
   if (!user)
     return (
@@ -125,9 +123,17 @@ export default function PublishingForm() {
         Publier dans la bibliothèque
       </h2>
 
+      {/* Message de succès */}
+      {successMessage && (
+        <p className="text-green-600 text-center font-semibold">
+          {successMessage}
+        </p>
+      )}
+
+      {/* Message d'erreur */}
       {error && <p className="text-red-500 text-center">{error}</p>}
 
-      {/* 🔹 Titre */}
+      {/* Titre */}
       <input
         type="text"
         placeholder="Titre du texte"
@@ -137,7 +143,7 @@ export default function PublishingForm() {
         required
       />
 
-      {/* 🔹 Contenu texte */}
+      {/* Contenu texte */}
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
@@ -145,7 +151,7 @@ export default function PublishingForm() {
         className="w-full p-2 border rounded-md h-32"
       />
 
-      {/* 🔹 Illustration (image) */}
+      {/* Illustration */}
       <input
         type="file"
         accept="image/*"
@@ -153,7 +159,7 @@ export default function PublishingForm() {
         className="w-full p-2 border rounded-md"
       />
 
-      {/* 🔹 Sélection du genre */}
+      {/* Sélection du genre */}
       <select
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
@@ -168,7 +174,7 @@ export default function PublishingForm() {
         <option value="Article">Article</option>
       </select>
 
-      {/* 🔹 Sélection du caractère */}
+      {/* Sélection du caractère */}
       <select
         value={caractere}
         onChange={(e) => setCaractere(e.target.value)}
@@ -184,7 +190,7 @@ export default function PublishingForm() {
         <option value="Satyrique">Satyrique</option>
       </select>
 
-      {/* 🔹 Bouton publication */}
+      {/* Bouton publication */}
       <button
         type="submit"
         disabled={loading}
