@@ -31,7 +31,7 @@ export default function AuthorStats({ authorId }){
   return (
     <div className="grid grid-cols-3 gap-4 mb-6">
       <div className="bg-white p-4 rounded shadow text-center">
-        <h4 className="text-sm text-gray-500">Nombre d'abonnés</h4>
+        <h4 className="text-sm text-gray-500">Mes abonnés</h4>
         <div className="text-2xl font-bold">{followers}</div>
       </div>
       <div className="bg-white p-4 rounded shadow text-center">
