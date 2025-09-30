@@ -1,143 +1,200 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebaseConfig";
+import { db, storage, auth } from "@/lib/firebaseConfig";
 import {
   collection,
+  addDoc,
   query,
   orderBy,
   onSnapshot,
-  doc,
+  serverTimestamp,
   updateDoc,
-  arrayUnion,
-  increment
+  doc,
+  arrayUnion
 } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
-import { Heart } from "lucide-react";
 
-export default function LisibleClubViewer() {
-  const [posts, setPosts] = useState([]);
+export default function ClubViewer() {
   const [user, setUser] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [content, setContent] = useState("");
+  const [file, setFile] = useState(null);
+  const [type, setType] = useState("text");
+  const [loading, setLoading] = useState(false);
+  const [commentText, setCommentText] = useState("");
 
+  // 🔹 Auth listener
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsubAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
   }, []);
 
+  // 🔹 Posts listener
   useEffect(() => {
     const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => {
-        const item = d.data();
-        return {
-          id: d.id,
-          ...item,
-          // convert createdAt if necessary for display
-          createdAt: item.createdAt?.toDate ? item.createdAt.toDate() : null,
-        };
-      });
-      setPosts(data);
+    const unsubscribe = onSnapshot(q, snapshot => {
+      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-
-    return () => unsub();
+    return () => unsubscribe();
   }, []);
 
-  const handleLike = async (post) => {
-    if (!user) {
-      alert("Veuillez vous connecter pour aimer une publication.");
-      return;
-    }
-    const likedBy = Array.isArray(post.likedBy) ? post.likedBy : [];
-    if (likedBy.includes(user.uid)) {
-      alert("Vous avez déjà aimé cette publication.");
-      return;
-    }
+  // 🔹 Publier
+  const handlePublish = async (e) => {
+    e.preventDefault();
+    if (!user) return alert("Connectez-vous pour publier.");
+    if (!content.trim() && !file) return alert("Ajoutez du contenu ou un fichier.");
 
+    setLoading(true);
     try {
-      const ref = doc(db, "clubPosts", post.id);
-      await updateDoc(ref, {
-        likes: increment(1),
-        likedBy: arrayUnion(user.uid),
+      let url = null;
+      if (file) {
+        const storageRef = ref(storage, `clubPosts/${user.uid}/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+        url = await new Promise((resolve, reject) => {
+          uploadTask.on("state_changed", null, reject, async () => {
+            resolve(await getDownloadURL(uploadTask.snapshot.ref));
+          });
+        });
+      }
+
+      await addDoc(collection(db, "clubPosts"), {
+        authorId: user.uid,
+        authorName: user.displayName || "Anonyme",
+        content: content || null,
+        url: url || null,
+        type,
+        likes: 0,
+        views: 0,
+        likedBy: [],
+        comments: [],
+        createdAt: serverTimestamp()
       });
 
-      // mise à jour locale immédiate (optimistic)
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? { ...p, likes: (p.likes || 0) + 1, likedBy: [...likedBy, user.uid] }
-            : p
-        )
-      );
+      setContent("");
+      setFile(null);
+      setType("text");
     } catch (err) {
-      console.error("Erreur like :", err);
+      console.error(err);
+      alert("Erreur lors de la publication.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // 🔹 Like
+  const handleLike = async (post) => {
+    if (!user) return alert("Connectez-vous pour liker.");
+    if (post.likedBy?.includes(user.uid)) return;
+    const postRef = doc(db, "clubPosts", post.id);
+    await updateDoc(postRef, {
+      likes: post.likes + 1,
+      likedBy: arrayUnion(user.uid)
+    });
+  };
+
+  // 🔹 Commenter
+  const handleComment = async (post) => {
+    if (!user) return alert("Connectez-vous pour commenter.");
+    if (!commentText.trim()) return;
+
+    const postRef = doc(db, "clubPosts", post.id);
+    await updateDoc(postRef, {
+      comments: arrayUnion({
+        text: commentText,
+        authorId: user.uid,
+        authorName: user.displayName || "Anonyme",
+        createdAt: serverTimestamp()
+      })
+    });
+    setCommentText("");
   };
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold mb-4">Lisible Club</h1>
 
-      {posts.length === 0 && (
-        <p className="text-center text-gray-500">Aucun post pour le moment.</p>
+      {user && (
+        <form onSubmit={handlePublish} className="p-4 border rounded-lg space-y-2">
+          <textarea
+            placeholder="Écrivez un texte..."
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full p-2 border rounded-md"
+          />
+          <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="p-2 border rounded-md"
+          >
+            <option value="text">Texte</option>
+            <option value="image">Image</option>
+            <option value="video">Vidéo</option>
+            <option value="audio">Audio</option>
+            <option value="live_video">Direct Vidéo</option>
+            <option value="live_audio">Direct Audio</option>
+          </select>
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md"
+          >
+            {loading ? "Publication en cours..." : "Publier"}
+          </button>
+        </form>
       )}
 
       {posts.map((post) => (
-        <article key={post.id} className="p-4 border rounded-lg shadow space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold">{post.authorName || "Anonyme"}</h3>
-              <div className="text-sm text-gray-500">
-                {post.createdAt ? post.createdAt.toLocaleString() : ""}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleLike(post)}
-                disabled={post.likedBy?.includes(user?.uid)}
-                title={post.likedBy?.includes(user?.uid) ? "Vous avez déjà aimé" : "J'aime"}
-                className={`flex items-center gap-1 ${
-                  post.likedBy?.includes(user?.uid) ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-              >
-                <Heart className="w-5 h-5 text-red-500" />
-                <span className="text-sm">{post.likes || 0}</span>
-              </button>
-            </div>
+        <div key={post.id} className="p-4 border rounded-lg shadow space-y-2">
+          <p className="text-gray-500">par {post.authorName}</p>
+          {post.type === "text" && <p>{post.content}</p>}
+          {post.type === "image" && <img src={post.url} alt="Image" className="rounded-lg" />}
+          {post.type === "video" && <video controls src={post.url} className="rounded-lg" />}
+          {post.type === "audio" && <audio controls src={post.url} />}
+          
+          <div className="flex items-center space-x-4">
+            <button onClick={() => handleLike(post)} className="text-red-500 font-bold">
+              ❤️ {post.likes || 0}
+            </button>
+            <button
+              onClick={() => navigator.share?.({ text: post.content || "", url: post.url })}
+              className="text-blue-500 font-semibold"
+            >
+              🔗 Partager
+            </button>
           </div>
 
-          {post.description && <p className="text-gray-700">{post.description}</p>}
-
-          {/* Contenu selon le type */}
-          {post.type === "text" && (
-            <p className="whitespace-pre-line">{post.content}</p>
-          )}
-
-          {post.type === "image" && post.content && (
-            <img src={post.content} alt="Publication" className="w-full rounded-lg" />
-          )}
-
-          {post.type === "video" && post.content && (
-            <video controls className="w-full rounded-lg">
-              <source src={post.content} type="video/mp4" />
-              Votre navigateur ne supporte pas la vidéo.
-            </video>
-          )}
-
-          {post.type === "audio" && post.content && (
-            <audio controls className="w-full">
-              <source src={post.content} type="audio/mpeg" />
-            </audio>
-          )}
-
-          {/* Si isLive true on peut afficher badge EN DIRECT */}
-          {post.isLive && (
-            <div className="inline-block px-2 py-1 bg-red-600 text-white rounded text-xs">
-              EN DIRECT
-            </div>
-          )}
-        </article>
+          {/* Commentaires */}
+          <div className="space-y-2">
+            {post.comments?.map((c, idx) => (
+              <p key={idx} className="text-gray-700">
+                <span className="font-semibold">{c.authorName}:</span> {c.text}
+              </p>
+            ))}
+            {user && (
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  placeholder="Commenter..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="flex-1 border p-2 rounded-md"
+                />
+                <button
+                  onClick={() => handleComment(post)}
+                  className="bg-green-500 text-white px-3 rounded-md"
+                >
+                  Envoyer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       ))}
+
+      {posts.length === 0 && <p className="text-center text-gray-500">Aucun post pour le moment.</p>}
     </div>
   );
 }
