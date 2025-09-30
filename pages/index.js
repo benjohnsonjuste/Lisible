@@ -5,9 +5,9 @@ export default function Home() {
     <div className="max-w-4xl mx-auto text-center px-4 py-8 space-y-8 bg-gray-900 text-gray-100 rounded-lg shadow-lg">
       {/* Image de couverture */}
       <img
-        src="/poster_2025-09-29-040111.png"
+        src="/logo.png"
         alt="Couverture Lisible"
-        className="w-full max-h-53 object-cover rounded-lg mb-6"
+        className="w-full max-h-50 object-cover rounded-lg mb-6"
       />
 
       <h1 className="text-2xl font-extrabold text-white mb-4">Bienvenue sur Lisible</h1>
