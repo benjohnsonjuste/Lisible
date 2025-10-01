@@ -1,73 +1,42 @@
 "use client";
 import { useEffect, useState } from "react";
+import UploadButton from "@/components/UploadButton";
 
 export default function ViewPage() {
-  const [posts, setPosts] = useState([]);
+  const [files, setFiles] = useState([]);
+
+  async function fetchFiles() {
+    const res = await fetch("/api/upload");
+    const data = await res.json();
+    setFiles(data);
+  }
 
   useEffect(() => {
-    async function fetchPosts() {
-      try {
-        const res = await fetch("/api/drive/list");
-        const data = await res.json();
-        setPosts(data);
-      } catch (err) {
-        console.error("Erreur récupération Drive :", err);
-      }
-    }
-    fetchPosts();
+    fetchFiles();
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Lisible Club Viewer</h1>
-      <p className="text-gray-600 mb-6">
-        Ici s’afficheront les publications ou contenus à consulter.
-      </p>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Gestion des fichiers Google Drive</h1>
 
-      {posts.map((post) => (
-        <div key={post.id} className="p-4 border rounded-lg shadow">
-          <p className="text-gray-500">
-            Posté le {new Date(post.createdTime).toLocaleString()}
-          </p>
+      <UploadButton refreshFiles={fetchFiles} />
 
-          {post.mimeType.startsWith("text/") && (
+      <h2 className="text-xl mt-6 mb-2">📂 Fichiers déjà uploadés :</h2>
+      <ul className="space-y-2">
+        {files.map((file) => (
+          <li key={file.id} className="p-2 border rounded">
             <a
-              href={post.webViewLink}
+              href={`https://drive.google.com/uc?id=${file.id}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 underline"
             >
-              Lire le texte : {post.name}
+              {file.name}
             </a>
-          )}
-
-          {post.mimeType.startsWith("image/") && (
-            <img
-              src={`https://drive.google.com/uc?id=${post.id}`}
-              alt={post.name}
-              className="rounded-lg mt-2"
-            />
-          )}
-
-          {post.mimeType.startsWith("video/") && (
-            <video controls className="rounded-lg mt-2">
-              <source src={`https://drive.google.com/uc?id=${post.id}`} />
-            </video>
-          )}
-
-          {post.mimeType.startsWith("audio/") && (
-            <audio controls className="mt-2">
-              <source src={`https://drive.google.com/uc?id=${post.id}`} />
-            </audio>
-          )}
-        </div>
-      ))}
-
-      {posts.length === 0 && (
-        <p className="text-center text-gray-500">
-          Aucune publication pour le moment.
-        </p>
-      )}
+            <span className="ml-2 text-gray-500 text-sm">({file.mimeType})</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
