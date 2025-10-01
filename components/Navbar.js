@@ -64,7 +64,7 @@ export default function Navbar() {
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/dashboard">
+            <Link href="/library">
               <LayoutDashboard className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
@@ -97,7 +97,7 @@ export default function Navbar() {
           <ul className="space-y-4">
             {[
               { href: "/auteurs", label: "Auteurs", icon: <Users className="w-5 h-5" /> },
-              { href: "/lisibleclub", label: "Lisible Club", icon: <MessageCircle className="w-5 h-5" /> },
+              { href: "/club", label: "Lisible Club", icon: <MessageCircle className="w-5 h-5" /> },
               { href: "/evenements", label: "Événements", icon: <Calendar className="w-5 h-5" /> },
               { href: "/terms", label: "Conditions d'utilisation", icon: <FileText className="w-5 h-5" /> },
               { href: "/contact", label: "Contact", icon: <MessageCircle className="w-5 h-5" /> },
