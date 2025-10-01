@@ -52,7 +52,7 @@ export default function Navbar() {
           </button>
 
           {/* Logo Lisible */}
-          <Link href="/" className="cursor-pointer">
+          <Link href="/logo.png" className="cursor-pointer">
             <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
           </Link>
 
@@ -60,7 +60,7 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
             <NotificationBell />
 
-            <Link href="/view">
+            <Link href="/club">
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
