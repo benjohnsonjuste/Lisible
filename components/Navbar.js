@@ -52,7 +52,7 @@ export default function Navbar() {
           </button>
 
           {/* Logo Lisible */}
-          <Link href="/logo.png" className="cursor-pointer">
+          <Link href="/Picsart_25-09-29_01-22-42-698.jpg" className="cursor-pointer">
             <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
           </Link>
 
