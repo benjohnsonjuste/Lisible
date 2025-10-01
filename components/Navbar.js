@@ -51,11 +51,6 @@ export default function Navbar() {
             <Menu className="w-8 h-8 text-white" />
           </button>
 
-          {/* Logo Lisible */}
-          <Link href="/" className="cursor-pointer">
-            <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
-          </Link>
-
           {/* Zone droite : Notifications + Auth */}
           <div className="flex items-center gap-6">
             <NotificationBell />
