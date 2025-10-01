@@ -1,5 +1,8 @@
 "use client";
 import { useState } from "react";
+import { db } from "../firebase"; // Firebase config file (see setup instructions below)
+import { addDoc, collection } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // For user authentication
 
 async function handleUpload(file, setLoading, setUrl) {
   try {
@@ -11,6 +14,7 @@ async function handleUpload(file, setLoading, setUrl) {
       try {
         const base64 = reader.result.split(",")[1];
 
+        // Upload file to Google Drive via API route
         const res = await fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -25,6 +29,21 @@ async function handleUpload(file, setLoading, setUrl) {
 
         const data = await res.json();
         if (setUrl) setUrl(data.url);
+
+        // Get the current user's ID (if authenticated)
+        const auth = getAuth();
+        const user = auth.currentUser;
+        const authorId = user ? user.uid : "anonymous"; // Fallback to "anonymous" if no user is logged in
+
+        // Save publication metadata to Firestore
+        await addDoc(collection(db, "publications"), {
+          url: data.url,
+          fileName: file.name,
+          mimeType: file.type,
+          authorId,
+          timestamp: new Date().toISOString(),
+          // Add optional fields like title, description, etc., if needed
+        });
       } catch (err) {
         console.error("❌ Upload échoué :", err);
         alert("Échec de l’upload !");
@@ -51,7 +70,7 @@ export default function UploadForm() {
 
   return (
     <div className="p-4">
-      <input type="file" onChange={onFileChange} />
+      <input type="file" onChange={onFileChange} disabled={loading} />
 
       {loading && <p className="text-blue-500">⏳ Upload en cours...</p>}
       {url && (
@@ -64,4 +83,4 @@ export default function UploadForm() {
       )}
     </div>
   );
-    }
+}
