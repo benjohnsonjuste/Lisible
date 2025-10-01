@@ -1,46 +1,56 @@
 import { google } from "googleapis";
 
-const auth = new google.auth.GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
-  scopes: ["https://www.googleapis.com/auth/drive"],
-});
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
-
+export async function POST(req) {
   try {
-    const { fileName, mimeType, base64 } = req.body;
-    const buffer = Buffer.from(base64, "base64");
+    const { fileName, mimeType, base64 } = await req.json();
 
-    const drive = google.drive({ version: "v3", auth: await auth.getClient() });
+    // Authenticate with Google Drive using service account
+    const auth = new google.auth.JWT({
+      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
 
-    const file = await drive.files.create({
-      requestBody: {
-        name: fileName,
-        parents: [process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID],
-        mimeType,
-      },
-      media: {
-        mimeType,
-        body: buffer,
-      },
+    const drive = google.drive({ version: "v3", auth });
+
+    const fileMetadata = {
+      name: fileName,
+      // parents: ["YOUR_GOOGLE_DRIVE_FOLDER_ID"], // Optional: Specify a folder ID
+    };
+
+    const media = {
+      mimeType,
+      body: Buffer.from(base64, "base64"),
+    };
+
+    // Upload file to Google Drive
+    const driveRes = await drive.files.create({
+      resource: fileMetadata,
+      media,
       fields: "id",
     });
 
-    const fileId = file.data.id;
-
-    // Rendre public
+    // Make the file publicly accessible
     await drive.permissions.create({
-      fileId,
-      requestBody: { role: "reader", type: "anyone" },
+      fileId: driveRes.data.id,
+      requestBody: {
+        role: "reader",
+        type: "anyone",
+      },
     });
 
-    const url = `https://drive.google.com/uc?id=${fileId}`;
-    res.status(200).json({ url });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erreur upload" });
+    // Generate public URL
+    const url = `https://drive.google.com/uc?id=${driveRes.data.id}`;
+
+    return new Response(JSON.stringify({ url }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Erreur d'upload vers Google Drive :", err);
+    return new Response(JSON.stringify({ error: "Échec de l'upload" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
