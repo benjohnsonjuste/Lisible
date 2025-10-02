@@ -1,0 +1,131 @@
+import React, { useState, useEffect } from "react";
+import { Rocket, Users, Eye, BookOpen, DollarSign } from "lucide-react";
+
+/**
+ * Composant pour afficher les métriques de l'auteur
+ * - abonnés
+ * - vues mensuelles
+ * - textes publiés
+ * - gains totaux
+ */
+export default function MetricsOverview() {
+  const [metrics, setMetrics] = useState({
+    subscribers: 0,
+    monthlyViews: 0,
+    textsPublished: 0,
+    totalEarnings: 0,
+  });
+
+  const [previousMetrics, setPreviousMetrics] = useState(null);
+  const [isMonetizationUnlocked, setIsMonetizationUnlocked] = useState(false);
+
+  // Simuler les mises à jour automatiques des métriques
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPreviousMetrics(metrics);
+      setMetrics((prev) => ({
+        ...prev,
+        subscribers: prev.subscribers + Math.floor(Math.random() * 10),
+        monthlyViews: prev.monthlyViews + Math.floor(Math.random() * 3000),
+        textsPublished: prev.textsPublished + (Math.random() > 0.9 ? 1 : 0),
+      }));
+    }, 5000); // simulation toutes les 5 sec
+
+    return () => clearInterval(interval);
+  }, [metrics]);
+
+  // Vérifier si la monétisation est débloquée (250 abonnés)
+  useEffect(() => {
+    if (metrics?.subscribers >= 250) {
+      setIsMonetizationUnlocked(true);
+    }
+  }, [metrics]);
+
+  // Calcul des gains (0.2 € pour 1000 vues)
+  useEffect(() => {
+    const earnings = (metrics.monthlyViews / 1000) * 0.2;
+    setMetrics((prev) => ({
+      ...prev,
+      totalEarnings: earnings.toFixed(2),
+    }));
+  }, [metrics.monthlyViews]);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Abonnés */}
+      <MetricCard
+        title="Abonnés"
+        value={metrics.subscribers}
+        previous={previousMetrics?.subscribers}
+        icon={<Users className="text-blue-500" size={28} />}
+      />
+
+      {/* Vues mensuelles */}
+      <MetricCard
+        title="Vues mensuelles"
+        value={metrics.monthlyViews}
+        previous={previousMetrics?.monthlyViews}
+        icon={<Eye className="text-green-500" size={28} />}
+      />
+
+      {/* Textes publiés */}
+      <MetricCard
+        title="Textes publiés"
+        value={metrics.textsPublished}
+        previous={previousMetrics?.textsPublished}
+        icon={<BookOpen className="text-purple-500" size={28} />}
+      />
+
+      {/* Gains totaux */}
+      <MetricCard
+        title="Gains totaux (€)"
+        value={metrics.totalEarnings}
+        previous={previousMetrics?.totalEarnings}
+        icon={<DollarSign className="text-yellow-500" size={28} />}
+      />
+
+      {/* Badge monétisation */}
+      <div className="col-span-1 md:col-span-2 flex justify-center mt-4">
+        {isMonetizationUnlocked ? (
+          <div className="flex items-center space-x-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg">
+            <Rocket size={20} /> <span>Monétisation débloquée 🚀</span>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 bg-gray-100 text-gray-600 px-4 py-2 rounded-lg">
+            <Rocket size={20} /> <span>Monétisation verrouillée</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// === Carte individuelle pour chaque métrique ===
+function MetricCard({ title, value, previous, icon }) {
+  const change =
+    previous !== undefined && previous !== null
+      ? value - previous
+      : null;
+
+  return (
+    <div className="p-4 border rounded-lg shadow-md bg-white">
+      <div className="flex items-center space-x-3">
+        {icon}
+        <div>
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <p className="text-2xl font-bold">{value}</p>
+          {change !== null && (
+            <p
+              className={`text-sm ${
+                change >= 0 ? "text-green-500" : "text-red-500"
+              }`}
+            >
+              {change >= 0 ? "+" : ""}
+              {change}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
