@@ -1,6 +1,6 @@
 // components/account-management/NotificationSection.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Checkbox from "@/components/ui/Checkbox";
 import AppIcon from "@/components/AppIcon";
 
