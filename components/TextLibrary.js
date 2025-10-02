@@ -1,17 +1,17 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/router";
 import { Grid, List, Eye, FileText } from "lucide-react";
 import AppImage from "@/components/AppImage";
 import { Button } from "@/components/ui/Button";
 
 export default function TextLibrary() {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // ⚡ Mode d’affichage : grille ou liste
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("recent");
 
-  // 📚 Exemple de données de textes (à connecter plus tard à Firestore)
+  // 📚 Exemple de données de textes (⚡ plus tard à connecter avec Firestore)
   const [textLibrary] = useState([
     {
       id: 1,
@@ -95,7 +95,7 @@ export default function TextLibrary() {
           <div
             key={text.id}
             className="border rounded-lg overflow-hidden shadow hover:shadow-md transition cursor-pointer"
-            onClick={() => navigate(`/text/${text.id}`)}
+            onClick={() => router.push(`/text/${text.id}`)}
           >
             <AppImage
               src={text.coverImage}
