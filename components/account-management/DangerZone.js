@@ -1,6 +1,6 @@
 // components/account-management/DangerZone.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Checkbox from "@/components/ui/Checkbox";
 import AppIcon from "@/components/AppIcon";
