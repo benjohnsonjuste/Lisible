@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import LisibleClubDashbord from "@/components/LisibleClubDashboard";
 import { db } from "@/lib/firebaseConfig";
 import {
   collection,
