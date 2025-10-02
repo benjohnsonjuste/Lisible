@@ -1,7 +1,7 @@
 // components/ImageUploader.js
 import React, { useState, useRef } from "react";
 import AppIcon from "@/components/AppIcon";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Bouton";
 import Input from "@/components/ui/Input";
 import AppImage from "@/components/AppImage";
 
