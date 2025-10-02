@@ -1,12 +1,12 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/router";
 import { PenTool, User, BarChart3 } from "lucide-react";
 
 /**
  * QuickActions : Section d'actions rapides pour le tableau de bord auteur
  */
 export default function QuickActions() {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const quickActionItems = [
     {
@@ -14,21 +14,21 @@ export default function QuickActions() {
       description: "Créez et partagez votre prochaine œuvre",
       icon: <PenTool className="text-primary" size={28} />,
       bgColor: "bg-primary/10",
-      action: () => navigate("/text-publishing"),
+      action: () => router.push("/author-dashboard/text-publishing"),
     },
     {
       title: "Gérer mon compte",
       description: "Modifiez vos informations personnelles",
       icon: <User className="text-secondary" size={28} />,
       bgColor: "bg-secondary/10",
-      action: () => navigate("/account-management"),
+      action: () => router.push("/account-management"),
     },
     {
       title: "Analyser les performances",
       description: "Consultez vos statistiques détaillées",
       icon: <BarChart3 className="text-accent" size={28} />,
       bgColor: "bg-accent/10",
-      action: () => navigate("/analytics"),
+      action: () => router.push("/analytics"),
     },
   ];
 
