@@ -2,16 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { db, storage, auth } from "@/lib/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  serverTimestamp
-} from "firebase/firestore";
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL
-} from "firebase/storage";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 
 export default function LisibleClubPublisher({ onNewPost }) {
@@ -36,8 +28,36 @@ export default function LisibleClubPublisher({ onNewPost }) {
     setFileKey(Date.now());
   };
 
+  const uploadFileAndGetUrl = async (fileToUpload) => {
+    if (!fileToUpload) return "";
+    // chemin lisible public possible; garder user id pour l'organisation mais régler règles Storage pour read public
+    const folder = "clubPosts/media";
+    const name = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${fileToUpload.name}`;
+    const storageRef = ref(storage, `${folder}/${name}`);
+
+    return await new Promise((resolve, reject) => {
+      const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+
+      const onError = (error) => {
+        reject(error);
+      };
+
+      const onComplete = async () => {
+        try {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(url);
+        } catch (err) {
+          reject(err);
+        }
+      };
+
+      uploadTask.on("state_changed", null, onError, onComplete);
+    });
+  };
+
   const handlePost = async (e) => {
     e.preventDefault();
+
     if (!user) {
       alert("Veuillez vous connecter pour publier.");
       return;
@@ -59,28 +79,18 @@ export default function LisibleClubPublisher({ onNewPost }) {
       let mediaUrl = "";
 
       if (file && type !== "text") {
-        const folder = "clubPosts/media";
-        const storageRef = ref(storage, `${folder}/${user.uid}/${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        mediaUrl = await new Promise((resolve, reject) => {
-          uploadTask.on(
-            "state_changed",
-            null,
-            (err) => reject(err),
-            async () => {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              resolve(url);
-            }
-          );
-        });
+        mediaUrl = await uploadFileAndGetUrl(file);
       }
+
+      // Capturer les métadonnées d'auteur au moment de la publication
+      const authorName = user.displayName || "Auteur inconnu";
+      const authorPhotoURL = user.photoURL || "";
 
       const newPost = {
         authorId: user.uid,
-        authorName: user.displayName || "Auteur inconnu",
+        authorName,
+        authorPhotoURL,
         type,
-        // content: texte ou url média
         content: type === "text" ? content.trim() : mediaUrl,
         description: description.trim() || "",
         likes: 0,
@@ -92,7 +102,6 @@ export default function LisibleClubPublisher({ onNewPost }) {
 
       await addDoc(collection(db, "clubPosts"), newPost);
 
-      // notifier parent s'il le faut (rafraîchissement UI, toast...)
       if (typeof onNewPost === "function") onNewPost();
 
       resetForm();
@@ -118,7 +127,6 @@ export default function LisibleClubPublisher({ onNewPost }) {
         <option value="image">Image</option>
         <option value="video">Vidéo</option>
         <option value="audio">Audio</option>
-        {/* Live géré séparément si nécessaire */}
       </select>
 
       {type === "text" ? (
@@ -133,9 +141,7 @@ export default function LisibleClubPublisher({ onNewPost }) {
         <input
           key={fileKey}
           type="file"
-          accept={
-            type === "image" ? "image/*" : type === "video" ? "video/*" : "audio/*"
-          }
+          accept={type === "image" ? "image/*" : type === "video" ? "video/*" : "audio/*"}
           onChange={(e) => setFile(e.target.files[0])}
           className="w-full p-2 border rounded-md"
           required
@@ -153,9 +159,7 @@ export default function LisibleClubPublisher({ onNewPost }) {
       <button
         type="submit"
         disabled={loading}
-        className={`w-full p-2 rounded-lg text-white ${
-          loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-        }`}
+        className={`w-full p-2 rounded-lg text-white ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
       >
         {loading ? "Publication..." : "Publier"}
       </button>
