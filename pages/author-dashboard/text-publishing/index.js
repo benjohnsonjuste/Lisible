@@ -1,6 +1,6 @@
 // pages/author-dashboard/text-publishing/index.js
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useRouter } from "next/router";
 
 import Header from "@/components/ui/Header";
 import Bouton from "@/components/ui/Bouton";
