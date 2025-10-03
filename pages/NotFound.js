@@ -5,8 +5,6 @@ import Bouton from "@/components/ui/Bouton";
 import AppIcon from "@/components/AppIcon";
 
 const NotFound = () => {
-  import { useRouter } from 'next/router';
-
 const router = useRouter();
 router.push('/some-path');
 
