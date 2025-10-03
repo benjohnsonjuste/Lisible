@@ -1,4 +1,3 @@
-// components/ui/Checkbox.jsx
 import React, { forwardRef, useId } from "react";
 import { Check, Minus } from "lucide-react";
 import { cn } from "../../utils/cn";
@@ -30,7 +29,7 @@ const Checkbox = forwardRef(
 
     return (
       <div className={cn("flex flex-col space-y-1", className)}>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 relative">
           <input
             id={checkboxId}
             type="checkbox"
@@ -47,7 +46,7 @@ const Checkbox = forwardRef(
           {indeterminate && !checked && (
             <Minus
               className={cn(
-                "absolute pointer-events-none",
+                "absolute left-1 top-1 pointer-events-none",
                 sizeClasses[size]
               )}
             />
@@ -55,7 +54,7 @@ const Checkbox = forwardRef(
           {checked && (
             <Check
               className={cn(
-                "absolute pointer-events-none",
+                "absolute left-1 top-1 pointer-events-none",
                 sizeClasses[size]
               )}
             />
@@ -77,9 +76,10 @@ const Checkbox = forwardRef(
 
 Checkbox.displayName = "Checkbox";
 
+// ✅ Export par défaut
 export default Checkbox;
 
-// Optionnel : groupe de cases à cocher
+// ✅ Export secondaire optionnel
 export const CheckboxGroup = forwardRef(
   ({ children, className, ...props }, ref) => {
     return (
