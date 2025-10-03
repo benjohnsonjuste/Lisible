@@ -1,11 +1,10 @@
 // components/ui/Header.jsx
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/router";
-import { cn } from "../../utils/cn";
-import { Bouton } from "./Bouton"; // corrige : import du vrai bouton
-import AppIcon from "./AppIcon";   // logo / icônes
-import InstallPrompt from "./InstallPrompt";
+import { cn } from "@/utils/cn";
+import { Bouton } from "@/components/ui/Bouton"; // import correct du bouton
+import AppIcon from "@/components/AppIcon";      // import depuis components
+import InstallPrompt from "@/components/ui/InstallPrompt";
 import {
   HelpCircle,
   User,
@@ -36,7 +35,7 @@ const Header = () => {
   };
 
   const handleLogout = () => {
-    // log out logic (à connecter avec Firebase/Auth plus tard)
+    // log out logic à connecter plus tard
     router.push("/login");
   };
 
@@ -72,7 +71,7 @@ const Header = () => {
           })}
         </nav>
 
-        {/* Menu actions secondaires et menu plus */}
+        {/* Menu actions secondaires */}
         <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
