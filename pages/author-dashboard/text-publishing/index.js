@@ -1,6 +1,9 @@
 // pages/author-dashboard/text-publishing/index.js
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from 'next/router';
+
+const router = useRouter();
+router.push('/some-path');
 
 import Header from "@/components/ui/Header";
 import Bouton from "@/components/ui/Bouton";
