@@ -1,3 +1,4 @@
+// components/ui/Checkbox.jsx
 import React, { forwardRef, useId } from "react";
 import { Check, Minus } from "lucide-react";
 import { cn } from "../../utils/cn";
@@ -76,10 +77,9 @@ const Checkbox = forwardRef(
 
 Checkbox.displayName = "Checkbox";
 
-// ✅ Export par défaut
 export default Checkbox;
 
-// ✅ Export secondaire optionnel
+// Optionnel : groupe de cases à cocher
 export const CheckboxGroup = forwardRef(
   ({ children, className, ...props }, ref) => {
     return (
