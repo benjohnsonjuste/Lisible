@@ -1,4 +1,3 @@
-// components/ForgotPasswordModal.jsx
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
