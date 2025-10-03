@@ -1,9 +1,9 @@
-import { PlusHorizontal, BookOpen, BarChart3, HelpCircle, LogOut, User } from 'lucide-react';
+import { Plus, BookOpen, BarChart3, HelpCircle, LogOut, User } from 'lucide-react';
 
 export default function Header() {
   return (
     <header>
-      <PlusHorizontal />
+      <Plus />
       {/* Autres icônes */}
     </header>
   );
