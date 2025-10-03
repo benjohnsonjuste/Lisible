@@ -1,8 +1,8 @@
 // pages/se-connecter/index.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import AuthenticationLayout from "@/components/AuthenticationLayout";
-import LoginForm from "@/pages/account-management/LoginForm";
+import { useRouter } from "next/router";
+import AuthenticationLayout from "@/components/AuthentificationLayout";
+import LoginForm from "@/LoginForm";
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import InstallPrompt from "@/components/ui/InstallPrompt";
 
