@@ -6,6 +6,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import { useEffect } from "react";
 import { subscribeToClubPosts } from "@/lib/firebaseMessagingClient";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { AuthProvider } from "@/context/AuthContext";
 
 function MyApp({ Component, pageProps }) {
   useEffect(() => {
@@ -23,14 +24,14 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   return (
-    <>
+    <AuthProvider>
       <Navbar />
       <main className="container-md py-6">
         <Component {...pageProps} />
       </main>
       <InstallPrompt />
       <Footer />
-    </>
+    </AuthProvider>
   );
 }
 
