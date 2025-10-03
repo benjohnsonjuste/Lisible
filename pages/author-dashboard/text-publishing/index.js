@@ -8,7 +8,7 @@ import TextEditor from "@/components/TextEditor";
 import ImageUploader from "@/components/ImageUploader";
 import PublishingSidebar from "@/components/PublishingSidebar";
 import ApercuModal from "@/components/ApercuModal";
-import PublishConfirmationModal from "@/components/PublishConfirmationModal";
+import PublierConfirmationModal from "@/components/PublierConfirmationModal";
 
 const TextPublishing = () => {
   const navigate = useNavigate();
