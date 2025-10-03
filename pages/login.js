@@ -8,7 +8,8 @@ import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import InstallPrompt from "@/components/ui/InstallPrompt";
 
 const LoginPage = () => {
-  const navigate = useNavigate();
+const router = useRouter();
+router.push('/some-path');
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
   useEffect(() => {
