@@ -17,7 +17,8 @@ import SubscriptionSection from "@/components/account-management/SubscriptionSec
 import DangerZone from "@/components/account-management/DangerZone";
 
 const GestionDesComptes = () => {
-  const navigate = useNavigate();
+const router = useRouter();
+router.push('/some-path');
 
   const [activeSection, setActiveSection] = useState("profil");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
