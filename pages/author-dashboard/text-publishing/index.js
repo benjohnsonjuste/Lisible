@@ -14,7 +14,8 @@ import ApercuModal from "@/components/ApercuModal";
 import PublierConfirmationModal from "@/components/PublierConfirmationModal";
 
 const TextPublishing = () => {
-  const navigate = useNavigate();
+const router = useRouter();
+router.push('/some-path');
   const [searchParams] = useSearchParams();
   const textId = searchParams.get("id");
 
