@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Bouton } from "@/components/ui/Bouton";
 import Input from "@/components/ui/Input";
 import AppIcon from "@/components/AppIcon";
 import InstallPrompt from "@/components/ui/InstallPrompt";
