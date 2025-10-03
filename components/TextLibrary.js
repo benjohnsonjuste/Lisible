@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/router";
 import { Grid, List, Eye, FileText } from "lucide-react";
 import AppImage from "@/components/AppImage";
-import { Button } from "@/components/ui/Button";
+import { Bouton } from "@/components/ui/Bouton";
 
 export default function TextLibrary() {
   const router = useRouter();
