@@ -12,8 +12,10 @@ function MyApp({ Component, pageProps }) {
   useEffect(() => {
     const auth = getAuth();
 
+    // Surveiller l’état de connexion utilisateur
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
+        // S’abonner aux notifications FCM
         subscribeToClubPosts(user.uid);
       }
     });
