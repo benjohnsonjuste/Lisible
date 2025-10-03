@@ -1,6 +1,6 @@
 // pages/NotFound.js
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/router";
 import Bouton from "@/components/ui/Bouton";
 import AppIcon from "@/components/AppIcon";
 
