@@ -1,7 +1,7 @@
 // components/ui/InstallPrompt.jsx
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bouton } from "@/components/ui/Bouton";
 
 export default function InstallPrompt({ variant = "modal" }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
