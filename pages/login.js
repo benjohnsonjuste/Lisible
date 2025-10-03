@@ -1,4 +1,4 @@
-import AuthenticationLayout from "@/components/ui/AuthenticationLayout";
+import AuthentificationLayout from "@/components/ui/AuthentificationLayout";
 import LoginForm from "@/components/login/LoginForm";
 
 export default function LoginPage() {
