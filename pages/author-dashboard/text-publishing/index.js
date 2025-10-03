@@ -7,7 +7,7 @@ import Bouton from "@/components/ui/Bouton";
 import TextEditor from "@/components/TextEditor";
 import ImageUploader from "@/components/ImageUploader";
 import PublishingSidebar from "@/components/PublishingSidebar";
-import PreviewModal from "@/components/PreviewModal";
+import ApercuModal from "@/components/ApercuModal";
 import PublishConfirmationModal from "@/components/PublishConfirmationModal";
 
 const TextPublishing = () => {
