@@ -5,7 +5,10 @@ import Bouton from "@/components/ui/Bouton";
 import AppIcon from "@/components/AppIcon";
 
 const NotFound = () => {
-  const navigate = useNavigate();
+  import { useRouter } from 'next/router';
+
+const router = useRouter();
+router.push('/some-path');
 
   const handleGoHome = () => {
     navigate("/"); // redirection vers la page d'accueil
