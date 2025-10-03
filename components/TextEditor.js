@@ -1,6 +1,6 @@
 // components/TextEditor.js
 import React, { useState, useEffect, useRef } from "react";
-import Button from "@/components/ui/Button";
+import Bouton from "@/components/ui/Bouton";
 import { Heart, PenTool, AlignLeft, AlignCenter, AlignRight, List, ListOrdered } from "@/components/AppIcon";
 
 const formatOptions = [
