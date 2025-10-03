@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Checkbox } from '@/components/ui/checkbox'; // Vérifie que le fichier existe
-import { Bouton } from '@/components/ui/bouton'; // Import Button si utilisé
+import { Checkbox } from '@/components/ui/Checkbox'; // Vérifie que le fichier existe
+import { Bouton } from '@/components/ui/Bouton'; // Import Button si utilisé
 
 export default function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
