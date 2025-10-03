@@ -1,6 +1,6 @@
 // pages/account-management/index.js
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/router";
 
 import Header from "@/components/ui/Header";
 import AppIcon from "@/components/AppIcon";
