@@ -1,16 +1,18 @@
 // context/AuthContext.js
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
+// Crée le contexte avec null par défaut
 const AuthContext = createContext(null);
 
+// Provider pour toute l'application
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const auth = getAuth();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
+      setUser(firebaseUser || null);
     });
     return () => unsubscribe();
   }, [auth]);
@@ -22,6 +24,11 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Hook pour utiliser le contexte
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
