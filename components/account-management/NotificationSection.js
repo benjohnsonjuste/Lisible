@@ -1,6 +1,6 @@
 // components/account-management/NotificationSection.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Checkbox from "@/components/ui/Checkbox";
 import AppIcon from "@/components/AppIcon";
 
@@ -81,9 +81,9 @@ const NotificationSection = ({ onNotificationUpdate }) => {
 
       {/* Bouton de sauvegarde */}
       <div className="flex justify-end mt-4">
-        <Bouton variante="primary" onClick={handleSave} disabled={isLoading}>
+        <Button variante="primary" onClick={handleSave} disabled={isLoading}>
           {isLoading ? "Enregistrement..." : "Enregistrer les modifications"}
-        </Bouton>
+        </Button>
       </div>
     </div>
   );
