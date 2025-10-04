@@ -56,7 +56,7 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
             <NotificationBell />
 
-            <Link href="/TextLibrary">
+            <Link href="/library">
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
@@ -73,7 +73,7 @@ export default function Navbar() {
                 <LogOut className="w-8 h-8 text-white hover:text-red-500 transition" />
               </button>
             ) : (
-              <Link href="/AuthDialog">
+              <Link href="/login">
                 <LogIn className="w-8 h-8 text-white hover:text-green-500 transition" />
               </Link>
             )}
