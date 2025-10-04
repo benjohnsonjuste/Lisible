@@ -1,16 +1,20 @@
-// components/ui/Button.jsx
+// ✅ Ce composant est client-side, mais n’a pas besoin de "use client" ici
+// car il ne contient pas de hooks comme useRouter. Il peut être utilisé dans
+// des composants client qui eux auront "use client" si nécessaire.
+
 import React, { forwardRef } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
-import clsx from "clsx"; // plus robuste que "../../utils/cn"
+import clsx from "clsx";
 import LoadingSpinner from "./LoadingSpinner";
 import AppIcon from "../AppIcon";
 
-// utilitaire tailwind
+// ✅ Utilitaire Tailwind robuste
 function cn(...classes) {
   return clsx(...classes);
 }
 
+// ✅ Variantes de style configurables
 const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
   {
@@ -44,6 +48,7 @@ const buttonVariants = cva(
   }
 );
 
+// ✅ Taille des icônes selon la taille du bouton
 const iconSizeMap = {
   xs: 12,
   sm: 16,
@@ -52,6 +57,7 @@ const iconSizeMap = {
   xl: 28,
 };
 
+// ✅ Composant principal
 const Button = forwardRef(
   (
     {
