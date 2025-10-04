@@ -73,7 +73,7 @@ export default function Navbar() {
                 <LogOut className="w-8 h-8 text-white hover:text-red-500 transition" />
               </button>
             ) : (
-              <Link href="/login">
+              <Link href="/AuthDialog">
                 <LogIn className="w-8 h-8 text-white hover:text-green-500 transition" />
               </Link>
             )}
