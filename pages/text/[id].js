@@ -1,4 +1,4 @@
-// pages/text/[id].jsx
+"use client";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { Eye, FileText, ArrowLeft } from "lucide-react";
