@@ -6,7 +6,6 @@ import { useRouter } from "next/router";
 import AuthentificationLayout from "@/components/ui/AuthentificationLayout";
 import LoginForm from "@/components/LoginForm";
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
-import InstallPrompt from "@/components/ui/InstallPrompt";
 
 const LoginPage = () => {
   const router = useRouter();
@@ -49,7 +48,6 @@ const LoginPage = () => {
         onClose={() => setIsForgotPasswordOpen(false)}
       />
 
-      <InstallPrompt />
     </AuthentificationLayout>
   );
 };
