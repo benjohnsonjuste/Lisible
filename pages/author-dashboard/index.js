@@ -3,7 +3,7 @@ import React from "react";
 import QuickActions from "@/components/QuickActions";
 import RecentActivity from "@/components/RecentActivity";
 import TextLibrary from "@/components/TextLibrary";
-import Bouton from "@/components/Bouton"; // ✅ Ajout de l'import manquant
+import Button from "@/components/Button"; // ✅ Ajout de l'import manquant
 
 const AuthorDashboard = () => {
   return (
