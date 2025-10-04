@@ -1,6 +1,6 @@
 // components/account-management/ProfileSection.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import AppIcon from "@/components/AppIcon";
 import AppImage from "@/components/AppImage";
@@ -64,12 +64,12 @@ const ProfileSection = ({ profileData, onProfileUpdate }) => {
           alt="Photo de profil"
           className="w-24 h-24 rounded-full object-cover"
         />
-        <Bouton variante="secondary">
+        <Button variante="secondary">
           <label className="cursor-pointer">
             Changer la photo
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
-        </Bouton>
+        </Button>
       </div>
 
       <Input
@@ -112,9 +112,9 @@ const ProfileSection = ({ profileData, onProfileUpdate }) => {
       {errors.global && <p className="text-red-600 text-sm">{errors.global}</p>}
 
       <div className="flex justify-end mt-4">
-        <Bouton variante="primary" onClick={handleSave} disabled={isUploading}>
+        <Button variante="primary" onClick={handleSave} disabled={isUploading}>
           {isUploading ? "Enregistrement..." : "Enregistrer"}
-        </Bouton>
+        </Button>
       </div>
     </div>
   );
