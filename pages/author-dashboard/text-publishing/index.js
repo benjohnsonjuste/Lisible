@@ -1,4 +1,3 @@
-// pages/author-dashboard/text-publishing.js
 "use client";
 
 import React from "react";
@@ -6,8 +5,14 @@ import { useAuth } from "@/context/AuthContext";
 import PublishingSidebar from "@/components/PublishingSidebar";
 
 export default function TextPublishing() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
+  // 🔄 Affiche un état de chargement pendant l'initialisation du contexte
+  if (loading) {
+    return <p>Chargement...</p>;
+  }
+
+  // 🔐 Vérifie si l'utilisateur est connecté
   if (!user) {
     return <p>Veuillez vous connecter pour publier un texte.</p>;
   }
