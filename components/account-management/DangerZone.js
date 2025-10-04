@@ -1,6 +1,6 @@
 // components/account-management/DangerZone.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Checkbox from "@/components/ui/Checkbox";
 import AppIcon from "@/components/AppIcon";
@@ -59,13 +59,13 @@ const DangerZone = ({ onAccountAction }) => {
         >
           Je comprends que mon compte sera désactivé.
         </Checkbox>
-        <Bouton
+        <Button 
           variante="danger"
           onClick={() => setShowDeactivateConfirmation(true)}
           disabled={!confirmationChecks.acknowledgeDeactivate || isLoading}
         >
           Désactiver
-        </Bouton>
+        </Button>
       </div>
 
       {/* Suppression du compte */}
@@ -82,13 +82,13 @@ const DangerZone = ({ onAccountAction }) => {
         >
           Je comprends que mon compte sera définitivement supprimé.
         </Checkbox>
-        <Bouton
+        <Button 
           variante="danger"
           onClick={() => setShowDeleteConfirmation(true)}
           disabled={!confirmationChecks.acknowledgeDelete || isLoading}
         >
           Supprimer
-        </Bouton>
+        </Button>
       </div>
 
       {/* Modales de confirmation */}
@@ -98,12 +98,12 @@ const DangerZone = ({ onAccountAction }) => {
             <h4 className="text-lg font-bold">Confirmer la désactivation</h4>
             <p>Êtes-vous sûr de vouloir désactiver votre compte ?</p>
             <div className="flex justify-end gap-4">
-              <Bouton variante="secondary" onClick={() => setShowDeactivateConfirmation(false)}>
+              <Button variante="secondary" onClick={() => setShowDeactivateConfirmation(false)}>
                 Annuler
-              </Bouton>
-              <Bouton variante="danger" onClick={handleDeactivateAccount} disabled={isLoading}>
+              </Button>
+              <Button variante="danger" onClick={handleDeactivateAccount} disabled={isLoading}>
                 {isLoading ? "Chargement..." : "Confirmer"}
-              </Bouton>
+              </Button>
             </div>
           </div>
         </div>
@@ -115,12 +115,12 @@ const DangerZone = ({ onAccountAction }) => {
             <h4 className="text-lg font-bold">Confirmer la suppression</h4>
             <p>Êtes-vous sûr de vouloir supprimer définitivement votre compte ?</p>
             <div className="flex justify-end gap-4">
-              <Bouton variante="secondary" onClick={() => setShowDeleteConfirmation(false)}>
+              <Button variante="secondary" onClick={() => setShowDeleteConfirmation(false)}>
                 Annuler
-              </Bouton>
-              <Bouton variante="danger" onClick={handleDeleteAccount} disabled={isLoading}>
+              </Button>
+              <Button variante="danger" onClick={handleDeleteAccount} disabled={isLoading}>
                 {isLoading ? "Chargement..." : "Supprimer"}
-              </Bouton>
+              </Button>
             </div>
           </div>
         </div>
