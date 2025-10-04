@@ -1,4 +1,4 @@
-// pages/NotFound.js
+"use client";
 import React from "react";
 import { useRouter } from "next/router";
 import Bouton from "@/components/ui/Bouton";
