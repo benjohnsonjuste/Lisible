@@ -21,12 +21,14 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <AuthProvider>
-      <Navbar />
-      <main className="container-md py-6">
-        <Component {...pageProps} />
-      </main>
-      <InstallPrompt />
-      <Footer />
+      <div className="app-wrapper">
+        <Navbar />
+        <main className="container-md py-6">
+          <Component {...pageProps} />
+        </main>
+        <InstallPrompt />
+        <Footer />
+      </div>
     </AuthProvider>
   );
 }
