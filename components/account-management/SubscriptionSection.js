@@ -1,6 +1,6 @@
 // components/account-management/SubscriptionSection.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import AppIcon from "@/components/AppIcon";
 
@@ -99,13 +99,13 @@ const SubscriptionSection = ({ subscriptionData, onSubscriptionUpdate }) => {
 
       {/* Actions */}
       <div className="flex gap-2 mt-4">
-        <Bouton
+        <Button
           variante="primary"
           onClick={() => onSubscriptionUpdate(selectedSubscribers)}
           disabled={selectedSubscribers.length === 0}
         >
           Appliquer aux abonnés sélectionnés
-        </Bouton>
+        </Button>
       </div>
     </div>
   );
