@@ -1,63 +1,53 @@
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Grid, List, Eye, FileText } from "lucide-react";
 import AppImage from "@/components/AppImage";
 import { Button } from "@/components/ui/Button";
+import { db } from "@/lib/firebaseConfig";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
 
 export default function TextLibrary() {
   const router = useRouter();
 
-  // ⚡ Mode d’affichage : grille ou liste
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("recent");
+  const [textLibrary, setTextLibrary] = useState([]);
 
-  // 📚 Exemple de données de textes (⚡ plus tard à connecter avec Firestore)
-  const [textLibrary] = useState([
-    {
-      id: 1,
-      title: "Les Murmures de Montmartre",
-      type: "Nouvelle",
-      publishedAt: "2025-01-15",
-      views: 2847,
-      coverImage:
-        "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300&q=80",
-      excerpt:
-        "Une histoire pavée de Montmartre, où les secrets du passé rencontrent les rêves du présent.",
-      status: "Publié",
-    },
-    {
-      id: 2,
-      title: "Réflexions sur l’Art Moderne",
-      type: "Essai",
-      publishedAt: "2025-02-01",
-      views: 1923,
-      coverImage:
-        "https://images.pexels.com/photos/1266808/pexels-photo-1266808.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop",
-      excerpt:
-        "Une analyse profonde des mouvements artistiques contemporains et leur impact sur notre perception de la beauté.",
-      status: "Publié",
-    },
-    {
-      id: 3,
-      title: "Le Jardin Secret",
-      type: "Roman",
-      publishedAt: "2025-02-20",
-      views: 857,
-      coverImage:
-        "https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=300&q=80",
-      excerpt:
-        "Un voyage poétique à travers les souvenirs d’enfance et la magie des jardins cachés.",
-      status: "Publié",
-    },
-  ]);
+  // Charger les textes depuis Firestore
+  useEffect(() => {
+    const fetchTexts = async () => {
+      try {
+        let q;
+        if (sortBy === "recent") {
+          q = query(collection(db, "texts"), orderBy("createdAt", "desc"));
+        } else if (sortBy === "views") {
+          q = query(collection(db, "texts"), orderBy("views", "desc"));
+        } else {
+          q = query(collection(db, "texts"), orderBy("title", "asc"));
+        }
+
+        const querySnapshot = await getDocs(q);
+        const texts = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setTextLibrary(texts);
+      } catch (error) {
+        console.error("Erreur lors du chargement des textes :", error);
+      }
+    };
+
+    fetchTexts();
+  }, [sortBy]);
 
   return (
     <div className="bg-card border rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">📚 Bibliothèque de textes</h2>
 
-        {/* Contrôles */}
         <div className="flex items-center gap-2">
           <Button
             variant={viewMode === "grid" ? "default" : "outline"}
@@ -106,17 +96,18 @@ export default function TextLibrary() {
             <div className="p-4">
               <h3 className="font-semibold text-lg">{text.title}</h3>
               <p className="text-xs text-muted-foreground mb-2">
-                {text.type} • {text.publishedAt}
+                {text.type} •{" "}
+                {new Date(text.publishedAt).toLocaleDateString("fr-FR")}
               </p>
               <p className="text-sm line-clamp-3">{text.excerpt}</p>
 
               {/* Stats */}
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Eye size={16} /> {text.views}
+                  <Eye size={16} /> {text.views || 0}
                 </span>
                 <span className="flex items-center gap-1">
-                  <FileText size={16} /> {text.status}
+                  <FileText size={16} /> {text.status || "Brouillon"}
                 </span>
               </div>
             </div>
