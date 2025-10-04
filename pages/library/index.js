@@ -1,5 +1,4 @@
-import UploadForm from "@/components/UploadForm";
-import PublicationsList from "@/components/PublicationsList";
+import TextLibrary from "@/components/TextLibrary";
 
 export default function LibraryPage() {
   return (
@@ -7,7 +6,7 @@ export default function LibraryPage() {
       <h1 className="text-2xl font-bold mb-6">Bibliothèque Lisible</h1>
       <UploadForm />
       <div className="mt-6">
-        <PublicationsList />
+        <TextLibrary/>
       </div>
     </div>
   );
