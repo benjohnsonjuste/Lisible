@@ -1,5 +1,5 @@
 import  Checkbox  from '@/components/ui/Checkbox';
-import  Bouton  from '@/components/ui/Bouton';
+import  Button  from '@/components/ui/Button';
 
 export default function PublierConfirmationModal({ onConfirm }) {
   return (
