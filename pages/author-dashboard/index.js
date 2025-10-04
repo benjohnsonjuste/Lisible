@@ -3,6 +3,7 @@ import React from "react";
 import QuickActions from "@/components/QuickActions";
 import RecentActivity from "@/components/RecentActivity";
 import TextLibrary from "@/components/TextLibrary";
+import Bouton from "@/components/Bouton"; // ✅ Ajout de l'import manquant
 
 const AuthorDashboard = () => {
   return (
@@ -38,6 +39,10 @@ const AuthorDashboard = () => {
           </p>
         </div>
         <TextLibrary />
+        {/* Exemple d'utilisation du bouton si nécessaire */}
+        {/* <div className="mt-6 text-center">
+          <Button>Ajouter un texte</Button>
+        </div> */}
       </div>
     </div>
   );
