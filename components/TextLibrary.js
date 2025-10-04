@@ -2,51 +2,61 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebaseConfig";
 import { Grid, List, Eye, FileText } from "lucide-react";
 import AppImage from "@/components/AppImage";
 import { Button } from "@/components/ui/Button";
-import { db } from "@/lib/firebaseConfig";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
 
 export default function TextLibrary() {
   const router = useRouter();
-
+  const [texts, setTexts] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
   const [sortBy, setSortBy] = useState("recent");
-  const [textLibrary, setTextLibrary] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Charger les textes depuis Firestore
+  // 🧠 Charger les textes depuis Firestore
   useEffect(() => {
     const fetchTexts = async () => {
       try {
-        let q;
-        if (sortBy === "recent") {
-          q = query(collection(db, "texts"), orderBy("createdAt", "desc"));
-        } else if (sortBy === "views") {
-          q = query(collection(db, "texts"), orderBy("views", "desc"));
-        } else {
-          q = query(collection(db, "texts"), orderBy("title", "asc"));
-        }
-
-        const querySnapshot = await getDocs(q);
-        const texts = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setTextLibrary(texts);
+        const q = query(collection(db, "texts"), orderBy("publishedAt", "desc"));
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setTexts(data);
       } catch (error) {
         console.error("Erreur lors du chargement des textes :", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchTexts();
-  }, [sortBy]);
+  }, []);
+
+  // 🔤 Tri (optionnel selon le choix)
+  const sortedTexts = [...texts].sort((a, b) => {
+    if (sortBy === "views") return (b.views || 0) - (a.views || 0);
+    if (sortBy === "title") return a.title.localeCompare(b.title);
+    return new Date(b.publishedAt) - new Date(a.publishedAt);
+  });
+
+  if (loading)
+    return (
+      <p className="text-center text-muted-foreground">Chargement des textes...</p>
+    );
+
+  if (texts.length === 0)
+    return (
+      <p className="text-center text-muted-foreground">
+        Aucun texte n’a encore été publié.
+      </p>
+    );
 
   return (
     <div className="bg-card border rounded-lg shadow-sm p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">📚 Bibliothèque de textes</h2>
+      {/* En-tête et filtres */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <h2 className="text-xl font-semibold">Tous les textes publiés</h2>
 
         <div className="flex items-center gap-2">
           <Button
@@ -68,13 +78,13 @@ export default function TextLibrary() {
             className="border rounded p-1 ml-3"
           >
             <option value="recent">Plus récents</option>
-            <option value="views">Plus vus</option>
+            <option value="views">Plus lus</option>
             <option value="title">Titre A-Z</option>
           </select>
         </div>
       </div>
 
-      {/* Liste des textes */}
+      {/* Affichage des textes */}
       <div
         className={
           viewMode === "grid"
@@ -82,14 +92,14 @@ export default function TextLibrary() {
             : "space-y-4"
         }
       >
-        {textLibrary.map((text) => (
+        {sortedTexts.map((text) => (
           <div
             key={text.id}
             className="border rounded-lg overflow-hidden shadow hover:shadow-md transition cursor-pointer"
             onClick={() => router.push(`/text/${text.id}`)}
           >
             <AppImage
-              src={text.coverImage}
+              src={text.coverImage || "/default-cover.jpg"}
               alt={text.title}
               className="w-full h-40 object-cover"
             />
@@ -107,7 +117,7 @@ export default function TextLibrary() {
                   <Eye size={16} /> {text.views || 0}
                 </span>
                 <span className="flex items-center gap-1">
-                  <FileText size={16} /> {text.status || "Brouillon"}
+                  <FileText size={16} /> {text.status || "Publié"}
                 </span>
               </div>
             </div>
