@@ -47,7 +47,7 @@ export default function Navbar() {
       {/* ======= HEADER PRINCIPAL ======= */}
       <header className="bg-primary shadow relative z-50">
         <div className="container-lg flex items-center justify-between py-4 px-4 text-white">
-          {/* Bouton menu */}
+          {/* Bouton Menu */}
           <button onClick={toggleMenu} className="cursor-pointer">
             <Menu className="w-8 h-8 text-white" />
           </button>
