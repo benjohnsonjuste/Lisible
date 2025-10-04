@@ -1,7 +1,7 @@
 // components/ApercuModal.js
 import React, { useState } from "react";
 import AppIcon from "@/components/AppIcon";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import AppImage from "@/components/AppImage";
 
 const ApercuModal = ({ isOpen, onClose, content, title, imageUrl }) => {
@@ -57,9 +57,9 @@ const ApercuModal = ({ isOpen, onClose, content, title, imageUrl }) => {
 
         {/* Actions */}
         <div className="flex justify-end space-x-2">
-          <Bouton onClick={onClose} className="bg-gray-300 hover:bg-gray-400">
+          <Button onClick={onClose} className="bg-gray-300 hover:bg-gray-400">
             Fermer
-          </Bouton>
+          </Button>
         </div>
       </div>
     </div>
