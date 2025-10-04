@@ -1,16 +1,15 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/router";
 import AuthentificationLayout from "@/components/ui/AuthentificationLayout";
-import LoginForm from "@/components/LoginForm";
-import ForgotPasswordModal from "@/components/ForgotPasswordModal";
+import AuthDialog from "@/components/AuthDialog";
 
-const LoginPage = () => {
+export default function LoginPage() {
   const router = useRouter();
-  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
+  // 🔒 Vérifie si l’utilisateur est déjà connecté
   useEffect(() => {
     const estAuth = localStorage.getItem("estauthentifié");
     if (estAuth === "vrai") {
@@ -18,38 +17,32 @@ const LoginPage = () => {
     }
   }, [router]);
 
-  const handleGoogleLogin = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      localStorage.setItem("estauthentifié", "vrai");
-      localStorage.setItem("loginMethod", "google");
-      router.push("/auteur-tableau-de-bord");
-    } catch (error) {
-      console.error("Connexion Google échouée :", error);
-    }
-  };
-
-  const handleForgotPassword = () => {
-    setIsForgotPasswordOpen(true);
+  // 🔁 Callback après authentification réussie
+  const handleAuthSuccess = () => {
+    localStorage.setItem("estauthentifié", "vrai");
+    router.push("/auteur-tableau-de-bord");
   };
 
   return (
     <AuthentificationLayout
       title="Connexion"
-      subtitle="Gérez vos publications et votre compte"
+      subtitle="Accédez à votre espace auteur sur Lisible"
     >
-      <LoginForm
-        onGoogleLogin={handleGoogleLogin}
-        onForgotPassword={handleForgotPassword}
-      />
+      {/* ✅ AuthDialog gère toutes les méthodes de connexion */}
+      <div className="flex justify-center mt-6">
+        <AuthDialog onAuthSuccess={handleAuthSuccess} />
+      </div>
 
-      <ForgotPasswordModal
-        isOpen={isForgotPasswordOpen}
-        onClose={() => setIsForgotPasswordOpen(false)}
-      />
-
+      <p className="text-center text-sm text-muted-foreground mt-6">
+        En vous connectant, vous acceptez nos{" "}
+        <a href="/conditions" className="underline hover:text-primary">
+          conditions d’utilisation
+        </a>{" "}
+        et notre{" "}
+        <a href="/confidentialite" className="underline hover:text-primary">
+          politique de confidentialité
+        </a>.
+      </p>
     </AuthentificationLayout>
   );
-};
-
-export default LoginPage;
+}
