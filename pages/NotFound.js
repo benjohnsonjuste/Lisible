@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 
 import React from "react";
 import { useRouter } from "next/router";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import AppIcon from "@/components/AppIcon";
 
 const NotFound = () => {
@@ -24,14 +24,14 @@ const NotFound = () => {
           La page que vous recherchez n’existe pas ou ne fonctionne plus.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Bouton
+          <Button
             variante="primaire"
             icones={<AppIcon nom="ArrowLeft" />}
             iconPosition="gauche"
             onClick={handleGoHome}
           >
             Retour
-          </Bouton>
+          </Button>
         </div>
       </div>
     </div>
