@@ -1,15 +1,16 @@
 "use client";
+export const dynamic = "force-dynamic";
+
 import React from "react";
 import { useRouter } from "next/router";
 import Bouton from "@/components/ui/Bouton";
 import AppIcon from "@/components/AppIcon";
 
 const NotFound = () => {
-const router = useRouter();
-router.push('/some-path');
+  const router = useRouter();
 
   const handleGoHome = () => {
-    navigate("/"); // redirection vers la page d'accueil
+    router.push("/"); // redirection vers la page d'accueil
   };
 
   return (
