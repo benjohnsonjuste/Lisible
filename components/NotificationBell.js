@@ -1,4 +1,4 @@
-// components/NotificationBell.jsx
+"use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
