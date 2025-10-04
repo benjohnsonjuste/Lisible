@@ -1,32 +1,30 @@
 "use client";
+export const dynamic = "force-dynamic";
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import AuthentificationLayout from "@/components/ui/AuthentificationLayout";
-import LoginForm from
-"@/components/LoginForm";
+import LoginForm from "@/components/LoginForm";
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import InstallPrompt from "@/components/ui/InstallPrompt";
 
 const LoginPage = () => {
-const router = useRouter();
-router.push('/some-path');
+  const router = useRouter();
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
   useEffect(() => {
-    // Vérifier si l'utilisateur est déjà authentifié
     const estAuth = localStorage.getItem("estauthentifié");
     if (estAuth === "vrai") {
-      navigate("/auteur-tableau-de-bord");
+      router.push("/auteur-tableau-de-bord");
     }
-  }, [navigate]);
+  }, [router]);
 
   const handleGoogleLogin = async () => {
     try {
-      // Simuler délai d'authentification Google
       await new Promise((resolve) => setTimeout(resolve, 1500));
       localStorage.setItem("estauthentifié", "vrai");
       localStorage.setItem("loginMethod", "google");
-      navigate("/auteur-tableau-de-bord");
+      router.push("/auteur-tableau-de-bord");
     } catch (error) {
       console.error("Connexion Google échouée :", error);
     }
@@ -37,7 +35,7 @@ router.push('/some-path');
   };
 
   return (
-    <AuthenticationLayout
+    <AuthentificationLayout
       title="Connexion"
       subtitle="Gérez vos publications et votre compte"
     >
@@ -52,7 +50,7 @@ router.push('/some-path');
       />
 
       <InstallPrompt />
-    </AuthenticationLayout>
+    </AuthentificationLayout>
   );
 };
 
