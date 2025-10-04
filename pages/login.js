@@ -1,4 +1,4 @@
-// pages/se-connecter/index.jsx
+"use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import AuthentificationLayout from "@/components/ui/AuthentificationLayout";
