@@ -1,6 +1,6 @@
 // components/account-management/PaymentSection.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import AppIcon from "@/components/AppIcon";
@@ -104,9 +104,9 @@ const PaymentSection = ({ paymentData, onPaymentUpdate }) => {
       )}
 
       <div className="flex justify-end mt-4">
-        <Bouton variante="primary" onClick={handleSave} disabled={isLoading}>
+        <Button variante="primary" onClick={handleSave} disabled={isLoading}>
           {isLoading ? "Enregistrement..." : "Enregistrer"}
-        </Bouton>
+        </Button>
       </div>
     </div>
   );
