@@ -1,7 +1,7 @@
 // components/ImageUploader.js
 import React, { useState, useRef } from "react";
 import AppIcon from "@/components/AppIcon";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import AppImage from "@/components/AppImage";
 
@@ -72,10 +72,10 @@ const ImageUploader = ({ onUpload }) => {
     >
       <p className="mb-2">Glissez-déposez votre image ici ou cliquez pour sélectionner</p>
 
-      <Bouton onClick={() => fileInputRef.current.click()}>
+      <Button onClick={() => fileInputRef.current.click()}>
         <AppIcon name="Upload" className="mr-2" />
         Choisir un fichier
-      </Bouton>
+      </Button>
 
       <Input
         type="file"
