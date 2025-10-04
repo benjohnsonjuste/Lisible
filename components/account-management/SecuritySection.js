@@ -1,6 +1,6 @@
 // components/account-management/SecuritySection.jsx
 import React, { useState } from "react";
-import Bouton from "@/components/ui/Bouton";
+import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import AppIcon from "@/components/AppIcon";
 import Checkbox from "@/components/ui/Checkbox";
@@ -87,9 +87,9 @@ const SecuritySection = ({ securityData, onSecurityUpdate }) => {
 
       {/* Changement de mot de passe */}
       <div>
-        <Bouton variante="secondary" onClick={() => setShowPasswordForm((prev) => !prev)}>
+        <Button variante="secondary" onClick={() => setShowPasswordForm((prev) => !prev)}>
           {showPasswordForm ? "Annuler" : "Changer le mot de passe"}
-        </Bouton>
+        </Button>
         {showPasswordForm && (
           <div className="mt-4 space-y-4">
             <Input
@@ -114,18 +114,18 @@ const SecuritySection = ({ securityData, onSecurityUpdate }) => {
               onChange={handlePasswordChange}
             />
             {errors.global && <p className="text-red-600 text-sm">{errors.global}</p>}
-            <Bouton variante="primary" onClick={handleSavePassword} disabled={isLoading}>
+            <Button variante="primary" onClick={handleSavePassword} disabled={isLoading}>
               {isLoading ? "Enregistrement..." : "Enregistrer"}
-            </Bouton>
+            </Button>
           </div>
         )}
       </div>
 
       {/* Changement d'email */}
       <div>
-        <Bouton variante="secondary" onClick={() => setShowEmailForm((prev) => !prev)}>
+        <Button variante="secondary" onClick={() => setShowEmailForm((prev) => !prev)}>
           {showEmailForm ? "Annuler" : "Changer l'email"}
-        </Bouton>
+        </Button>
         {showEmailForm && (
           <div className="mt-4 space-y-4">
             <Input
@@ -135,9 +135,9 @@ const SecuritySection = ({ securityData, onSecurityUpdate }) => {
               value={emailForm.email}
               onChange={handleEmailChange}
             />
-            <Bouton variante="primary" onClick={handleSaveEmail} disabled={isLoading}>
+            <Button variante="primary" onClick={handleSaveEmail} disabled={isLoading}>
               {isLoading ? "Enregistrement..." : "Enregistrer"}
-            </Bouton>
+            </Button>
           </div>
         )}
       </div>
