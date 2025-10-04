@@ -1,6 +1,6 @@
-import  useState  from 'react';
-import  Checkbox  from '@/components/ui/Checkbox'; // Vérifie que le fichier existe
-import  Bouton  from '@/components/ui/Bouton'; // Import Button si utilisé
+import { useState } from 'react';
+import Checkbox from '@/components/ui/Checkbox'; // Vérifie que ce fichier existe
+import Bouton from '@/components/ui/Bouton'; // ✅ Renommé pour correspondre à l'utilisation dans le JSX
 
 export default function LoginForm() {
   const [rememberMe, setRememberMe] = useState(false);
@@ -12,7 +12,7 @@ export default function LoginForm() {
         checked={rememberMe} 
         onCheckedChange={(checked) => setRememberMe(checked)} 
       />
-      <Button type="submit">Se connecter</Button>
+      <Bouton type="submit">Se connecter</Bouton>
     </form>
   );
 }
