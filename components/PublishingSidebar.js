@@ -1,5 +1,5 @@
 import  Checkbox  from '@/components/ui/Checkbox';
-import  Buton  from '@/components/ui/Buton';
+import  Button  from '@/components/ui/Button';
 
 export default function PublishingSidebar() {
   return (
