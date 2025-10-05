@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import QuickActions from "@/components/QuickActions";
 import TextPublishingForm from
 "@/components/TextPublishingForm";
-import ContentLibrary from "@/components/ContentLibrary";
+import ContentLibrary from "@/components/ui/ContentLibrary";
 
 export default function AuthorDashboard() {
   const { user } = useAuth();
