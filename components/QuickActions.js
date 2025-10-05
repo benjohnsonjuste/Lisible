@@ -12,7 +12,7 @@ export default function QuickActions() {
   const quickActionItems = [
     {
       title: "Publier un nouveau texte",
-      description: "Créez et partagez votre prochaine œuvre",
+      description: "Partagez gratuitement sur Lisible",
       icon: <PenTool className="text-primary" size={28} />,
       bgColor: "bg-primary/10",
       action: () => router.push("/author-dashboard/text-publishing"),
@@ -35,7 +35,7 @@ export default function QuickActions() {
 
   return (
     <div className="bg-card border rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold mb-6">Actions rapides</h2>
+      <h2 className="text-xl font-semibold mb-6">Tableau de bord</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {quickActionItems.map((item, idx) => (
           <button
