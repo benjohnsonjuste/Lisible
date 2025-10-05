@@ -9,7 +9,17 @@ import PaymentSection from "@/components/account-management/PaymentSection";
 import DangerZone from "@/components/account-management/DangerZone";
 
 export default function AccountManagement() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center">
+        <p className="text-lg text-muted-foreground">
+          Chargement de votre compte...
+        </p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -24,9 +34,12 @@ export default function AccountManagement() {
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
       <header>
-        <h1 className="text-2xl font-bold mb-2">⚙️ Gestion du compte</h1>
+        <h1 className="text-2xl font-bold mb-2 text-blue-400">
+          ⚙️ Gérer mon compte
+        </h1>
         <p className="text-muted-foreground">
-          Bienvenue, <span className="font-semibold">{user.email}</span>
+          Bienvenue,{" "}
+          <span className="font-semibold">{user?.email || "Utilisateur"}</span>
         </p>
       </header>
 
