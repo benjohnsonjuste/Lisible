@@ -1,19 +1,16 @@
 "use client";
 
 import React from "react";
-import ContentLibrary from "@/components/ui/ContentLibrary";
+import PublishedTextsOverview from "@/components/PublishedTextsOverview";
 
-export default function LibraryPage() {
+export default function PublishedTextsPage() {
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <header className="mb-8 text-center">
-        <p className="text-muted-foreground">
-          Découvrez tous les textes publiés sur Lisible.
-        </p>
-      </header>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">
+        Tous les textes publiés
+      </h1>
 
-      {/* ✅ Section principale : affichage des textes */}
-      <ContentLibrary />
+      <PublishedTextsOverview />
     </div>
   );
 }
