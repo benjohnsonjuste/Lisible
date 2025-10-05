@@ -14,7 +14,7 @@ export default function QuickActions() {
       title: "Publier un nouveau texte",
       description: "Partagez gratuitement sur Lisible",
       icon: <PenTool className="text-primary" size={28} />,
-      bgColor: "bg-primary/10",
+      bgColor: "bg-blue-100",
       action: () => router.push("/author-dashboard/text-publishing"),
     },
     {
