@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/router";
-import AuthentificationLayout from "@/components/ui/AuthentificationLayout";
 import AuthDialog from "@/components/AuthDialog";
 
 export default function LoginPage() {
@@ -13,18 +12,17 @@ export default function LoginPage() {
   useEffect(() => {
     const estAuth = localStorage.getItem("estauthentifié");
     if (estAuth === "vrai") {
-      router.push("/auteur-tableau-de-bord");
+      router.push("/author-dashboard");
     }
   }, [router]);
 
   // 🔁 Callback après authentification réussie
   const handleAuthSuccess = () => {
     localStorage.setItem("estauthentifié", "vrai");
-    router.push("/auteur-tableau-de-bord");
+    router.push("/author-dashboard");
   };
 
   return (
-    <AuthentificationLayout
       title="Connexion"
       subtitle="Accédez à votre espace auteur sur Lisible"
     >
@@ -35,14 +33,13 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-muted-foreground mt-6">
         En vous connectant, vous acceptez nos{" "}
-        <a href="/conditions" className="underline hover:text-primary">
+        <a href="/terms" className="underline hover:text-primary">
           conditions d’utilisation
         </a>{" "}
         et notre{" "}
-        <a href="/confidentialite" className="underline hover:text-primary">
+        <a href="/terms" className="underline hover:text-primary">
           politique de confidentialité
         </a>.
       </p>
-    </AuthentificationLayout>
   );
 }
