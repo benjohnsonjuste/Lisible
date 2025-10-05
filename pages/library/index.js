@@ -1,26 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import TextLibrary from "@/components/TextLibrary";
+import React from "react";
+import ContentLibrary from "@/components/ui/ContentLibrary";
 
 export default function LibraryPage() {
-  const [texts, setTexts] = useState([]);
-
-  // Optionnel : on pourrait charger ici les textes pour les passer à TextLibrary
-  useEffect(() => {
-    // (La logique est déjà dans TextLibrary, donc ce useEffect est juste pour futur usage)
-  }, []);
-
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 text-center">
-        📚 Bibliothèque Lisible
-      </h1>
+    <div className="p-6 max-w-7xl mx-auto">
+      <header className="mb-8 text-center">
+        <p className="text-muted-foreground">
+          Découvrez tous les textes publiés sur Lisible.
+        </p>
+      </header>
 
-      {/* Section affichage des textes publiés */}
-      <div className="mt-6">
-        <TextLibrary />
-      </div>
+      {/* ✅ Section principale : affichage des textes */}
+      <ContentLibrary />
     </div>
   );
 }
