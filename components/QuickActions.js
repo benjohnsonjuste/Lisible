@@ -22,7 +22,7 @@ export default function QuickActions() {
       description: "Modifiez vos informations personnelles",
       icon: <User className="text-secondary" size={28} />,
       bgColor: "bg-secondary/10",
-      action: () => router.push("/account-management"),
+      action: () => router.push("/account"),
     },
     {
       title: "Analyser les performances",
