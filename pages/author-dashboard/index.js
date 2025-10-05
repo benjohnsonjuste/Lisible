@@ -4,8 +4,6 @@
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import QuickActions from "@/components/QuickActions";
-import TextPublishingForm from
-"@/components/TextPublishingForm";
 import ContentLibrary from "@/components/ui/ContentLibrary";
 
 export default function AuthorDashboard() {
@@ -22,7 +20,6 @@ export default function AuthorDashboard() {
   return (
     <div className="space-y-6">
       <QuickActions />
-      <TextPublishingForm />
       <ContentLibrary />
       {/* ajoute d'autres sections du dashboard ici */}
     </div>
