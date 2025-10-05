@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import Header from "@/components/ui/Header";
 import Button from "@/components/ui/Button";
@@ -27,7 +27,7 @@ const mockTexts = [
 ];
 
 const TextPublishing = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const textId = searchParams.get("id");
 
@@ -53,6 +53,7 @@ const TextPublishing = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
 
+  // Charger le texte existant si textId
   useEffect(() => {
     const existingText = mockTexts.find(
       (text) => text.id === parseInt(textId)
@@ -74,6 +75,7 @@ const TextPublishing = () => {
     }
   }, [textId]);
 
+  // Calcul du nombre de mots
   useEffect(() => {
     const tmp = document.createElement("div");
     tmp.innerHTML = textData.content || "";
@@ -82,6 +84,7 @@ const TextPublishing = () => {
     setWordCount(mots.length);
   }, [textData.content]);
 
+  // Auto-save toutes les 30 secondes
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       handleSaveDraft();
@@ -130,7 +133,7 @@ const TextPublishing = () => {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       localStorage.removeItem(`draft_${textId || "new"}`);
       alert("Votre texte a été publié avec succès !");
-      navigate("/auteur-tableau-de-bord");
+      router.push("/auteur-tableau-de-bord");
     } catch (err) {
       console.error("Erreur publication du texte", err);
       alert("Une erreur est survenue lors de la publication. Veuillez réessayer.");
@@ -147,7 +150,7 @@ const TextPublishing = () => {
       );
       if (!confirmLeave) return;
     }
-    navigate("/auteur-tableau-de-bord");
+    router.push("/auteur-tableau-de-bord");
   };
 
   return (
