@@ -92,7 +92,7 @@ export default function Navbar() {
 
           <ul className="space-y-4">
             {[
-              { href: "/account-management", label: "Mon compte", icon: <Users className="w-5 h-5" /> },
+              { href: "/account-management/index", label: "Mon compte", icon: <Users className="w-5 h-5" /> },
               { href: "/lisible-club", label: "Lisible Club", icon: <MessageCircle className="w-5 h-5" /> },
               { href: "/evenements", label: "Événements", icon: <Calendar className="w-5 h-5" /> },
               { href: "/terms", label: "Conditions d'utilisation", icon: <FileText className="w-5 h-5" /> },
