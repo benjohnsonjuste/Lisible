@@ -1,250 +1,215 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { db, storage, auth } from "@/lib/firebaseConfig";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  updateDoc,
+  doc,
+  increment,
+} from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import Input from "@/components/ui/Input";
 
-import Header from "@/components/ui/Header";
-import Button from "@/components/ui/Button";
-import TextEditor from "@/components/TextEditor";
-import ImageUploader from "@/components/ImageUploader";
-import PublishingSidebar from "@/components/PublishingSidebar";
-import ApercuModal from "@/components/ApercuModal";
-import PublierConfirmationModal from "@/components/PublierConfirmationModal";
-
-const mockTexts = [
-  {
-    id: 1,
-    title: "Les Murmures de Montmartre",
-    subtitle: "Une histoire captivante dans les rues pavées de Montmartre",
-    content: "<h1>Chapitre Premier</h1><p>Les premiers rayons du soleil...</p>",
-    coverImage: "https://images.unsplash.com/photo-1502602898536-47ad22581b52?1=800&h=400",
-    contentImages: [],
-    visibility: "public",
-    category: "fiction",
-    tags: ["paris", "romance"],
-    contentWarning: "",
-  },
-];
-
-const TextPublishing = () => {
+export default function TextPublishing() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const textId = searchParams.get("id");
 
   const [textData, setTextData] = useState({
     title: "",
     subtitle: "",
+    category: "",
+    tags: "",
     content: "",
-    coverImage: "",
-    contentImages: [],
   });
 
-  const [publishingData, setPublishingData] = useState({
-    visibility: "public",
-    category: "fiction",
-    tags: [],
-    contentWarning: "",
-  });
-
-  const [wordCount, setWordCount] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [coverFile, setCoverFile] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // Charger le texte existant si textId
+  // 🔄 Charger le brouillon s’il existe
   useEffect(() => {
-    const existingText = mockTexts.find(
-      (text) => text.id === parseInt(textId)
-    );
-    if (existingText) {
-      setTextData({
-        title: existingText.title,
-        subtitle: existingText.subtitle,
-        content: existingText.content,
-        coverImage: existingText.coverImage,
-        contentImages: existingText.contentImages,
-      });
-      setPublishingData({
-        visibility: existingText.visibility,
-        category: existingText.category,
-        tags: existingText.tags,
-        contentWarning: existingText.contentWarning,
-      });
+    const draft = localStorage.getItem("text_draft");
+    if (draft) {
+      setTextData(JSON.parse(draft));
     }
-  }, [textId]);
+  }, []);
 
-  // Calcul du nombre de mots
+  // 🔢 Compteur de mots automatique
   useEffect(() => {
-    const tmp = document.createElement("div");
-    tmp.innerHTML = textData.content || "";
-    const text = tmp.textContent || tmp.innerText || "";
-    const mots = text.trim().split(/\s+/);
-    setWordCount(mots.length);
+    const count = textData.content.trim().split(/\s+/).filter(Boolean).length;
+    setWordCount(count);
   }, [textData.content]);
 
-  // Auto-save toutes les 30 secondes
+  // 💾 Sauvegarde automatique toutes les 30 secondes
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       handleSaveDraft();
     }, 30000);
     return () => clearInterval(autoSaveInterval);
-  }, [textData, publishingData]);
+  }, [textData]);
 
-  const handleTextDataChange = (field, value) => {
+  // 🧠 Fonction pour sauvegarder localement
+  const handleSaveDraft = () => {
+    try {
+      localStorage.setItem("text_draft", JSON.stringify(textData));
+      setSaveStatus("Brouillon sauvegardé ✔️");
+    } catch (err) {
+      console.error("Erreur de sauvegarde du brouillon :", err);
+      setSaveStatus("Erreur de sauvegarde ❌");
+    }
+  };
+
+  const handleChange = (field, value) => {
     setTextData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleCoverImageChange = (image) => {
-    setTextData((prev) => ({ ...prev, coverImage: image }));
+  // 📤 Upload image de couverture vers Firebase Storage (Google Drive)
+  const uploadCover = async () => {
+    if (!coverFile) return "";
+    const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name}`);
+    await uploadBytes(storageRef, coverFile);
+    return await getDownloadURL(storageRef);
   };
 
-  const handleContentImagesChange = (images) => {
-    setTextData((prev) => ({ ...prev, contentImages: images }));
-  };
+  // 🚀 Publier le texte sur Firestore
+  const handlePublish = async (e) => {
+    e.preventDefault();
 
-  const handleSaveDraft = async () => {
-    setSaveStatus("saving");
-    try {
-      const draftData = { textData, publishingData, savedAt: new Date().toISOString() };
-      localStorage.setItem(`draft_${textId || "new"}`, JSON.stringify(draftData));
-      setSaveStatus("saved");
-    } catch (err) {
-      console.error("Erreur d'enregistrement du brouillon", err);
-      setSaveStatus("error");
-    }
-  };
-
-  const handlePreview = () => setShowPreview(true);
-  const handlePublish = () => setShowPublishModal(true);
-
-  const handleConfirmPublish = async () => {
-    if (!textData.title?.trim()) {
-      alert("Veuillez saisir un titre pour votre texte.");
+    if (!auth.currentUser) {
+      alert("Vous devez être connecté pour publier un texte.");
       return;
     }
-    if (!textData.content?.trim()) {
-      alert("Veuillez saisir du contenu pour votre texte.");
+
+    if (!textData.title.trim() || !textData.content.trim()) {
+      alert("Veuillez saisir un titre et un contenu avant de publier.");
       return;
     }
+
     setIsPublishing(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      localStorage.removeItem(`draft_${textId || "new"}`);
-      alert("Votre texte a été publié avec succès !");
-      router.push("/auteur-tableau-de-bord");
-    } catch (err) {
-      console.error("Erreur publication du texte", err);
-      alert("Une erreur est survenue lors de la publication. Veuillez réessayer.");
+      const coverUrl = await uploadCover();
+
+      const newText = {
+        ...textData,
+        tags: textData.tags
+          ? textData.tags.split(",").map((t) => t.trim())
+          : [],
+        coverUrl,
+        authorId: auth.currentUser.uid,
+        authorEmail: auth.currentUser.email,
+        wordCount,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        visibility: "public",
+      };
+
+      await addDoc(collection(db, "texts"), newText);
+
+      // 📈 Mise à jour automatique des métriques
+      const authorRef = doc(db, "authors", auth.currentUser.uid);
+      await updateDoc(authorRef, {
+        publishedCount: increment(1),
+        totalWords: increment(wordCount),
+      });
+
+      // 🧹 Nettoyer le brouillon
+      localStorage.removeItem("text_draft");
+
+      alert("Texte publié avec succès !");
+      router.push("/author-dashboard/analytics");
+    } catch (error) {
+      console.error("Erreur de publication :", error);
+      alert("Erreur lors de la publication. Réessayez.");
     } finally {
       setIsPublishing(false);
-      setShowPublishModal(false);
     }
-  };
-
-  const handleBack = () => {
-    if (textData.title || textData.content) {
-      const confirmLeave = window.confirm(
-        "Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter ?"
-      );
-      if (!confirmLeave) return;
-    }
-    router.push("/auteur-tableau-de-bord");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="pt-16 lg:flex">
-        <div className="lg:hidden p-4 border-b border-gray-200 flex justify-between">
-          <Button variant="ghost" iconName="ArrowLeft" iconPosition="left" onClick={handleBack}>
-            Retour
-          </Button>
-          <Button variant="outline" iconName="Settings" iconPosition="left" onClick={() => setShowMobileSidebar(true)}>
-            Options
-          </Button>
-        </div>
+    <div className="min-h-screen bg-gray-50 flex justify-center items-start py-10">
+      <form
+        onSubmit={handlePublish}
+        className="bg-white shadow-md rounded-2xl p-8 w-full max-w-3xl space-y-6"
+      >
+        <h1 className="text-2xl font-bold text-center text-gray-800">
+          Publier un texte sur Lisible
+        </h1>
 
-        <div className="flex-1 p-6 lg:pr-0 max-w-4xl mx-auto space-y-6">
-          <div className="space-y-4">
-            <h1 className="text-2xl font-bold text-gray-900">Nouveau texte</h1>
-            <p className="text-sm text-gray-500">Créez et publiez votre contenu littéraire</p>
-
-            <input
-              type="text"
-              placeholder="Titre de votre texte"
-              value={textData.title}
-              onChange={(e) => handleTextDataChange("title", e.target.value)}
-              className="text-2xl font-bold border-0 border-b-2 border-gray-300 focus:border-primary w-full py-3"
-              maxLength={100}
-            />
-            <input
-              type="text"
-              placeholder="Sous-titre (facultatif)"
-              value={textData.subtitle}
-              onChange={(e) => handleTextDataChange("subtitle", e.target.value)}
-              className="text-lg border-0 border-b-2 border-gray-300 focus:border-primary w-full py-2"
-              maxLength={150}
-            />
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Image de couverture</h3>
-              <ImageUploader
-                images={textData.coverImage ? [textData.coverImage] : []}
-                onImagesChange={(imgs) => handleCoverImageChange(imgs[0])}
-                type="cover"
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Contenu</h3>
-              <TextEditor
-                content={textData.content}
-                onChange={handleTextDataChange}
-                onSave={handleSaveDraft}
-                saveStatus={saveStatus}
-                wordCount={wordCount}
-              />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Images du contenu</h3>
-              <ImageUploader
-                images={textData.contentImages}
-                onImagesChange={handleContentImagesChange}
-                type="content"
-              />
-            </div>
-          </div>
-        </div>
-
-        <PublishingSidebar
-          publishingData={publishingData}
-          setPublishingData={setPublishingData}
-          onSaveDraft={handleSaveDraft}
-          onPreview={handlePreview}
-          onPublish={handlePublish}
-          isPublishing={isPublishing}
+        <Input
+          label="Titre du texte"
+          required
+          value={textData.title}
+          onChange={(e) => handleChange("title", e.target.value)}
         />
-      </div>
 
-      <ApercuModal
-        open={showPreview}
-        onClose={() => setShowPreview(false)}
-        textData={textData}
-        publishingData={publishingData}
-      />
+        <Input
+          label="Sous-titre"
+          value={textData.subtitle}
+          onChange={(e) => handleChange("subtitle", e.target.value)}
+        />
 
-      <PublierConfirmationModal
-        open={showPublishModal}
-        onConfirm={handleConfirmPublish}
-        onClose={() => setShowPublishModal(false)}
-        textData={textData}
-        publishingData={publishingData}
-      />
+        <Input
+          label="Catégorie"
+          value={textData.category}
+          onChange={(e) => handleChange("category", e.target.value)}
+        />
+
+        <Input
+          label="Tags (séparés par des virgules)"
+          value={textData.tags}
+          onChange={(e) => handleChange("tags", e.target.value)}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-primary mb-1">
+            Contenu du texte <span className="text-destructive">*</span>
+          </label>
+          <textarea
+            required
+            value={textData.content}
+            onChange={(e) => handleChange("content", e.target.value)}
+            placeholder="Écrivez votre texte ici..."
+            className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          />
+          <p className="text-xs text-muted mt-1">
+            {wordCount} mots – {saveStatus}
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-primary mb-1">
+            Image de couverture
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setCoverFile(e.target.files[0])}
+            className="w-full text-sm text-muted"
+          />
+        </div>
+
+        <div className="flex justify-between items-center">
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition"
+          >
+            Sauvegarder le brouillon
+          </button>
+
+          <button
+            type="submit"
+            disabled={isPublishing}
+            className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50"
+          >
+            {isPublishing ? "Publication..." : "Publier sur Lisible"}
+          </button>
+        </div>
+      </form>
     </div>
   );
-};
-
-export default TextPublishing;
+}
