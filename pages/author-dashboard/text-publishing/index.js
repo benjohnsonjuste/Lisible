@@ -6,6 +6,8 @@ import ImageUploader from "@/components/ImageUploader";
 import ApercuModal from "@/components/ApercuModal";
 import PublierConfirmationModal from "@/components/PublierConfirmationModal";
 import PublishingSidebar from "@/components/PublishingSidebar";
+import PublishingForm from
+"@/components/PublishingForm";
 import TextEditor from "@/components/TextEditor";
 import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
