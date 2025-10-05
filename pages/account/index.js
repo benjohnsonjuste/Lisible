@@ -38,4 +38,4 @@ export default function AccountManagement() {
       <DangerZone user={user} />
     </div>
   );
-        }
+}
