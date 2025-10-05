@@ -56,6 +56,10 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
             <NotificationBell />
 
+            <Link href="/index">
+              <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
+            </Link>
+            
             <Link href="/library">
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
@@ -92,7 +96,7 @@ export default function Navbar() {
 
           <ul className="space-y-4">
             {[
-              { href: "/account-management/index", label: "Mon compte", icon: <Users className="w-5 h-5" /> },
+              { href: "/account", label: "Mon compte", icon: <Users className="w-5 h-5" /> },
               { href: "/lisible-club", label: "Lisible Club", icon: <MessageCircle className="w-5 h-5" /> },
               { href: "/evenements", label: "Événements", icon: <Calendar className="w-5 h-5" /> },
               { href: "/terms", label: "Conditions d'utilisation", icon: <FileText className="w-5 h-5" /> },
