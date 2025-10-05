@@ -2,11 +2,11 @@
 
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
-import ProfileSection from "@/components/account/ProfileSection";
-import NotificationSection from "@/components/account/NotificationSection";
-import SecuritySection from "@/components/account/SecuritySection";
-import PaymentSection from "@/components/account/PaymentSection";
-import DangerZone from "@/components/account/DangerZone";
+import ProfileSection from "@/components/account-management/ProfileSection";
+import NotificationSection from "@/components/account-management/NotificationSection";
+import SecuritySection from "@/components/account-management/SecuritySection";
+import PaymentSection from "@/components/account-management/PaymentSection";
+import DangerZone from "@/components/account-management/DangerZone";
 
 export default function AccountManagement() {
   const { user } = useAuth();
