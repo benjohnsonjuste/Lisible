@@ -24,7 +24,7 @@ export default function AuthDialog() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        router.replace("/dashboard"); // éviter retour au login
+        router.replace("/author-dashboard"); // éviter retour au login
       }
     });
     return () => unsubscribe();
@@ -57,7 +57,7 @@ export default function AuthDialog() {
         );
       }
 
-      router.push("/dashboard");
+      router.push("/author-dashboard");
     } catch (e) {
       setError(e.message);
     }
@@ -82,7 +82,7 @@ export default function AuthDialog() {
         { merge: true }
       );
 
-      router.push("/dashboard");
+      router.push("/author-dashboard");
     } catch (e) {
       setError(e.message);
     }
