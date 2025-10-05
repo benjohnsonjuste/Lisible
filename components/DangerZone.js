@@ -1,9 +1,8 @@
-// components/account-management/DangerZone.jsx
+"use client";
+
 import React, { useState } from "react";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 import Checkbox from "@/components/ui/Checkbox";
-import AppIcon from "@/components/AppIcon";
 
 const DangerZone = ({ onAccountAction }) => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -17,12 +16,12 @@ const DangerZone = ({ onAccountAction }) => {
   const handleDeactivateAccount = async () => {
     setIsLoading(true);
     try {
-      // Simuler un appel API
+      // Simulation d’un appel API
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      onAccountAction({ type: "désactiver", succès: true });
+      onAccountAction?.({ type: "désactiver", success: true });
       setShowDeactivateConfirmation(false);
-    } catch (erreur) {
-      console.error("Erreur lors de la désactivation du compte", erreur);
+    } catch (error) {
+      console.error("Erreur lors de la désactivation du compte :", error);
     } finally {
       setIsLoading(false);
     }
@@ -32,10 +31,10 @@ const DangerZone = ({ onAccountAction }) => {
     setIsLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      onAccountAction({ type: "supprimer", succès: true });
+      onAccountAction?.({ type: "supprimer", success: true });
       setShowDeleteConfirmation(false);
-    } catch (erreur) {
-      console.error("Erreur lors de la suppression du compte", erreur);
+    } catch (error) {
+      console.error("Erreur lors de la suppression du compte :", error);
     } finally {
       setIsLoading(false);
     }
@@ -43,65 +42,68 @@ const DangerZone = ({ onAccountAction }) => {
 
   return (
     <div className="p-6 bg-red-50 rounded-lg space-y-6">
-      <h2 className="text-xl font-bold text-red-600">Danger Zone</h2>
+      <h2 className="text-xl font-bold text-red-600">Zone de danger</h2>
 
       {/* Désactivation du compte */}
-      <div className="border p-4 rounded-lg bg-red-100">
+      <div className="border border-red-300 p-4 rounded-lg bg-red-100">
         <h3 className="font-semibold text-red-700 mb-2">Désactiver le compte</h3>
         <p className="mb-2">
           Vous pouvez désactiver votre compte temporairement. Vous pourrez le réactiver plus tard.
         </p>
         <Checkbox
           checked={confirmationChecks.acknowledgeDeactivate}
-          onChange={(checked) =>
-            setConfirmationChecks({ ...confirmationChecks, acknowledgeDeactivate: checked })
+          onCheckedChange={(checked) =>
+            setConfirmationChecks((prev) => ({ ...prev, acknowledgeDeactivate: checked }))
           }
         >
           Je comprends que mon compte sera désactivé.
         </Checkbox>
-        <Button 
-          variante="danger"
+        <Button
+          variant="destructive"
           onClick={() => setShowDeactivateConfirmation(true)}
           disabled={!confirmationChecks.acknowledgeDeactivate || isLoading}
+          className="mt-3"
         >
           Désactiver
         </Button>
       </div>
 
       {/* Suppression du compte */}
-      <div className="border p-4 rounded-lg bg-red-200">
+      <div className="border border-red-400 p-4 rounded-lg bg-red-200">
         <h3 className="font-semibold text-red-800 mb-2">Supprimer le compte</h3>
         <p className="mb-2">
-          La suppression du compte est irréversible et toutes vos données seront perdues.
+          La suppression du compte est <strong>irréversible</strong> et toutes vos données seront
+          perdues.
         </p>
         <Checkbox
           checked={confirmationChecks.acknowledgeDelete}
-          onChange={(checked) =>
-            setConfirmationChecks({ ...confirmationChecks, acknowledgeDelete: checked })
+          onCheckedChange={(checked) =>
+            setConfirmationChecks((prev) => ({ ...prev, acknowledgeDelete: checked }))
           }
         >
           Je comprends que mon compte sera définitivement supprimé.
         </Checkbox>
-        <Button 
-          variante="danger"
+        <Button
+          variant="destructive"
           onClick={() => setShowDeleteConfirmation(true)}
           disabled={!confirmationChecks.acknowledgeDelete || isLoading}
+          className="mt-3"
         >
           Supprimer
         </Button>
       </div>
 
-      {/* Modales de confirmation */}
+      {/* Modale de désactivation */}
       {showDeactivateConfirmation && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white p-6 rounded-lg space-y-4 w-full max-w-md">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4 z-50">
+          <div className="bg-white p-6 rounded-lg space-y-4 w-full max-w-md shadow-lg">
             <h4 className="text-lg font-bold">Confirmer la désactivation</h4>
             <p>Êtes-vous sûr de vouloir désactiver votre compte ?</p>
             <div className="flex justify-end gap-4">
-              <Button variante="secondary" onClick={() => setShowDeactivateConfirmation(false)}>
+              <Button variant="outline" onClick={() => setShowDeactivateConfirmation(false)}>
                 Annuler
               </Button>
-              <Button variante="danger" onClick={handleDeactivateAccount} disabled={isLoading}>
+              <Button variant="destructive" onClick={handleDeactivateAccount} disabled={isLoading}>
                 {isLoading ? "Chargement..." : "Confirmer"}
               </Button>
             </div>
@@ -109,16 +111,17 @@ const DangerZone = ({ onAccountAction }) => {
         </div>
       )}
 
+      {/* Modale de suppression */}
       {showDeleteConfirmation && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white p-6 rounded-lg space-y-4 w-full max-w-md">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4 z-50">
+          <div className="bg-white p-6 rounded-lg space-y-4 w-full max-w-md shadow-lg">
             <h4 className="text-lg font-bold">Confirmer la suppression</h4>
             <p>Êtes-vous sûr de vouloir supprimer définitivement votre compte ?</p>
             <div className="flex justify-end gap-4">
-              <Button variante="secondary" onClick={() => setShowDeleteConfirmation(false)}>
+              <Button variant="outline" onClick={() => setShowDeleteConfirmation(false)}>
                 Annuler
               </Button>
-              <Button variante="danger" onClick={handleDeleteAccount} disabled={isLoading}>
+              <Button variant="destructive" onClick={handleDeleteAccount} disabled={isLoading}>
                 {isLoading ? "Chargement..." : "Supprimer"}
               </Button>
             </div>
