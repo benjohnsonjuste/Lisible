@@ -53,7 +53,6 @@ const TextPublishing = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // Charger le texte existant si textId
   useEffect(() => {
     const existingText = mockTexts.find(
       (text) => text.id === parseInt(textId)
@@ -75,7 +74,6 @@ const TextPublishing = () => {
     }
   }, [textId]);
 
-  // Calcul du nombre de mots
   useEffect(() => {
     const tmp = document.createElement("div");
     tmp.innerHTML = textData.content || "";
@@ -84,12 +82,10 @@ const TextPublishing = () => {
     setWordCount(mots.length);
   }, [textData.content]);
 
-  // Auto-save toutes les 30 secondes
   useEffect(() => {
     const autoSaveInterval = setInterval(() => {
       handleSaveDraft();
     }, 30000);
-
     return () => clearInterval(autoSaveInterval);
   }, [textData, publishingData]);
 
@@ -108,11 +104,7 @@ const TextPublishing = () => {
   const handleSaveDraft = async () => {
     setSaveStatus("saving");
     try {
-      const draftData = {
-        textData,
-        publishingData,
-        savedAt: new Date().toISOString(),
-      };
+      const draftData = { textData, publishingData, savedAt: new Date().toISOString() };
       localStorage.setItem(`draft_${textId || "new"}`, JSON.stringify(draftData));
       setSaveStatus("saved");
     } catch (err) {
@@ -135,7 +127,7 @@ const TextPublishing = () => {
     }
     setIsPublishing(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // simulation API
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       localStorage.removeItem(`draft_${textId || "new"}`);
       alert("Votre texte a été publié avec succès !");
       navigate("/auteur-tableau-de-bord");
@@ -162,8 +154,7 @@ const TextPublishing = () => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="pt-16 lg:flex">
-        {/* Barre latérale mobile */}
-        <div className={`lg:hidden p-4 border-b border-gray-200 flex justify-between`}>
+        <div className="lg:hidden p-4 border-b border-gray-200 flex justify-between">
           <Button variant="ghost" iconName="ArrowLeft" iconPosition="left" onClick={handleBack}>
             Retour
           </Button>
@@ -172,13 +163,11 @@ const TextPublishing = () => {
           </Button>
         </div>
 
-        {/* Contenu principal */}
         <div className="flex-1 p-6 lg:pr-0 max-w-4xl mx-auto space-y-6">
           <div className="space-y-4">
             <h1 className="text-2xl font-bold text-gray-900">Nouveau texte</h1>
             <p className="text-sm text-gray-500">Créez et publiez votre contenu littéraire</p>
 
-            {/* Titre et Sous-titre */}
             <input
               type="text"
               placeholder="Titre de votre texte"
@@ -196,7 +185,6 @@ const TextPublishing = () => {
               maxLength={150}
             />
 
-            {/* Image de couverture */}
             <div>
               <h3 className="text-lg font-semibold mb-2">Image de couverture</h3>
               <ImageUploader
@@ -206,7 +194,6 @@ const TextPublishing = () => {
               />
             </div>
 
-            {/* Éditeur de contenu */}
             <div>
               <h3 className="text-lg font-semibold mb-2">Contenu</h3>
               <TextEditor
@@ -218,7 +205,6 @@ const TextPublishing = () => {
               />
             </div>
 
-            {/* Images de contenu */}
             <div>
               <h3 className="text-lg font-semibold mb-2">Images du contenu</h3>
               <ImageUploader
@@ -230,7 +216,6 @@ const TextPublishing = () => {
           </div>
         </div>
 
-        {/* Barre latérale de publication */}
         <PublishingSidebar
           publishingData={publishingData}
           setPublishingData={setPublishingData}
@@ -241,15 +226,13 @@ const TextPublishing = () => {
         />
       </div>
 
-      {/* Aperçu */}
-      <PreviewModal
+      <ApercuModal
         open={showPreview}
         onClose={() => setShowPreview(false)}
         textData={textData}
         publishingData={publishingData}
       />
 
-      {/* Confirmation de publication */}
       <PublierConfirmationModal
         open={showPublishModal}
         onConfirm={handleConfirmPublish}
