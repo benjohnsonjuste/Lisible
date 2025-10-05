@@ -1,40 +1,30 @@
-// context/AuthContext.js
-import { createContext, useContext, useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+"use client";
 
-// 🔒 Crée le contexte avec null par défaut
-const AuthContext = createContext(null);
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebaseConfig";
 
-// ✅ Provider global pour l'application
-export function AuthProvider({ children }) {
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const auth = getAuth();
 
   useEffect(() => {
+    // Surveille les changements d'état de connexion Firebase
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser || null);
+      setUser(firebaseUser);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [auth]);
-
-  const value = { user, loading };
+  }, []);
 
   return (
-    <AuthContext.Provider value={value}>
-      {children}
+    <AuthContext.Provider value={{ user, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
-}
+};
 
-// ✅ Hook sécurisé pour accéder au contexte
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === null) {
-    // Sécurité renforcée pour éviter les erreurs de build
-    console.warn("useAuth must be used within an AuthProvider");
-    return { user: null, loading: true };
-  }
-  return context;
-}
+// Hook personnalisé pour accéder à l'utilisateur
+export const useAuth = () => useContext(AuthContext);
