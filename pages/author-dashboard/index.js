@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import QuickActions from "@/components/QuickActions";
 import TextPublishingForm from
 "@/components/TextPublishingForm";
-import TextLibrary from "@/components/TextLibrary";
+import ContentLibrary from "@/components/ContentLibrary";
 
 export default function AuthorDashboard() {
   const { user } = useAuth();
@@ -23,7 +23,7 @@ export default function AuthorDashboard() {
     <div className="space-y-6">
       <QuickActions />
       <TextPublishingForm />
-      <TextLibrary />
+      <ContentLibrary />
       {/* ajoute d'autres sections du dashboard ici */}
     </div>
   );
