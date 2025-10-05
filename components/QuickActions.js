@@ -21,7 +21,7 @@ export default function QuickActions() {
       title: "Gérer mon compte",
       description: "Modifiez vos informations personnelles",
       icon: <User className="text-secondary" size={28} />,
-      bgColor: "bg-secondary/10",
+      bgColor: "bg-pink-100",
       action: () => router.push("/account"),
     },
     {
