@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Eye, Heart } from "lucide-react";
 
@@ -12,10 +13,13 @@ type TextItem = {
   coverUrl?: string;
   views: number;
   likes: number;
+  category?: string;
+  tags?: string[];
   created_at: string;
 };
 
 export default function TextLibrary() {
+  const router = useRouter();
   const [texts, setTexts] = useState<TextItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +46,7 @@ export default function TextLibrary() {
   const incrementViews = async (id: string) => {
     const { error } = await supabase
       .from("texts")
-      .update({ views: supabase.rpc("increment", { column: "views" }) })
+      .update({ views: supabase.raw("views + 1") })
       .eq("id", id);
 
     if (error) {
@@ -73,11 +77,16 @@ export default function TextLibrary() {
     }
   };
 
+  const handleOpenText = async (id: string) => {
+    await incrementViews(id);
+    router.push(`/text/${id}`);
+  };
+
   if (loading) return <p className="text-center py-10">Chargement...</p>;
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Bibliothèque Lisible</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">📚 Bibliothèque publique</h1>
       {texts.length === 0 ? (
         <p>Aucun texte publié pour le moment.</p>
       ) : (
@@ -85,7 +94,8 @@ export default function TextLibrary() {
           {texts.map((text) => (
             <div
               key={text.id}
-              className="bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor onClick={() => incrementViews(text.id)}
+              className="bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer"
+              onClick={() => handleOpenText(text.id)}
             >
               {text.coverUrl && (
                 <img
