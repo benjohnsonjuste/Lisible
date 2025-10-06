@@ -117,7 +117,7 @@ export default function TextPublishing() {
         <div className="flex justify-between items-center">
           <button type="button" onClick={handleSaveDraft} className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition">Sauvegarder le brouillon</button>
           <button type="submit" disabled={isPublishing} className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50">
-            {isPublishing ? "Publication..." : "Publier"}
+            {isPublishing ? "Publication..." : "Publier sur Lisible"}
           </button>
         </div>
       </form>
