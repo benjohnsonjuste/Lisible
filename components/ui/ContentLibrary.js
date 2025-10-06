@@ -2,15 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore";
-import { db } from "@/lib/firebaseConfig";
-import { getAuth } from "firebase/auth";
+import { supabase } from "@/lib/supabaseClient";
 import {
   BookOpen,
   FileText,
@@ -19,7 +11,6 @@ import {
   Newspaper,
   Grid3X3,
   List,
-  Plus,
 } from "lucide-react";
 
 export default function ContentLibrary({ className = "" }) {
@@ -33,59 +24,47 @@ export default function ContentLibrary({ className = "" }) {
 
   const formatDate = (d) =>
     new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(d));
-  const formatCurrency = (n) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(n);
   const formatNumber = (n) => new Intl.NumberFormat("fr-FR").format(n);
+  const formatCurrency = (n) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(n);
 
-  // 🔥 Récupération des textes de Firestore
+  // 🔥 Récupérer les textes de l'auteur depuis Supabase
+  const fetchTexts = async () => {
+    setLoading(true);
+    const user = supabase.auth.user();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("texts")
+      .select("*")
+      .eq("author_id", user.id)
+      .order("published_at", { ascending: false });
+
+    if (error) {
+      console.error("Erreur récupération textes :", error);
+      setContentItems([]);
+    } else {
+      setContentItems(data);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (!user) return;
-
-        const q = query(
-          collection(db, "texts"),
-          where("authorId", "==", user.uid),
-          orderBy("publishedAt", "desc")
-        );
-
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-
-        setContentItems(data);
-      } catch (error) {
-        console.error("Erreur lors du chargement des textes :", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContent();
+    fetchTexts();
   }, []);
 
-  // 🔁 Tri personnalisé
   const sortedItems = [...contentItems].sort((a, b) => {
     switch (sortBy) {
       case "views":
-        return b.views - a.views;
+        return (b.views || 0) - (a.views || 0);
       case "earnings":
-        return b.earnings - a.earnings;
+        return (b.earnings || 0) - (a.earnings || 0);
       case "title":
         return a.title.localeCompare(b.title);
       default:
-        return new Date(b.publishedAt) - new Date(a.publishedAt);
+        return new Date(b.published_at) - new Date(a.published_at);
     }
   });
 
-  const handleItemClick = (item) => {
-    router.push(`/text-publishing?id=${item.id}`);
-  };
-
-  // ☁️ Exemple de lien Google Drive (contenu du texte)
   const openDriveFile = (driveFileId) => {
     if (driveFileId) window.open(`https://drive.google.com/file/d/${driveFileId}/view`, "_blank");
   };
@@ -103,7 +82,7 @@ export default function ContentLibrary({ className = "" }) {
       {/* Header */}
       <div className="p-6 border-b border-border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold">📚 Ma Bibliothèque</h2>
+          <h2 className="text-xl font-semibold">Mes textes</h2>
           <p className="text-sm text-muted-foreground">
             Gérez vos textes publiés et suivez leurs performances.
           </p>
@@ -147,27 +126,17 @@ export default function ContentLibrary({ className = "" }) {
             <BookOpen size={48} className="mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">Aucun texte publié</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              Commencez à écrire et partagez vos créations avec vos lecteurs.
+              Vous n'avez encore publié aucun texte.
             </p>
-            <button
-              onClick={() => router.push("/text-publishing")}
-              className="px-4 py-2 bg-primary text-white rounded-lg flex items-center justify-center gap-2 mx-auto"
-            >
-              <Plus size={16} /> Nouveau texte
-            </button>
           </div>
         ) : (
-          <div
-            className={
-              viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"
-            }
-          >
+          <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" : "space-y-4"}>
             {sortedItems.map((item) => {
               const Icon = typeIcons[item.type] || FileText;
               return (
                 <div
                   key={item.id}
-                  onClick={() => openDriveFile(item.driveFileId)}
+                  onClick={() => openDriveFile(item.drive_file_id)}
                   className="border border-border rounded-lg p-4 hover:bg-muted cursor-pointer"
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -183,7 +152,7 @@ export default function ContentLibrary({ className = "" }) {
                     {item.excerpt || "Aperçu non disponible..."}
                   </p>
                   <div className="text-xs text-muted-foreground space-x-3">
-                    <span>{formatDate(item.publishedAt)}</span>
+                    <span>{formatDate(item.published_at)}</span>
                     <span>{formatNumber(item.views || 0)} vues</span>
                     <span>{formatNumber(item.subscribers || 0)} abonnés</span>
                     <span>{formatCurrency(item.earnings || 0)}</span>
