@@ -1,30 +1,59 @@
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
+import { db } from "@/lib/firebaseConfig";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
-export default function ProfileForm({ user }) {
-  const [form, setForm] = useState({
-    name: user.name || "",
-    bio: user.bio || "",
-    website: user.website || "",
-  });
+export default function ProfileSection({ user }) {
+  const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const ref = doc(db, "authors", user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        setDisplayName(data.displayName || user.displayName || "");
+        setBio(data.bio || "");
+      }
+      setLoading(false);
+    };
+    fetchProfile();
+  }, [user]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await fetch("/api/account/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+  const handleSave = async () => {
+    const ref = doc(db, "authors", user.uid);
+    await setDoc(ref, { displayName, bio, email: user.email }, { merge: true });
+    alert("✅ Profil mis à jour !");
   };
 
+  if (loading) return <p>Chargement...</p>;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <input name="name" value={form.name} onChange={handleChange} placeholder="Nom complet" className="input" />
-      <textarea name="bio" value={form.bio} onChange={handleChange} placeholder="Biographie" className="textarea" />
-      <input name="website" value={form.website} onChange={handleChange} placeholder="Site web" className="input" />
-      <button type="submit" className="btn-primary">Sauvegarder</button>
-    </form>
+    <div>
+      <h2 className="text-xl font-semibold mb-4">Profil</h2>
+      <div className="space-y-3">
+        <input
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          className="w-full border rounded-lg p-2"
+          placeholder="Nom d’affichage"
+        />
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          className="w-full border rounded-lg p-2"
+          rows={4}
+          placeholder="Biographie ou présentation"
+        />
+        <button
+          onClick={handleSave}
+          className="bg-primary text-white rounded-lg px-4 py-2"
+        >
+          Sauvegarder
+        </button>
+      </div>
+    </div>
   );
 }
