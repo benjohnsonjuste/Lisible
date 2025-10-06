@@ -39,21 +39,19 @@ export default function TextPublishing() {
     }
   }, []);
 
-  // 🔢 Compteur de mots automatique
+  // 🔢 Compteur de mots dynamique
   useEffect(() => {
     const count = textData.content.trim().split(/\s+/).filter(Boolean).length;
     setWordCount(count);
   }, [textData.content]);
 
-  // 💾 Sauvegarde automatique toutes les 30s
+  // 💾 Sauvegarde automatique toutes les 30 secondes
   useEffect(() => {
-    const autoSave = setInterval(() => {
-      handleSaveDraft();
-    }, 30000);
-    return () => clearInterval(autoSave);
+    const interval = setInterval(() => handleSaveDraft(), 30000);
+    return () => clearInterval(interval);
   }, [textData]);
 
-  // 🧠 Sauvegarde du brouillon localement
+  // 🧠 Sauvegarde du brouillon local
   const handleSaveDraft = () => {
     try {
       localStorage.setItem("text_draft", JSON.stringify(textData));
@@ -68,7 +66,7 @@ export default function TextPublishing() {
     setTextData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 📤 Upload de l'image
+  // 📤 Upload image de couverture sur Firebase Storage
   const uploadCover = async () => {
     if (!coverFile) return "";
     const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name}`);
@@ -76,7 +74,7 @@ export default function TextPublishing() {
     return await getDownloadURL(storageRef);
   };
 
-  // 🚀 Publier le texte sur Lisible
+  // 🚀 Publier le texte sur Firestore
   const handlePublish = async (e) => {
     e.preventDefault();
 
@@ -105,15 +103,15 @@ export default function TextPublishing() {
         authorId: currentUser.uid,
         authorEmail: currentUser.email,
         wordCount,
-        visibility: "public", // 👈 rend visible dans la Library
+        visibility: "public", // Texte visible dans la bibliothèque publique
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
-      // ✅ Forcer l’ajout dans Firestore
-      const docRef = await addDoc(collection(db, "texts"), newText);
+      // Ajoute le texte dans Firestore
+      await addDoc(collection(db, "texts"), newText);
 
-      // ✅ Crée ou met à jour les infos auteur
+      // Met à jour les infos auteur
       const authorRef = doc(db, "authors", currentUser.uid);
       await setDoc(
         authorRef,
@@ -124,20 +122,19 @@ export default function TextPublishing() {
         { merge: true }
       );
 
-      // ✅ Met à jour les stats auteur
+      // Met à jour les stats auteur
       await updateDoc(authorRef, {
         publishedCount: increment(1),
         totalWords: increment(wordCount),
       });
 
-      // 🧹 Supprime le brouillon local
+      // Supprime le brouillon local
       localStorage.removeItem("text_draft");
 
-      // ✅ Message utilisateur
-      alert(`✅ Texte publié avec succès sur Lisible !
-Titre : ${textData.title}`);
+      // Feedback utilisateur
+      alert(`✅ Texte publié avec succès !\nTitre : ${textData.title}`);
 
-      // 🔁 Redirige vers la bibliothèque publique
+      // Redirection vers la bibliothèque publique
       router.push("/library");
     } catch (error) {
       console.error("Erreur de publication :", error);
