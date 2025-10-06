@@ -1,18 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { db, storage, auth } from "@/lib/firebaseConfig";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  updateDoc,
-  doc,
-  increment,
-  setDoc,
-} from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase } from "@/lib/supabaseClient";
 import Input from "@/components/ui/Input";
 
 export default function TextPublishing() {
@@ -25,120 +15,95 @@ export default function TextPublishing() {
     tags: "",
     content: "",
   });
-
   const [coverFile, setCoverFile] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // 🔄 Charger le brouillon local s’il existe
+  // Charger brouillon depuis localStorage
   useEffect(() => {
     const draft = localStorage.getItem("text_draft");
-    if (draft) {
-      setTextData(JSON.parse(draft));
-    }
+    if (draft) setTextData(JSON.parse(draft));
   }, []);
 
-  // 🔢 Compteur de mots dynamique
+  // Compteur de mots dynamique
   useEffect(() => {
     const count = textData.content.trim().split(/\s+/).filter(Boolean).length;
     setWordCount(count);
   }, [textData.content]);
 
-  // 💾 Sauvegarde automatique toutes les 30 secondes
+  // Sauvegarde automatique toutes les 30s
   useEffect(() => {
     const interval = setInterval(() => handleSaveDraft(), 30000);
     return () => clearInterval(interval);
   }, [textData]);
 
-  // 🧠 Sauvegarde du brouillon local
   const handleSaveDraft = () => {
     try {
       localStorage.setItem("text_draft", JSON.stringify(textData));
       setSaveStatus("Brouillon sauvegardé ✔️");
     } catch (err) {
-      console.error("Erreur sauvegarde :", err);
+      console.error(err);
       setSaveStatus("Erreur de sauvegarde ❌");
     }
   };
 
   const handleChange = (field, value) => {
-    setTextData((prev) => ({ ...prev, [field]: value }));
+    setTextData(prev => ({ ...prev, [field]: value }));
   };
 
-  // 📤 Upload image de couverture sur Firebase Storage
+  // Upload image sur Supabase Storage
   const uploadCover = async () => {
-    if (!coverFile) return "";
-    const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name}`);
-    await uploadBytes(storageRef, coverFile);
-    return await getDownloadURL(storageRef);
+    if (!coverFile) return null;
+    const fileExt = coverFile.name.split(".").pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from("covers")
+      .upload(fileName, coverFile);
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    const { publicUrl } = supabase.storage.from("covers").getPublicUrl(fileName);
+    return publicUrl;
   };
 
-  // 🚀 Publier le texte sur Firestore
+  // Publier le texte
   const handlePublish = async (e) => {
     e.preventDefault();
-
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      alert("⚠️ Vous devez être connecté pour publier un texte.");
-      return;
-    }
-
     if (!textData.title.trim() || !textData.content.trim()) {
-      alert("⚠️ Veuillez saisir un titre et un contenu avant de publier.");
+      alert("⚠️ Veuillez saisir un titre et un contenu.");
       return;
     }
 
     setIsPublishing(true);
-
     try {
       const coverUrl = await uploadCover();
 
-      const newText = {
-        ...textData,
-        tags: textData.tags
-          ? textData.tags.split(",").map((t) => t.trim().toLowerCase())
-          : [],
-        coverUrl,
-        authorId: currentUser.uid,
-        authorEmail: currentUser.email,
-        wordCount,
-        visibility: "public", // Texte visible dans la bibliothèque publique
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-
-      // Ajoute le texte dans Firestore
-      await addDoc(collection(db, "texts"), newText);
-
-      // Met à jour les infos auteur
-      const authorRef = doc(db, "authors", currentUser.uid);
-      await setDoc(
-        authorRef,
+      const { error } = await supabase.from("texts").insert([
         {
-          email: currentUser.email,
-          lastPublishedAt: serverTimestamp(),
+          ...textData,
+          tags: textData.tags ? textData.tags.split(",").map(t => t.trim().toLowerCase()) : [],
+          coverUrl,
+          author_id: supabase.auth.user()?.id,
+          views: 0,
+          likes: 0,
+          visibility: "public",
+          created_at: new Date(),
+          updated_at: new Date(),
         },
-        { merge: true }
-      );
+      ]);
 
-      // Met à jour les stats auteur
-      await updateDoc(authorRef, {
-        publishedCount: increment(1),
-        totalWords: increment(wordCount),
-      });
+      if (error) throw error;
 
-      // Supprime le brouillon local
+      // Supprime brouillon local
       localStorage.removeItem("text_draft");
 
-      // Feedback utilisateur
       alert(`✅ Texte publié avec succès !\nTitre : ${textData.title}`);
-
-      // Redirection vers la bibliothèque publique
       router.push("/library");
-    } catch (error) {
-      console.error("Erreur de publication :", error);
-      alert("❌ Échec de la publication. Vérifiez votre connexion ou réessayez.");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Échec de la publication.");
     } finally {
       setIsPublishing(false);
     }
@@ -158,35 +123,32 @@ export default function TextPublishing() {
           label="Titre du texte"
           required
           value={textData.title}
-          onChange={(e) => handleChange("title", e.target.value)}
+          onChange={e => handleChange("title", e.target.value)}
         />
-
         <Input
           label="Sous-titre"
           value={textData.subtitle}
-          onChange={(e) => handleChange("subtitle", e.target.value)}
+          onChange={e => handleChange("subtitle", e.target.value)}
         />
-
         <Input
           label="Catégorie"
           value={textData.category}
-          onChange={(e) => handleChange("category", e.target.value)}
+          onChange={e => handleChange("category", e.target.value)}
         />
-
         <Input
           label="Tags (séparés par des virgules)"
           value={textData.tags}
-          onChange={(e) => handleChange("tags", e.target.value)}
+          onChange={e => handleChange("tags", e.target.value)}
         />
 
         <div>
           <label className="block text-sm font-medium text-primary mb-1">
-            Contenu du texte <span className="text-destructive">*</span>
+            Contenu <span className="text-destructive">*</span>
           </label>
           <textarea
             required
             value={textData.content}
-            onChange={(e) => handleChange("content", e.target.value)}
+            onChange={e => handleChange("content", e.target.value)}
             placeholder="Écrivez votre texte ici..."
             className="w-full min-h-[220px] border border-input rounded-md px-3 py-2 text-sm"
           />
@@ -202,7 +164,7 @@ export default function TextPublishing() {
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setCoverFile(e.target.files[0])}
+            onChange={e => setCoverFile(e.target.files[0])}
             className="w-full text-sm text-muted"
           />
         </div>
