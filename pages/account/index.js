@@ -34,7 +34,7 @@ user={user} />,
 user={user} />,
     security: <SecuritySettings user={user} />,
     danger: <DangerZone
-user={user} />,
+user={user} />
   };
 
   return (
