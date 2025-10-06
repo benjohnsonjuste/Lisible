@@ -39,7 +39,7 @@ user={user} />
 
   return (
     <div className="flex flex-col md:flex-row gap-6 p-6">
-      <AccountSidebar active={section} setActive={setSection} />
+      <PublicationsList active={section} setActive={setSection} />
       <div className="flex-1 bg-card border border-border rounded-xl p-6 shadow-sm">
         {sections[section]}
       </div>
