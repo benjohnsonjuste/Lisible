@@ -8,6 +8,7 @@ export default function TextLibrary() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Charger les textes publics
   const fetchTexts = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -16,8 +17,12 @@ export default function TextLibrary() {
       .eq("visibility", "public")
       .order("created_at", { ascending: false });
 
-    if (error) console.error(error);
-    else setTexts(data);
+    if (error) {
+      console.error("Erreur récupération textes :", error);
+      setTexts([]);
+    } else {
+      setTexts(data);
+    }
     setLoading(false);
   };
 
@@ -25,21 +30,25 @@ export default function TextLibrary() {
     fetchTexts();
   }, []);
 
-  const incrementViews = async (text) => {
+  // Incrémenter le compteur de vues
+  const incrementViews = async (id, currentViews) => {
     const { error } = await supabase
       .from("texts")
-      .update({ views: (text.views || 0) + 1 })
-      .eq("id", text.id);
-    if (error) console.error(error);
+      .update({ views: currentViews + 1 })
+      .eq("id", id);
+
+    if (error) console.error("Erreur incrément vues :", error);
     else fetchTexts();
   };
 
-  const toggleLike = async (text) => {
+  // Gérer les likes
+  const toggleLike = async (id, currentLikes) => {
     const { error } = await supabase
       .from("texts")
-      .update({ likes: (text.likes || 0) + 1 })
-      .eq("id", text.id);
-    if (error) console.error(error);
+      .update({ likes: currentLikes + 1 })
+      .eq("id", id);
+
+    if (error) console.error("Erreur likes :", error);
     else fetchTexts();
   };
 
@@ -47,7 +56,8 @@ export default function TextLibrary() {
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">📚 Bibliothèque publique</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">Bibliothèque Lisible</h1>
+
       {texts.length === 0 ? (
         <p>Aucun texte publié pour le moment.</p>
       ) : (
@@ -56,7 +66,7 @@ export default function TextLibrary() {
             <div
               key={text.id}
               className="bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer"
-              onClick={() => incrementViews(text)}
+              onClick={() => incrementViews(text.id, text.views || 0)}
             >
               {text.coverUrl && (
                 <img
@@ -65,6 +75,7 @@ export default function TextLibrary() {
                   className="w-full h-40 object-cover rounded-lg mb-3"
                 />
               )}
+
               <h2 className="text-lg font-semibold">{text.title}</h2>
               {text.subtitle && <p className="text-sm text-muted mb-2">{text.subtitle}</p>}
               <p className="text-sm line-clamp-3 mb-3">{text.content}</p>
@@ -74,12 +85,13 @@ export default function TextLibrary() {
                   className="flex items-center gap-1 hover:text-red-500"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleLike(text);
+                    toggleLike(text.id, text.likes || 0);
                   }}
                 >
                   <Heart size={16} />
                   {text.likes || 0}
                 </button>
+
                 <div className="flex items-center gap-1">
                   <Eye size={16} />
                   {text.views || 0}
