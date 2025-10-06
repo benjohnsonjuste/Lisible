@@ -20,19 +20,16 @@ export default function TextPublishing() {
   const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // Charger brouillon depuis localStorage
   useEffect(() => {
     const draft = localStorage.getItem("text_draft");
     if (draft) setTextData(JSON.parse(draft));
   }, []);
 
-  // Compteur de mots dynamique
   useEffect(() => {
     const count = textData.content.trim().split(/\s+/).filter(Boolean).length;
     setWordCount(count);
   }, [textData.content]);
 
-  // Sauvegarde automatique toutes les 30s
   useEffect(() => {
     const interval = setInterval(() => handleSaveDraft(), 30000);
     return () => clearInterval(interval);
@@ -52,40 +49,50 @@ export default function TextPublishing() {
     setTextData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Upload image sur Supabase Storage
   const uploadCover = async () => {
     if (!coverFile) return null;
     const fileExt = coverFile.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
-    const { data, error } = await supabase.storage
+
+    const { error: uploadError } = await supabase.storage
       .from("covers")
       .upload(fileName, coverFile);
-    if (error) {
-      console.error(error);
+
+    if (uploadError) {
+      console.error(uploadError);
       return null;
     }
-    const { publicUrl } = supabase.storage.from("covers").getPublicUrl(fileName);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("covers")
+      .getPublicUrl(fileName);
+
     return publicUrl;
   };
 
-  // Publier le texte
   const handlePublish = async (e) => {
     e.preventDefault();
+
     if (!textData.title.trim() || !textData.content.trim()) {
       alert("⚠️ Veuillez saisir un titre et un contenu.");
       return;
     }
 
     setIsPublishing(true);
+
     try {
       const coverUrl = await uploadCover();
+
+      // Récupérer l'utilisateur connecté
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Utilisateur non connecté");
 
       const { error } = await supabase.from("texts").insert([
         {
           ...textData,
           tags: textData.tags ? textData.tags.split(",").map(t => t.trim().toLowerCase()) : [],
           coverUrl,
-          author_id: supabase.auth.user()?.id,
+          author_id: user.id,
           views: 0,
           likes: 0,
           visibility: "public",
@@ -96,14 +103,13 @@ export default function TextPublishing() {
 
       if (error) throw error;
 
-      // Supprime brouillon local
       localStorage.removeItem("text_draft");
 
       alert(`✅ Texte publié avec succès !\nTitre : ${textData.title}`);
       router.push("/library");
     } catch (err) {
       console.error(err);
-      alert("❌ Échec de la publication.");
+      alert("❌ Échec de la publication. Vérifiez que vous êtes connecté et réessayez.");
     } finally {
       setIsPublishing(false);
     }
