@@ -1,129 +1,230 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebaseConfig";
-import { Grid, List, Eye, FileText } from "lucide-react";
-import AppImage from "@/components/AppImage";
-import { Button } from "@/components/ui/Button";
+import { useRouter } from "next/navigation";
+import { db, storage, auth } from "@/lib/firebaseConfig";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  updateDoc,
+  doc,
+  increment,
+  setDoc,
+} from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import Input from "@/components/ui/Input";
 
-export default function TextLibrary() {
+export default function TextPublishing() {
   const router = useRouter();
-  const [texts, setTexts] = useState([]);
-  const [viewMode, setViewMode] = useState("grid");
-  const [sortBy, setSortBy] = useState("recent");
-  const [loading, setLoading] = useState(true);
 
-  // 🧠 Charger les textes depuis Firestore
-  useEffect(() => {
-    const fetchTexts = async () => {
-      try {
-        const q = query(collection(db, "texts"), orderBy("publishedAt", "desc"));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setTexts(data);
-      } catch (error) {
-        console.error("Erreur lors du chargement des textes :", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTexts();
-  }, []);
-
-  // 🔤 Tri (optionnel selon le choix)
-  const sortedTexts = [...texts].sort((a, b) => {
-    if (sortBy === "views") return (b.views || 0) - (a.views || 0);
-    if (sortBy === "title") return a.title.localeCompare(b.title);
-    return new Date(b.publishedAt) - new Date(a.publishedAt);
+  const [textData, setTextData] = useState({
+    title: "",
+    subtitle: "",
+    category: "",
+    tags: "",
+    content: "",
   });
 
-  if (loading)
-    return (
-      <p className="text-center text-muted-foreground">Chargement des textes...</p>
-    );
+  const [coverFile, setCoverFile] = useState(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [saveStatus, setSaveStatus] = useState("");
 
-  if (texts.length === 0)
-    return (
-      <p className="text-center text-muted-foreground">
-        Aucun texte n’a encore été publié.
-      </p>
-    );
+  // 🔄 Charger le brouillon local s’il existe
+  useEffect(() => {
+    const draft = localStorage.getItem("text_draft");
+    if (draft) {
+      setTextData(JSON.parse(draft));
+    }
+  }, []);
+
+  // 🔢 Compteur de mots dynamique
+  useEffect(() => {
+    const count = textData.content.trim().split(/\s+/).filter(Boolean).length;
+    setWordCount(count);
+  }, [textData.content]);
+
+  // 💾 Sauvegarde automatique toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => handleSaveDraft(), 30000);
+    return () => clearInterval(interval);
+  }, [textData]);
+
+  // 🧠 Sauvegarde du brouillon local
+  const handleSaveDraft = () => {
+    try {
+      localStorage.setItem("text_draft", JSON.stringify(textData));
+      setSaveStatus("Brouillon sauvegardé ✔️");
+    } catch (err) {
+      console.error("Erreur sauvegarde :", err);
+      setSaveStatus("Erreur de sauvegarde ❌");
+    }
+  };
+
+  const handleChange = (field, value) => {
+    setTextData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // 📤 Upload image de couverture sur Firebase Storage
+  const uploadCover = async () => {
+    if (!coverFile) return "";
+    const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name}`);
+    await uploadBytes(storageRef, coverFile);
+    return await getDownloadURL(storageRef);
+  };
+
+  // 🚀 Publier le texte sur Firestore
+  const handlePublish = async (e) => {
+    e.preventDefault();
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("⚠️ Vous devez être connecté pour publier un texte.");
+      return;
+    }
+
+    if (!textData.title.trim() || !textData.content.trim()) {
+      alert("⚠️ Veuillez saisir un titre et un contenu avant de publier.");
+      return;
+    }
+
+    setIsPublishing(true);
+
+    try {
+      const coverUrl = await uploadCover();
+
+      const newText = {
+        ...textData,
+        tags: textData.tags
+          ? textData.tags.split(",").map((t) => t.trim().toLowerCase())
+          : [],
+        coverUrl,
+        authorId: currentUser.uid,
+        authorEmail: currentUser.email,
+        wordCount,
+        visibility: "public", // Texte visible dans la bibliothèque publique
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      // Ajoute le texte dans Firestore
+      await addDoc(collection(db, "texts"), newText);
+
+      // Met à jour les infos auteur
+      const authorRef = doc(db, "authors", currentUser.uid);
+      await setDoc(
+        authorRef,
+        {
+          email: currentUser.email,
+          lastPublishedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Met à jour les stats auteur
+      await updateDoc(authorRef, {
+        publishedCount: increment(1),
+        totalWords: increment(wordCount),
+      });
+
+      // Supprime le brouillon local
+      localStorage.removeItem("text_draft");
+
+      // Feedback utilisateur
+      alert(`✅ Texte publié avec succès !\nTitre : ${textData.title}`);
+
+      // Redirection vers la bibliothèque publique
+      router.push("/library");
+    } catch (error) {
+      console.error("Erreur de publication :", error);
+      alert("❌ Échec de la publication. Vérifiez votre connexion ou réessayez.");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   return (
-    <div className="bg-card border rounded-lg shadow-sm p-6">
-      {/* En-tête et filtres */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h2 className="text-xl font-semibold">Tous les textes publiés</h2>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "grid" ? "default" : "outline"}
-            onClick={() => setViewMode("grid")}
-          >
-            <Grid size={18} />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            onClick={() => setViewMode("list")}
-          >
-            <List size={18} />
-          </Button>
-
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="border rounded p-1 ml-3"
-          >
-            <option value="recent">Plus récents</option>
-            <option value="views">Plus lus</option>
-            <option value="title">Titre A-Z</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Affichage des textes */}
-      <div
-        className={
-          viewMode === "grid"
-            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-            : "space-y-4"
-        }
+    <div className="min-h-screen bg-gray-50 flex justify-center items-start py-10">
+      <form
+        onSubmit={handlePublish}
+        className="bg-white shadow-md rounded-2xl p-8 w-full max-w-3xl space-y-6"
       >
-        {sortedTexts.map((text) => (
-          <div
-            key={text.id}
-            className="border rounded-lg overflow-hidden shadow hover:shadow-md transition cursor-pointer"
-            onClick={() => router.push(`/text/${text.id}`)}
-          >
-            <AppImage
-              src={text.coverImage || "/default-cover.jpg"}
-              alt={text.title}
-              className="w-full h-40 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-lg">{text.title}</h3>
-              <p className="text-xs text-muted-foreground mb-2">
-                {text.type} •{" "}
-                {new Date(text.publishedAt).toLocaleDateString("fr-FR")}
-              </p>
-              <p className="text-sm line-clamp-3">{text.excerpt}</p>
+        <h1 className="text-2xl font-bold text-center text-primary">
+          ✍️ Publier un texte sur Lisible
+        </h1>
 
-              {/* Stats */}
-              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Eye size={16} /> {text.views || 0}
-                </span>
-                <span className="flex items-center gap-1">
-                  <FileText size={16} /> {text.status || "Publié"}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+        <Input
+          label="Titre du texte"
+          required
+          value={textData.title}
+          onChange={(e) => handleChange("title", e.target.value)}
+        />
+
+        <Input
+          label="Sous-titre"
+          value={textData.subtitle}
+          onChange={(e) => handleChange("subtitle", e.target.value)}
+        />
+
+        <Input
+          label="Catégorie"
+          value={textData.category}
+          onChange={(e) => handleChange("category", e.target.value)}
+        />
+
+        <Input
+          label="Tags (séparés par des virgules)"
+          value={textData.tags}
+          onChange={(e) => handleChange("tags", e.target.value)}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-primary mb-1">
+            Contenu du texte <span className="text-destructive">*</span>
+          </label>
+          <textarea
+            required
+            value={textData.content}
+            onChange={(e) => handleChange("content", e.target.value)}
+            placeholder="Écrivez votre texte ici..."
+            className="w-full min-h-[220px] border border-input rounded-md px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-muted mt-1">
+            {wordCount} mots – {saveStatus}
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-primary mb-1">
+            Image de couverture
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setCoverFile(e.target.files[0])}
+            className="w-full text-sm text-muted"
+          />
+        </div>
+
+        <div className="flex justify-between items-center">
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition"
+          >
+            Sauvegarder le brouillon
+          </button>
+
+          <button
+            type="submit"
+            disabled={isPublishing}
+            className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50"
+          >
+            {isPublishing ? "Publication..." : "Publier sur Lisible"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
