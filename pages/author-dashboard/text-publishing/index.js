@@ -10,6 +10,7 @@ import {
   updateDoc,
   doc,
   increment,
+  setDoc,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Input from "@/components/ui/Input";
@@ -30,7 +31,7 @@ export default function TextPublishing() {
   const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // 🔄 Charger le brouillon s’il existe
+  // 🔄 Charger le brouillon local s’il existe
   useEffect(() => {
     const draft = localStorage.getItem("text_draft");
     if (draft) {
@@ -44,21 +45,21 @@ export default function TextPublishing() {
     setWordCount(count);
   }, [textData.content]);
 
-  // 💾 Sauvegarde automatique toutes les 30 secondes
+  // 💾 Sauvegarde automatique toutes les 30s
   useEffect(() => {
-    const autoSaveInterval = setInterval(() => {
+    const autoSave = setInterval(() => {
       handleSaveDraft();
     }, 30000);
-    return () => clearInterval(autoSaveInterval);
+    return () => clearInterval(autoSave);
   }, [textData]);
 
-  // 🧠 Fonction pour sauvegarder localement
+  // 🧠 Sauvegarde du brouillon localement
   const handleSaveDraft = () => {
     try {
       localStorage.setItem("text_draft", JSON.stringify(textData));
       setSaveStatus("Brouillon sauvegardé ✔️");
     } catch (err) {
-      console.error("Erreur de sauvegarde du brouillon :", err);
+      console.error("Erreur sauvegarde :", err);
       setSaveStatus("Erreur de sauvegarde ❌");
     }
   };
@@ -67,7 +68,7 @@ export default function TextPublishing() {
     setTextData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 📤 Upload image de couverture vers Firebase Storage (Google Drive)
+  // 📤 Upload de l'image
   const uploadCover = async () => {
     if (!coverFile) return "";
     const storageRef = ref(storage, `covers/${Date.now()}_${coverFile.name}`);
@@ -75,55 +76,72 @@ export default function TextPublishing() {
     return await getDownloadURL(storageRef);
   };
 
-  // 🚀 Publier le texte sur Firestore
+  // 🚀 Publier le texte sur Lisible
   const handlePublish = async (e) => {
     e.preventDefault();
 
-    if (!auth.currentUser) {
-      alert("Vous devez être connecté pour publier un texte.");
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("⚠️ Vous devez être connecté pour publier un texte.");
       return;
     }
 
     if (!textData.title.trim() || !textData.content.trim()) {
-      alert("Veuillez saisir un titre et un contenu avant de publier.");
+      alert("⚠️ Veuillez saisir un titre et un contenu avant de publier.");
       return;
     }
 
     setIsPublishing(true);
+
     try {
       const coverUrl = await uploadCover();
 
       const newText = {
         ...textData,
         tags: textData.tags
-          ? textData.tags.split(",").map((t) => t.trim())
+          ? textData.tags.split(",").map((t) => t.trim().toLowerCase())
           : [],
         coverUrl,
-        authorId: auth.currentUser.uid,
-        authorEmail: auth.currentUser.email,
+        authorId: currentUser.uid,
+        authorEmail: currentUser.email,
         wordCount,
+        visibility: "public", // 👈 rend visible dans la Library
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        visibility: "public",
       };
 
-      await addDoc(collection(db, "texts"), newText);
+      // ✅ Forcer l’ajout dans Firestore
+      const docRef = await addDoc(collection(db, "texts"), newText);
 
-      // 📈 Mise à jour automatique des métriques
-      const authorRef = doc(db, "authors", auth.currentUser.uid);
+      // ✅ Crée ou met à jour les infos auteur
+      const authorRef = doc(db, "authors", currentUser.uid);
+      await setDoc(
+        authorRef,
+        {
+          email: currentUser.email,
+          lastPublishedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // ✅ Met à jour les stats auteur
       await updateDoc(authorRef, {
         publishedCount: increment(1),
         totalWords: increment(wordCount),
       });
 
-      // 🧹 Nettoyer le brouillon
+      // 🧹 Supprime le brouillon local
       localStorage.removeItem("text_draft");
 
-      alert("Texte publié avec succès !");
-      router.push("/author-dashboard/analytics");
+      // ✅ Message utilisateur
+      alert(`✅ Texte publié avec succès sur Lisible !
+Titre : ${textData.title}`);
+
+      // 🔁 Redirige vers la bibliothèque publique
+      router.push("/library");
     } catch (error) {
       console.error("Erreur de publication :", error);
-      alert("Erreur lors de la publication. Réessayez.");
+      alert("❌ Échec de la publication. Vérifiez votre connexion ou réessayez.");
     } finally {
       setIsPublishing(false);
     }
@@ -135,8 +153,8 @@ export default function TextPublishing() {
         onSubmit={handlePublish}
         className="bg-white shadow-md rounded-2xl p-8 w-full max-w-3xl space-y-6"
       >
-        <h1 className="text-2xl font-bold text-center text-gray-800">
-          Publier un texte sur Lisible
+        <h1 className="text-2xl font-bold text-center text-primary">
+          ✍️ Publier un texte sur Lisible
         </h1>
 
         <Input
@@ -173,7 +191,7 @@ export default function TextPublishing() {
             value={textData.content}
             onChange={(e) => handleChange("content", e.target.value)}
             placeholder="Écrivez votre texte ici..."
-            className="w-full min-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            className="w-full min-h-[220px] border border-input rounded-md px-3 py-2 text-sm"
           />
           <p className="text-xs text-muted mt-1">
             {wordCount} mots – {saveStatus}
