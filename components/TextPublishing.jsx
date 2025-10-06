@@ -19,18 +19,18 @@ export default function TextPublishing() {
   const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // 🔄 Charger brouillon local
+  // Charger brouillon depuis localStorage
   useEffect(() => {
     const draft = localStorage.getItem("text_draft");
     if (draft) setTextData(JSON.parse(draft));
   }, []);
 
-  // 🔢 Compteur de mots
+  // Compteur de mots dynamique
   useEffect(() => {
     setWordCount(textData.content.trim().split(/\s+/).filter(Boolean).length);
   }, [textData.content]);
 
-  // 💾 Sauvegarde automatique toutes les 30s
+  // Sauvegarde automatique toutes les 30s
   useEffect(() => {
     const interval = setInterval(() => handleSaveDraft(), 30000);
     return () => clearInterval(interval);
@@ -49,31 +49,34 @@ export default function TextPublishing() {
     setTextData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 📤 Upload image sur Supabase Storage
+  // Upload image sur Supabase Storage
   const uploadCover = async () => {
     if (!coverFile) return null;
+
     const fileExt = coverFile.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const { error } = await supabase.storage.from("covers").upload(fileName, coverFile);
     if (error) {
-      console.error(error);
+      console.error("Erreur upload image :", error.message);
       return null;
     }
-    const { publicUrl } = supabase.storage.from("covers").getPublicUrl(fileName);
-    return publicUrl;
+    const { data } = supabase.storage.from("covers").getPublicUrl(fileName);
+    return data.publicUrl;
   };
 
-  // 🚀 Publier
+  // Publier le texte
   const handlePublish = async (e) => {
     e.preventDefault();
-    const user = supabase.auth.user();
+
+    // Auth utilisateur
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return alert("⚠️ Connectez-vous pour publier.");
 
-    if (!textData.title.trim() || !textData.content.trim()) {
+    if (!textData.title.trim() || !textData.content.trim())
       return alert("⚠️ Titre et contenu obligatoires.");
-    }
 
     setIsPublishing(true);
+
     try {
       const coverUrl = await uploadCover();
 
@@ -85,19 +88,19 @@ export default function TextPublishing() {
           author_id: user.id,
           views: 0,
           likes: 0,
-          visibility: "public",
-          created_at: new Date(),
-          updated_at: new Date(),
+          visibility: "public", // visible publiquement
         },
       ]);
 
       if (error) throw error;
 
+      // Supprime le brouillon local
       localStorage.removeItem("text_draft");
+
       alert(`✅ Texte publié avec succès !\nTitre : ${textData.title}`);
       router.push("/library");
     } catch (err) {
-      console.error(err);
+      console.error("Erreur publication :", err);
       alert("❌ Échec de la publication.");
     } finally {
       setIsPublishing(false);
@@ -137,7 +140,9 @@ export default function TextPublishing() {
         </div>
 
         <div className="flex justify-between items-center">
-          <button type="button" onClick={handleSaveDraft} className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition">Sauvegarder le brouillon</button>
+          <button type="button" onClick={handleSaveDraft} className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition">
+            Sauvegarder le brouillon
+          </button>
           <button type="submit" disabled={isPublishing} className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50">
             {isPublishing ? "Publication..." : "Publier sur Lisible"}
           </button>
