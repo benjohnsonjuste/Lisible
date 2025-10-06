@@ -8,7 +8,6 @@ export default function TextLibrary() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Charger les textes publics
   const fetchTexts = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -17,12 +16,8 @@ export default function TextLibrary() {
       .eq("visibility", "public")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Erreur récupération textes :", error);
-      setTexts([]);
-    } else {
-      setTexts(data);
-    }
+    if (error) console.error(error);
+    else setTexts(data);
     setLoading(false);
   };
 
@@ -30,25 +25,16 @@ export default function TextLibrary() {
     fetchTexts();
   }, []);
 
-  // Incrémenter le compteur de vues
-  const incrementViews = async (id, currentViews) => {
-    const { error } = await supabase
-      .from("texts")
-      .update({ views: currentViews + 1 })
-      .eq("id", id);
-
-    if (error) console.error("Erreur incrément vues :", error);
+  // Incrementer vues
+  const incrementViews = async (id) => {
+    const { error } = await supabase.from("texts").update({ views: supabase.raw('views + 1') }).eq("id", id);
+    if (error) console.error(error);
     else fetchTexts();
   };
 
-  // Gérer les likes
   const toggleLike = async (id, currentLikes) => {
-    const { error } = await supabase
-      .from("texts")
-      .update({ likes: currentLikes + 1 })
-      .eq("id", id);
-
-    if (error) console.error("Erreur likes :", error);
+    const { error } = await supabase.from("texts").update({ likes: currentLikes + 1 }).eq("id", id);
+    if (error) console.error(error);
     else fetchTexts();
   };
 
@@ -56,45 +42,23 @@ export default function TextLibrary() {
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Bibliothèque Lisible</h1>
-
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">📚 Bibliothèque publique</h1>
       {texts.length === 0 ? (
         <p>Aucun texte publié pour le moment.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {texts.map((text) => (
-            <div
-              key={text.id}
-              className="bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer"
-              onClick={() => incrementViews(text.id, text.views || 0)}
-            >
-              {text.coverUrl && (
-                <img
-                  src={text.coverUrl}
-                  alt={text.title}
-                  className="w-full h-40 object-cover rounded-lg mb-3"
-                />
-              )}
-
+          {texts.map(text => (
+            <div key={text.id} className="bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer" onClick={() => incrementViews(text.id)}>
+              {text.coverUrl && <img src={text.coverUrl} alt={text.title} className="w-full h-40 object-cover rounded-lg mb-3" />}
               <h2 className="text-lg font-semibold">{text.title}</h2>
               {text.subtitle && <p className="text-sm text-muted mb-2">{text.subtitle}</p>}
               <p className="text-sm line-clamp-3 mb-3">{text.content}</p>
-
               <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
-                <button
-                  className="flex items-center gap-1 hover:text-red-500"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLike(text.id, text.likes || 0);
-                  }}
-                >
-                  <Heart size={16} />
-                  {text.likes || 0}
+                <button className="flex items-center gap-1 hover:text-red-500" onClick={e => { e.stopPropagation(); toggleLike(text.id, text.likes || 0); }}>
+                  <Heart size={16}/> {text.likes || 0}
                 </button>
-
                 <div className="flex items-center gap-1">
-                  <Eye size={16} />
-                  {text.views || 0}
+                  <Eye size={16}/> {text.views || 0}
                 </div>
               </div>
             </div>
