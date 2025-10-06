@@ -2,11 +2,11 @@
 
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
-import ProfileSection from "@/components/account-management/ProfileSection";
-import NotificationSection from "@/components/account-management/NotificationSection";
-import SecuritySection from "@/components/account-management/SecuritySection";
-import PaymentSection from "@/components/account-management/PaymentSection";
-import DangerZone from "@/components/account-management/DangerZone";
+import ProfileForm from "@/components/account/ProfileForm";
+import NotificationsSettings from "@/components/account/NotificationsSettings";
+import SecuritySettings from "@/components/account/SecuritySettings";
+import PaymentMethods from "@/components/account/PaymentMethods";
+import DangerZone from "@/components/account/DangerZone";
 
 export default function AccountManagement() {
   const { user, loading } = useAuth();
@@ -44,10 +44,10 @@ export default function AccountManagement() {
       </header>
 
       {/* Sections principales */}
-      <ProfileSection user={user} />
-      <NotificationSection user={user} />
-      <SecuritySection user={user} />
-      <PaymentSection user={user} />
+      <ProfileForm user={user} />
+      <NotificationsSettings user={user} />
+      <SecuritySettings user={user} />
+      <PaymentMethods user={user} />
       <DangerZone user={user} />
     </div>
   );
