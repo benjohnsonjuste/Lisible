@@ -7,7 +7,6 @@ import Input from "@/components/ui/Input";
 
 export default function TextPublishing() {
   const router = useRouter();
-
   const [textData, setTextData] = useState({
     title: "",
     subtitle: "",
@@ -20,16 +19,18 @@ export default function TextPublishing() {
   const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
+  // 🔄 Charger brouillon local
   useEffect(() => {
     const draft = localStorage.getItem("text_draft");
     if (draft) setTextData(JSON.parse(draft));
   }, []);
 
+  // 🔢 Compteur de mots
   useEffect(() => {
-    const count = textData.content.trim().split(/\s+/).filter(Boolean).length;
-    setWordCount(count);
+    setWordCount(textData.content.trim().split(/\s+/).filter(Boolean).length);
   }, [textData.content]);
 
+  // 💾 Sauvegarde automatique toutes les 30s
   useEffect(() => {
     const interval = setInterval(() => handleSaveDraft(), 30000);
     return () => clearInterval(interval);
@@ -39,53 +40,42 @@ export default function TextPublishing() {
     try {
       localStorage.setItem("text_draft", JSON.stringify(textData));
       setSaveStatus("Brouillon sauvegardé ✔️");
-    } catch (err) {
-      console.error(err);
+    } catch {
       setSaveStatus("Erreur de sauvegarde ❌");
     }
   };
 
   const handleChange = (field, value) => {
-    setTextData(prev => ({ ...prev, [field]: value }));
+    setTextData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // 📤 Upload image sur Supabase Storage
   const uploadCover = async () => {
     if (!coverFile) return null;
     const fileExt = coverFile.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("covers")
-      .upload(fileName, coverFile);
-
-    if (uploadError) {
-      console.error(uploadError);
+    const { error } = await supabase.storage.from("covers").upload(fileName, coverFile);
+    if (error) {
+      console.error(error);
       return null;
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("covers")
-      .getPublicUrl(fileName);
-
+    const { publicUrl } = supabase.storage.from("covers").getPublicUrl(fileName);
     return publicUrl;
   };
 
+  // 🚀 Publier
   const handlePublish = async (e) => {
     e.preventDefault();
+    const user = supabase.auth.user();
+    if (!user) return alert("⚠️ Connectez-vous pour publier.");
 
     if (!textData.title.trim() || !textData.content.trim()) {
-      alert("⚠️ Veuillez saisir un titre et un contenu.");
-      return;
+      return alert("⚠️ Titre et contenu obligatoires.");
     }
 
     setIsPublishing(true);
-
     try {
       const coverUrl = await uploadCover();
-
-      // Récupérer l'utilisateur connecté
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error("Utilisateur non connecté");
 
       const { error } = await supabase.from("texts").insert([
         {
@@ -104,12 +94,11 @@ export default function TextPublishing() {
       if (error) throw error;
 
       localStorage.removeItem("text_draft");
-
       alert(`✅ Texte publié avec succès !\nTitre : ${textData.title}`);
       router.push("/library");
     } catch (err) {
       console.error(err);
-      alert("❌ Échec de la publication. Vérifiez que vous êtes connecté et réessayez.");
+      alert("❌ Échec de la publication.");
     } finally {
       setIsPublishing(false);
     }
@@ -125,32 +114,13 @@ export default function TextPublishing() {
           ✍️ Publier un texte sur Lisible
         </h1>
 
-        <Input
-          label="Titre du texte"
-          required
-          value={textData.title}
-          onChange={e => handleChange("title", e.target.value)}
-        />
-        <Input
-          label="Sous-titre"
-          value={textData.subtitle}
-          onChange={e => handleChange("subtitle", e.target.value)}
-        />
-        <Input
-          label="Catégorie"
-          value={textData.category}
-          onChange={e => handleChange("category", e.target.value)}
-        />
-        <Input
-          label="Tags (séparés par des virgules)"
-          value={textData.tags}
-          onChange={e => handleChange("tags", e.target.value)}
-        />
+        <Input label="Titre" required value={textData.title} onChange={e => handleChange("title", e.target.value)} />
+        <Input label="Sous-titre" value={textData.subtitle} onChange={e => handleChange("subtitle", e.target.value)} />
+        <Input label="Catégorie" value={textData.category} onChange={e => handleChange("category", e.target.value)} />
+        <Input label="Tags (virgules)" value={textData.tags} onChange={e => handleChange("tags", e.target.value)} />
 
         <div>
-          <label className="block text-sm font-medium text-primary mb-1">
-            Contenu <span className="text-destructive">*</span>
-          </label>
+          <label className="block text-sm font-medium text-primary mb-1">Contenu <span className="text-destructive">*</span></label>
           <textarea
             required
             value={textData.content}
@@ -158,37 +128,17 @@ export default function TextPublishing() {
             placeholder="Écrivez votre texte ici..."
             className="w-full min-h-[220px] border border-input rounded-md px-3 py-2 text-sm"
           />
-          <p className="text-xs text-muted mt-1">
-            {wordCount} mots – {saveStatus}
-          </p>
+          <p className="text-xs text-muted mt-1">{wordCount} mots – {saveStatus}</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-primary mb-1">
-            Image de couverture
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={e => setCoverFile(e.target.files[0])}
-            className="w-full text-sm text-muted"
-          />
+          <label className="block text-sm font-medium text-primary mb-1">Image de couverture</label>
+          <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files[0])} className="w-full text-sm text-muted" />
         </div>
 
         <div className="flex justify-between items-center">
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition"
-          >
-            Sauvegarder le brouillon
-          </button>
-
-          <button
-            type="submit"
-            disabled={isPublishing}
-            className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50"
-          >
+          <button type="button" onClick={handleSaveDraft} className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition">Sauvegarder le brouillon</button>
+          <button type="submit" disabled={isPublishing} className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50">
             {isPublishing ? "Publication..." : "Publier sur Lisible"}
           </button>
         </div>
