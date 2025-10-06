@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Input from "@/components/ui/Input";
+import { useAuth } from "@/context/AuthContext"; // ✅ pour récupérer le user
 
 export default function TextPublishing({ onPublishSuccess }) {
+  const { user } = useAuth(); // ✅ utilisateur courant depuis ton contexte
+
   const [textData, setTextData] = useState({
     title: "",
     subtitle: "",
@@ -77,13 +80,8 @@ export default function TextPublishing({ onPublishSuccess }) {
   const handlePublish = async (e) => {
     e.preventDefault();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      alert("⚠️ Connectez-vous pour publier.");
+    if (!user) {
+      alert("⚠️ Vous devez être connecté pour publier.");
       return;
     }
 
@@ -108,6 +106,7 @@ export default function TextPublishing({ onPublishSuccess }) {
           content: textData.content,
           cover_url: coverUrl,
           author_id: user.id,
+          author_email: user.email,
           views: 0,
           likes: 0,
           visibility: "public",
