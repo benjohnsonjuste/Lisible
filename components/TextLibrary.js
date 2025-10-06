@@ -56,7 +56,7 @@ export default function TextLibrary() {
 
   return (
     <div className="min-h-screen p-6 bg-gray-50">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Bibliothèque Lisible</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">📚 Bibliothèque publique</h1>
       {texts.length === 0 ? (
         <p>Aucun texte publié pour le moment.</p>
       ) : (
@@ -66,4 +66,25 @@ export default function TextLibrary() {
               {text.coverUrl && <img src={text.coverUrl} alt={text.title} className="w-full h-40 object-cover rounded-lg mb-3" />}
               <h2 className="text-lg font-semibold">{text.title}</h2>
               {text.subtitle && <p className="text-sm text-muted mb-2">{text.subtitle}</p>}
-              <p className="text-sm line-clamp-3 mb-3">{text.content}</p>
+<p className="text-sm line-clamp-3 mb-3">{text.content}</p>
+              <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
+                <button
+                  className="flex items-center gap-1 hover:text-red-500"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLike(text.id, text.likes || 0);
+                  }}
+                >
+                  <Heart size={16} /> {text.likes || 0}
+                </button>
+                <div className="flex items-center gap-1">
+                  <Eye size={16} /> {text.views || 0}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
