@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Input from "@/components/ui/Input";
-import { useAuth } from "@/context/AuthContext"; // ✅ pour récupérer le user
 
 export default function TextPublishing({ onPublishSuccess }) {
-  const { user } = useAuth(); // ✅ utilisateur courant depuis ton contexte
+  const router = useRouter();
 
   const [textData, setTextData] = useState({
     title: "",
@@ -21,17 +21,15 @@ export default function TextPublishing({ onPublishSuccess }) {
   const [wordCount, setWordCount] = useState(0);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // 🔹 Charger le brouillon local
+  // 🔹 Charger brouillon local
   useEffect(() => {
     const draft = localStorage.getItem("text_draft");
     if (draft) setTextData(JSON.parse(draft));
   }, []);
 
-  // 🔹 Compter les mots
+  // 🔹 Compteur de mots dynamique
   useEffect(() => {
-    setWordCount(
-      textData.content.trim().split(/\s+/).filter(Boolean).length
-    );
+    setWordCount(textData.content.trim().split(/\s+/).filter(Boolean).length);
   }, [textData.content]);
 
   // 🔹 Sauvegarde automatique toutes les 30s
@@ -53,9 +51,10 @@ export default function TextPublishing({ onPublishSuccess }) {
     setTextData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 🔹 Upload vers le bucket "covers"
+  // 🔹 Upload image dans le bucket "covers"
   const uploadCover = async () => {
     if (!coverFile) return null;
+
     const fileExt = coverFile.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
 
@@ -69,10 +68,7 @@ export default function TextPublishing({ onPublishSuccess }) {
       return null;
     }
 
-    const { data: publicData } = supabase.storage
-      .from("covers")
-      .getPublicUrl(fileName);
-
+    const { data: publicData } = supabase.storage.from("covers").getPublicUrl(fileName);
     return publicData?.publicUrl || null;
   };
 
@@ -80,29 +76,32 @@ export default function TextPublishing({ onPublishSuccess }) {
   const handlePublish = async (e) => {
     e.preventDefault();
 
-    if (!user) {
-      alert("⚠️ Vous devez être connecté pour publier.");
-      return;
-    }
-
-    if (!textData.title.trim() || !textData.content.trim()) {
-      alert("⚠️ Le titre et le contenu sont obligatoires.");
-      return;
-    }
-
     setIsPublishing(true);
-
     try {
+      // Récupérer utilisateur Supabase
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) throw sessionError;
+      const user = session?.user;
+      if (!user) return alert("⚠️ Connectez-vous pour publier.");
+
+      if (!textData.title.trim() || !textData.content.trim()) {
+        return alert("⚠️ Le titre et le contenu sont obligatoires.");
+      }
+
+      // Upload couverture
       const coverUrl = await uploadCover();
 
+      // Insérer texte
       const { error: insertError } = await supabase.from("texts").insert([
         {
           title: textData.title,
           subtitle: textData.subtitle,
           category: textData.category,
-          tags: textData.tags
-            ? textData.tags.split(",").map((t) => t.trim().toLowerCase())
-            : [],
+          tags: textData.tags ? textData.tags.split(",").map((t) => t.trim().toLowerCase()) : [],
           content: textData.content,
           cover_url: coverUrl,
           author_id: user.id,
@@ -110,16 +109,18 @@ export default function TextPublishing({ onPublishSuccess }) {
           views: 0,
           likes: 0,
           visibility: "public",
-          created_at: new Date(),
+          created_at: new Date().toISOString(),
         },
       ]);
 
       if (insertError) throw insertError;
 
+      // Supprime brouillon
       localStorage.removeItem("text_draft");
-      alert(`✅ Texte publié avec succès !`);
 
+      alert("✅ Texte publié avec succès !");
       if (onPublishSuccess) onPublishSuccess();
+      else router.push("/library");
     } catch (err) {
       console.error("Erreur publication :", err);
       alert("❌ Échec de la publication. Vérifiez la console.");
