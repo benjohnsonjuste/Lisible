@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Input from "@/components/ui/Input";
+import { toast } from "sonner";
 
 export default function TextPublishing({ onPublishSuccess }) {
   const router = useRouter();
@@ -42,8 +43,10 @@ export default function TextPublishing({ onPublishSuccess }) {
     try {
       localStorage.setItem("text_draft", JSON.stringify(textData));
       setSaveStatus("Brouillon sauvegardé ✔️");
+      toast.success("Brouillon sauvegardé ✔️");
     } catch {
       setSaveStatus("Erreur de sauvegarde ❌");
+      toast.error("Erreur de sauvegarde ❌");
     }
   };
 
@@ -64,7 +67,7 @@ export default function TextPublishing({ onPublishSuccess }) {
 
     if (uploadError) {
       console.error("Erreur upload image :", uploadError.message);
-      alert("❌ Échec du téléversement de la couverture.");
+      toast.error("❌ Échec du téléversement de la couverture.");
       return null;
     }
 
@@ -86,10 +89,14 @@ export default function TextPublishing({ onPublishSuccess }) {
 
       if (sessionError) throw sessionError;
       const user = session?.user;
-      if (!user) return alert("⚠️ Connectez-vous pour publier.");
+      if (!user) {
+        toast.error("⚠️ Connectez-vous pour publier.");
+        return;
+      }
 
       if (!textData.title.trim() || !textData.content.trim()) {
-        return alert("⚠️ Le titre et le contenu sont obligatoires.");
+        toast.error("⚠️ Le titre et le contenu sont obligatoires.");
+        return;
       }
 
       // Upload couverture
@@ -118,12 +125,12 @@ export default function TextPublishing({ onPublishSuccess }) {
       // Supprime brouillon
       localStorage.removeItem("text_draft");
 
-      alert("✅ Texte publié avec succès !");
+      toast.success("✅ Texte publié avec succès !");
       if (onPublishSuccess) onPublishSuccess();
       else router.push("/library");
     } catch (err) {
       console.error("Erreur publication :", err);
-      alert("❌ Échec de la publication. Vérifiez la console.");
+      toast.error("❌ Échec de la publication. Vérifiez la console.");
     } finally {
       setIsPublishing(false);
     }
