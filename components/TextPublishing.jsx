@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Input from "@/components/ui/Input";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 export default function TextPublishing({ onPublishSuccess }) {
   const router = useRouter();
+  const { user } = useAuth(); // ✅ utiliser user du contexte
 
   const [textData, setTextData] = useState({
     title: "",
@@ -79,36 +81,33 @@ export default function TextPublishing({ onPublishSuccess }) {
   const handlePublish = async (e) => {
     e.preventDefault();
 
+    if (!user) {
+      toast.error("⚠️ Connectez-vous pour publier.");
+      return;
+    }
+
+    if (!textData.title.trim() || !textData.content.trim()) {
+      toast.error("⚠️ Le titre et le contenu sont obligatoires.");
+      return;
+    }
+
     setIsPublishing(true);
     try {
-      // Récupérer utilisateur Supabase
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) throw sessionError;
-      const user = session?.user;
-      if (!user) {
-        toast.error("⚠️ Connectez-vous pour publier.");
-        return;
-      }
-
-      if (!textData.title.trim() || !textData.content.trim()) {
-        toast.error("⚠️ Le titre et le contenu sont obligatoires.");
-        return;
-      }
-
-      // Upload couverture
+      // Upload couverture si fournie
       const coverUrl = await uploadCover();
 
-      // Insérer texte
-      const { error: insertError } = await supabase.from("texts").insert([
+      // Préparer les tags pour Supabase
+      const tagsArray = textData.tags
+        ? textData.tags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      // Insérer dans la table "texts"
+      const { data, error: insertError } = await supabase.from("texts").insert([
         {
           title: textData.title,
           subtitle: textData.subtitle,
           category: textData.category,
-          tags: textData.tags ? textData.tags.split(",").map((t) => t.trim().toLowerCase()) : [],
+          tags: tagsArray,
           content: textData.content,
           cover_url: coverUrl,
           author_id: user.id,
@@ -120,11 +119,13 @@ export default function TextPublishing({ onPublishSuccess }) {
         },
       ]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Erreur insertion texte :", insertError);
+        toast.error(`❌ Échec de la publication : ${insertError.message}`);
+        return;
+      }
 
-      // Supprime brouillon
       localStorage.removeItem("text_draft");
-
       toast.success("✅ Texte publié avec succès !");
       if (onPublishSuccess) onPublishSuccess();
       else router.push("/library");
