@@ -3,6 +3,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import InstallPrompt from "@/components/InstallPrompt";
+import { Analytics } from "@vercel/analytics/react";
 
 function MyApp({ Component, pageProps }) {
   return (
@@ -13,6 +14,7 @@ function MyApp({ Component, pageProps }) {
       </main>
       <InstallPrompt />
       <Footer />
+      <Analytics /> {/* ✅ Suivi Vercel Analytics */}
     </AuthProvider>
   );
 }
