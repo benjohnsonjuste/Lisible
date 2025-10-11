@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { auth, db } from "@/lib/firebaseConfig";
@@ -7,16 +8,18 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { FcGoogle } from "react-icons/fc"; // ✅ Icône Google (alternative à lucide)
+import ForgotPasswordModal from "@/components/ForgotPasswordModal"; // ✅ Ton composant modal
+import { toast } from "sonner";
 
 export default function AuthDialog() {
   const [mode, setMode] = useState("login"); // "login" ou "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false); // ✅ état du modal
   const router = useRouter();
   const provider = new GoogleAuthProvider();
 
@@ -24,27 +27,21 @@ export default function AuthDialog() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        router.replace("/author-dashboard"); // éviter retour au login
+        router.replace("/author-dashboard");
       }
     });
     return () => unsubscribe();
   }, [router]);
 
-  // Gestion email/mot de passe pour login ou signup
+  // Connexion ou inscription par email
   const handleEmailAuth = async () => {
     setError("");
-    setMessage("");
     try {
       let userCredential;
-
       if (mode === "login") {
-        // Connexion
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // Inscription
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-        // Création du document Firestore pour l'auteur
         await setDoc(
           doc(db, "authors", userCredential.user.uid),
           {
@@ -56,21 +53,18 @@ export default function AuthDialog() {
           { merge: true }
         );
       }
-
       router.push("/author-dashboard");
     } catch (e) {
       setError(e.message);
+      toast.error("Erreur : " + e.message);
     }
   };
 
-  // Gestion connexion Google
+  // Connexion Google
   const handleGoogleAuth = async () => {
     setError("");
-    setMessage("");
     try {
       const result = await signInWithPopup(auth, provider);
-
-      // Création ou mise à jour de l'auteur
       await setDoc(
         doc(db, "authors", result.user.uid),
         {
@@ -81,27 +75,10 @@ export default function AuthDialog() {
         },
         { merge: true }
       );
-
       router.push("/author-dashboard");
     } catch (e) {
       setError(e.message);
-    }
-  };
-
-  // Gestion du mot de passe oublié
-  const handlePasswordReset = async () => {
-    setError("");
-    setMessage("");
-    if (!email) {
-      setError("Veuillez entrer votre email pour réinitialiser le mot de passe.");
-      return;
-    }
-
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setMessage("Un email de réinitialisation a été envoyé à votre adresse.");
-    } catch (e) {
-      setError(e.message);
+      toast.error("Erreur Google : " + e.message);
     }
   };
 
@@ -111,19 +88,18 @@ export default function AuthDialog() {
         {mode === "login" ? "Connexion" : "Inscription"}
       </h2>
 
-      {/* Affichage des messages */}
       {error && <div className="text-red-600 mb-2 text-sm">{error}</div>}
-      {message && <div className="text-green-600 mb-2 text-sm">{message}</div>}
 
-      {/* Connexion Google */}
+      {/* 🔹 Connexion Google avec icône */}
       <button
         onClick={handleGoogleAuth}
-        className="w-full bg-red-500 text-white py-2 rounded mb-4 hover:bg-red-600 transition"
+        className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded mb-4 hover:bg-red-600 transition"
       >
-        Continuer avec Google
+        <FcGoogle size={20} /> {/* ✅ Icône Google */}
+        <span>Continuer avec Google</span>
       </button>
 
-      {/* Email et mot de passe */}
+      {/* 🔹 Email et mot de passe */}
       <input
         type="email"
         placeholder="Email"
@@ -140,7 +116,6 @@ export default function AuthDialog() {
       />
 
       <div className="flex flex-col gap-3">
-        {/* Bouton principal login/signup */}
         <button
           onClick={handleEmailAuth}
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
@@ -148,10 +123,11 @@ export default function AuthDialog() {
           {mode === "login" ? "Se connecter" : "S'inscrire"}
         </button>
 
-        {/* Mot de passe oublié uniquement pour le mode login */}
+        {/* 🔹 Lien vers modal Mot de passe oublié */}
         {mode === "login" && (
           <button
-            onClick={handlePasswordReset}
+            type="button"
+            onClick={() => setIsForgotModalOpen(true)}
             className="text-sm text-blue-600 hover:underline self-center"
           >
             Mot de passe oublié ?
@@ -159,7 +135,7 @@ export default function AuthDialog() {
         )}
       </div>
 
-      {/* Bascule entre connexion et inscription */}
+      {/* 🔹 Changement de mode */}
       <div className="text-center mt-4">
         {mode === "login" ? (
           <p className="text-sm">
@@ -183,6 +159,14 @@ export default function AuthDialog() {
           </p>
         )}
       </div>
+
+      {/* 🔹 Composant modal pour réinitialisation */}
+      {isForgotModalOpen && (
+        <ForgotPasswordModal
+          onClose={() => setIsForgotModalOpen(false)}
+          email={email}
+        />
+      )}
     </div>
   );
 }
