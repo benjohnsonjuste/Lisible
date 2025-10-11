@@ -6,10 +6,11 @@ import { supabase } from "@/lib/supabaseClient";
 import Input from "@/components/ui/Input";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { sendToSheets } from "@/lib/sendToSheets"; // ✅ ajout de l’import
 
 export default function TextPublishing({ onPublishSuccess }) {
   const router = useRouter();
-  const { user } = useAuth(); // ✅ utiliser user du contexte
+  const { user } = useAuth();
 
   const [textData, setTextData] = useState({
     title: "",
@@ -30,12 +31,14 @@ export default function TextPublishing({ onPublishSuccess }) {
     if (draft) setTextData(JSON.parse(draft));
   }, []);
 
-  // 🔹 Compteur de mots dynamique
+  // 🔹 Compteur de mots
   useEffect(() => {
-    setWordCount(textData.content.trim().split(/\s+/).filter(Boolean).length);
+    setWordCount(
+      textData.content.trim().split(/\s+/).filter(Boolean).length
+    );
   }, [textData.content]);
 
-  // 🔹 Sauvegarde automatique toutes les 30s
+  // 🔹 Sauvegarde automatique
   useEffect(() => {
     const interval = setInterval(() => handleSaveDraft(), 30000);
     return () => clearInterval(interval);
@@ -52,14 +55,12 @@ export default function TextPublishing({ onPublishSuccess }) {
     }
   };
 
-  const handleChange = (field, value) => {
+  const handleChange = (field, value) =>
     setTextData((prev) => ({ ...prev, [field]: value }));
-  };
 
-  // 🔹 Upload image dans le bucket "covers"
+  // 🔹 Upload image dans Supabase Storage
   const uploadCover = async () => {
     if (!coverFile) return null;
-
     const fileExt = coverFile.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
 
@@ -73,7 +74,10 @@ export default function TextPublishing({ onPublishSuccess }) {
       return null;
     }
 
-    const { data: publicData } = supabase.storage.from("covers").getPublicUrl(fileName);
+    const { data: publicData } = supabase.storage
+      .from("covers")
+      .getPublicUrl(fileName);
+
     return publicData?.publicUrl || null;
   };
 
@@ -93,15 +97,12 @@ export default function TextPublishing({ onPublishSuccess }) {
 
     setIsPublishing(true);
     try {
-      // Upload couverture si fournie
       const coverUrl = await uploadCover();
-
-      // Préparer les tags pour Supabase
       const tagsArray = textData.tags
         ? textData.tags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
         : [];
 
-      // Insérer dans la table "texts"
+      // ✅ Insertion dans Supabase
       const { data, error: insertError } = await supabase.from("texts").insert([
         {
           title: textData.title,
@@ -123,6 +124,20 @@ export default function TextPublishing({ onPublishSuccess }) {
         console.error("Erreur insertion texte :", insertError);
         toast.error(`❌ Échec de la publication : ${insertError.message}`);
         return;
+      }
+
+      // ✅ Envoi automatique à Google Sheets
+      try {
+        await sendToSheets({
+          email: user.email,
+          name: user.user_metadata?.display_name || "Auteur inconnu",
+          text: textData.title,
+          action: "Publication Lisible",
+        });
+        toast.success("📝 Détails envoyés à Google Sheets !");
+      } catch (sheetErr) {
+        console.error("Erreur d’envoi à Google Sheets :", sheetErr);
+        toast.warning("⚠️ Publié, mais échec de l’envoi à Sheets.");
       }
 
       localStorage.removeItem("text_draft");
