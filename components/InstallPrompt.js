@@ -76,7 +76,7 @@ export default function InstallPrompt() {
         {/* Icône et texte */}
         <div className="flex items-center gap-3">
           <div className="bg-black rounded-full p-2 shadow-lg">
-            <img src="/icon.png" alt="Lisible logo" className="w-8 h-8" />
+            <img src="/favicon.ico" alt="Lisible logo" className="w-8 h-8" />
           </div>
           <div>
             <p className="font-bold text-lg">Installer Lisible</p>
