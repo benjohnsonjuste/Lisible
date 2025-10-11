@@ -93,7 +93,7 @@ export default function AuthDialog() {
       {/* 🔹 Connexion Google avec icône */}
       <button
         onClick={handleGoogleAuth}
-        className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded mb-4 hover:bg-red-600 transition"
+        className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded mb-4 hover:bg-black-600 transition"
       >
         <FcGoogle size={20} /> {/* ✅ Icône Google */}
         <span>Continuer avec Google</span>
