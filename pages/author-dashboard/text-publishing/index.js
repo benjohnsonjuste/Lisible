@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import TextPublishing from "@/components/TextPublishing";
+import TextPublishingForm from "@/components/TextPublishingForm";
 
 export default function AuthorDashboardPage() {
   return (
@@ -10,7 +10,7 @@ export default function AuthorDashboardPage() {
         Tableau de bord
       </h1>
 
-      <TextPublishing />
+      <TextPublishingForm />
     </div>
   );
 }
