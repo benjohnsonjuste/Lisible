@@ -1,165 +1,125 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Input from "@/components/ui/Input";
-import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import { sendToSheets } from "@/lib/sendToSheets";
+import { toast } from "sonner";
 
-export default function TextPublishing({ onPublishSuccess }) {
-  const router = useRouter();
-  const { user } = useAuth();
-
-  const [textData, setTextData] = useState({
-    title: "",
-    subtitle: "",
-    category: "",
-    tags: "",
-    content: "",
-  });
-
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
-  const [saveStatus, setSaveStatus] = useState("");
-
-  // 🔹 Charger brouillon local
-  useEffect(() => {
-    const draft = localStorage.getItem("text_draft");
-    if (draft) setTextData(JSON.parse(draft));
-  }, []);
-
-  // 🔹 Compteur de mots
-  useEffect(() => {
-    setWordCount(
-      textData.content.trim().split(/\s+/).filter(Boolean).length
-    );
-  }, [textData.content]);
-
-  const handleSaveDraft = () => {
-    try {
-      localStorage.setItem("text_draft", JSON.stringify(textData));
-      setSaveStatus("Brouillon sauvegardé ✔️");
-      toast.success("Brouillon sauvegardé ✔️");
-    } catch {
-      setSaveStatus("Erreur de sauvegarde ❌");
-      toast.error("Erreur de sauvegarde ❌");
-    }
-  };
-
-  const handleChange = (field, value) =>
-    setTextData((prev) => ({ ...prev, [field]: value }));
+export default function TextPublishing() {
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [content, setContent] = useState("");
+  const [visibility, setVisibility] = useState("public");
+  const [loading, setLoading] = useState(false);
 
   const handlePublish = async (e) => {
     e.preventDefault();
 
-    if (!user) {
-      toast.error("⚠️ Connectez-vous pour publier.");
+    if (!title || !content) {
+      toast.error("Le titre et le contenu sont requis.");
       return;
     }
 
-    if (!textData.title.trim() || !textData.content.trim()) {
-      toast.error("⚠️ Le titre et le contenu sont obligatoires.");
-      return;
-    }
+    setLoading(true);
 
-    setIsPublishing(true);
     try {
-      const tagsArray = textData.tags
-        ? textData.tags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)
-        : [];
+      // ✅ Étape 1 : Insertion dans Supabase
+      const { data, error } = await supabase
+        .from("texts")
+        .insert([
+          {
+            title,
+            subtitle,
+            content,
+            visibility,
+            likes: 0,
+            views: 0,
+          },
+        ])
+        .select()
+        .single();
 
-      // 🔹 Envoyer directement à Google Sheets
+      if (error) throw error;
+
+      // ✅ Étape 2 : Envoi des métadonnées à Google Sheets
       await sendToSheets({
-        email: user.email,
-        name: user.user_metadata?.display_name || "Auteur inconnu",
-        title: textData.title,
-        subtitle: textData.subtitle,
-        category: textData.category,
-        tags: tagsArray.join(", "),
-        content: textData.content,
-        action: "Publication Lisible",
+        title,
+        subtitle,
         date: new Date().toISOString(),
+        visibility,
+        likes: 0,
+        views: 0,
       });
 
-      localStorage.removeItem("text_draft");
-      toast.success("✅ Texte publié et enregistré dans Google Sheets !");
-      if (onPublishSuccess) onPublishSuccess();
-      else router.push("/library");
+      toast.success("🎉 Publication réussie et enregistrée dans Google Sheets !");
+      setTitle("");
+      setSubtitle("");
+      setContent("");
     } catch (err) {
-      console.error("Erreur publication Sheets :", err);
-      toast.error("❌ Échec de l’enregistrement dans Sheets.");
+      console.error("Erreur de publication :", err.message);
+      toast.error("Échec de la publication !");
     } finally {
-      setIsPublishing(false);
+      setLoading(false);
     }
   };
 
   return (
-    <form
-      onSubmit={handlePublish}
-      className="bg-white shadow-md rounded-2xl p-8 w-full max-w-3xl space-y-6"
-    >
-      <h1 className="text-2xl font-bold text-center text-primary">
-        ✍️ Publier un texte sur Lisible
-      </h1>
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow">
+      <h1 className="text-2xl font-bold mb-4">✍️ Publier un texte</h1>
 
-      <Input
-        label="Titre"
-        required
-        value={textData.title}
-        onChange={(e) => handleChange("title", e.target.value)}
-      />
+      <form onSubmit={handlePublish} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">Titre</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring"
+            placeholder="Titre du texte"
+          />
+        </div>
 
-      <Input
-        label="Sous-titre"
-        value={textData.subtitle}
-        onChange={(e) => handleChange("subtitle", e.target.value)}
-      />
+        <div>
+          <label className="block text-sm font-medium">Sous-titre</label>
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring"
+            placeholder="Sous-titre facultatif"
+          />
+        </div>
 
-      <Input
-        label="Catégorie"
-        value={textData.category}
-        onChange={(e) => handleChange("category", e.target.value)}
-      />
+        <div>
+          <label className="block text-sm font-medium">Contenu</label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring h-40"
+            placeholder="Écris ton texte ici..."
+          />
+        </div>
 
-      <Input
-        label="Tags (séparés par des virgules)"
-        value={textData.tags}
-        onChange={(e) => handleChange("tags", e.target.value)}
-      />
+        <div>
+          <label className="block text-sm font-medium">Visibilité</label>
+          <select
+            value={visibility}
+            onChange={(e) => setVisibility(e.target.value)}
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring"
+          >
+            <option value="public">Public</option>
+            <option value="private">Privé</option>
+          </select>
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-primary mb-1">
-          Contenu <span className="text-destructive">*</span>
-        </label>
-        <textarea
-          required
-          value={textData.content}
-          onChange={(e) => handleChange("content", e.target.value)}
-          placeholder="Écrivez votre texte ici..."
-          className="w-full min-h-[220px] border border-input rounded-md px-3 py-2 text-sm"
-        />
-        <p className="text-xs text-muted mt-1">
-          {wordCount} mots – {saveStatus}
-        </p>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <button
-          type="button"
-          onClick={handleSaveDraft}
-          className="px-4 py-2 rounded-md border border-primary text-primary hover:bg-primary/10 transition"
-        >
-          Sauvegarder le brouillon
-        </button>
         <button
           type="submit"
-          disabled={isPublishing}
-          className="px-4 py-2 rounded-md bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
         >
-          {isPublishing ? "Publication..." : "Publier"}
+          {loading ? "Publication en cours..." : "Publier"}
         </button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }
