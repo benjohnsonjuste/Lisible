@@ -3,8 +3,11 @@
 import React, { useState } from "react";
 import { db } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { supabase } from "@/lib/supabaseClient";
+import { sendToSheets } from "@/lib/sendToSheets";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
+import { toast } from "sonner"; // ✅ pour afficher des popups jolis
 
 export default function TextPublishingForm() {
   const { user } = useAuth();
@@ -13,42 +16,71 @@ export default function TextPublishingForm() {
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
-  // 🔥 Fonction pour publier le texte
+  // 🔥 Fonction pour publier le texte sur Firestore + Supabase + Google Sheets
   const handlePublish = async (e) => {
     e.preventDefault();
+
     if (!user) {
-      setMessage("Vous devez être connecté pour publier un texte.");
+      toast.error("❌ Vous devez être connecté pour publier un texte.");
       return;
     }
 
     setLoading(true);
-    setMessage("");
+    toast.info("⏳ Publication du texte en cours...");
 
     try {
-      await addDoc(collection(db, "texts"), {
+      const textData = {
         title,
         type,
         excerpt,
         content,
         authorId: user.uid,
         authorName: user.displayName || "Auteur anonyme",
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
         views: 0,
+        likes: 0,
         status: "Publié",
-      });
+        visibility: "public",
+      };
 
-      setMessage("✅ Texte publié avec succès !");
+      // 1️⃣ Envoi dans Firestore
+      await addDoc(collection(db, "texts"), {
+        ...textData,
+        createdAt: serverTimestamp(),
+      });
+      toast.success("✅ Texte enregistré sur Firestore !");
+
+      // 2️⃣ Envoi dans Supabase
+      const { error: supabaseError } = await supabase.from("texts").insert([textData]);
+      if (supabaseError) throw new Error(supabaseError.message);
+      toast.success("✅ Texte ajouté dans Supabase !");
+
+      // 3️⃣ Envoi dans Google Sheets
+      await sendToSheets({
+        title: textData.title,
+        author: textData.authorName,
+        type: textData.type,
+        excerpt: textData.excerpt,
+        date: textData.createdAt,
+        views: textData.views,
+        likes: textData.likes,
+        status: textData.status,
+      });
+      toast.success("✅ Texte synchronisé avec Google Sheets !");
+
+      // ✅ Réinitialisation du formulaire
       setTitle("");
       setExcerpt("");
       setContent("");
+
+      toast.message("🎉 Publication complète sur toutes les plateformes !");
     } catch (error) {
       console.error("Erreur lors de la publication :", error);
-      setMessage("❌ Échec de la publication. Veuillez réessayer.");
+      toast.error(`❌ Échec de la publication : ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -64,13 +96,12 @@ export default function TextPublishingForm() {
           onChange={(e) => setTitle(e.target.value)}
           required
           className="w-full border rounded-md p-2"
+          placeholder="Ex: Le Chant du Vent"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">
-          Type de texte
-        </label>
+        <label className="block text-sm font-medium mb-1">Type de texte</label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
@@ -96,9 +127,7 @@ export default function TextPublishingForm() {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">
-          Contenu principal
-        </label>
+        <label className="block text-sm font-medium mb-1">Contenu principal</label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -114,18 +143,6 @@ export default function TextPublishingForm() {
           {loading ? "Publication..." : "Publier le texte"}
         </Button>
       </div>
-
-      {message && (
-        <p
-          className={`mt-3 text-sm ${
-            message.startsWith("✅")
-              ? "text-green-600"
-              : "text-red-600"
-          }`}
-        >
-          {message}
-        </p>
-      )}
     </form>
   );
 }
