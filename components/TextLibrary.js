@@ -2,102 +2,82 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+import { sendToSheets } from "@/lib/sendToSheets";
 import { Eye, Heart } from "lucide-react";
-import { toast } from "sonner";
 
-export default function TextLibrary() {
+export default function Library() {
   const router = useRouter();
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const getTexts = async () => {
-    setLoading(true);
+  useEffect(() => {
+    fetchTexts();
+  }, []);
+
+  async function fetchTexts() {
     try {
-      const res = await fetch("/api/sheets");
-      const data = await res.json();
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("texts")
+        .select("id, title, author, created_at, likes, views")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
       setTexts(data || []);
-    } catch (err) {
-      console.error("Erreur récupération Sheets :", err);
-      toast.error("❌ Impossible de charger les textes depuis Sheets.");
+
+      // ✅ Envoie les textes dans Google Sheets
+      if (data?.length) {
+        for (const text of data) {
+          await sendToSheets({
+            title: text.title,
+            author: text.author,
+            date: new Date(text.created_at).toISOString(),
+            likes: text.likes || 0,
+            views: text.views || 0,
+          });
+        }
+      }
+
+      console.log("✅ Données Library synchronisées avec Google Sheets");
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement des textes :", error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  useEffect(() => {
-    getTexts();
-  }, []);
-
-  const incrementField = async (rowIndex, field) => {
-    try {
-      const res = await fetch("/api/sheets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rowIndex, field }),
-      });
-      const result = await res.json();
-      if (!result.success) throw new Error("Erreur API");
-      // mettre à jour l'état
-      setTexts((prev) =>
-        prev.map((t, idx) =>
-          idx === rowIndex ? { ...t, [field]: result.newValue } : t
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      toast.error("⚠️ Impossible de mettre à jour le compteur.");
-    }
-  };
-
-  const handleOpenText = (idx) => {
-    incrementField(idx, "views");
-    router.push(`/text/${idx}`);
-  };
-
-  const handleLike = (idx) => {
-    incrementField(idx, "likes");
-  };
-
-  if (loading) return <p className="text-center py-10">Chargement...</p>;
-  if (!texts.length) return <p className="text-center py-10">Aucun texte publié.</p>;
+  if (loading) return <p className="text-center">Chargement de la bibliothèque...</p>;
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">📚 Bibliothèque publique</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {texts.map((text, idx) => (
-          <div
-            key={idx}
-            className="bg-white p-4 rounded-xl shadow hover:shadow-md transition cursor-pointer"
-            onClick={() => handleOpenText(idx)}
-          >
-            {text.cover_url && (
-              <img
-                src={text.cover_url}
-                alt={text.title}
-                className="w-full h-40 object-cover rounded-lg mb-3"
-              />
-            )}
-            <h2 className="text-lg font-semibold">{text.title}</h2>
-            {text.subtitle && <p className="text-sm text-muted mb-2">{text.subtitle}</p>}
-            <p className="text-sm line-clamp-3 mb-3">{text.content}</p>
-            <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLike(idx);
-                }}
-                className="flex items-center gap-1 hover:text-red-500"
-              >
-                <Heart size={16} /> {text.likes || 0}
-              </button>
-              <div className="flex items-center gap-1">
-                <Eye size={16} /> {text.views || 0}
+    <div className="p-4 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-4 text-center">Bibliothèque Lisible</h1>
+
+      {texts.length === 0 ? (
+        <p className="text-center text-gray-500">Aucun texte disponible.</p>
+      ) : (
+        <ul className="space-y-4">
+          {texts.map((text) => (
+            <li
+              key={text.id}
+              className="p-4 bg-white shadow rounded-lg cursor-pointer hover:bg-gray-50 transition"
+              onClick={() => router.push(`/text/${text.id}`)}
+            >
+              <h2 className="text-lg font-semibold">{text.title}</h2>
+              <p className="text-sm text-gray-600">par {text.author}</p>
+
+              <div className="flex items-center gap-4 mt-2 text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Eye size={16} /> {text.views || 0}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Heart size={16} /> {text.likes || 0}
+                </span>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
