@@ -10,6 +10,7 @@ export default function Library() {
   const router = useRouter();
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [synced, setSynced] = useState(false); // 🔒 évite double synchronisation
 
   useEffect(() => {
     fetchTexts();
@@ -18,28 +19,35 @@ export default function Library() {
   async function fetchTexts() {
     try {
       setLoading(true);
+
       const { data, error } = await supabase
         .from("texts")
-        .select("id, title, author, created_at, likes, views")
+        .select("id, title, author, created_at, likes, views, visibility")
+        .eq("visibility", "public") // 🔒 n'affiche que les textes publics
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       setTexts(data || []);
 
-      // ✅ Envoie les textes dans Google Sheets
-      if (data?.length) {
+      // ✅ Étape 2 : Synchronisation avec Google Sheets (une seule fois)
+      if (!synced && data?.length) {
         for (const text of data) {
-          await sendToSheets({
-            title: text.title,
-            author: text.author,
-            date: new Date(text.created_at).toISOString(),
-            likes: text.likes || 0,
-            views: text.views || 0,
-          });
+          try {
+            await sendToSheets({
+              title: text.title,
+              author: text.author || "Anonyme",
+              date: new Date(text.created_at).toISOString(),
+              likes: text.likes || 0,
+              views: text.views || 0,
+              visibility: text.visibility || "public",
+            });
+          } catch (err) {
+            console.warn("Erreur d'envoi d’un texte à Google Sheets :", err.message);
+          }
         }
+        setSynced(true);
+        console.log("✅ Bibliothèque synchronisée avec Google Sheets");
       }
-
-      console.log("✅ Données Library synchronisées avec Google Sheets");
     } catch (error) {
       console.error("❌ Erreur lors du chargement des textes :", error.message);
     } finally {
@@ -47,26 +55,29 @@ export default function Library() {
     }
   }
 
-  if (loading) return <p className="text-center">Chargement de la bibliothèque...</p>;
+  if (loading)
+    return <p className="text-center mt-10 text-gray-600">Chargement de la bibliothèque...</p>;
 
   return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-4 text-center">Bibliothèque Lisible</h1>
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6 text-center">📚 Bibliothèque Lisible</h1>
 
       {texts.length === 0 ? (
-        <p className="text-center text-gray-500">Aucun texte disponible.</p>
+        <p className="text-center text-gray-500">Aucun texte disponible pour le moment.</p>
       ) : (
         <ul className="space-y-4">
           {texts.map((text) => (
             <li
               key={text.id}
-              className="p-4 bg-white shadow rounded-lg cursor-pointer hover:bg-gray-50 transition"
+              className="p-4 bg-white shadow-sm rounded-xl cursor-pointer hover:bg-gray-50 transition"
               onClick={() => router.push(`/text/${text.id}`)}
             >
-              <h2 className="text-lg font-semibold">{text.title}</h2>
-              <p className="text-sm text-gray-600">par {text.author}</p>
+              <h2 className="text-lg font-semibold text-gray-800">{text.title}</h2>
+              <p className="text-sm text-gray-600">
+                par <span className="font-medium">{text.author || "Auteur inconnu"}</span>
+              </p>
 
-              <div className="flex items-center gap-4 mt-2 text-gray-500">
+              <div className="flex items-center gap-6 mt-3 text-gray-500 text-sm">
                 <span className="flex items-center gap-1">
                   <Eye size={16} /> {text.views || 0}
                 </span>
