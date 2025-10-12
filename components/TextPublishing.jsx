@@ -15,7 +15,7 @@ export default function TextPublishing() {
   const handlePublish = async (e) => {
     e.preventDefault();
 
-    if (!title || !content) {
+    if (!title.trim() || !content.trim()) {
       toast.error("Le titre et le contenu sont requis.");
       return;
     }
@@ -23,7 +23,7 @@ export default function TextPublishing() {
     setLoading(true);
 
     try {
-      // ✅ Étape 1 : Insertion dans Supabase
+      // ✅ Étape 1 : Enregistrer le texte dans Supabase
       const { data, error } = await supabase
         .from("texts")
         .insert([
@@ -41,10 +41,11 @@ export default function TextPublishing() {
 
       if (error) throw error;
 
-      // ✅ Étape 2 : Envoi des métadonnées à Google Sheets
+      // ✅ Étape 2 : Enregistrer les métadonnées dans Google Sheets
       await sendToSheets({
         title,
         subtitle,
+        content: content.slice(0, 100) + "...", // résumé
         date: new Date().toISOString(),
         visibility,
         likes: 0,
@@ -55,57 +56,58 @@ export default function TextPublishing() {
       setTitle("");
       setSubtitle("");
       setContent("");
+      setVisibility("public");
     } catch (err) {
-      console.error("Erreur de publication :", err.message);
-      toast.error("Échec de la publication !");
+      console.error("Erreur de publication :", err);
+      toast.error("❌ Échec de la publication !");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow">
-      <h1 className="text-2xl font-bold mb-4">✍️ Publier un texte</h1>
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-md">
+      <h1 className="text-2xl font-bold mb-6 text-center">✍️ Publier un texte</h1>
 
-      <form onSubmit={handlePublish} className="space-y-4">
+      <form onSubmit={handlePublish} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium">Titre</label>
+          <label className="block text-sm font-medium mb-1">Titre</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring"
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
             placeholder="Titre du texte"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Sous-titre</label>
+          <label className="block text-sm font-medium mb-1">Sous-titre</label>
           <input
             type="text"
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring"
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
             placeholder="Sous-titre facultatif"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Contenu</label>
+          <label className="block text-sm font-medium mb-1">Contenu</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring h-40"
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300 h-40"
             placeholder="Écris ton texte ici..."
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Visibilité</label>
+          <label className="block text-sm font-medium mb-1">Visibilité</label>
           <select
             value={visibility}
             onChange={(e) => setVisibility(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring"
+            className="w-full p-2 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
           >
             <option value="public">Public</option>
             <option value="private">Privé</option>
@@ -115,7 +117,11 @@ export default function TextPublishing() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
+          className={`w-full py-2 rounded-lg font-medium text-white transition ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
           {loading ? "Publication en cours..." : "Publier"}
         </button>
