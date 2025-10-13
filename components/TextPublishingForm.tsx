@@ -6,7 +6,7 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { supabase } from "@/lib/supabaseClient";
 import { sendToSheets } from "@/lib/sendToSheets";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button"; // ⚠️ Correction du nom du composant
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface TextData {
@@ -22,12 +22,6 @@ interface TextData {
   likes: number;
   status: string;
   visibility: string;
-}
-
-interface SyncStatus {
-  firestore: { success: boolean; message: string };
-  supabase: { success: boolean; message: string };
-  sheets: { success: boolean; message: string };
 }
 
 export default function TextPublishingForm(): JSX.Element {
@@ -52,12 +46,6 @@ export default function TextPublishingForm(): JSX.Element {
     const createdAt = new Date().toISOString();
     const commitId = crypto.randomUUID();
 
-    const syncStatus: SyncStatus = {
-      firestore: { success: false, message: "" },
-      supabase: { success: false, message: "" },
-      sheets: { success: false, message: "" },
-    };
-
     try {
       const textData: TextData = {
         commitId,
@@ -79,16 +67,11 @@ export default function TextPublishingForm(): JSX.Element {
         ...textData,
         createdAt: serverTimestamp(),
       });
-      syncStatus.firestore = { success: true, message: "Texte enregistré sur Firestore" };
       toast.success("✅ Firestore OK");
 
       // 2️⃣ Supabase
       const { error: supabaseError } = await supabase.from("texts").insert([textData]);
-      if (supabaseError) {
-        syncStatus.supabase = { success: false, message: supabaseError.message };
-        throw new Error(`Supabase: ${supabaseError.message}`);
-      }
-      syncStatus.supabase = { success: true, message: "Texte ajouté dans Supabase" };
+      if (supabaseError) throw new Error(`Supabase: ${supabaseError.message}`);
       toast.success("✅ Supabase OK");
 
       // 3️⃣ Google Sheets
@@ -103,7 +86,6 @@ export default function TextPublishingForm(): JSX.Element {
         likes: textData.likes,
         status: textData.status,
       });
-      syncStatus.sheets = { success: true, message: "Texte synchronisé avec Google Sheets" };
       toast.success("✅ Sheets OK");
 
       // ✅ Réinitialisation
@@ -118,135 +100,7 @@ export default function TextPublishingForm(): JSX.Element {
     } finally {
       setLoading(false);
     }
-  };
-
-  return (
-    <form
-      onSubmit={handlePublish}
-      className="bg-card border rounded-lg shadow-sm p-6 space-y-4"
-    >
-      <div>
-"use client";
-
-import React, { useState } from "react";
-import { db } from "@/lib/firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { supabase } from "@/lib/supabaseClient";
-import { sendToSheets } from "@/lib/sendToSheets";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button"; // ⚠️ Correction du nom du composant
-import { toast } from "sonner";
-
-interface TextData {
-  commitId: string;
-  title: string;
-  type: string;
-  excerpt: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  createdAt: string;
-  views: number;
-  likes: number;
-  status: string;
-  visibility: string;
-}
-
-interface SyncStatus {
-  firestore: { success: boolean; message: string };
-  supabase: { success: boolean; message: string };
-  sheets: { success: boolean; message: string };
-}
-
-export default function TextPublishingForm(): JSX.Element {
-  const { user } = useAuth();
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState("Roman");
-  const [excerpt, setExcerpt] = useState("");
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handlePublish = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!user || !user.uid) {
-      toast.error("❌ Vous devez être connecté pour publier un texte.");
-      return;
-    }
-
-    setLoading(true);
-    toast.info("⏳ Publication du texte en cours...");
-
-    const createdAt = new Date().toISOString();
-    const commitId = crypto.randomUUID();
-
-    const syncStatus: SyncStatus = {
-      firestore: { success: false, message: "" },
-      supabase: { success: false, message: "" },
-      sheets: { success: false, message: "" },
-    };
-
-    try {
-      const textData: TextData = {
-        commitId,
-        title,
-        type,
-        excerpt,
-        content,
-        authorId: user.uid,
-        authorName: user.displayName || "Auteur anonyme",
-        createdAt,
-        views: 0,
-        likes: 0,
-        status: "Publié",
-        visibility: "public",
-      };
-
-      // 1️⃣ Firestore
-      await addDoc(collection(db, "texts"), {
-        ...textData,
-        createdAt: serverTimestamp(),
-      });
-      syncStatus.firestore = { success: true, message: "Texte enregistré sur Firestore" };
-      toast.success("✅ Firestore OK");
-
-      // 2️⃣ Supabase
-      const { error: supabaseError } = await supabase.from("texts").insert([textData]);
-      if (supabaseError) {
-        syncStatus.supabase = { success: false, message: supabaseError.message };
-        throw new Error(`Supabase: ${supabaseError.message}`);
-      }
-      syncStatus.supabase = { success: true, message: "Texte ajouté dans Supabase" };
-      toast.success("✅ Supabase OK");
-
-      // 3️⃣ Google Sheets
-      await sendToSheets({
-        commitId,
-        title: textData.title,
-        author: textData.authorName,
-        type: textData.type,
-        excerpt: textData.excerpt,
-        date: textData.createdAt,
-        views: textData.views,
-        likes: textData.likes,
-        status: textData.status,
-      });
-      syncStatus.sheets = { success: true, message: "Texte synchronisé avec Google Sheets" };
-      toast.success("✅ Sheets OK");
-
-      // ✅ Réinitialisation
-      setTitle("");
-      setExcerpt("");
-      setContent("");
-
-      toast.success("🎉 Publication réussie sur toutes les plateformes !");
-    } catch (error: any) {
-      console.error("Erreur lors de la publication :", error);
-      toast.error(`❌ Échec : ${error.message || error.toString()}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }; // <-- ✅ bien fermer la fonction ici AVANT le return
 
   return (
     <form
@@ -310,4 +164,4 @@ export default function TextPublishingForm(): JSX.Element {
       </div>
     </form>
   );
-    }
+}
