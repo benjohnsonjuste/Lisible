@@ -164,4 +164,4 @@ export default function TextPublishingForm(): JSX.Element {
       </div>
     </form>
   );
-}
+  }
