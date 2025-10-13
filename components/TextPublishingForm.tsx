@@ -9,18 +9,39 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 
-export default function TextPublishingForm() {
-  const { user } = useAuth();
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState("Roman");
-  const [excerpt, setExcerpt] = useState("");
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
+interface TextData {
+  commitId: string;
+  title: string;
+  type: string;
+  excerpt: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  views: number;
+  likes: number;
+  status: string;
+  visibility: string;
+}
 
-  const handlePublish = async (e: React.FormEvent) => {
+interface SyncStatus {
+  firestore: { success: boolean; message: string };
+  supabase: { success: boolean; message: string };
+  sheets: { success: boolean; message: string };
+}
+
+export default function TextPublishingForm(): JSX.Element {
+  const { user } = useAuth();
+  const [title, setTitle] = useState<string>("");
+  const [type, setType] = useState<string>("Roman");
+  const [excerpt, setExcerpt] = useState<string>("");
+  const [content, setContent] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handlePublish = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!user) {
+    if (!user || !user.uid) {
       toast.error("❌ Vous devez être connecté pour publier un texte.");
       return;
     }
@@ -31,14 +52,14 @@ export default function TextPublishingForm() {
     const createdAt = new Date();
     const commitId = crypto.randomUUID();
 
-    const syncStatus: Record<string, { success: boolean; message: string }> = {
+    const syncStatus: SyncStatus = {
       firestore: { success: false, message: "" },
       supabase: { success: false, message: "" },
       sheets: { success: false, message: "" },
     };
 
     try {
-      const textData = {
+      const textData: TextData = {
         commitId,
         title,
         type,
@@ -105,7 +126,64 @@ export default function TextPublishingForm() {
       onSubmit={handlePublish}
       className="bg-card border rounded-lg shadow-sm p-6 space-y-4"
     >
-      {/* ...form fields inchangés... */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Titre du texte</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          className="w-full border rounded-md p-2"
+          placeholder="Ex: Le Chant du Vent"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Type de texte</label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full border rounded-md p-2"
+        >
+          <option>Roman</option>
+          <option>Nouvelle</option>
+          <option>Poésie</option>
+          <option>Essai</option>
+          <option>Article</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Extrait</label>
+        <textarea
+          value={excerpt}
+          onChange={(e) => setExcerpt(e.target.value)}
+          rows={2}
+          className="w-full border rounded-md p-2"
+          placeholder="Résumé ou introduction..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Contenu principal</label>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={8}
+          className="w-full border rounded-md p-2"
+          placeholder="Écrivez ou collez votre texte ici..."
+          required
+        />
+      </div>
+
+      <div className="pt-2">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Publication..." : "Publier le texte"}
+        </Button>
+      </div>
+    </form>
+  );
+    }      {/* ...form fields inchangés... */}
       <div className="pt-2">
         <Button type="submit" disabled={loading}>
           {loading ? "Publication..." : "Publier le texte"}
