@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { sendToSheets } from "@/lib/sendToSheets";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
-import { toast } from "sonner"; // ✅ pour afficher des popups jolis
+import { toast } from "sonner";
 
 export default function TextPublishingForm() {
   const { user } = useAuth();
@@ -17,8 +17,7 @@ export default function TextPublishingForm() {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 Fonction pour publier le texte sur Firestore + Supabase + Google Sheets
-  const handlePublish = async (e) => {
+  const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) {
@@ -30,52 +29,55 @@ export default function TextPublishingForm() {
     toast.info("⏳ Publication du texte en cours...");
 
     try {
-      const textData = {
+      const now = new Date().toISOString();
+
+      const baseTextData = {
         title,
         type,
         excerpt,
         content,
         authorId: user.uid,
         authorName: user.displayName || "Auteur anonyme",
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         views: 0,
         likes: 0,
         status: "Publié",
         visibility: "public",
+        platformsSynced: ["Firestore", "Supabase", "Google Sheets"],
       };
 
-      // 1️⃣ Envoi dans Firestore
+      // 1️⃣ Firestore
       await addDoc(collection(db, "texts"), {
-        ...textData,
-        createdAt: serverTimestamp(),
+        ...baseTextData,
+        createdAt: serverTimestamp(), // Firestore gère son propre timestamp
       });
       toast.success("✅ Texte enregistré sur Firestore !");
 
-      // 2️⃣ Envoi dans Supabase
-      const { error: supabaseError } = await supabase.from("texts").insert([textData]);
-      if (supabaseError) throw new Error(supabaseError.message);
+      // 2️⃣ Supabase
+      const { error: supabaseError } = await supabase.from("texts").insert([baseTextData]);
+      if (supabaseError) throw new Error(`Supabase: ${supabaseError.message}`);
       toast.success("✅ Texte ajouté dans Supabase !");
 
-      // 3️⃣ Envoi dans Google Sheets
+      // 3️⃣ Google Sheets
       await sendToSheets({
-        title: textData.title,
-        author: textData.authorName,
-        type: textData.type,
-        excerpt: textData.excerpt,
-        date: textData.createdAt,
-        views: textData.views,
-        likes: textData.likes,
-        status: textData.status,
+        title: baseTextData.title,
+        author: baseTextData.authorName,
+        type: baseTextData.type,
+        excerpt: baseTextData.excerpt,
+        date: baseTextData.createdAt,
+        views: baseTextData.views,
+        likes: baseTextData.likes,
+        status: baseTextData.status,
       });
       toast.success("✅ Texte synchronisé avec Google Sheets !");
 
-      // ✅ Réinitialisation du formulaire
+      // ✅ Réinitialisation
       setTitle("");
       setExcerpt("");
       setContent("");
 
-      toast.message("🎉 Publication complète sur toutes les plateformes !");
-    } catch (error) {
+      toast.message("🎉 Publication réussie sur toutes les plateformes !");
+    } catch (error: any) {
       console.error("Erreur lors de la publication :", error);
       toast.error(`❌ Échec de la publication : ${error.message}`);
     } finally {
@@ -120,7 +122,7 @@ export default function TextPublishingForm() {
         <textarea
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
-          rows="2"
+          rows={2}
           className="w-full border rounded-md p-2"
           placeholder="Résumé ou introduction..."
         />
@@ -131,7 +133,7 @@ export default function TextPublishingForm() {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows="8"
+          rows={8}
           className="w-full border rounded-md p-2"
           placeholder="Écrivez ou collez votre texte ici..."
           required
