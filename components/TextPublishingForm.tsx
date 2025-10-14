@@ -6,119 +6,136 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { supabase } from "@/lib/supabaseClient";
 import { sendToSheets } from "@/lib/sendToSheets";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 
-interface TextData {
-  commitId: string;
-  title: string;
-  type: string;
-  excerpt: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  createdAt: string;
-  views: number;
-  likes: number;
-  status: string;
-  visibility: string;
-}
-
-export default function TextPublishingForm(): JSX.Element {
+export default function TextPublishingForm() {
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [type, setType] = useState("Roman");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handlePublish = async (e: React.FormEvent<HTMLFormElement>) => {
+  // 📤 Fonction principale : publier le texte
+  const handlePublish = async (e) => {
     e.preventDefault();
 
-    if (!user || !user.uid) {
-      toast.error("❌ Vous devez être connecté pour publier un texte.");
+    if (!user) {
+      toast.error("⚠️ Vous devez être connecté pour publier un texte.");
+      return;
+    }
+
+    if (!title || !content) {
+      toast.error("Le titre et le contenu sont requis !");
       return;
     }
 
     setLoading(true);
-    toast.info("⏳ Publication du texte en cours...");
-
-    const createdAt = new Date().toISOString();
-    const commitId = crypto.randomUUID();
 
     try {
-      const textData: TextData = {
-        commitId,
+      let imageUrl = null;
+
+      // ✅ 1. Upload image vers Supabase Storage (si présente)
+      if (image) {
+        const fileName = `${user.uid}_${Date.now()}_${image.name}`;
+        const { data, error } = await supabase.storage
+          .from("images")
+          .upload(`covers/${fileName}`, image);
+
+        if (error) throw error;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("images")
+          .getPublicUrl(`covers/${fileName}`);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      // ✅ 2. Enregistrer dans Supabase
+      const { data: supaData, error: supaError } = await supabase
+        .from("texts")
+        .insert([
+          {
+            title,
+            type,
+            excerpt,
+            content,
+            author_id: user.uid,
+            author_name: user.displayName || "Auteur anonyme",
+            image_url: imageUrl,
+            views: 0,
+            likes: 0,
+            status: "Publié",
+          },
+        ])
+        .select()
+        .single();
+
+      if (supaError) throw supaError;
+
+      // ✅ 3. Sauvegarde Firestore (redondance / temps réel)
+      await addDoc(collection(db, "texts"), {
         title,
         type,
         excerpt,
         content,
         authorId: user.uid,
         authorName: user.displayName || "Auteur anonyme",
-        createdAt,
+        imageUrl,
+        createdAt: serverTimestamp(),
         views: 0,
         likes: 0,
         status: "Publié",
-        visibility: "public",
-      };
-
-      // 1️⃣ Firestore
-      await addDoc(collection(db, "texts"), {
-        ...textData,
-        createdAt: serverTimestamp(),
       });
-      toast.success("✅ Firestore OK");
 
-      // 2️⃣ Supabase
-      const { error: supabaseError } = await supabase.from("texts").insert([textData]);
-      if (supabaseError) throw new Error(`Supabase: ${supabaseError.message}`);
-      toast.success("✅ Supabase OK");
-
-      // 3️⃣ Google Sheets
+      // ✅ 4. Synchroniser avec Google Sheets
       await sendToSheets({
-        commitId,
-        title: textData.title,
-        author: textData.authorName,
-        type: textData.type,
-        excerpt: textData.excerpt,
-        date: textData.createdAt,
-        views: textData.views,
-        likes: textData.likes,
-        status: textData.status,
+        title,
+        author: user.displayName || "Auteur anonyme",
+        type,
+        date: new Date().toISOString(),
+        views: 0,
+        likes: 0,
       });
-      toast.success("✅ Sheets OK");
 
-      // ✅ Réinitialisation
+      toast.success("🎉 Texte publié avec succès !");
       setTitle("");
       setExcerpt("");
       setContent("");
-
-      toast.success("🎉 Publication réussie sur toutes les plateformes !");
-    } catch (error: any) {
+      setImage(null);
+    } catch (error) {
       console.error("Erreur lors de la publication :", error);
-      toast.error(`❌ Échec : ${error.message || error.toString()}`);
+      toast.error("❌ Échec de la publication. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
-  }; // <-- ✅ bien fermer la fonction ici AVANT le return
+  };
 
   return (
     <form
       onSubmit={handlePublish}
-      className="bg-card border rounded-lg shadow-sm p-6 space-y-4"
+      className="bg-white border rounded-lg shadow-sm p-6 space-y-4 max-w-2xl mx-auto"
     >
+      <h2 className="text-2xl font-semibold text-center mb-2">
+        ✍️ Publier un texte
+      </h2>
+
+      {/* Champ titre */}
       <div>
-        <label className="block text-sm font-medium mb-1">Titre du texte</label>
+        <label className="block text-sm font-medium mb-1">Titre</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
           className="w-full border rounded-md p-2"
-          placeholder="Ex: Le Chant du Vent"
+          placeholder="Titre du texte"
         />
       </div>
 
+      {/* Type */}
       <div>
         <label className="block text-sm font-medium mb-1">Type de texte</label>
         <select
@@ -134,34 +151,52 @@ export default function TextPublishingForm(): JSX.Element {
         </select>
       </div>
 
+      {/* Extrait */}
       <div>
         <label className="block text-sm font-medium mb-1">Extrait</label>
         <textarea
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
-          rows={2}
+          rows="2"
           className="w-full border rounded-md p-2"
           placeholder="Résumé ou introduction..."
         />
       </div>
 
+      {/* Contenu */}
       <div>
-        <label className="block text-sm font-medium mb-1">Contenu principal</label>
+        <label className="block text-sm font-medium mb-1">
+          Contenu principal
+        </label>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={8}
+          rows="8"
           className="w-full border rounded-md p-2"
           placeholder="Écrivez ou collez votre texte ici..."
           required
         />
       </div>
 
+      {/* Image de couverture */}
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Image de couverture (facultative)
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImage(e.target.files[0])}
+          className="w-full border rounded-md p-2"
+        />
+      </div>
+
+      {/* Bouton publier */}
       <div className="pt-2">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Publication..." : "Publier le texte"}
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? "Publication en cours..." : "Publier le texte"}
         </Button>
       </div>
     </form>
   );
-  }
+}
