@@ -35,12 +35,13 @@ export default function TextPublishingForm() {
         body: data,
       });
 
+      const result = await res.json();
+
       if (!res.ok) {
-        throw new Error("Erreur réseau");
+        throw new Error(result.error || "Erreur réseau");
       }
 
-      const result = await res.json();
-      setMessage(result.message || result.error);
+      setMessage(result.message || "Texte publié avec succès.");
     } catch (err) {
       setMessage("Échec de la publication, veuillez réessayer.");
     } finally {
