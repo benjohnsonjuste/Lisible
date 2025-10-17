@@ -1,35 +1,58 @@
+"use client";
 import { useEffect, useState } from "react";
 
-export default function Home() {
+export default function LibraryPage() {
   const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/list")
-      .then((res) => res.json())
-      .then((data) => setPosts(data));
+    const fetchPosts = async () => {
+      try {
+        const res = await fetch("/api/list");
+        const data = await res.json();
+        setPosts(data);
+      } catch (err) {
+        console.error("Erreur de chargement :", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Publications récentes</h1>
-      {posts.length === 0 ? (
-        <p>Aucun texte pour le moment.</p>
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">📚 Bibliothèque Lisible</h1>
+
+      {loading ? (
+        <p>Chargement en cours...</p>
+      ) : posts.length === 0 ? (
+        <p>Aucun texte publié pour le moment.</p>
       ) : (
-        posts.map((post) => (
-          <div key={post.id} className="mb-6 p-4 bg-white rounded shadow">
-            <h2 className="text-xl font-semibold">{post.titre}</h2>
-            <p className="text-gray-600 text-sm mb-2">par {post.auteur}</p>
-            {post.imageURL && (
-              <img
-                src={post.imageURL}
-                alt={post.titre}
-                className="w-full h-auto rounded mb-2"
-              />
-            )}
-            <p>{post.contenu}</p>
-            <p className="text-xs text-gray-500 mt-2">{post.date}</p>
-          </div>
-        ))
+        <ul className="space-y-6">
+          {posts.map((post) => (
+            <li key={post.id} className="border p-4 rounded shadow-sm bg-white">
+              <h2 className="text-xl font-semibold">{post.titre}</h2>
+              <p className="text-sm text-gray-600 mb-2">par {post.auteur}</p>
+              <p className="whitespace-pre-line">{post.contenu}</p>
+              {post.image_url && (
+                <img
+                  src={post.image_url}
+                  alt={`Illustration pour ${post.titre}`}
+                  className="mt-4 max-h-64 object-cover rounded"
+                />
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                {new Date(post.created_at).toLocaleDateString("fr-FR", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
