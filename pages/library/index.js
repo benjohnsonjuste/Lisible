@@ -10,7 +10,13 @@ export default function LibraryPage() {
       try {
         const res = await fetch("/api/list");
         const data = await res.json();
-        setPosts(data);
+
+        // Sécurise le formatage
+        if (Array.isArray(data)) {
+          setPosts(data);
+        } else {
+          console.error("Données inattendues :", data);
+        }
       } catch (err) {
         console.error("Erreur de chargement :", err);
       } finally {
