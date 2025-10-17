@@ -25,16 +25,27 @@ export default function TextPublishingForm() {
     setMessage("");
 
     const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => data.append(key, value));
-
-    const res = await fetch("/api/publish", {
-      method: "POST",
-      body: data,
+    Object.entries(formData).forEach(([key, value]) => {
+      data.append(key, value);
     });
 
-    const result = await res.json();
-    setLoading(false);
-    setMessage(result.message || result.error);
+    try {
+      const res = await fetch("/api/publish", {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        throw new Error("Erreur réseau");
+      }
+
+      const result = await res.json();
+      setMessage(result.message || result.error);
+    } catch (err) {
+      setMessage("Échec de la publication, veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,6 +54,7 @@ export default function TextPublishingForm() {
       className="flex flex-col gap-3 bg-white p-4 rounded-lg shadow-md max-w-xl mx-auto"
     >
       <input
+        type="text"
         name="auteur"
         placeholder="Nom de l'auteur"
         className="border p-2 rounded"
@@ -50,6 +62,7 @@ export default function TextPublishingForm() {
         required
       />
       <input
+        type="text"
         name="titre"
         placeholder="Titre du texte"
         className="border p-2 rounded"
