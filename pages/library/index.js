@@ -44,7 +44,7 @@ export default function LibraryPage() {
                 />
               )}
               <p className="text-xs text-gray-500 mt-2">
-                {new Date(post.created_at).toLocaleDateString("fr-FR", {
+                {new Date(post.date).toLocaleDateString("fr-FR", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
