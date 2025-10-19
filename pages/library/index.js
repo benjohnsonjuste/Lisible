@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { app } from "@/firebase"; // ← alias propre
+import { app } from "@/firebase";
 
 const db = getFirestore(app);
 
@@ -13,10 +13,20 @@ export default function LibraryPage() {
     const fetchPosts = async () => {
       try {
         const snapshot = await getDocs(collection(db, "texts"));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const data = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((post) => post.titre && post.contenu); // ignore les entrées vides
+
+        // Optionnel : tri par date si disponible
+        data.sort((a, b) => {
+          const dateA = a.created_at?.toDate?.() || new Date(0);
+          const dateB = b.created_at?.toDate?.() || new Date(0);
+          return dateB - dateA;
+        });
+
         setPosts(data);
       } catch (err) {
         console.error("Erreur de chargement :", err);
@@ -51,15 +61,13 @@ export default function LibraryPage() {
                 />
               )}
               <p className="text-xs text-gray-500 mt-2">
-                {post.created_at?.toDate?.() ? (
-                  post.created_at.toDate().toLocaleDateString("fr-FR", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
-                ) : (
-                  "Date inconnue"
-                )}
+                {post.created_at?.toDate?.()
+                  ? post.created_at.toDate().toLocaleDateString("fr-FR", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "Date inconnue"}
               </p>
             </li>
           ))}
