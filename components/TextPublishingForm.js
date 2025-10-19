@@ -1,11 +1,5 @@
 "use client";
 import { useState } from "react";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { app } from "../firebase"; // ton fichier de config Firebase
-
-const storage = getStorage(app);
-const db = getFirestore(app);
 
 export default function TextPublishingForm() {
   const [formData, setFormData] = useState({
@@ -31,26 +25,45 @@ export default function TextPublishingForm() {
     setMessage("");
 
     try {
-      let imageURL = null;
+      let imageURL = "";
 
       if (formData.image) {
-        const imageRef = ref(storage, `images/${Date.now()}-${formData.image.name}`);
-        await uploadBytes(imageRef, formData.image);
-        imageURL = await getDownloadURL(imageRef);
-      }
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          imageURL = reader.result;
 
-      await addDoc(collection(db, "texts"), {
-        auteur: formData.auteur,
-        titre: formData.titre,
-        contenu: formData.contenu,
-        image_url: imageURL,
-        created_at: serverTimestamp(),
+          await sendToSheets(imageURL);
+        };
+        reader.readAsDataURL(formData.image);
+      } else {
+        await sendToSheets("");
+      }
+    } catch (err) {
+      console.error("Erreur de publication :", err);
+      setMessage("Échec de la publication.");
+      setLoading(false);
+    }
+  };
+
+  const sendToSheets = async (imageURL) => {
+    try {
+      const webhookURL = "https://script.google.com/macros/s/AKfycbyAyvh4_2ntzSZftpa77BS6Mt6YrHfkatD3X_TqfktmJakpGUwEHItLLmPN1x4-1or0/exec";
+
+      await fetch(webhookURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auteur: formData.auteur,
+          titre: formData.titre,
+          contenu: formData.contenu,
+          image_url: imageURL,
+        }),
       });
 
       setMessage("Texte publié avec succès.");
       setFormData({ auteur: "", titre: "", contenu: "", image: null });
     } catch (err) {
-      console.error("Erreur Firebase:", err);
+      console.error("Erreur Sheets:", err);
       setMessage("Échec de la publication.");
     } finally {
       setLoading(false);
@@ -98,7 +111,7 @@ export default function TextPublishingForm() {
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
+        className="bg-green-600 text-white rounded p-2 hover:bg-green-700"
       >
         {loading ? "Publication en cours..." : "Publier"}
       </button>
