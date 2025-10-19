@@ -1,5 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { app } from "../firebase";
+
+const db = getFirestore(app);
 
 export default function LibraryPage() {
   const [posts, setPosts] = useState([]);
@@ -8,15 +12,12 @@ export default function LibraryPage() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const res = await fetch("/api/list");
-        const data = await res.json();
-
-        // Sécurise le formatage
-        if (Array.isArray(data)) {
-          setPosts(data);
-        } else {
-          console.error("Données inattendues :", data);
-        }
+        const snapshot = await getDocs(collection(db, "texts"));
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPosts(data);
       } catch (err) {
         console.error("Erreur de chargement :", err);
       } finally {
@@ -50,7 +51,7 @@ export default function LibraryPage() {
                 />
               )}
               <p className="text-xs text-gray-500 mt-2">
-                {new Date(post.date).toLocaleDateString("fr-FR", {
+                {post.created_at?.toDate?.().toLocaleDateString("fr-FR", {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
