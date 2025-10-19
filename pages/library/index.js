@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { app } from "../firebase";
+import { app } from "@/firebase"; // ← alias propre
 
 const db = getFirestore(app);
 
@@ -51,11 +51,15 @@ export default function LibraryPage() {
                 />
               )}
               <p className="text-xs text-gray-500 mt-2">
-                {post.created_at?.toDate?.().toLocaleDateString("fr-FR", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {post.created_at?.toDate?.() ? (
+                  post.created_at.toDate().toLocaleDateString("fr-FR", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                ) : (
+                  "Date inconnue"
+                )}
               </p>
             </li>
           ))}
