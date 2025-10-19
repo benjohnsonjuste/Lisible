@@ -1,5 +1,11 @@
 "use client";
 import { useState } from "react";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { app } from "../firebase"; // ton fichier de config Firebase
+
+const storage = getStorage(app);
+const db = getFirestore(app);
 
 export default function TextPublishingForm() {
   const [formData, setFormData] = useState({
@@ -24,25 +30,28 @@ export default function TextPublishingForm() {
     setLoading(true);
     setMessage("");
 
-    const data = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      data.append(key, value);
-    });
-
     try {
-      const res = await fetch("/api/publish", {
-        method: "POST",
-        body: data,
-      });
+      let imageURL = null;
 
-      if (!res.ok) {
-        throw new Error("Erreur réseau");
+      if (formData.image) {
+        const imageRef = ref(storage, `images/${Date.now()}-${formData.image.name}`);
+        await uploadBytes(imageRef, formData.image);
+        imageURL = await getDownloadURL(imageRef);
       }
 
-      const result = await res.json();
-      setMessage(result.message || result.error);
+      await addDoc(collection(db, "texts"), {
+        auteur: formData.auteur,
+        titre: formData.titre,
+        contenu: formData.contenu,
+        image_url: imageURL,
+        created_at: serverTimestamp(),
+      });
+
+      setMessage("Texte publié avec succès.");
+      setFormData({ auteur: "", titre: "", contenu: "", image: null });
     } catch (err) {
-      setMessage("Échec de la publication, veuillez réessayer.");
+      console.error("Erreur Firebase:", err);
+      setMessage("Échec de la publication.");
     } finally {
       setLoading(false);
     }
@@ -58,6 +67,7 @@ export default function TextPublishingForm() {
         name="auteur"
         placeholder="Nom de l'auteur"
         className="border p-2 rounded"
+        value={formData.auteur}
         onChange={handleChange}
         required
       />
@@ -66,6 +76,7 @@ export default function TextPublishingForm() {
         name="titre"
         placeholder="Titre du texte"
         className="border p-2 rounded"
+        value={formData.titre}
         onChange={handleChange}
         required
       />
@@ -74,6 +85,7 @@ export default function TextPublishingForm() {
         placeholder="Votre texte ici..."
         rows="6"
         className="border p-2 rounded"
+        value={formData.contenu}
         onChange={handleChange}
         required
       />
