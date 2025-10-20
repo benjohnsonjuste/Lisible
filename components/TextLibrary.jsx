@@ -1,130 +1,66 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { db } from "@/lib/firebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { toast } from "sonner";
-import Image from "next/image";
 
 export default function LibraryPage() {
-  const [texts, setTexts] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState("supabase"); // "supabase" | "firestore"
 
-  // 🔄 Charger les textes à partir de Supabase ou Firestore
   useEffect(() => {
-    const fetchTexts = async () => {
-      setLoading(true);
+    const fetchPosts = async () => {
       try {
-        let results = [];
+        const res = await fetch("https://gsx2json.com/api?id=1XhozRiz4wXLlPUDQ44aGE5Nt4ITD5jNCs63uPhVHB0w");
+        const json = await res.json();
+        const rows = json.rows || [];
 
-        if (source === "supabase") {
-          const { data, error } = await supabase
-            .from("texts")
-            .select("*")
-            .order("id", { ascending: false });
-
-          if (error) throw error;
-          results = data;
-        } else {
-          const snapshot = await getDocs(collection(db, "texts"));
-          results = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
+        const formatted = rows
+          .filter((row) => row.titre && row.contenu)
+          .map((row, index) => ({
+            id: index,
+            auteur: row.auteur || "Anonyme",
+            titre: row.titre,
+            contenu: row.contenu,
+            image_url: row.image_url || null,
+            date: row.date || row.timestamp || "Date inconnue",
           }));
-        }
 
-        setTexts(results);
-      } catch (error) {
-        console.error("Erreur de chargement :", error);
-        toast.error("Impossible de charger la bibliothèque.");
+        setPosts(formatted);
+      } catch (err) {
+        console.error("Erreur de chargement :", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTexts();
-  }, [source]);
-
-  if (loading)
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500 animate-pulse">Chargement des textes...</p>
-      </div>
-    );
-
-  if (texts.length === 0)
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center">
-        <p className="text-gray-500 text-lg">Aucun texte publié pour l’instant.</p>
-        <Button
-          className="mt-4"
-          onClick={() => (window.location.href = "/publish")}
-        >
-          Publier un texte
-        </Button>
-      </div>
-    );
+    fetchPosts();
+  }, []);
 
   return (
-    <main className="max-w-6xl mx-auto py-10 px-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">📚 Bibliothèque Lisible</h1>
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">📚 Bibliothèque Lisible</h1>
 
-        <select
-          className="border rounded-md p-2 text-sm"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-        >
-          <option value="supabase">Depuis Supabase</option>
-          <option value="firestore">Depuis Firestore</option>
-        </select>
-      </div>
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {texts.map((text) => (
-          <Card
-            key={text.id}
-            className="overflow-hidden hover:shadow-lg transition-all border"
-          >
-            {text.image_url || text.imageUrl ? (
-              <div className="relative w-full h-48">
-                <Image
-                  src={text.image_url || text.imageUrl}
-                  alt={text.title}
-                  fill
-                  className="object-cover"
+      {loading ? (
+        <p>Chargement en cours...</p>
+      ) : posts.length === 0 ? (
+        <p>Aucun texte publié pour le moment.</p>
+      ) : (
+        <ul className="space-y-6">
+          {posts.map((post) => (
+            <li key={post.id} className="border p-4 rounded shadow-sm bg-white">
+              <h2 className="text-xl font-semibold">{post.titre}</h2>
+              <p className="text-sm text-gray-600 mb-2">par {post.auteur}</p>
+              <p className="whitespace-pre-line">{post.contenu}</p>
+              {post.image_url && (
+                <img
+                  src={post.image_url}
+                  alt={`Illustration pour ${post.titre}`}
+                  className="mt-4 max-h-64 object-cover rounded"
                 />
-              </div>
-            ) : (
-              <div className="bg-gray-100 h-48 flex items-center justify-center text-gray-400 text-sm">
-                Pas d’image
-              </div>
-            )}
-
-            <div className="p-4 space-y-2">
-              <h2 className="font-semibold text-lg line-clamp-1">{text.title}</h2>
-              <p className="text-sm text-gray-500 italic">
-                {text.author_name || text.authorName || "Auteur anonyme"}
-              </p>
-              <p className="text-gray-700 text-sm line-clamp-3">{text.excerpt}</p>
-
-              <Button
-                variant="outline"
-                className="mt-2 w-full"
-                onClick={() => {
-                  window.location.href = `/read/${text.id}`;
-                }}
-              >
-                Lire plus →
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </main>
+              )}
+              <p className="text-xs text-gray-500 mt-2">{post.date}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
