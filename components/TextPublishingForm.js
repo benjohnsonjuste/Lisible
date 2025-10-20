@@ -7,6 +7,7 @@ export default function TextPublishingForm() {
     titre: "",
     contenu: "",
     image: null,
+    date: "", // ← nouveau champ
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,7 +32,6 @@ export default function TextPublishingForm() {
         const reader = new FileReader();
         reader.onloadend = async () => {
           imageURL = reader.result;
-
           await sendToSheets(imageURL);
         };
         reader.readAsDataURL(formData.image);
@@ -57,11 +57,12 @@ export default function TextPublishingForm() {
           titre: formData.titre,
           contenu: formData.contenu,
           image_url: imageURL,
+          date: formData.date,
         }),
       });
 
       setMessage("Texte publié avec succès.");
-      setFormData({ auteur: "", titre: "", contenu: "", image: null });
+      setFormData({ auteur: "", titre: "", contenu: "", image: null, date: "" });
     } catch (err) {
       console.error("Erreur Sheets:", err);
       setMessage("Échec de la publication.");
@@ -99,6 +100,14 @@ export default function TextPublishingForm() {
         rows="6"
         className="border p-2 rounded"
         value={formData.contenu}
+        onChange={handleChange}
+        required
+      />
+      <input
+        type="date"
+        name="date"
+        className="border p-2 rounded"
+        value={formData.date}
         onChange={handleChange}
         required
       />
