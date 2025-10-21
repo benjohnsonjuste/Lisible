@@ -1,66 +1,65 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { db } from "@/lib/firebaseConfig";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import Image from "next/image";
 
 export default function LibraryPage() {
-  const [posts, setPosts] = useState([]);
+  const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const res = await fetch("https://gsx2json.com/api?id=1XhozRiz4wXLlPUDQ44aGE5Nt4ITD5jNCs63uPhVHB0w");
-        const json = await res.json();
-        const rows = json.rows || [];
-
-        const formatted = rows
-          .filter((row) => row.titre && row.contenu)
-          .map((row, index) => ({
-            id: index,
-            auteur: row.auteur || "Anonyme",
-            titre: row.titre,
-            contenu: row.contenu,
-            image_url: row.image_url || null,
-            date: row.date || row.timestamp || "Date inconnue",
-          }));
-
-        setPosts(formatted);
-      } catch (err) {
-        console.error("Erreur de chargement :", err);
-      } finally {
-        setLoading(false);
-      }
+    const loadTexts = async () => {
+      const q = query(collection(db, "texts"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setTexts(data);
+      setLoading(false);
     };
 
-    fetchPosts();
+    loadTexts();
   }, []);
 
+  if (loading)
+    return <p className="text-center mt-10">Chargement des textes...</p>;
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <main className="max-w-5xl mx-auto py-10 px-4">
       <h1 className="text-3xl font-bold mb-6">📚 Bibliothèque Lisible</h1>
 
-      {loading ? (
-        <p>Chargement en cours...</p>
-      ) : posts.length === 0 ? (
-        <p>Aucun texte publié pour le moment.</p>
-      ) : (
-        <ul className="space-y-6">
-          {posts.map((post) => (
-            <li key={post.id} className="border p-4 rounded shadow-sm bg-white">
-              <h2 className="text-xl font-semibold">{post.titre}</h2>
-              <p className="text-sm text-gray-600 mb-2">par {post.auteur}</p>
-              <p className="whitespace-pre-line">{post.contenu}</p>
-              {post.image_url && (
-                <img
-                  src={post.image_url}
-                  alt={`Illustration pour ${post.titre}`}
-                  className="mt-4 max-h-64 object-cover rounded"
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {texts.map((text) => (
+          <div
+            key={text.id}
+            className="border rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden"
+          >
+            {text.imageUrl && (
+              <div className="relative w-full h-48">
+                <Image
+                  src={text.imageUrl}
+                  alt={text.title}
+                  fill
+                  className="object-cover"
                 />
-              )}
-              <p className="text-xs text-gray-500 mt-2">{post.date}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+              </div>
+            )}
+
+            <div className="p-4">
+              <h2 className="text-lg font-semibold mb-1">{text.title}</h2>
+              <p className="text-gray-600 text-sm line-clamp-3 mb-2">
+                {text.excerpt}
+              </p>
+              <button
+                className="text-blue-600 underline text-sm"
+                onClick={() => alert(text.content)}
+              >
+                Lire plus
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </main>
   );
 }
