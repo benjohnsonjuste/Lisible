@@ -1,71 +1,80 @@
 "use client";
-import { useState } from "react";
+
+import React, { useState } from "react";
+import { db, storage } from "@/lib/firebaseConfig";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/Button";
+import { toast } from "sonner";
+import { sendToSheets } from "@/lib/sendToSheets";
 
 export default function TextPublishingForm() {
-  const [formData, setFormData] = useState({
-    auteur: "",
-    titre: "",
-    contenu: "",
-    image: null,
-    date: "", // ← nouveau champ
-  });
+  const { user } = useAuth();
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState("Roman");
+  const [excerpt, setExcerpt] = useState("");
+  const [content, setContent] = useState("");
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files ? files[0] : value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
+  const handlePublish = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage("");
 
-    try {
-      let imageURL = "";
-
-      if (formData.image) {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          imageURL = reader.result;
-          await sendToSheets(imageURL);
-        };
-        reader.readAsDataURL(formData.image);
-      } else {
-        await sendToSheets("");
-      }
-    } catch (err) {
-      console.error("Erreur de publication :", err);
-      setMessage("Échec de la publication.");
-      setLoading(false);
+    if (!user) {
+      toast.error("Vous devez être connecté pour publier un texte.");
+      return;
     }
-  };
 
-  const sendToSheets = async (imageURL) => {
+    if (!title || !content) {
+      toast.error("Veuillez remplir le titre et le contenu.");
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      const webhookURL = "https://script.google.com/macros/s/AKfycbyAyvh4_2ntzSZftpa77BS6Mt6YrHfkatD3X_TqfktmJakpGUwEHItLLmPN1x4-1or0/exec";
+      let imageUrl = "";
 
-      await fetch(webhookURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          auteur: formData.auteur,
-          titre: formData.titre,
-          contenu: formData.contenu,
-          image_url: imageURL,
-          date: formData.date,
-        }),
+      // ✅ Étape 1 — upload image vers Firebase Storage
+      if (image) {
+        const storageRef = ref(storage, `texts/${Date.now()}_${image.name}`);
+        const snapshot = await uploadBytes(storageRef, image);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      // ✅ Étape 2 — sauvegarde du texte dans Firestore
+      const docRef = await addDoc(collection(db, "texts"), {
+        title,
+        type,
+        excerpt,
+        content,
+        imageUrl,
+        authorId: user.uid,
+        authorName: user.displayName || "Auteur anonyme",
+        createdAt: serverTimestamp(),
+        views: 0,
+        status: "Publié",
       });
 
-      setMessage("Texte publié avec succès.");
-      setFormData({ auteur: "", titre: "", contenu: "", image: null, date: "" });
-    } catch (err) {
-      console.error("Erreur Sheets:", err);
-      setMessage("Échec de la publication.");
+      // ✅ Étape 3 — enregistrement dans Google Sheets (métadonnées)
+      await sendToSheets({
+        title,
+        type,
+        author: user.displayName || "Auteur anonyme",
+        date: new Date().toISOString(),
+        imageUrl,
+        excerpt,
+      });
+
+      toast.success("🎉 Texte publié avec succès !");
+      setTitle("");
+      setExcerpt("");
+      setContent("");
+      setImage(null);
+    } catch (error) {
+      console.error("Erreur lors de la publication :", error);
+      toast.error("❌ Échec de la publication. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
@@ -73,59 +82,78 @@ export default function TextPublishingForm() {
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 bg-white p-4 rounded-lg shadow-md max-w-xl mx-auto"
+      onSubmit={handlePublish}
+      className="max-w-2xl mx-auto bg-white border rounded-lg shadow-sm p-6 space-y-4"
     >
-      <input
-        type="text"
-        name="auteur"
-        placeholder="Nom de l'auteur"
-        className="border p-2 rounded"
-        value={formData.auteur}
-        onChange={handleChange}
-        required
-      />
-      <input
-        type="text"
-        name="titre"
-        placeholder="Titre du texte"
-        className="border p-2 rounded"
-        value={formData.titre}
-        onChange={handleChange}
-        required
-      />
-      <textarea
-        name="contenu"
-        placeholder="Votre texte ici..."
-        rows="6"
-        className="border p-2 rounded"
-        value={formData.contenu}
-        onChange={handleChange}
-        required
-      />
-      <input
-        type="date"
-        name="date"
-        className="border p-2 rounded"
-        value={formData.date}
-        onChange={handleChange}
-        required
-      />
-      <input
-        type="file"
-        name="image"
-        accept="image/*"
-        onChange={handleChange}
-      />
-      <button
+      <h1 className="text-2xl font-bold mb-2 text-center">✍️ Publier un texte</h1>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Titre du texte</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          className="w-full border rounded-md p-2"
+          placeholder="Titre de ton texte"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Type de texte</label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full border rounded-md p-2"
+        >
+          <option>Roman</option>
+          <option>Nouvelle</option>
+          <option>Poésie</option>
+          <option>Essai</option>
+          <option>Article</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Extrait (facultatif)</label>
+        <textarea
+          value={excerpt}
+          onChange={(e) => setExcerpt(e.target.value)}
+          rows="2"
+          className="w-full border rounded-md p-2"
+          placeholder="Résumé ou introduction..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Image d’illustration</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImage(e.target.files[0])}
+          className="w-full border rounded-md p-2"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Contenu principal</label>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows="10"
+          required
+          className="w-full border rounded-md p-2"
+          placeholder="Écris ou colle ton texte ici..."
+        />
+      </div>
+
+      <Button
         type="submit"
         disabled={loading}
-        className="bg-green-600 text-white rounded p-2 hover:bg-green-700"
+        className="w-full bg-blue-600 text-white rounded-md py-2 hover:bg-blue-700 transition disabled:opacity-50"
       >
-        {loading ? "Publication en cours..." : "Publier"}
-      </button>
-
-      {message && <p className="text-center mt-2">{message}</p>}
+        {loading ? "Publication en cours..." : "Publier le texte"}
+      </Button>
     </form>
   );
 }
