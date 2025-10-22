@@ -1,101 +1,74 @@
 "use client";
-
 import { useState } from "react";
 import { db, storage } from "@/lib/firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { sendToSheets } from "@/lib/sendToSheets";
 import { toast } from "sonner";
 
 export default function TextPublishingForm() {
   const [title, setTitle] = useState("");
-  const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handlePublish = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       let imageUrl = "";
       if (image) {
-        const storageRef = ref(storage, `images/${Date.now()}_${image.name}`);
-        await uploadBytes(storageRef, image);
-        imageUrl = await getDownloadURL(storageRef);
+        const imageRef = ref(storage, `texts/${Date.now()}-${image.name}`);
+        const snapshot = await uploadBytes(imageRef, image);
+        imageUrl = await getDownloadURL(snapshot.ref);
       }
 
-      // 1️⃣ Enregistrer dans Firestore
       await addDoc(collection(db, "texts"), {
         title,
-        excerpt,
         content,
         imageUrl,
         createdAt: serverTimestamp(),
       });
 
-      // 2️⃣ Enregistrer dans Google Sheets
-      await sendToSheets({
-        title,
-        authorName: "Auteur inconnu",
-        excerpt,
-        imageUrl,
-      });
-
-      toast.success("✅ Texte publié avec succès !");
+      toast.success("Texte publié avec succès !");
       setTitle("");
-      setExcerpt("");
       setContent("");
       setImage(null);
     } catch (error) {
       console.error(error);
-      toast.error("❌ Échec de la publication");
+      toast.error("Échec de la publication, veuillez réessayer.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handlePublish} className="space-y-4 max-w-xl mx-auto mt-10">
-      <h1 className="text-2xl font-bold">Publier un texte</h1>
-
+    <form onSubmit={handleSubmit} className="p-4 max-w-lg mx-auto bg-white rounded-xl shadow space-y-4">
+      <h2 className="text-xl font-bold">Publier un texte</h2>
       <input
         type="text"
         placeholder="Titre"
+        className="w-full p-2 border rounded"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="w-full border p-2 rounded-md"
         required
       />
-
       <textarea
-        placeholder="Extrait"
-        value={excerpt}
-        onChange={(e) => setExcerpt(e.target.value)}
-        rows="3"
-        className="w-full border p-2 rounded-md"
-      />
-
-      <textarea
-        placeholder="Contenu complet"
+        placeholder="Contenu du texte"
+        className="w-full p-2 border rounded h-40"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        rows="8"
-        className="w-full border p-2 rounded-md"
         required
       />
-
       <input
         type="file"
         accept="image/*"
         onChange={(e) => setImage(e.target.files[0])}
       />
-
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-600 text-white px-4 py-2 rounded-md"
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
       >
         {loading ? "Publication..." : "Publier"}
       </button>
