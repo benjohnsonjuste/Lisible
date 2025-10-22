@@ -2,9 +2,9 @@
 import { google } from "googleapis";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).send("Méthode non autorisée");
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { title, authorName, excerpt, imageUrl } = req.body;
+  const { title, content, author } = req.body;
 
   try {
     const auth = new google.auth.GoogleAuth({
@@ -16,21 +16,20 @@ export default async function handler(req, res) {
     });
 
     const sheets = google.sheets({ version: "v4", auth });
-
-    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+    const sheetId = process.env.GOOGLE_SHEET_ID;
 
     await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: "Feuille1!A:D",
+      spreadsheetId: sheetId,
+      range: "A1",
       valueInputOption: "RAW",
       requestBody: {
-        values: [[title, authorName, excerpt, imageUrl || ""]],
+        values: [[title, content, author, new Date().toLocaleString()]],
       },
     });
 
-    res.status(200).json({ message: "Succès" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erreur API Sheets", error });
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Erreur Google Sheets:", err);
+    res.status(500).json({ error: err.message });
   }
 }
