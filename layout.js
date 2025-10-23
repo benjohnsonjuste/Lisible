@@ -1,12 +1,8 @@
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
-import "./globals.css"; // optionnel, si tu utilises un fichier global CSS
+import "@/styles/globals.css"; // ✅ import global avec alias @
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <head>
