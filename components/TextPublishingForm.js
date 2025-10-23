@@ -1,9 +1,6 @@
 "use client";
+
 import { useState } from "react";
-import { db, storage } from "@/lib/firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { toast } from "sonner";
 
 export default function TextPublishingForm() {
   const [title, setTitle] = useState("");
@@ -15,61 +12,47 @@ export default function TextPublishingForm() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      let imageUrl = "";
-      if (image) {
-        const imageRef = ref(storage, `texts/${Date.now()}-${image.name}`);
-        const snapshot = await uploadBytes(imageRef, image);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      }
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("content", content);
+    if (image) formData.append("image", image);
 
-      await addDoc(collection(db, "texts"), {
-        title,
-        content,
-        imageUrl,
-        createdAt: serverTimestamp(),
-      });
+    const res = await fetch("/api/publish-text", {
+      method: "POST",
+      body: formData,
+    });
 
-      toast.success("Texte publié avec succès !");
+    if (res.ok) {
+      alert("Texte publié !");
       setTitle("");
       setContent("");
       setImage(null);
-    } catch (error) {
-      console.error(error);
-      toast.error("Échec de la publication, veuillez réessayer.");
-    } finally {
-      setLoading(false);
+    } else {
+      alert("Erreur lors de la publication");
     }
+
+    setLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 max-w-lg mx-auto bg-white rounded-xl shadow space-y-4">
-      <h2 className="text-xl font-bold">Publier un texte</h2>
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-xl max-w-lg mx-auto">
       <input
         type="text"
-        placeholder="Titre"
-        className="w-full p-2 border rounded"
+        placeholder="Titre du texte"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        className="w-full p-2 border rounded"
         required
       />
       <textarea
-        placeholder="Contenu du texte"
-        className="w-full p-2 border rounded h-40"
+        placeholder="Écris ton texte ici..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
+        className="w-full p-2 border rounded min-h-[150px]"
         required
       />
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImage(e.target.files[0])}
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
+      <input type="file" accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+      <button disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded w-full">
         {loading ? "Publication..." : "Publier"}
       </button>
     </form>
