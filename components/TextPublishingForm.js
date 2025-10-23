@@ -1,18 +1,17 @@
-// components/TextPublishingForm.jsx
 "use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
-export default function TextPublishingForm() {
+export default function TextPublishingForm({ textData }) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const { user } = useAuth();
+  const [title, setTitle] = useState(textData?.title || "");
+  const [content, setContent] = useState(textData?.content || "");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir fichier image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -24,49 +23,41 @@ export default function TextPublishingForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !content) {
-      toast.error("Le titre et le contenu sont requis.");
+      toast.error("Titre et contenu requis");
       return;
     }
-
     setLoading(true);
     try {
-      let imageBase64 = null;
-      let imageName = null;
-
+      let imageBase64 = textData?.image || null;
+      let imageName = textData?.imageName || null;
       if (imageFile) {
         imageBase64 = await toDataUrl(imageFile);
         imageName = imageFile.name;
       }
 
       const payload = {
+        id: textData?.id,
         title,
         content,
-        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
-        authorEmail: "",
+        authorName: user?.displayName || user?.email || "Auteur inconnu",
+        authorEmail: user?.email || "",
         imageBase64,
         imageName,
       };
 
       const res = await fetch("/api/publish-github", {
-        method: "POST",
+        method: textData?.id ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       const json = await res.json();
-
-      if (!res.ok) {
-        console.error("Erreur publication GitHub:", json);
-        throw new Error(json.error || "Échec publication");
-      }
+      if (!res.ok) throw new Error(json.error || "Publication échouée");
 
       toast.success("✅ Publication réussie !");
-      setTitle("");
-      setContent("");
-      setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
-      console.error("Erreur côté client:", err);
+      console.error("publish error", err);
       toast.error("❌ Erreur de publication");
     } finally {
       setLoading(false);
@@ -74,56 +65,27 @@ export default function TextPublishingForm() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
-    >
-      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Titre</label>
-        <input
-          type="text"
-          name="title"
-          placeholder="Titre du texte"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Contenu</label>
-        <textarea
-          name="content"
-          placeholder="Écris ton texte ici..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={8}
-          className="w-full p-2 border rounded min-h-[150px]"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Image d'illustration (optionnel)
-        </label>
-        <input
-          type="file"
-          name="image"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0])}
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-      >
-        {loading ? "Publication en cours..." : "Publier sur GitHub"}
+    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6 bg-white rounded shadow space-y-4">
+      <h2 className="text-xl font-semibold">{textData ? "Modifier le texte" : "Publier un texte"}</h2>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Titre"
+        className="w-full p-2 border rounded"
+      />
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Contenu"
+        rows={8}
+        className="w-full p-2 border rounded"
+      />
+      <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
+      {textData?.image && !imageFile && (
+        <img src={textData.image} alt="Image actuelle" className="h-40 mt-2 object-cover rounded" />
+      )}
+      <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded">
+        {loading ? "Publication..." : textData ? "Mettre à jour" : "Publier"}
       </button>
     </form>
   );
