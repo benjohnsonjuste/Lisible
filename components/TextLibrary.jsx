@@ -15,9 +15,9 @@ export default function TextLibrary() {
     const fetchTexts = async () => {
       try {
         const res = await fetch("/api/github-texts");
+        if (!res.ok) throw new Error("Erreur récupération textes");
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || "Erreur récupération textes");
-        setTexts(json.data);
+        setTexts(json.data || []);
       } catch (err) {
         console.error(err);
         toast.error("Impossible de charger la bibliothèque");
@@ -46,6 +46,7 @@ export default function TextLibrary() {
               className="h-48 w-full object-cover rounded-xl mb-4"
             />
           )}
+
           <h2 className="text-xl font-semibold mb-1">{text.title}</h2>
           <p className="text-sm text-gray-500 mb-2">
             {text.authorName} — {text.genre}
@@ -54,15 +55,14 @@ export default function TextLibrary() {
 
           {/* Compteurs */}
           <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
-            <span>👁️ {text.views || 0}</span>
-            <span>💬 {text.comments || 0}</span>
+            <span>👁️ {text.views ?? 0}</span>
+            <span>💬 {text.comments ?? 0}</span>
           </div>
 
-          {/* LikeButton */}
+          {/* LikeButton et commentaire */}
           <div className="flex justify-between items-center mb-2">
-            <LikeButton textId={text.id} initialCount={text.likes} />
+            <LikeButton textId={text.id} initialCount={text.likes ?? 0} />
 
-            {/* Commentaire ou bouton connexion */}
             {session?.user ? (
               <Link
                 href={`/texts/${text.id}`}
