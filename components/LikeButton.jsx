@@ -5,43 +5,32 @@ import { useState, useEffect } from "react";
 // Props : textId (identifiant du texte), initialCount (nombre initial de likes)
 export default function LikeButton({ textId, initialCount = 0 }) {
   const [likes, setLikes] = useState(initialCount);
-  const [userVote, setUserVote] = useState(null); // 'like', 'dislike', ou null
+  const [hasLiked, setHasLiked] = useState(false);
 
   useEffect(() => {
     // Récupérer le vote précédent depuis localStorage
     const votes = JSON.parse(localStorage.getItem("likes") || "{}");
-    if (votes[textId]) setUserVote(votes[textId]);
+    if (votes[textId] === true) setHasLiked(true);
   }, [textId]);
 
-  const handleVote = async (voteType) => {
+  const handleLike = async () => {
     const votes = JSON.parse(localStorage.getItem("likes") || "{}");
-    let newVote = voteType;
+    if (hasLiked) return; // ne permet qu’un like par utilisateur
 
-    if (userVote === voteType) {
-      // Si l'utilisateur reclique sur le même vote => annuler
-      newVote = null;
-    }
-
-    // Calcul du nouveau compteur local
-    let newLikes = likes;
-    if (userVote === "like") newLikes -= 1;
-    if (userVote === "dislike") newLikes += 1; // optionnel si on gère dislikes
-    if (newVote === "like") newLikes += 1;
-    if (newVote === "dislike") newLikes -= 1; // optionnel si on gère dislikes
-
+    const newLikes = likes + 1;
     setLikes(newLikes);
-    setUserVote(newVote);
+    setHasLiked(true);
 
     // Sauvegarde local
-    votes[textId] = newVote;
+    votes[textId] = true;
     localStorage.setItem("likes", JSON.stringify(votes));
 
-    // Mise à jour GitHub (index.json) si tu veux
+    // Mise à jour GitHub
     try {
       await fetch("/api/update-like", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ textId, vote: newVote }),
+        body: JSON.stringify({ textId, likes: newLikes }),
       });
     } catch (err) {
       console.error("Erreur mise à jour like GitHub :", err);
@@ -51,20 +40,13 @@ export default function LikeButton({ textId, initialCount = 0 }) {
   return (
     <div className="flex items-center gap-2">
       <button
-        onClick={() => handleVote("like")}
+        onClick={handleLike}
         className={`px-2 py-1 rounded ${
-          userVote === "like" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+          hasLiked ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
         }`}
+        title={hasLiked ? "Vous avez déjà liké" : "Cliquez pour liker"}
       >
         👍
-      </button>
-      <button
-        onClick={() => handleVote("dislike")}
-        className={`px-2 py-1 rounded ${
-          userVote === "dislike" ? "bg-red-600 text-white" : "bg-gray-200 text-gray-700"
-        }`}
-      >
-        👎
       </button>
       <span className="ml-2 text-sm">{likes}</span>
     </div>
