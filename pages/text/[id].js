@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import LikeButton from "@/components/LikeButton";
 import { toast } from "sonner";
+import AdScript from "@/components/AdScript"; // <-- import du composant pub
 
 export default function ReadTextPage() {
   const { id } = useParams();
@@ -55,6 +56,9 @@ export default function ReadTextPage() {
       </div>
     );
 
+  // Séparer le contenu en paragraphes pour insérer la pub
+  const paragraphs = text.content.split("\n\n");
+
   return (
     <main className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow mt-10">
       {/* Bouton retour */}
@@ -79,16 +83,27 @@ export default function ReadTextPage() {
       {/* Titre */}
       <h1 className="text-3xl font-bold mb-2">{text.title}</h1>
 
+      {/* Pub sous le titre */}
+      <AdScript />
+
       {/* Auteur et date */}
       <div className="text-sm text-gray-500 mb-6 flex justify-between">
         <span>✍️ {text.author || "Auteur inconnu"}</span>
         <span>📅 {new Date(text.date).toLocaleDateString("fr-FR")}</span>
       </div>
 
-      {/* Contenu complet */}
+      {/* Contenu complet avec pub après le 2e paragraphe */}
       <article className="prose prose-gray max-w-none text-gray-800 leading-relaxed whitespace-pre-wrap">
-        {text.content}
+        {paragraphs.map((p, i) => (
+          <div key={i}>
+            <p>{p}</p>
+            {i === 1 && <AdScript />} {/* Pub après le 2e paragraphe */}
+          </div>
+        ))}
       </article>
+
+      {/* Pub à la fin */}
+      <AdScript />
 
       {/* Section Like */}
       <div className="mt-6 flex justify-end">
