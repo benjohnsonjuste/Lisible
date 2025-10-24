@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/router";
 
 export default function NotificationsPage() {
   const { data: session } = useSession();
@@ -27,7 +27,7 @@ export default function NotificationsPage() {
     return () => unsubscribe();
   }, [session?.user?.id]);
 
-  const markAsRead = async (notifId: string, link?: string) => {
+  const markAsRead = async (notifId, link) => {
     if (!session?.user?.id) return;
     const notifRef = doc(db, "users", session.user.id, "notifications", notifId);
     await updateDoc(notifRef, { read: true });
