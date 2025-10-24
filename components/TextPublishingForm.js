@@ -1,3 +1,4 @@
+// components/TextPublishingForm.jsx
 "use client";
 
 import { useState } from "react";
@@ -8,11 +9,10 @@ export default function TextPublishingForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [genre, setGenre] = useState("Poésie"); // ✅ Genre par défaut
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir un fichier image en Base64
+  // Convertir fichier image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -23,7 +23,6 @@ export default function TextPublishingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!title || !content) {
       toast.error("Le titre et le contenu sont requis.");
       return;
@@ -42,8 +41,7 @@ export default function TextPublishingForm() {
       const payload = {
         title,
         content,
-        genre, // ✅ Envoi du genre choisi
-        authorName: "Auteur inconnu", // Peut être remplacé par user.displayName si tu utilises Auth
+        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
         authorEmail: "",
         imageBase64,
         imageName,
@@ -65,7 +63,6 @@ export default function TextPublishingForm() {
       toast.success("✅ Publication réussie !");
       setTitle("");
       setContent("");
-      setGenre("Poésie");
       setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
@@ -83,7 +80,6 @@ export default function TextPublishingForm() {
     >
       <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
-      {/* Champ Titre */}
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
         <input
@@ -97,25 +93,6 @@ export default function TextPublishingForm() {
         />
       </div>
 
-      {/* Sélecteur de Genre */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Genre</label>
-        <select
-          name="genre"
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        >
-          <option value="Poésie">Poésie</option>
-          <option value="Nouvelle">Nouvelle</option>
-          <option value="Roman">Roman</option>
-          <option value="Article">Article</option>
-          <option value="Essai">Essai</option>
-        </select>
-      </div>
-
-      {/* Zone de texte */}
       <div>
         <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
@@ -129,7 +106,6 @@ export default function TextPublishingForm() {
         />
       </div>
 
-      {/* Image d’illustration */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Image d'illustration (optionnel)
@@ -142,7 +118,6 @@ export default function TextPublishingForm() {
         />
       </div>
 
-      {/* Bouton de publication */}
       <button
         type="submit"
         disabled={loading}
