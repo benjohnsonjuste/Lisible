@@ -1,34 +1,32 @@
-import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
+// === Mise à jour du compteur de likes dans index.json ===
+try {
+  const indexRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data/texts/index.json`, {
+    headers: { Authorization: `token ${GITHUB_TOKEN}` },
+  });
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (indexRes.ok) {
+    const indexJson = await indexRes.json();
+    const decoded = Buffer.from(indexJson.content, "base64").toString();
+    const indexData = JSON.parse(decoded);
+    const idx = indexData.findIndex((t) => t.id === textId);
+    if (idx !== -1) {
+      indexData[idx].likes = textData.likes.length;
+      const updated = Buffer.from(JSON.stringify(indexData, null, 2)).toString("base64");
 
-  const { id } = req.query;
-  try {
-    const filePath = `data/texts/${id}.md`;
-    const file = await getFileContent({ path: filePath, owner: process.env.GITHUB_OWNER, repo: process.env.GITHUB_REPO, branch: process.env.GITHUB_BRANCH, token: process.env.GITHUB_TOKEN });
-
-    let content = Buffer.from(file.content, "base64").toString("utf8");
-    const likesMatch = content.match(/likes:\s*(\d+)/);
-    const likes = likesMatch ? Number(likesMatch[1]) + 1 : 1;
-
-    // replace or add likes
-    if (likesMatch) {
-      content = content.replace(/likes:\s*\d+/, `likes: ${likes}`);
-    } else {
-      content = content.replace(/^---\s*([\s\S]*?)---/, `---$1\nlikes: ${likes}\n---`);
+      await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/data/texts/index.json`, {
+        method: "PUT",
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `❤️ Mise à jour du compteur de likes pour ${textId}`,
+          content: updated,
+          sha: indexJson.sha,
+        }),
+      });
     }
-
-    await createOrUpdateFile({
-      path: filePath,
-      content,
-      commitMessage: `Like ${id}`,
-      branch: process.env.GITHUB_BRANCH || "main",
-    });
-
-    res.status(200).json({ success: true, likes });
-  } catch (err) {
-    console.error("like error", err);
-    res.status(500).json({ error: err.message });
   }
-      }
+} catch (err) {
+  console.warn("Erreur mise à jour index.json (likes):", err);
+}
