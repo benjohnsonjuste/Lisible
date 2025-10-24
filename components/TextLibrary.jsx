@@ -1,75 +1,91 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import LikeButton from "@/components/LikeButton";
-import CommentSection from "@/components/CommentSection"; // gestion des commentaires
-import { useAuth } from "@/context/AuthContext";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function TextLibrary() {
-  const { user } = useAuth();
+  const { data: session } = useSession();
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchTexts() {
+    const fetchTexts = async () => {
       try {
-        const res = await fetch("/api/github-texts"); // récupère index.json
+        const res = await fetch("/api/github-texts");
         const json = await res.json();
-        if (res.ok && json.success) {
-          setTexts(json.data);
-        } else {
-          console.error("Erreur fetch textes", json);
-        }
+        if (!res.ok) throw new Error(json.error || "Erreur récupération textes");
+        setTexts(json.data);
       } catch (err) {
         console.error(err);
+        toast.error("Impossible de charger la bibliothèque");
       } finally {
         setLoading(false);
       }
-    }
+    };
+
     fetchTexts();
   }, []);
 
-  if (loading) return <p className="text-center p-4">Chargement des textes...</p>;
+  if (loading)
+    return <p className="text-center mt-10 text-gray-500">Chargement des textes...</p>;
+
+  if (!texts.length)
+    return <p className="text-center mt-10 text-gray-500">Aucun texte disponible.</p>;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
+    <div className="max-w-5xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
       {texts.map((text) => (
-        <div key={text.id} className="p-4 bg-white rounded shadow space-y-2">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">{text.title}</h3>
-            <span className="text-sm text-gray-500">{text.genre}</span>
-          </div>
-
+        <div key={text.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
           {text.image && (
-            <img src={text.image} alt={text.title} className="rounded object-cover max-h-60 w-full" />
+            <img
+              src={text.image}
+              alt={text.title}
+              className="h-48 w-full object-cover rounded-xl mb-4"
+            />
           )}
+          <h2 className="text-xl font-semibold mb-1">{text.title}</h2>
+          <p className="text-sm text-gray-500 mb-2">
+            {text.authorName} — {text.genre}
+          </p>
+          <p className="text-gray-700 mb-4 line-clamp-4">{text.content}</p>
 
-          <p className="text-gray-800">{text.excerpt}</p>
-
-          <div className="flex justify-between items-center pt-2">
-            <span className="text-sm text-gray-500">{text.authorName}</span>
-
-            {/* Likes disponibles pour tous */}
-            <LikeButton textId={text.id} initialCount={text.likes} />
+          {/* Compteurs */}
+          <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+            <span>👁️ {text.views || 0}</span>
+            <span>💬 {text.comments || 0}</span>
           </div>
 
-          {/* Commentaires */}
-          {user ? (
-            <CommentSection textId={text.id} />
-          ) : (
-            <div className="mt-2">
-              <a
-                href={`/login?redirect=/bibliotheque#${text.id}`}
+          {/* LikeButton */}
+          <div className="flex justify-between items-center mb-2">
+            <LikeButton textId={text.id} initialCount={text.likes} />
+
+            {/* Commentaire ou bouton connexion */}
+            {session?.user ? (
+              <Link
+                href={`/texts/${text.id}`}
                 className="text-blue-600 hover:underline text-sm"
               >
-                Connectez-vous pour commenter
-              </a>
-            </div>
-          )}
-
-          <div className="text-sm text-gray-500 mt-1">
-            {text.comments} commentaire{text.comments > 1 ? "s" : ""}
+                💬 Commenter
+              </Link>
+            ) : (
+              <Link
+                href={`/login?callback=/texts/${text.id}`}
+                className="text-blue-600 hover:underline text-sm"
+              >
+                💬 Connexion pour commenter
+              </Link>
+            )}
           </div>
+
+          <Link
+            href={`/texts/${text.id}`}
+            className="mt-auto text-right text-blue-600 hover:underline text-sm"
+          >
+            Lire la suite →
+          </Link>
         </div>
       ))}
     </div>
