@@ -1,88 +1,31 @@
 // pages/api/github-texts.js
-export const runtime = "nodejs";
+import { NextApiRequest, NextApiResponse } from "next";
 
-import { Buffer } from "buffer";
-import { listFilesInRepoDir, getFileContent } from "../../lib/githubClient";
+const GITHUB_REPO = process.env.GITHUB_REPO; // ex: "username/repo"
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 export default async function handler(req, res) {
   try {
-    const owner = process.env.GITHUB_OWNER;
-    const repo = process.env.GITHUB_REPO;
-    const branch = process.env.GITHUB_BRANCH || "main";
-    const token = process.env.GITHUB_TOKEN;
+    const indexPath = "data/texts/index.json";
 
-    if (!owner || !repo || !token) {
-      return res.status(500).json({ error: "GitHub configuration missing in environment variables." });
-    }
-
-    // Liste les fichiers du dossier data/texts/
-    const listing = await listFilesInRepoDir({
-      owner,
-      repo,
-      path: "data/texts",
-      branch,
-      token,
+    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${indexPath}`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github.v3.raw",
+      },
     });
 
-    if (!Array.isArray(listing)) return res.status(200).json({ success: true, data: [] });
-
-    const results = [];
-
-    for (const file of listing) {
-      if (file.type !== "file") continue;
-
-      try {
-        const fileObj = await getFileContent({
-          owner,
-          repo,
-          path: file.path,
-          branch,
-          token,
-        });
-
-        const contentEncoded = fileObj?.data?.content || fileObj?.content;
-        if (!contentEncoded) continue;
-
-        const decoded = Buffer.from(contentEncoded, "base64").toString("utf8");
-
-        // --- Extraction du frontmatter ---
-        const fmMatch = decoded.match(/^---\s*([\s\S]*?)---\s*([\s\S]*)$/);
-        let meta = {};
-        let body = decoded;
-
-        if (fmMatch) {
-          const rawFm = fmMatch[1];
-          body = fmMatch[2];
-          rawFm.split(/\r?\n/).forEach((line) => {
-            const idx = line.indexOf(":");
-            if (idx > -1) {
-              const key = line.slice(0, idx).trim();
-              const val = line.slice(idx + 1).trim().replace(/^"|"$/g, "");
-              meta[key] = val;
-            }
-          });
-        }
-
-        results.push({
-          id: meta.id || file.name.replace(/\.[^/.]+$/, ""),
-          title: meta.title || file.name,
-          author: meta.author || "",
-          image: meta.image || "",
-          date: meta.date || file.sha,
-          excerpt: body.trim().slice(0, 300),
-          content: body.trim(),
-        });
-      } catch (err) {
-        console.warn("Erreur lors du fetch du fichier:", file.path, err.message);
-      }
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`GitHub API error: ${text}`);
     }
 
-    // Tri par date (décroissant)
-    results.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const indexData = await response.json();
 
-    return res.status(200).json({ success: true, data: results });
+    // indexData doit être un tableau d'objets texte
+    res.status(200).json({ data: indexData });
   } catch (err) {
-    console.error("Erreur dans /api/github-texts:", err);
-    return res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Impossible de récupérer les textes depuis GitHub" });
   }
 }
