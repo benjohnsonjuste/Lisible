@@ -32,7 +32,7 @@ export default function TextPublishingForm({ textData }) {
 
     setLoading(true);
     try {
-      let imageBase64 = textData?.image || null;
+      let imageBase64 = textData?.imageBase64 || null;
       let imageName = textData?.imageName || null;
 
       if (imageFile) {
@@ -41,7 +41,7 @@ export default function TextPublishingForm({ textData }) {
       }
 
       const payload = {
-        id: textData?.id,
+        id: textData?.id || Date.now().toString(),
         title,
         content,
         genre,
@@ -49,6 +49,9 @@ export default function TextPublishingForm({ textData }) {
         authorEmail: user?.email || "",
         imageBase64,
         imageName,
+        likes: textData?.likes || 0,
+        comments: textData?.comments || 0,
+        date: new Date().toISOString(),
       };
 
       const res = await fetch("/api/publish-github", {
@@ -79,7 +82,6 @@ export default function TextPublishingForm({ textData }) {
         {textData ? "Modifier le texte" : "Publier un texte"}
       </h2>
 
-      {/* Champ titre */}
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -87,7 +89,6 @@ export default function TextPublishingForm({ textData }) {
         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
       />
 
-      {/* Sélecteur de genre */}
       <select
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
@@ -100,7 +101,6 @@ export default function TextPublishingForm({ textData }) {
         <option value="roman">Roman</option>
       </select>
 
-      {/* Zone de texte */}
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
@@ -109,7 +109,6 @@ export default function TextPublishingForm({ textData }) {
         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
       />
 
-      {/* Image */}
       <div className="space-y-2">
         <input
           type="file"
@@ -117,7 +116,6 @@ export default function TextPublishingForm({ textData }) {
           onChange={(e) => setImageFile(e.target.files[0])}
           className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
         />
-
         {textData?.image && !imageFile && (
           <img
             src={textData.image}
@@ -127,7 +125,6 @@ export default function TextPublishingForm({ textData }) {
         )}
       </div>
 
-      {/* Bouton publier */}
       <button
         type="submit"
         disabled={loading}
