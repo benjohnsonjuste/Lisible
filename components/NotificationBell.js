@@ -6,7 +6,7 @@ import Link from "next/link";
 export default function NotificationBell() {
   return (
     <Link
-      href="/notifications"
+      href="/notifications/page.tsx"
       className="relative cursor-pointer hover:scale-110 transition-transform"
       title="Voir les notifications"
     >
