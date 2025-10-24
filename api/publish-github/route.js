@@ -140,7 +140,7 @@ ${content}
     return res.status(200).json({
       success: true,
       id: fileId,
-      message: "✅ Publication réussie sur GitHub",
+      message: "✅ Publication réussie sur Lisible",
     });
   } catch (err) {
     console.error("Erreur publication GitHub:", err);
