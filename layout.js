@@ -1,8 +1,12 @@
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import "@/app/globals.css";
+import NotificationCenter from "@/components/NotificationCenter";
+import { useSession } from "next-auth/react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
+
   return (
     <html lang="fr" className="h-full">
       <head>
@@ -16,9 +20,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
 
         {/* Notifications globales */}
+        {session?.user?.id && <NotificationCenter userId={session.user.id} />}
+
+        {/* Toaster pour les notifications instantanées */}
         <Toaster richColors position="top-center" expand />
 
-        {/* Analytics */}
+        {/* Analytics Vercel */}
         <Analytics />
       </body>
     </html>
