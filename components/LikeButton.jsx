@@ -1,44 +1,50 @@
-// components/LikeButton.jsx
 "use client";
-
 import { useEffect, useState } from "react";
-import { doc, onSnapshot, setDoc, updateDoc, increment, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebaseConfig";
 import { Heart } from "lucide-react";
+import { toggleLike, getLikes } from "@/lib/likes";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LikeButton({ textId }) {
+  const { user } = useAuth();
+  const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(0);
-  const docRef = doc(db, "likes", String(textId));
+
+  // Identifiant utilisateur ou visiteur
+  const getUserId = () => {
+    if (user?.email) return user.email;
+    let guestId = localStorage.getItem("guestId");
+    if (!guestId) {
+      guestId = "guest-" + Math.random().toString(36).substring(2, 8);
+      localStorage.setItem("guestId", guestId);
+    }
+    return guestId;
+  };
+
+  const userId = getUserId();
 
   useEffect(() => {
-    const unsub = onSnapshot(docRef, (snap) => {
-      if (!snap.exists()) {
-        setCount(0);
-      } else {
-        setCount(snap.data().count || 0);
-      }
-    }, (err) => console.error("like onSnapshot error", err));
-    return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      const data = await getLikes(textId);
+      setCount(data.count || 0);
+      setLiked(!!data.users?.[userId]);
+    })();
   }, [textId]);
 
-  const handleLike = async (e) => {
-    e.stopPropagation();
-    try {
-      const snap = await getDoc(docRef);
-      if (!snap.exists()) {
-        await setDoc(docRef, { count: 1 });
-      } else {
-        await updateDoc(docRef, { count: increment(1) });
-      }
-    } catch (err) {
-      console.error("like error", err);
-    }
+  const handleClick = async () => {
+    const result = await toggleLike(textId, userId);
+    setLiked(result.liked);
+    setCount(result.count);
   };
 
   return (
-    <button onClick={handleLike} className="flex items-center gap-2 text-sm">
-      <Heart size={16} /> {count}
+    <button
+      onClick={handleClick}
+      className="flex items-center space-x-2 text-gray-600 hover:text-red-500 transition"
+    >
+      <Heart
+        className={`w-5 h-5 ${liked ? "fill-red-500 text-red-500" : "text-gray-500"}`}
+      />
+      <span>{count}</span>
     </button>
   );
 }
