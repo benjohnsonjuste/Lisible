@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 export default function NotificationsPage() {
   const { data: session } = useSession();
@@ -35,6 +35,7 @@ export default function NotificationsPage() {
     if (link) router.push(link);
   };
 
+  // Rendu si utilisateur non connecté
   if (!session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -43,6 +44,7 @@ export default function NotificationsPage() {
     );
   }
 
+  // Rendu si aucune notification
   if (!notifications.length) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -51,6 +53,7 @@ export default function NotificationsPage() {
     );
   }
 
+  // Rendu principal
   return (
     <main className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow mt-10">
       <h1 className="text-3xl font-bold mb-6">Notifications</h1>
