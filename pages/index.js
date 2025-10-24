@@ -34,7 +34,7 @@ export default function Home() {
       {/* Bouton S'inscrire pour auteurs */}
       <p className="text-gray-200 mt-6">Commencez à publier sur Lisible dès maintenant.</p>
       <div className="text-center mt-6">
-        <Link href="/register">
+        <Link href="/login">
           <a className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-lg transition">
             S'inscrire
           </a>
