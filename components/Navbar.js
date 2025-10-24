@@ -1,12 +1,13 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation"; // ✅ utilise "next/navigation" (et non "next/router")
 import { auth } from "@/lib/firebaseConfig";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import NotificationBell from "@/components/NotificationBell";
 
-// Import des icônes lucide-react
+// Icônes lucide-react
 import {
   Menu,
   Home,
@@ -44,27 +45,27 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ======= HEADER PRINCIPAL ======= */}
-      <header className="bg-primary shadow relative z-50">
-        <div className="container-lg flex items-center justify-between py-4 px-4 text-white">
-          {/* Bouton Menu */}
-          <button onClick={toggleMenu} className="cursor-pointer">
-            <Menu className="w-8 h-8 text-white" />
+      {/* ======= HEADER ======= */}
+      <header className="bg-primary shadow fixed top-0 left-0 w-full z-50">
+        <div className="container mx-auto flex items-center justify-between py-3 px-4 text-white">
+          {/* Bouton menu latéral */}
+          <button onClick={toggleMenu} className="cursor-pointer z-[60]">
+            <Menu className="w-8 h-8 text-white hover:text-blue-300 transition" />
           </button>
 
-          {/* Zone droite : Notifications + Auth */}
-          <div className="flex items-center gap-6">
+          {/* Zone droite */}
+          <div className="flex items-center gap-5">
             <NotificationBell />
 
-            <Link href="/index">
+            <Link href="/index" className="cursor-pointer">
               <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
-            
-            <Link href="/bibliotheque">
+
+            <Link href="/bibliotheque" className="cursor-pointer">
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/author-dashboard">
+            <Link href="/author-dashboard" className="cursor-pointer">
               <LayoutDashboard className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
@@ -77,7 +78,7 @@ export default function Navbar() {
                 <LogOut className="w-8 h-8 text-white hover:text-red-500 transition" />
               </button>
             ) : (
-              <Link href="/login">
+              <Link href="/login" className="cursor-pointer">
                 <LogIn className="w-8 h-8 text-white hover:text-green-500 transition" />
               </Link>
             )}
@@ -86,12 +87,12 @@ export default function Navbar() {
       </header>
 
       {/* ======= SIDEBAR ======= */}
-      <div
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 z-40 ${
+      <aside
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 z-50 ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-4">
+        <div className="p-5 pt-6">
           <h2 className="text-xl font-semibold mb-6 text-gray-800">Menu</h2>
 
           <ul className="space-y-4">
@@ -103,28 +104,27 @@ export default function Navbar() {
               { href: "/contact", label: "Contact", icon: <MessageCircle className="w-5 h-5" /> },
             ].map((item) => (
               <li key={item.href}>
-                <Link href={item.href}>
-                  <span
-                    onClick={handleMenuClick}
-                    className="flex items-center gap-3 hover:text-blue-600 cursor-pointer"
-                  >
-                    {item.icon}
-                    {item.label}
-                  </span>
+                <Link
+                  href={item.href}
+                  onClick={handleMenuClick}
+                  className="flex items-center gap-3 text-gray-700 hover:text-blue-600 cursor-pointer"
+                >
+                  {item.icon}
+                  {item.label}
                 </Link>
               </li>
             ))}
           </ul>
         </div>
-      </div>
+      </aside>
 
       {/* ======= OVERLAY ======= */}
       {isMenuOpen && (
         <div
           onClick={toggleMenu}
-          className="fixed inset-0 bg-black bg-opacity-40 z-30"
+          className="fixed inset-0 bg-black bg-opacity-40 z-40 cursor-pointer"
         />
       )}
     </>
   );
-}
+    }
