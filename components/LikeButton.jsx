@@ -1,52 +1,44 @@
+// components/LikeButton.jsx
 "use client";
 
 import { useEffect, useState } from "react";
+import { doc, onSnapshot, setDoc, updateDoc, increment, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebaseConfig";
+import { Heart } from "lucide-react";
 
-export default function LikeButton({ textId, initialCount = 0 }) {
-  const [likes, setLikes] = useState(initialCount);
-  const [userVote, setUserVote] = useState(null);
+export default function LikeButton({ textId }) {
+  const [count, setCount] = useState(0);
+  const docRef = doc(db, "likes", String(textId));
 
   useEffect(() => {
-    const votes = JSON.parse(localStorage.getItem("likes") || "{}");
-    if (votes[textId]) setUserVote(votes[textId]);
+    const unsub = onSnapshot(docRef, (snap) => {
+      if (!snap.exists()) {
+        setCount(0);
+      } else {
+        setCount(snap.data().count || 0);
+      }
+    }, (err) => console.error("like onSnapshot error", err));
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textId]);
 
-  const handleVote = async (voteType) => {
-    const votes = JSON.parse(localStorage.getItem("likes") || "{}");
-    let newVote = voteType;
-
-    if (userVote === voteType) newVote = null;
-
-    let newLikes = likes;
-    if (userVote === "like") newLikes -= 1;
-    if (newVote === "like") newLikes += 1;
-
-    setLikes(newLikes);
-    setUserVote(newVote);
-
-    votes[textId] = newVote;
-    localStorage.setItem("likes", JSON.stringify(votes));
-
+  const handleLike = async (e) => {
+    e.stopPropagation();
     try {
-      await fetch("/api/update-like", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ textId, vote: newVote }),
-      });
+      const snap = await getDoc(docRef);
+      if (!snap.exists()) {
+        await setDoc(docRef, { count: 1 });
+      } else {
+        await updateDoc(docRef, { count: increment(1) });
+      }
     } catch (err) {
-      console.error("Erreur mise à jour like GitHub :", err);
+      console.error("like error", err);
     }
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => handleVote("like")}
-        className={`px-2 py-1 rounded ${userVote === "like" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}`}
-      >
-        👍
-      </button>
-      <span>{likes}</span>
-    </div>
+    <button onClick={handleLike} className="flex items-center gap-2 text-sm">
+      <Heart size={16} /> {count}
+    </button>
   );
 }
