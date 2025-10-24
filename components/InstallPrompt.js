@@ -23,23 +23,29 @@ export default function InstallPrompt() {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowBanner(true);
-      timerRef.current = setTimeout(() => setShowBanner(false), 15000);
     };
-
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Fallback : afficher le banner sur tous les autres systèmes
-    const fallbackTimer = setTimeout(() => setShowBanner(true), 1000);
+    // Affichage périodique toutes les 30 secondes pendant 15 secondes
+    const interval = setInterval(() => {
+      setShowBanner(true);
+      timerRef.current = setTimeout(() => setShowBanner(false), 15000);
+    }, 30000);
+
+    // Première apparition au bout d’une seconde
+    const firstTimer = setTimeout(() => {
+      setShowBanner(true);
+      timerRef.current = setTimeout(() => setShowBanner(false), 15000);
+    }, 1000);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      clearInterval(interval);
+      clearTimeout(firstTimer);
       if (timerRef.current) clearTimeout(timerRef.current);
-      clearTimeout(fallbackTimer);
     };
   }, []);
 
-  // Installer pour Android
   const handleInstallClick = async () => {
     if (platform === "android" && deferredPrompt) {
       deferredPrompt.prompt();
@@ -59,6 +65,7 @@ export default function InstallPrompt() {
     setShowBanner(false);
   };
 
+  // Gestion du swipe pour fermer
   const handleTouchStart = (e) => {
     startX.current = e.touches ? e.touches[0].clientX : e.clientX;
   };
@@ -70,16 +77,12 @@ export default function InstallPrompt() {
   };
 
   const handleTouchEnd = () => {
-    if (Math.abs(translateX) > 100) {
-      setShowBanner(false);
-    } else {
-      setTranslateX(0);
-    }
+    if (Math.abs(translateX) > 100) setShowBanner(false);
+    else setTranslateX(0);
   };
 
   if (!showBanner) return null;
 
-  // Texte dynamique selon plateforme
   const bannerText = {
     android: "Installer Lisible pour un accès rapide.",
     ios: "Ajouter Lisible à votre écran d’accueil pour un accès rapide.",
@@ -97,10 +100,10 @@ export default function InstallPrompt() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="fixed top-0 left-0 z-50 w-full max-w-lg"
-      style={{ transform: `translateX(calc(-50% + ${translateX}px))` }}
+      className="fixed top-4 left-1/2 z-50 w-[90%] max-w-lg transform -translate-x-1/2 transition-transform duration-300"
+      style={{ transform: `translateX(${translateX}px) translateX(-50%)` }}
     >
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl p-4 flex items-center justify-between animate-slideDown border border-blue-400">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl shadow-2xl p-4 flex items-center justify-between border border-blue-400 animate-fadeInDown">
         {/* Icône et texte */}
         <div className="flex items-center gap-3">
           <div className="bg-black rounded-full p-2 shadow-lg">
