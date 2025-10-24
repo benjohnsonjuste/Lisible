@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { TEXT_GENRES } from "@/lib/constants";
 
 export default function TextPublishingForm({ textData }) {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function TextPublishingForm({ textData }) {
 
     setLoading(true);
     try {
-      let imageBase64 = textData?.imageBase64 || null;
+      let imageBase64 = textData?.image || null;
       let imageName = textData?.imageName || null;
 
       if (imageFile) {
@@ -41,7 +42,7 @@ export default function TextPublishingForm({ textData }) {
       }
 
       const payload = {
-        id: textData?.id || Date.now().toString(),
+        id: textData?.id,
         title,
         content,
         genre,
@@ -49,9 +50,6 @@ export default function TextPublishingForm({ textData }) {
         authorEmail: user?.email || "",
         imageBase64,
         imageName,
-        likes: textData?.likes || 0,
-        comments: textData?.comments || 0,
-        date: new Date().toISOString(),
       };
 
       const res = await fetch("/api/publish-github", {
@@ -74,31 +72,24 @@ export default function TextPublishingForm({ textData }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-6 bg-white rounded-2xl shadow-lg space-y-4 border border-gray-200"
-    >
-      <h2 className="text-2xl font-bold text-center text-blue-700">
-        {textData ? "Modifier le texte" : "Publier un texte"}
-      </h2>
+    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6 bg-white rounded shadow space-y-4 border">
+      <h2 className="text-2xl font-bold text-center">{textData ? "Modifier le texte" : "Publier un texte"}</h2>
 
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Titre du texte"
-        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+        className="w-full p-3 border rounded-lg"
       />
 
       <select
         value={genre}
         onChange={(e) => setGenre(e.target.value)}
-        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+        className="w-full p-3 border rounded-lg"
       >
-        <option value="poésie">Poésie</option>
-        <option value="nouvelle">Nouvelle</option>
-        <option value="essai">Essai</option>
-        <option value="article">Article</option>
-        <option value="roman">Roman</option>
+        {TEXT_GENRES.map((g) => (
+          <option key={g} value={g}>{g}</option>
+        ))}
       </select>
 
       <textarea
@@ -106,29 +97,24 @@ export default function TextPublishingForm({ textData }) {
         onChange={(e) => setContent(e.target.value)}
         placeholder="Contenu du texte..."
         rows={8}
-        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+        className="w-full p-3 border rounded-lg resize-none"
       />
 
-      <div className="space-y-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0])}
-          className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
-        />
-        {textData?.image && !imageFile && (
-          <img
-            src={textData.image}
-            alt="Image actuelle"
-            className="h-40 w-full object-cover rounded-lg border"
-          />
-        )}
-      </div>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImageFile(e.target.files[0])}
+        className="block w-full text-sm text-gray-700 mt-2"
+      />
+
+      {textData?.image && !imageFile && (
+        <img src={textData.image} alt="Image actuelle" className="h-40 w-full object-cover rounded-lg mt-2" />
+      )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300"
+        className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg"
       >
         {loading ? "Publication..." : textData ? "Mettre à jour" : "Publier"}
       </button>
