@@ -1,9 +1,10 @@
+// components/TextPublishingForm.jsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createOrUpdateFile } from "@/lib/githubClient";
+import { createOrUpdateFile } from "@/lib/githubClient"; // <-- notre système GitHub
 
 export default function TextPublishingForm({ user }) {
   const router = useRouter();
@@ -30,27 +31,16 @@ export default function TextPublishingForm({ user }) {
     }
 
     setLoading(true);
-
     try {
-      let imageUrl = null;
+      let imageBase64 = null;
+      let imageName = null;
 
-      // Publier l'image si elle existe
       if (imageFile) {
-        const imageBase64 = await toDataUrl(imageFile);
-        const uploadRes = await fetch("/api/upload-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            imageBase64,
-            imageName: imageFile.name,
-          }),
-        });
-        const uploadJson = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadJson.error || "Erreur upload image");
-        imageUrl = `https://raw.githubusercontent.com/${process.env.NEXT_PUBLIC_GITHUB_OWNER}/${process.env.NEXT_PUBLIC_GITHUB_REPO}/main/${uploadJson.path}`;
+        imageBase64 = await toDataUrl(imageFile);
+        imageName = imageFile.name;
       }
 
-      const id = Date.now().toString();
+      const id = Date.now().toString(); // ID unique pour chaque texte
       const payload = {
         id,
         title,
@@ -58,10 +48,11 @@ export default function TextPublishingForm({ user }) {
         genre,
         authorName: user?.displayName || user?.email || "Auteur inconnu",
         authorEmail: user?.email || "",
-        image: imageUrl,
+        imageBase64,
+        imageName,
       };
 
-      // Publier le texte sur GitHub
+      // Créer ou mettre à jour le texte sur GitHub
       await createOrUpdateFile({
         owner: process.env.GITHUB_OWNER,
         repo: process.env.GITHUB_REPO,
