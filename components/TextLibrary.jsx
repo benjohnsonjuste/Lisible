@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import LikeButton from "@/components/LikeButton";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 
 export default function TextLibrary() {
-  const { data: session } = useSession();
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterGenre, setFilterGenre] = useState("Tout");
+  const [filter, setFilter] = useState("Tout");
 
   useEffect(() => {
     const fetchTexts = async () => {
@@ -30,34 +28,35 @@ export default function TextLibrary() {
     fetchTexts();
   }, []);
 
+  const filteredTexts =
+    filter === "Tout" ? texts : texts.filter((t) => t.genre === filter);
+
   if (loading)
     return <p className="text-center mt-10 text-gray-500">Chargement des textes...</p>;
 
-  const genres = ["Tout", "Poésie", "Nouvelle", "Roman", "Article", "Essai"];
-  const filteredTexts =
-    filterGenre === "Tout" ? texts : texts.filter((t) => t.genre === filterGenre);
+  if (!texts.length)
+    return <p className="text-center mt-10 text-gray-500">Aucun texte disponible.</p>;
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <div className="flex justify-center mb-6 space-x-4">
-        {genres.map((g) => (
+      <h1 className="text-3xl font-bold mb-6 text-center">Bibliothèque Lisible</h1>
+
+      {/* Filtre par genre */}
+      <div className="flex justify-center gap-4 mb-6">
+        {["Tout", "Poésie", "Nouvelle", "Roman", "Article", "Essai"].map((g) => (
           <button
             key={g}
-            onClick={() => setFilterGenre(g)}
-            className={`px-3 py-1 rounded-full border ${
-              filterGenre === g ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
+            className={`px-4 py-2 rounded ${
+              filter === g ? "bg-blue-600 text-white" : "bg-gray-200"
             }`}
+            onClick={() => setFilter(g)}
           >
             {g}
           </button>
         ))}
       </div>
 
-      {filteredTexts.length === 0 && (
-        <p className="text-center text-gray-500 mt-10">Aucun texte disponible.</p>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTexts.map((text) => (
           <div key={text.id} className="bg-white rounded-2xl shadow p-4 flex flex-col">
             {text.image && (
@@ -73,35 +72,28 @@ export default function TextLibrary() {
             </p>
             <p className="text-gray-700 mb-4 line-clamp-4">{text.content}</p>
 
-            {/* Compteurs */}
             <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
               <span>👁️ {text.views || 0}</span>
               <span>💬 {text.comments || 0}</span>
             </div>
 
-            {/* LikeButton et Commentaire */}
             <div className="flex justify-between items-center mb-2">
               <LikeButton textId={text.id} initialCount={text.likes} />
-              {session?.user ? (
-                <Link href={`/texts/${text.id}`} className="text-blue-600 hover:underline text-sm">
-                  💬 Commenter
-                </Link>
-              ) : (
-                <Link
-                  href={`/login?callback=/texts/${text.id}`}
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  💬 Connexion pour commenter
-                </Link>
-              )}
+
+              <Link
+                href={`/texts/${text.id}`}
+                className="text-blue-600 hover:underline text-sm"
+              >
+                Lire / Commenter
+              </Link>
             </div>
 
-            <Link
-              href={`/texts/${text.id}`}
-              className="mt-auto text-right text-blue-600 hover:underline text-sm"
+            <button
+              onClick={() => navigator.clipboard.writeText(window.location.origin + `/texts/${text.id}`)}
+              className="mt-auto text-right text-sm text-gray-500 hover:text-blue-600"
             >
-              Lire la suite →
-            </Link>
+              🔗 Partager
+            </button>
           </div>
         ))}
       </div>
