@@ -6,7 +6,6 @@ export default function InstallPrompt() {
   const autoCloseRef = useRef(null);
   const intervalRef = useRef(null);
 
-  // Capture l'événement beforeinstallprompt
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
@@ -22,20 +21,15 @@ export default function InstallPrompt() {
     };
   }, []);
 
-  // Affiche la bannière toutes les 60 secondes si le prompt est disponible
   useEffect(() => {
     if (!deferredPrompt) return;
 
     const showBannerPeriodically = () => {
       setShowBanner(true);
-      // Fermeture automatique après 10 secondes
       autoCloseRef.current = setTimeout(() => setShowBanner(false), 10000);
     };
 
-    // Première apparition immédiate
     showBannerPeriodically();
-
-    // Puis toutes les 60 secondes
     intervalRef.current = setInterval(showBannerPeriodically, 60000);
 
     return () => {
@@ -44,7 +38,6 @@ export default function InstallPrompt() {
     };
   }, [deferredPrompt]);
 
-  // Lorsque l'utilisateur clique sur "Installer"
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
@@ -63,7 +56,6 @@ export default function InstallPrompt() {
     clearTimeout(autoCloseRef.current);
   };
 
-  // Fermeture manuelle
   const handleClose = () => {
     setShowBanner(false);
     clearTimeout(autoCloseRef.current);
@@ -75,7 +67,10 @@ export default function InstallPrompt() {
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 
                     bg-blue-600 text-white shadow-lg p-4 z-50 flex justify-between items-center 
                     animate-slideDown rounded-lg max-w-lg w-full">
-      <div className="font-semibold text-lg">📱 Installer Lisible</div>
+      <div className="flex items-center gap-2 font-semibold text-lg">
+        <img src="/favicon.ico" alt="Favicon" className="w-6 h-6" />
+        Installer Lisible
+      </div>
       <div className="flex gap-2">
         <button
           onClick={handleInstallClick}
