@@ -74,4 +74,4 @@ export default function ReadTextPage() {
       <CommentSection textId={text.id} />
     </main>
   );
-      }
+}
