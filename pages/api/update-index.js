@@ -77,4 +77,4 @@ export default async function handler(req, res) {
     console.error("update-index error:", err);
     return res.status(500).json({ error: err.message || "Erreur serveur" });
   }
-}
+} 
