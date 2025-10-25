@@ -1,5 +1,5 @@
 // pages/api/update-index.js
-import { createOrUpdateFile, listFilesInRepoDir, getFileContent } from "@/lib/githubClient";
+import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -7,74 +7,65 @@ export default async function handler(req, res) {
   }
 
   try {
-    const payload = req.body;
-
-    if (!payload || !payload.id) {
-      return res.status(400).json({ error: "Données invalides" });
+    const newText = req.body;
+    if (!newText || !newText.id) {
+      return res.status(400).json({ error: "Payload invalide" });
     }
 
-    const { id, title, genre, authorName, authorEmail, imageBase64, imageName } = payload;
-
-    const owner = process.env.GITHUB_OWNER;
-    const repo = process.env.GITHUB_REPO;
-    const token = process.env.GITHUB_TOKEN;
-    const branch = "main";
-
-    // 1️⃣ Récupérer tous les fichiers textes dans le dossier data/texts
-    const files = await listFilesInRepoDir({
-      owner,
-      repo,
-      path: "data/texts",
-      branch,
-      token,
+    // Récupérer l'index existant sur GitHub
+    const indexFile = await getFileContent({
+      owner: process.env.GITHUB_OWNER,
+      repo: process.env.GITHUB_REPO,
+      path: "data/texts/index.json",
+      branch: "main",
+      token: process.env.GITHUB_TOKEN,
     });
 
-    // 2️⃣ Créer un tableau de tous les textes
-    const texts = [];
-    for (const file of files) {
-      if (file.type !== "file") continue;
-      const contentData = await getFileContent({
-        owner,
-        repo,
-        path: `data/texts/${file.name}`,
-        branch,
-        token,
-      });
-      if (!contentData || !contentData.content) continue;
-
-      const jsonContent = Buffer.from(contentData.content, "base64").toString("utf8");
-      const text = JSON.parse(jsonContent);
-
-      // Assurer que certaines valeurs existent
-      texts.push({
-        id: text.id,
-        title: text.title,
-        genre: text.genre,
-        authorName: text.authorName,
-        authorEmail: text.authorEmail || "",
-        image: text.imageBase64 || null,
-        imageName: text.imageName || null,
-        likes: text.likes || 0,
-        views: text.views || 0,
-        comments: text.comments || 0,
-        date: text.date || new Date().toISOString(),
-      });
+    let indexData = [];
+    if (indexFile) {
+      indexData = JSON.parse(Buffer.from(indexFile.content, "base64").toString("utf8"));
     }
 
-    // 3️⃣ Créer ou mettre à jour index.json
+    // Ajouter ou mettre à jour le texte dans l'index
+    const existingIndex = indexData.findIndex((t) => t.id === newText.id);
+    const textEntry = {
+      id: newText.id,
+      title: newText.title,
+      content: newText.content,
+      genre: newText.genre || "Poésie",
+      authorName: newText.authorName || "Auteur inconnu",
+      authorEmail: newText.authorEmail || "",
+      image: newText.imageBase64 || null, // image d'illustration en Base64
+      imageName: newText.imageName || null,
+      date: newText.date || new Date().toISOString(),
+      views: newText.views || 0,
+      likes: newText.likes || 0,
+      comments: newText.comments || 0,
+    };
+
+    if (existingIndex > -1) {
+      indexData[existingIndex] = textEntry;
+    } else {
+      indexData.push(textEntry);
+    }
+
+    // Trier par date décroissante
+    indexData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Mettre à jour l'index sur GitHub
     await createOrUpdateFile({
-      owner,
-      repo,
-      path: "data/index.json",
-      content: JSON.stringify({ data: texts }, null, 2),
-      commitMessage: "🔄 Mise à jour index.json de la bibliothèque",
-      branch,
-      token,
+      owner: process.env.GITHUB_OWNER,
+      repo: process.env.GITHUB_REPO,
+      path: "data/texts/index.json",
+      content: JSON.stringify(indexData, null, 2),
+      commitMessage: `📚 Mise à jour index des textes: ${newText.title}`,
+      branch: "main",
+      token: process.env.GITHUB_TOKEN,
     });
 
-    return res.status(200).json({ success: true, count: texts.length });
+    res.status(200).json({ success: true });
   } catch (err) {
-    console.error("update-index error:", err);
-    return res.status(500).json({ error: err.message || "Erreur serveur" });
+    console.error("Erreur update-index:", err);
+    res.status(500).json({ error: "Erreur serveur" });
   }
-} 
+}
