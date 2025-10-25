@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import LikeButton from "@/components/LikeButton";
 import { toast } from "sonner";
-import CommentSection from "@/components/CommentSection"; // Nouveau composant pour gérer les commentaires
+import CommentSection from "@/components/CommentSection";
 
 export default function ReadTextPage() {
   const { id } = useParams();
@@ -49,24 +49,30 @@ export default function ReadTextPage() {
     fetchText();
   }, [id]);
 
-  if (loading) return <p>Chargement...</p>;
-  if (!text) return <p>Texte introuvable</p>;
+  if (loading) return <p className="text-center mt-10 text-gray-500">Chargement...</p>;
+  if (!text) return <p className="text-center mt-10 text-gray-500">Texte introuvable</p>;
 
   return (
     <main className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow mt-10">
-      <h1 className="text-3xl font-bold">{text.title}</h1>
+      <h1 className="text-3xl font-bold mb-2">{text.title}</h1>
       <p className="text-sm text-gray-500 mb-4">
         ✍️ {text.authorName} | 📚 {text.genre} | 📅 {new Date(text.date).toLocaleDateString("fr-FR")}
       </p>
 
       {text.image && (
-        <img src={text.image} alt={text.title} className="w-full h-64 object-cover rounded-xl mb-4" />
+        <img
+          src={text.image}
+          alt={text.title}
+          className="w-full h-64 object-cover rounded-xl mb-6"
+        />
       )}
 
-      <article className="prose prose-gray max-w-none whitespace-pre-wrap mb-6">{text.content}</article>
+      <article className="prose prose-gray max-w-none whitespace-pre-wrap mb-6">
+        {text.content}
+      </article>
 
       {/* Like */}
-      <div className="mb-4">
+      <div className="mb-6">
         <LikeButton textId={text.id} initialCount={text.likes} />
       </div>
 
@@ -74,4 +80,4 @@ export default function ReadTextPage() {
       <CommentSection textId={text.id} />
     </main>
   );
-} 
+}
