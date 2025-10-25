@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (!title || !content)
     return res.status(400).json({ error: "Titre et contenu requis" });
 
-  const owner = "ton-nom-utilisateur";
+  const owner = "benjohnsonjuste";
   const repo = "Lisible";
   const token = process.env.GITHUB_TOKEN;
   const path = "texts/index.json";
