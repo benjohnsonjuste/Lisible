@@ -1,3 +1,4 @@
+// pages/api/publish-github.js
 import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
 
 const OWNER = "benjohnsonjuste";
