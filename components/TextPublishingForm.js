@@ -1,10 +1,12 @@
+// components/TextPublishingForm.jsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { createOrUpdateFile } from "@/lib/githubClient"; // <-- notre système GitHub
 
-export default function TextPublishingForm() {
+export default function TextPublishingForm({ user }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -38,28 +40,35 @@ export default function TextPublishingForm() {
         imageName = imageFile.name;
       }
 
+      const id = Date.now().toString(); // ID unique pour chaque texte
       const payload = {
+        id,
         title,
         content,
         genre,
-        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
-        authorEmail: "",
+        authorName: user?.displayName || user?.email || "Auteur inconnu",
+        authorEmail: user?.email || "",
         imageBase64,
         imageName,
       };
 
-      const res = await fetch("/api/publish-github", {
+      // Créer ou mettre à jour le texte sur GitHub
+      await createOrUpdateFile({
+        owner: process.env.GITHUB_OWNER,
+        repo: process.env.GITHUB_REPO,
+        path: `data/texts/${id}.json`,
+        content: JSON.stringify(payload, null, 2),
+        commitMessage: `📝 Publication du texte: ${title}`,
+        token: process.env.GITHUB_TOKEN,
+      });
+
+      // Mettre à jour index.json
+      const indexRes = await fetch("/api/update-index", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        console.error("Erreur publication GitHub:", json);
-        throw new Error(json.error || "Échec publication");
-      }
+      if (!indexRes.ok) throw new Error("Impossible de mettre à jour l'index");
 
       toast.success("✅ Publication réussie !");
       setTitle("");
@@ -86,6 +95,7 @@ export default function TextPublishingForm() {
         <label className="block text-sm font-medium mb-1">Titre</label>
         <input
           type="text"
+          name="title"
           placeholder="Titre du texte"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -97,6 +107,7 @@ export default function TextPublishingForm() {
       <div>
         <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
+          name="content"
           placeholder="Écris ton texte ici..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -113,11 +124,11 @@ export default function TextPublishingForm() {
           onChange={(e) => setGenre(e.target.value)}
           className="w-full p-2 border rounded"
         >
-          <option value="Poésie">Poésie</option>
-          <option value="Nouvelle">Nouvelle</option>
-          <option value="Roman">Roman</option>
-          <option value="Article">Article</option>
-          <option value="Essai">Essai</option>
+          <option>Poésie</option>
+          <option>Nouvelle</option>
+          <option>Roman</option>
+          <option>Article</option>
+          <option>Essai</option>
         </select>
       </div>
 
@@ -127,12 +138,10 @@ export default function TextPublishingForm() {
         </label>
         <input
           type="file"
+          name="image"
           accept="image/*"
           onChange={(e) => setImageFile(e.target.files[0])}
         />
-        {imageFile && (
-          <p className="text-sm mt-1">{imageFile.name}</p>
-        )}
       </div>
 
       <button
@@ -140,7 +149,7 @@ export default function TextPublishingForm() {
         disabled={loading}
         className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
       >
-        {loading ? "Publication en cours..." : "Publier sur GitHub"}
+        {loading ? "Publication en cours..." : "Publier sur Lisible"}
       </button>
     </form>
   );
