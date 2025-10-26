@@ -54,7 +54,7 @@ export default function TextPublishingForm({ user }) {
       if (!res.ok) throw new Error("Erreur de publication");
 
       toast.success("✅ Publication réussie !");
-      router.push("/bibliotheque");
+      router.push("/library");
     } catch (err) {
       console.error(err);
       toast.error("❌ Échec de publication");
@@ -68,7 +68,7 @@ export default function TextPublishingForm({ user }) {
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
       <input
         type="text"
