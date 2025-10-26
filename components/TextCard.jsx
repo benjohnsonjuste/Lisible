@@ -15,7 +15,7 @@ export default function TextCard({ text }) {
   // 🔥 Écoute en temps réel des compteurs Firestore
   useEffect(() => {
     if (!text?.id) return;
-    const metaRef = doc(db, "textsMeta", text.id);
+    const metaRef = doc(db, "textsMeta", text.id.toString());
     const unsubscribe = onSnapshot(metaRef, (snap) => {
       const data = snap.data();
       setViews(data?.views || 0);
