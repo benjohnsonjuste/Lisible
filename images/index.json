@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1698312345678",
+    "textId": "1698312345677",
+    "imageName": "mon_image.png",
+    "imageUrl": "https://raw.githubusercontent.com/<OWNER>/<REPO>/main/data/images/mon_image.png",
+    "authorName": "Auteur inconnu",
+    "authorEmail": "auteur@example.com",
+    "date": "2025-10-25T12:45:00.000Z"
+  },
+  {
+    "id": "1698312356789",
+    "textId": "1698312345688",
+    "imageName": "autre_image.jpg",
+    "imageUrl": "https://raw.githubusercontent.com/<OWNER>/<REPO>/main/data/images/autre_image.jpg",
+    "authorName": "Jean Dupont",
+    "authorEmail": "jean@example.com",
+    "date": "2025-10-25T13:00:00.000Z"
+  }
+]
