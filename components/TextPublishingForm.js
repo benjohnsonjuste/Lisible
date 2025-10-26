@@ -4,13 +4,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createOrUpdateFile } from "@/lib/githubClient"; // <-- notre système GitHub
 
-export default function TextPublishingForm({ user }) {
+export default function TextPublishingForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [genre, setGenre] = useState("Poésie");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -40,40 +38,31 @@ export default function TextPublishingForm({ user }) {
         imageName = imageFile.name;
       }
 
-      const id = Date.now().toString(); // ID unique pour chaque texte
       const payload = {
-        id,
         title,
         content,
-        genre,
-        authorName: user?.displayName || user?.email || "Auteur inconnu",
-        authorEmail: user?.email || "",
+        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
+        authorEmail: "",
         imageBase64,
         imageName,
       };
 
-      // Créer ou mettre à jour le texte sur GitHub
-      await createOrUpdateFile({
-        owner: process.env.GITHUB_OWNER,
-        repo: process.env.GITHUB_REPO,
-        path: `data/texts/${id}.json`,
-        content: JSON.stringify(payload, null, 2),
-        commitMessage: `📝 Publication du texte: ${title}`,
-        token: process.env.GITHUB_TOKEN,
-      });
-
-      // Mettre à jour index.json
-      const indexRes = await fetch("/api/update-index", {
+      const res = await fetch("/api/publish-github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!indexRes.ok) throw new Error("Impossible de mettre à jour l'index");
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        console.error("Erreur publication GitHub:", json);
+        throw new Error(json.error || "Échec publication");
+      }
 
       toast.success("✅ Publication réussie !");
       setTitle("");
       setContent("");
-      setGenre("Poésie");
       setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
@@ -89,7 +78,7 @@ export default function TextPublishingForm({ user }) {
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
@@ -118,21 +107,6 @@ export default function TextPublishingForm({ user }) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Genre</label>
-        <select
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
-          className="w-full p-2 border rounded"
-        >
-          <option>Poésie</option>
-          <option>Nouvelle</option>
-          <option>Roman</option>
-          <option>Article</option>
-          <option>Essai</option>
-        </select>
-      </div>
-
-      <div>
         <label className="block text-sm font-medium mb-1">
           Image d'illustration (optionnel)
         </label>
@@ -149,7 +123,7 @@ export default function TextPublishingForm({ user }) {
         disabled={loading}
         className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
       >
-        {loading ? "Publication en cours..." : "Publier sur Lisible"}
+        {loading ? "Publication en cours..." : "Publier"}
       </button>
     </form>
   );
