@@ -47,4 +47,4 @@ export default async function handler(req, res) {
     console.error(err);
     res.status(500).json({ error: "Impossible de mettre à jour l'auteur" });
   }
-} 
+}
