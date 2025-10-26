@@ -1,10 +1,9 @@
-// components/TextPublishingForm.jsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createOrUpdateFile } from "@/lib/githubClient"; // <-- notre système GitHub
+import { createOrUpdateFile } from "@/lib/githubClient";
 
 export default function TextPublishingForm({ user }) {
   const router = useRouter();
@@ -14,7 +13,7 @@ export default function TextPublishingForm({ user }) {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir fichier image en Base64
+  // Convertir image → Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -32,15 +31,39 @@ export default function TextPublishingForm({ user }) {
 
     setLoading(true);
     try {
-      let imageBase64 = null;
+      const id = Date.now().toString(); // ID unique
       let imageName = null;
+      let imageBase64 = null;
+      let imageUrl = null;
 
+      // 🔹 1. Si une image est présente, on la convertit et on l’envoie à l’API image
       if (imageFile) {
         imageBase64 = await toDataUrl(imageFile);
-        imageName = imageFile.name;
+        imageName = `${id}_${imageFile.name}`;
+
+        const imageRes = await fetch("/api/update-images-index", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id,
+            textId: id,
+            imageName,
+            imageBase64,
+            authorName: user?.displayName || user?.email || "Auteur inconnu",
+            authorEmail: user?.email || "",
+          }),
+        });
+
+        const imageJson = await imageRes.json();
+        if (!imageRes.ok) {
+          console.error("Erreur upload image:", imageJson);
+          throw new Error("Erreur lors de l'envoi de l'image");
+        }
+
+        imageUrl = imageJson.imageUrl; // URL publique depuis GitHub
       }
 
-      const id = Date.now().toString(); // ID unique pour chaque texte
+      // 🔹 2. Construire les données du texte
       const payload = {
         id,
         title,
@@ -48,11 +71,11 @@ export default function TextPublishingForm({ user }) {
         genre,
         authorName: user?.displayName || user?.email || "Auteur inconnu",
         authorEmail: user?.email || "",
-        imageBase64,
-        imageName,
+        imageUrl, // URL GitHub (si image envoyée)
+        date: new Date().toISOString(),
       };
 
-      // Créer ou mettre à jour le texte sur GitHub
+      // 🔹 3. Créer le fichier texte sur GitHub
       await createOrUpdateFile({
         owner: process.env.GITHUB_OWNER,
         repo: process.env.GITHUB_REPO,
@@ -62,14 +85,16 @@ export default function TextPublishingForm({ user }) {
         token: process.env.GITHUB_TOKEN,
       });
 
-      // Mettre à jour index.json
+      // 🔹 4. Mettre à jour l’index général des textes
       const indexRes = await fetch("/api/update-index", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       if (!indexRes.ok) throw new Error("Impossible de mettre à jour l'index");
 
+      // 🔹 5. Succès et redirection
       toast.success("✅ Publication réussie !");
       setTitle("");
       setContent("");
@@ -77,7 +102,7 @@ export default function TextPublishingForm({ user }) {
       setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
-      console.error("Erreur côté client:", err);
+      console.error("Erreur publication:", err);
       toast.error("❌ Erreur de publication");
     } finally {
       setLoading(false);
@@ -91,11 +116,11 @@ export default function TextPublishingForm({ user }) {
     >
       <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
 
+      {/* Titre */}
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
         <input
           type="text"
-          name="title"
           placeholder="Titre du texte"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -104,10 +129,10 @@ export default function TextPublishingForm({ user }) {
         />
       </div>
 
+      {/* Contenu */}
       <div>
         <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
-          name="content"
           placeholder="Écris ton texte ici..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -117,6 +142,7 @@ export default function TextPublishingForm({ user }) {
         />
       </div>
 
+      {/* Genre */}
       <div>
         <label className="block text-sm font-medium mb-1">Genre</label>
         <select
@@ -132,13 +158,13 @@ export default function TextPublishingForm({ user }) {
         </select>
       </div>
 
+      {/* Image d’illustration */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Image d'illustration (optionnel)
         </label>
         <input
           type="file"
-          name="image"
           accept="image/*"
           onChange={(e) => setImageFile(e.target.files[0])}
         />
