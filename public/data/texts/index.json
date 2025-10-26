@@ -1,0 +1,23 @@
+{
+  "lastUpdated": "2025-10-26T19:00:00Z",
+  "texts": [
+    {
+      "id": "1735264873952",
+      "title": "Premier texte publié",
+      "authorName": "Auteur inconnu",
+      "authorEmail": "",
+      "createdAt": "2025-10-26T18:59:00Z",
+      "image": "/data/images/1735264873952.json",
+      "path": "/data/texts/1735264873952.json"
+    },
+    {
+      "id": "1735264900000",
+      "title": "Deuxième texte d’exemple",
+      "authorName": "Ben Johnson Juste",
+      "authorEmail": "ben@example.com",
+      "createdAt": "2025-10-26T19:01:00Z",
+      "image": "/data/images/1735264900000.json",
+      "path": "/data/texts/1735264900000.json"
+    }
+  ]
+}
