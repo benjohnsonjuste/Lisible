@@ -63,4 +63,4 @@ export default async function handler(req, res) {
     console.error("Erreur API publish:", err);
     res.status(500).json({ error: "Erreur de publication" });
   }
-}
+} 
