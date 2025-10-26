@@ -45,7 +45,7 @@ export default async function handler(req, res) {
 
     // Mise à jour de texts/index.json
     const indexPath = `public/data/texts/index.json`;
-    const indexRes = await fetch(`https://raw.githubusercontent.com/<OWNER>/<REPO>/main/${indexPath}`);
+    const indexRes = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/${indexPath}`);
     const currentIndex = indexRes.ok ? await indexRes.json() : [];
     const updatedIndex = [
       { id, title, authorName, authorId, date: new Date().toISOString() },
@@ -63,4 +63,4 @@ export default async function handler(req, res) {
     console.error("Erreur API publish:", err);
     res.status(500).json({ error: "Erreur de publication" });
   }
-} 
+}
