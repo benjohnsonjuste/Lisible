@@ -4,7 +4,7 @@
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import QuickActions from "@/components/QuickActions";
-import ContentLibrary from "@/components/ui/ContentLibrary";
+import ContentLibrary from "@/components/ContentLibrary";
 
 export default function AuthorDashboard() {
   const { user } = useAuth();
