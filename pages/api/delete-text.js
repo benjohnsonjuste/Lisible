@@ -56,4 +56,4 @@ export default async function handler(req, res) {
     console.error("Erreur suppression texte:", err);
     res.status(500).json({ error: "Erreur suppression texte" });
   }
-}
+} 
