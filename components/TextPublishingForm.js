@@ -54,7 +54,7 @@ export default function TextPublishingForm({ user }) {
       if (!res.ok) throw new Error("Erreur de publication");
 
       toast.success("✅ Publication réussie !");
-      router.push("/library");
+      router.push("/bibliotheque");
     } catch (err) {
       console.error(err);
       toast.error("❌ Échec de publication");
