@@ -61,7 +61,7 @@ export default function Navbar() {
               <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/library" className="cursor-pointer">
+            <Link href="/bibliotheque" className="cursor-pointer">
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
