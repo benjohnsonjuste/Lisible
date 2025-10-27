@@ -87,4 +87,4 @@ function TextCard({ text }) {
       </div>
     </div>
   );
-}
+} 
