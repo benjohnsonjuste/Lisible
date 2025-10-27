@@ -2,158 +2,191 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { db } from "@/firebase";
-import { doc, onSnapshot, setDoc, updateDoc, arrayUnion, increment } from "firebase/firestore";
 import { toast } from "sonner";
-import Link from "next/link";
+import { db } from "@/firebase"; // Assure-toi que db est exporté
+import {
+  doc,
+  onSnapshot,
+  updateDoc,
+  arrayUnion,
+  increment,
+} from "firebase/firestore";
+import { useSession } from "next-auth/react";
 
-export default function TextPage({ user }) {
+export default function TextPage() {
   const router = useRouter();
   const params = useParams();
   const textId = params?.id;
 
+  const { data: session } = useSession();
   const [text, setText] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
   const [likes, setLikes] = useState(0);
   const [comments, setComments] = useState([]);
-  const [commentText, setCommentText] = useState("");
+  const [newComment, setNewComment] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Charger le texte
   useEffect(() => {
-    if (!textId) return;
     const fetchText = async () => {
       try {
         const res = await fetch(`/data/texts/${textId}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
+
+        // 🔹 Incrémente les vues si l'utilisateur est connecté
+        const metaRef = doc(db, "textsMeta", textId);
+        await updateDoc(metaRef, { views: increment(1) }).catch(() =>
+          updateDoc(metaRef, { views: 1 })
+        );
+
+        // 🔹 Écoute en temps réel des vues, likes et commentaires
+        onSnapshot(metaRef, (snap) => {
+          const meta = snap.data();
+          setViews(meta?.views || 0);
+          setLikes(meta?.likes || 0);
+          setComments(meta?.comments || []);
+        });
       } catch (err) {
-        console.error(err);
+        console.error("Erreur chargement texte:", err);
         toast.error("Impossible de charger le texte");
       } finally {
         setLoading(false);
       }
     };
-    fetchText();
+
+    if (textId) fetchText();
   }, [textId]);
 
-  // Mettre à jour compteur vues
-  useEffect(() => {
-    if (!textId) return;
-    const metaRef = doc(db, "textsMeta", textId);
-    onSnapshot(metaRef, (snap) => {
-      const data = snap.data();
-      setViews(data?.views || 0);
-      setLikes(data?.likes || 0);
-      setComments(data?.comments || []);
-    });
-
-    // Incrémenter les vues si utilisateur unique
-    (async () => {
-      const userId = user?.id || "anon";
-      const userDoc = doc(db, "textsMeta", textId);
-      await setDoc(
-        userDoc,
-        { viewers: arrayUnion(userId) },
-        { merge: true }
-      );
-      const snap = await doc(db, "textsMeta", textId).get();
-      const viewers = snap.data()?.viewers || [];
-      if (!viewers.includes(userId)) {
-        await updateDoc(doc(db, "textsMeta", textId), { views: increment(1) });
-      }
-    })();
-  }, [textId, user]);
-
   const handleLike = async () => {
-    if (!user) return router.push(`/login?redirect=/texts/${textId}`);
+    if (!session) {
+      toast.error("Vous devez vous connecter pour liker");
+      router.push(`/login?redirect=/texts/${textId}`);
+      return;
+    }
+
     try {
-      const userLikeId = user.id;
       const metaRef = doc(db, "textsMeta", textId);
-      const snap = await metaRef.get();
-      const likedUsers = snap.data()?.likedUsers || [];
-      if (likedUsers.includes(userLikeId)) {
-        toast.error("Vous avez déjà liké ce texte");
-        return;
-      }
       await updateDoc(metaRef, {
         likes: increment(1),
-        likedUsers: arrayUnion(userLikeId),
+        likedBy: arrayUnion(session.user.email),
       });
     } catch (err) {
       console.error(err);
-      toast.error("Erreur lors du like");
+      toast.error("Impossible de liker pour le moment");
     }
   };
 
-  const handleComment = async () => {
-    if (!user) return router.push(`/login?redirect=/texts/${textId}`);
-    if (!commentText.trim()) return;
+  const handleComment = async (e) => {
+    e.preventDefault();
+    if (!session) {
+      toast.error("Vous devez vous connecter pour commenter");
+      router.push(`/login?redirect=/texts/${textId}`);
+      return;
+    }
+    if (!newComment.trim()) return;
+
     try {
       const metaRef = doc(db, "textsMeta", textId);
       await updateDoc(metaRef, {
         comments: arrayUnion({
-          userId: user.id,
-          userName: user.name,
-          text: commentText,
-          createdAt: new Date().toISOString(),
+          text: newComment,
+          author: session.user.name || session.user.email,
+          date: new Date().toISOString(),
         }),
       });
-      setCommentText("");
+      setNewComment("");
     } catch (err) {
       console.error(err);
-      toast.error("Erreur lors de l'ajout du commentaire");
+      toast.error("Impossible de commenter pour le moment");
     }
   };
 
-  if (loading) return <div className="text-center py-10 text-gray-600">Chargement...</div>;
-  if (!text) return <div className="text-center py-10 text-gray-600">Texte introuvable</div>;
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: text.title,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Lien copié dans le presse-papiers !");
+    }
+  };
+
+  if (loading)
+    return <div className="text-center py-10 text-gray-600">Chargement...</div>;
+
+  if (!text)
+    return (
+      <div className="text-center py-10 text-gray-600">Texte introuvable.</div>
+    );
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow space-y-4">
-      {text.image && (
-        <img src={text.image} alt={text.title} className="w-full h-64 object-cover rounded" />
-      )}
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">{text.title}</h1>
-      <p className="text-sm text-gray-500 mb-4">
-        ✍️ {text.authorName} | 🗓 {new Date(text.date).toLocaleDateString("fr-FR")}
+      <p className="text-sm text-gray-500">
+        ✍️ {text.authorName} | 🗓{" "}
+        {new Date(text.date).toLocaleDateString("fr-FR")}
       </p>
-      <p className="whitespace-pre-line">{text.content}</p>
+      {text.image && (
+        <img
+          src={text.image}
+          alt={text.title}
+          className="w-full h-64 object-cover rounded"
+        />
+      )}
+      <div className="prose">{text.content}</div>
 
-      <div className="flex items-center gap-6 mt-4 text-gray-600">
-        <button onClick={handleLike} className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+      <div className="flex gap-4 items-center mt-4">
+        <button
+          onClick={handleLike}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
           👍 {likes}
         </button>
         <span>👁️ {views}</span>
         <button
-          onClick={() => navigator.share?.({ title: text.title, url: window.location.href })}
-          className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+          onClick={handleShare}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         >
           🔗 Partager
         </button>
       </div>
 
       <div className="mt-6">
-        <h2 className="text-lg font-semibold mb-2">💬 Commentaires ({comments.length})</h2>
-        {comments.map((c, i) => (
-          <div key={i} className="mb-2 p-2 bg-gray-100 rounded">
-            <span className="font-semibold">{c.userName}:</span> {c.text}
-          </div>
-        ))}
-
-        <div className="mt-4 flex gap-2">
-          <input
-            type="text"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Écrire un commentaire..."
-            className="flex-1 p-2 border rounded"
+        <h2 className="text-xl font-semibold mb-2">💬 Commentaires</h2>
+        <form onSubmit={handleComment} className="flex flex-col gap-2 mb-4">
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Ajouter un commentaire..."
+            rows={3}
+            className="w-full border p-2 rounded"
           />
-          <button onClick={handleComment} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-            Envoyer
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Commenter
           </button>
-        </div>
+        </form>
+
+        {comments.length ? (
+          <ul className="space-y-2">
+            {comments.map((c, i) => (
+              <li key={i} className="border p-2 rounded">
+                <p className="text-sm text-gray-700">{c.text}</p>
+                <p className="text-xs text-gray-500">
+                  — {c.author} |{" "}
+                  {new Date(c.date).toLocaleDateString("fr-FR")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">Aucun commentaire pour le moment.</p>
+        )}
       </div>
     </div>
   );
