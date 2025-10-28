@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { db } from "@/firebase";
-import { doc, onSnapshot } from "firebase/firestore";
 
-export default function LibraryPage() {
+export default function BibliothequePage() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,14 +11,11 @@ export default function LibraryPage() {
     const fetchTexts = async () => {
       try {
         const res = await fetch("/data/texts/index.json");
-        if (!res.ok) throw new Error("Impossible de charger l'index des textes");
-        const json = await res.json();
-
-        // Trier par date décroissante
-        const sorted = [...json].sort((a, b) => new Date(b.date) - new Date(a.date));
-        setTexts(sorted);
+        if (!res.ok) throw new Error("Impossible de charger les textes");
+        const data = await res.json();
+        setTexts(data);
       } catch (err) {
-        console.error(err);
+        console.error("Erreur de chargement:", err);
       } finally {
         setLoading(false);
       }
@@ -28,63 +23,82 @@ export default function LibraryPage() {
     fetchTexts();
   }, []);
 
-  if (loading) return <div className="text-center py-10 text-gray-600">Chargement de la bibliothèque...</div>;
-  if (!texts.length) return <div className="text-center py-10 text-gray-600">Aucun texte publié.</div>;
+  if (loading)
+    return <p className="text-center mt-10 text-gray-600">Chargement...</p>;
+
+  if (texts.length === 0)
+    return (
+      <p className="text-center mt-10 text-gray-600">
+        Aucun texte publié pour le moment.
+      </p>
+    );
 
   return (
-    <div className="max-w-6xl mx-auto p-6 grid gap-6 md:grid-cols-2">
-      {texts.map((text) => (
-        <TextCard key={text.id} text={text} />
-      ))}
-    </div>
-  );
-}
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-5xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-center mb-8">
+          📚 Bibliothèque Lisible
+        </h1>
 
-function TextCard({ text }) {
-  const [views, setViews] = useState(0);
-  const [likes, setLikes] = useState(0);
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {texts.map((text) => {
+            const views =
+              typeof window !== "undefined"
+                ? localStorage.getItem(`views-${text.id}`) || 0
+                : 0;
 
-  useEffect(() => {
-    if (!text?.id) return;
-    const metaRef = doc(db, "textsMeta", text.id);
-    const unsubscribe = onSnapshot(metaRef, (snap) => {
-      const data = snap.data();
-      setViews(data?.views || 0);
-      setLikes(data?.likes || 0);
-    });
-    return () => unsubscribe();
-  }, [text.id]);
+            const comments =
+              typeof window !== "undefined"
+                ? JSON.parse(localStorage.getItem(`comments-${text.id}`) || "[]")
+                    .length
+                : 0;
 
-  const authorName = text.authorName || "Auteur inconnu";
-  const authorId = text.authorId || "inconnu";
-  const imageUrl = text.image || "/default-placeholder.png";
-  const formattedDate = text.date
-    ? new Date(text.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
-    : "Date inconnue";
+            return (
+              <div
+                key={text.id}
+                className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col"
+              >
+                <div className="h-48 bg-gray-100">
+                  <img
+                    src={text.image || "/default-placeholder.png"}
+                    alt={text.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
 
-  return (
-    <div className="bg-white shadow rounded-xl overflow-hidden hover:shadow-lg transition">
-      <img src={imageUrl} alt={text.title} className="w-full h-48 object-cover" />
-      <div className="p-4">
-        <h2 className="text-xl font-semibold mb-1">{text.title}</h2>
-        <p className="text-sm text-gray-500 mb-2">
-          ✍️{" "}
-          <Link href={`/auteur/${authorId}`} className="text-blue-600 hover:underline">
-            {authorName}
-          </Link>{" "}
-          | 🗓 {formattedDate}
-        </p>
-        <div className="flex items-center gap-4 text-sm mb-4 text-gray-600">
-          <span>👁️ {views}</span>
-          <span>👍 {likes}</span>
+                <div className="p-4 flex flex-col flex-1">
+                  <h2 className="text-lg font-semibold mb-2">{text.title}</h2>
+
+                  <p className="text-sm text-gray-600 mb-2">
+                    ✍️ {text.authorName || "Auteur inconnu"}
+                  </p>
+
+                  <p className="text-xs text-gray-400 mb-4">
+                    Publié le{" "}
+                    {new Date(text.date).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+
+                  <div className="mt-auto flex items-center justify-between text-sm text-gray-600">
+                    <span>👁️ {views} vues</span>
+                    <span>💬 {comments} commentaires</span>
+                  </div>
+
+                  <Link
+                    href={`/texts/${text.id}`}
+                    className="mt-4 inline-block text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                  >
+                    Lire
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <Link
-          href={`/texts/${text.id}`}
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Lire
-        </Link>
       </div>
     </div>
   );
-} 
+}
