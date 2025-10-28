@@ -1,66 +1,81 @@
-import { createOrUpdateFile } from "@/lib/githubClient";
+import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { title, content, authorName, authorId, imageBase64, imageName } = req.body;
-  const id = Date.now();
-  const textPath = `public/data/texts/${id}.json`;
-  const imagePath = imageBase64
-    ? `public/data/images/${id}.json`
-    : null;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Méthode non autorisée" });
+  }
 
   try {
-    const textData = {
+    const { title, content, authorName, authorId, imageBase64, imageName } = req.body;
+
+    if (!title || !content) {
+      return res.status(400).json({ error: "Titre et contenu requis" });
+    }
+
+    // 🔹 Création d’un identifiant unique
+    const id = Date.now();
+    const date = new Date().toISOString();
+
+    const newText = {
       id,
       title,
       content,
-      authorName,
-      authorId,
-      date: new Date().toISOString(),
-      image: imageBase64 ? `/data/images/${id}.json` : null,
+      authorName: authorName || "Auteur inconnu",
+      authorId: authorId || null,
+      date,
+      image: imageBase64 || null,
+      imageName: imageName || null,
     };
 
-    // Publier le texte
+    // 1️⃣ — Sauvegarde du texte complet dans /public/data/texts/{id}.json
+    const textPath = `public/data/texts/${id}.json`;
     await createOrUpdateFile({
+      owner: "benjohnsonjuste",
+      repo: "Lisible",
       path: textPath,
-      content: JSON.stringify(textData, null, 2),
-      message: `📝 Publier texte ${title}`,
+      content: JSON.stringify(newText, null, 2),
+      message: `📝 Nouveau texte: ${title}`,
     });
 
-    // Publier l'image si présente
-    if (imageBase64 && imageName) {
-      const imageData = {
-        id,
-        name: imageName,
-        base64: imageBase64,
-        linkedText: id,
-      };
-      await createOrUpdateFile({
-        path: imagePath,
-        content: JSON.stringify(imageData, null, 2),
-        message: `🖼️ Ajouter image pour ${title}`,
+    // 2️⃣ — Lecture de l’index existant
+    let indexData = [];
+    try {
+      const existing = await getFileContent({
+        owner: "benjohnsonjuste",
+        repo: "Lisible",
+        path: "public/data/texts/index.json",
       });
+      indexData = JSON.parse(existing || "[]");
+    } catch {
+      console.warn("Aucun fichier index.json trouvé, création d’un nouveau fichier.");
     }
 
-    // Mise à jour de texts/index.json
-    const indexPath = `public/data/texts/index.json`;
-    const indexRes = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/${indexPath}`);
-    const currentIndex = indexRes.ok ? await indexRes.json() : [];
-    const updatedIndex = [
-      { id, title, authorName, authorId, date: new Date().toISOString() },
-      ...currentIndex,
-    ];
+    // 3️⃣ — Création du résumé du texte
+    const newTextSummary = {
+      id,
+      title,
+      authorName: newText.authorName,
+      authorId: newText.authorId,
+      date,
+      image: newText.image || null,
+    };
 
+    // 4️⃣ — Ajout du texte dans l’index (en tête de liste)
+    const updatedIndex = [newTextSummary, ...indexData];
+
+    // 5️⃣ — Sauvegarde de l’index mis à jour
     await createOrUpdateFile({
-      path: indexPath,
+      owner: "benjohnsonjuste",
+      repo: "Lisible",
+      path: "public/data/texts/index.json",
       content: JSON.stringify(updatedIndex, null, 2),
-      message: `📚 Mettre à jour index textes`,
+      message: `📚 Index mis à jour: ${title}`,
     });
 
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error("Erreur API publish:", err);
-    res.status(500).json({ error: "Erreur de publication" });
+    console.log(`✅ Texte publié : ${title}`);
+    return res.status(200).json({ success: true, textId: id });
+  } catch (error) {
+    console.error("Erreur de publication:", error);
+    return res.status(500).json({ error: "Erreur lors de la publication" });
   }
 }
