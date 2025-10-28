@@ -1,180 +1,164 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "next/router";
 import { toast } from "sonner";
-import { db } from "@/firebase";
-import { doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from "firebase/firestore";
-import { useSession } from "next-auth/react";
 
-export default function TextDetailsPage() {
-  const { id } = useParams();
+export default function TextPage() {
   const router = useRouter();
-  const { data: session } = useSession();
-
+  const { id } = router.query;
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
-  const [likes, setLikes] = useState(0);
+  const [comments, setComments] = useState([]);
+  const [user, setUser] = useState(null); // ici tu mettras la session Firebase si tu veux
+  const [commentText, setCommentText] = useState("");
 
-  // Charger le contenu du texte (depuis le dossier public/data/texts)
+  // Charger le texte depuis le dossier public/data/texts
   useEffect(() => {
     if (!id) return;
-    const fetchText = async () => {
+
+    async function fetchText() {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
-      } catch (err) {
-        console.error("❌ Erreur chargement texte :", err);
-        toast.error("Impossible de charger le texte");
-      } finally {
         setLoading(false);
+        incrementViews(id);
+      } catch (error) {
+        console.error("Erreur:", error);
+        toast.error("Impossible de charger le texte");
       }
-    };
+    }
+
     fetchText();
   }, [id]);
 
-  // 🔁 Charger les vues et likes depuis Firestore en temps réel
-  useEffect(() => {
-    if (!id) return;
-    const ref = doc(db, "textsMeta", id);
-    const unsub = onSnapshot(ref, (snap) => {
-      const data = snap.data();
-      setViews(data?.views || 0);
-      setLikes(data?.likes || 0);
-    });
-    return () => unsub();
-  }, [id]);
-
-  // 👁️ Incrémenter le compteur de vues à chaque ouverture
-  useEffect(() => {
-    if (!id) return;
-    const ref = doc(db, "textsMeta", id);
-    const incrementView = async () => {
-      try {
-        const snap = await getDoc(ref);
-        if (!snap.exists()) {
-          await setDoc(ref, { views: 1, likes: 0 });
-        } else {
-          await updateDoc(ref, { views: increment(1) });
-        }
-      } catch (err) {
-        console.warn("Erreur enregistrement vue :", err);
-      }
-    };
-    incrementView();
-  }, [id]);
-
-  // ❤️ Gérer le Like
-  const handleLike = async () => {
-    if (!session) {
-      toast.info("Connecte-toi pour aimer un texte !");
-      router.push(`/login?redirect=/texts/${id}`);
-      return;
-    }
-
-    try {
-      const ref = doc(db, "textsMeta", id);
-      await updateDoc(ref, { likes: increment(1) });
-      toast.success("Tu as aimé ce texte ❤️");
-    } catch (err) {
-      console.error("Erreur lors du Like :", err);
-      toast.error("Impossible d'ajouter ton like");
-    }
+  // Simuler un compteur de vues (localStorage)
+  const incrementViews = (textId) => {
+    const key = `views-${textId}`;
+    const current = parseInt(localStorage.getItem(key) || "0") + 1;
+    localStorage.setItem(key, current);
+    setViews(current);
   };
 
-  // 💬 Gérer le clic sur Commenter
+  // Gérer les commentaires locaux
   const handleComment = () => {
-    if (!session) {
-      toast.info("Connecte-toi pour commenter !");
+    if (!user) {
+      toast.error("Veuillez vous connecter pour commenter.");
       router.push(`/login?redirect=/texts/${id}`);
       return;
     }
-    toast("Fonction commentaire à venir 💬");
+
+    if (!commentText.trim()) return;
+    const newComment = {
+      author: user.displayName || "Utilisateur",
+      content: commentText,
+      date: new Date().toISOString(),
+    };
+    setComments((prev) => [...prev, newComment]);
+    setCommentText("");
   };
 
-  if (loading) {
-    return <div className="text-center py-10 text-gray-600">Chargement...</div>;
-  }
+  // Gérer les likes
+  const handleLike = () => {
+    if (!user) {
+      toast.error("Veuillez vous connecter pour aimer ce texte.");
+      router.push(`/login?redirect=/texts/${id}`);
+      return;
+    }
+    toast.success("❤️ Merci pour ton like !");
+  };
 
-  if (!text) {
-    return (
-      <div className="text-center py-10 text-gray-600">
-        Texte introuvable ou supprimé.
-      </div>
-    );
-  }
+  // Partage
+  const handleShare = async () => {
+    try {
+      await navigator.share({
+        title: text?.title,
+        text: `Découvre ce texte sur Lisible : ${text?.title}`,
+        url: window.location.href,
+      });
+    } catch {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Lien copié dans le presse-papier !");
+    }
+  };
 
-  const formattedDate = text.date
-    ? new Date(text.date).toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
-    : "Date inconnue";
-
-  const authorName = text.authorName || "Auteur inconnu";
+  if (loading) return <p className="text-center mt-10">Chargement...</p>;
+  if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white shadow rounded-xl">
+    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
       {text.image && (
         <img
           src={text.image}
           alt={text.title}
-          className="w-full h-64 object-cover rounded-lg mb-4"
+          className="w-full h-64 object-cover rounded-xl"
         />
       )}
 
-      <h1 className="text-3xl font-bold mb-2">{text.title}</h1>
-      <p className="text-gray-500 mb-4">
-        ✍️ {authorName} | 🗓 {formattedDate}
-      </p>
+      <h1 className="text-3xl font-bold">{text.title}</h1>
 
-      <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
-        <span>👁️ {views} vues</span>
-        <span>👍 {likes} likes</span>
+      <div className="text-gray-600 text-sm flex justify-between">
+        <p>
+          ✍️ <strong>{text.authorName}</strong>
+        </p>
+        <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
-      <div className="text-lg leading-relaxed whitespace-pre-wrap mb-6">
-        {text.content || "Aucun contenu disponible."}
-      </div>
+      <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
-      <div className="flex gap-3">
+      <div className="flex gap-4 pt-4 border-t">
         <button
           onClick={handleLike}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-3 py-1 bg-pink-500 text-white rounded hover:bg-pink-600"
         >
-          👍 Aimer
+          ❤️ Aimer
         </button>
         <button
-          onClick={handleComment}
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-        >
-          💬 Commenter
-        </button>
-        <button
-          onClick={() => {
-            navigator.share
-              ? navigator.share({
-                  title: text.title,
-                  text: `Lis ce texte sur Lisible : ${text.title}`,
-                  url: window.location.href,
-                })
-              : toast.info("Partage non supporté sur ce navigateur");
-          }}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          onClick={handleShare}
+          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           🔗 Partager
         </button>
+        <span className="ml-auto text-sm text-gray-500">
+          👁️ {views} vues
+        </span>
       </div>
 
-      <div className="mt-8 text-center">
-        <Link href="/library" className="text-blue-600 hover:underline">
-          ← Retour à la bibliothèque
-        </Link>
+      <div className="pt-4 border-t">
+        <h3 className="font-semibold mb-2">💬 Commentaires ({comments.length})</h3>
+        {comments.length === 0 ? (
+          <p className="text-gray-500 text-sm">Aucun commentaire pour l’instant.</p>
+        ) : (
+          <ul className="space-y-2">
+            {comments.map((c, i) => (
+              <li key={i} className="p-2 border rounded">
+                <p className="text-sm text-gray-700">
+                  <strong>{c.author}</strong> ·{" "}
+                  {new Date(c.date).toLocaleString()}
+                </p>
+                <p>{c.content}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-3 flex flex-col gap-2">
+          <textarea
+            placeholder="Écrire un commentaire..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            className="w-full border rounded p-2"
+          />
+          <button
+            onClick={handleComment}
+            className="self-end px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Publier
+          </button>
+        </div>
       </div>
     </div>
   );
