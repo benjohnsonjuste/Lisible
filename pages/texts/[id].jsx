@@ -1,192 +1,180 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { db } from "@/firebase"; // Assure-toi que db est exporté
-import {
-  doc,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  increment,
-} from "firebase/firestore";
+import { db } from "@/firebase";
+import { doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 
-export default function TextPage() {
+export default function TextDetailsPage() {
+  const { id } = useParams();
   const router = useRouter();
-  const params = useParams();
-  const textId = params?.id;
-
   const { data: session } = useSession();
+
   const [text, setText] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
   const [likes, setLikes] = useState(0);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-  const [loading, setLoading] = useState(true);
 
+  // Charger le contenu du texte (depuis le dossier public/data/texts)
   useEffect(() => {
+    if (!id) return;
     const fetchText = async () => {
       try {
-        const res = await fetch(`/data/texts/${textId}.json`);
+        const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
-
-        // 🔹 Incrémente les vues si l'utilisateur est connecté
-        const metaRef = doc(db, "textsMeta", textId);
-        await updateDoc(metaRef, { views: increment(1) }).catch(() =>
-          updateDoc(metaRef, { views: 1 })
-        );
-
-        // 🔹 Écoute en temps réel des vues, likes et commentaires
-        onSnapshot(metaRef, (snap) => {
-          const meta = snap.data();
-          setViews(meta?.views || 0);
-          setLikes(meta?.likes || 0);
-          setComments(meta?.comments || []);
-        });
       } catch (err) {
-        console.error("Erreur chargement texte:", err);
+        console.error("❌ Erreur chargement texte :", err);
         toast.error("Impossible de charger le texte");
       } finally {
         setLoading(false);
       }
     };
+    fetchText();
+  }, [id]);
 
-    if (textId) fetchText();
-  }, [textId]);
+  // 🔁 Charger les vues et likes depuis Firestore en temps réel
+  useEffect(() => {
+    if (!id) return;
+    const ref = doc(db, "textsMeta", id);
+    const unsub = onSnapshot(ref, (snap) => {
+      const data = snap.data();
+      setViews(data?.views || 0);
+      setLikes(data?.likes || 0);
+    });
+    return () => unsub();
+  }, [id]);
 
+  // 👁️ Incrémenter le compteur de vues à chaque ouverture
+  useEffect(() => {
+    if (!id) return;
+    const ref = doc(db, "textsMeta", id);
+    const incrementView = async () => {
+      try {
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          await setDoc(ref, { views: 1, likes: 0 });
+        } else {
+          await updateDoc(ref, { views: increment(1) });
+        }
+      } catch (err) {
+        console.warn("Erreur enregistrement vue :", err);
+      }
+    };
+    incrementView();
+  }, [id]);
+
+  // ❤️ Gérer le Like
   const handleLike = async () => {
     if (!session) {
-      toast.error("Vous devez vous connecter pour liker");
-      router.push(`/login?redirect=/texts/${textId}`);
+      toast.info("Connecte-toi pour aimer un texte !");
+      router.push(`/login?redirect=/texts/${id}`);
       return;
     }
 
     try {
-      const metaRef = doc(db, "textsMeta", textId);
-      await updateDoc(metaRef, {
-        likes: increment(1),
-        likedBy: arrayUnion(session.user.email),
-      });
+      const ref = doc(db, "textsMeta", id);
+      await updateDoc(ref, { likes: increment(1) });
+      toast.success("Tu as aimé ce texte ❤️");
     } catch (err) {
-      console.error(err);
-      toast.error("Impossible de liker pour le moment");
+      console.error("Erreur lors du Like :", err);
+      toast.error("Impossible d'ajouter ton like");
     }
   };
 
-  const handleComment = async (e) => {
-    e.preventDefault();
+  // 💬 Gérer le clic sur Commenter
+  const handleComment = () => {
     if (!session) {
-      toast.error("Vous devez vous connecter pour commenter");
-      router.push(`/login?redirect=/texts/${textId}`);
+      toast.info("Connecte-toi pour commenter !");
+      router.push(`/login?redirect=/texts/${id}`);
       return;
     }
-    if (!newComment.trim()) return;
-
-    try {
-      const metaRef = doc(db, "textsMeta", textId);
-      await updateDoc(metaRef, {
-        comments: arrayUnion({
-          text: newComment,
-          author: session.user.name || session.user.email,
-          date: new Date().toISOString(),
-        }),
-      });
-      setNewComment("");
-    } catch (err) {
-      console.error(err);
-      toast.error("Impossible de commenter pour le moment");
-    }
+    toast("Fonction commentaire à venir 💬");
   };
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: text.title,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié dans le presse-papiers !");
-    }
-  };
-
-  if (loading)
+  if (loading) {
     return <div className="text-center py-10 text-gray-600">Chargement...</div>;
+  }
 
-  if (!text)
+  if (!text) {
     return (
-      <div className="text-center py-10 text-gray-600">Texte introuvable.</div>
+      <div className="text-center py-10 text-gray-600">
+        Texte introuvable ou supprimé.
+      </div>
     );
+  }
+
+  const formattedDate = text.date
+    ? new Date(text.date).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      })
+    : "Date inconnue";
+
+  const authorName = text.authorName || "Auteur inconnu";
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">{text.title}</h1>
-      <p className="text-sm text-gray-500">
-        ✍️ {text.authorName} | 🗓{" "}
-        {new Date(text.date).toLocaleDateString("fr-FR")}
-      </p>
+    <div className="max-w-3xl mx-auto p-6 bg-white shadow rounded-xl">
       {text.image && (
         <img
           src={text.image}
           alt={text.title}
-          className="w-full h-64 object-cover rounded"
+          className="w-full h-64 object-cover rounded-lg mb-4"
         />
       )}
-      <div className="prose">{text.content}</div>
 
-      <div className="flex gap-4 items-center mt-4">
+      <h1 className="text-3xl font-bold mb-2">{text.title}</h1>
+      <p className="text-gray-500 mb-4">
+        ✍️ {authorName} | 🗓 {formattedDate}
+      </p>
+
+      <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
+        <span>👁️ {views} vues</span>
+        <span>👍 {likes} likes</span>
+      </div>
+
+      <div className="text-lg leading-relaxed whitespace-pre-wrap mb-6">
+        {text.content || "Aucun contenu disponible."}
+      </div>
+
+      <div className="flex gap-3">
         <button
           onClick={handleLike}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
-          👍 {likes}
+          👍 Aimer
         </button>
-        <span>👁️ {views}</span>
         <button
-          onClick={handleShare}
+          onClick={handleComment}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          💬 Commenter
+        </button>
+        <button
+          onClick={() => {
+            navigator.share
+              ? navigator.share({
+                  title: text.title,
+                  text: `Lis ce texte sur Lisible : ${text.title}`,
+                  url: window.location.href,
+                })
+              : toast.info("Partage non supporté sur ce navigateur");
+          }}
           className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         >
           🔗 Partager
         </button>
       </div>
 
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2">💬 Commentaires</h2>
-        <form onSubmit={handleComment} className="flex flex-col gap-2 mb-4">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Ajouter un commentaire..."
-            rows={3}
-            className="w-full border p-2 rounded"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Commenter
-          </button>
-        </form>
-
-        {comments.length ? (
-          <ul className="space-y-2">
-            {comments.map((c, i) => (
-              <li key={i} className="border p-2 rounded">
-                <p className="text-sm text-gray-700">{c.text}</p>
-                <p className="text-xs text-gray-500">
-                  — {c.author} |{" "}
-                  {new Date(c.date).toLocaleDateString("fr-FR")}
-                </p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-500">Aucun commentaire pour le moment.</p>
-        )}
+      <div className="mt-8 text-center">
+        <Link href="/library" className="text-blue-600 hover:underline">
+          ← Retour à la bibliothèque
+        </Link>
       </div>
     </div>
   );
