@@ -3,61 +3,102 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
+import { useAuth } from "@/context/AuthContext"; // 🔥 ton AuthProvider Firebase
 
-export default function TextPublishingForm({ user }) {
+export default function TextPublishingForm() {
   const router = useRouter();
+  const { user } = useAuth(); // ✅ utilisateur connecté Firebase
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [imageFile, setImageFile] = useState(null);
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const toDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+  // 🧠 Pour créer un ID unique basé sur la date
+  const generateId = () => Date.now();
 
-  const handleSubmit = async (e) => {
+  // 📤 Gestion de la publication
+  const handlePublish = async (e) => {
     e.preventDefault();
-    if (!title || !content) {
-      toast.error("Titre et contenu requis");
+
+    if (!user) {
+      toast.error("⚠️ Vous devez être connecté pour publier un texte.");
+      router.push("/login");
+      return;
+    }
+
+    if (!title.trim() || !content.trim()) {
+      toast.error("Veuillez remplir le titre et le contenu.");
       return;
     }
 
     setLoading(true);
+
     try {
-      let imageBase64 = null;
-      let imageName = null;
+      const id = generateId();
+      const authorName =
+        user.displayName ||
+        user.email?.split("@")[0] ||
+        "Auteur inconnu";
 
-      if (imageFile) {
-        imageBase64 = await toDataUrl(imageFile);
-        imageName = imageFile.name;
-      }
+      const authorId = user.uid || null;
 
-      const payload = {
+      const newText = {
+        id,
         title,
         content,
-        authorName: user?.name || "Auteur inconnu",
-        authorId: user?.id || null,
-        imageBase64,
-        imageName,
+        authorName,
+        authorId,
+        date: new Date().toISOString(),
+        image: image || "/default-placeholder.png",
       };
 
-      const res = await fetch("/api/publish-github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      // 1️⃣ — Créer le fichier du texte individuel
+      await createOrUpdateFile({
+        owner: "benjohnsonjuste",
+        repo: "Lisible",
+        path: `public/data/texts/${id}.json`,
+        content: JSON.stringify(newText, null, 2),
+        message: `📝 Nouveau texte: ${title}`,
       });
 
-      if (!res.ok) throw new Error("Erreur de publication");
+      // 2️⃣ — Mettre à jour l’index général
+      let indexData = [];
+      try {
+        const res = await getFileContent({
+          owner: "benjohnsonjuste",
+          repo: "Lisible",
+          path: "public/data/texts/index.json",
+        });
+        indexData = JSON.parse(res || "[]");
+      } catch (err) {
+        console.warn("⚠️ Aucun index trouvé, création d’un nouveau.");
+      }
 
-      toast.success("✅ Publication réussie !");
-      router.push("/bibliotheque");
+      const newEntry = {
+        id,
+        title,
+        authorName,
+        authorId,
+        date: newText.date,
+        image: newText.image,
+      };
+
+      const updatedIndex = [newEntry, ...indexData];
+      await createOrUpdateFile({
+        owner: "benjohnsonjuste",
+        repo: "Lisible",
+        path: "public/data/texts/index.json",
+        content: JSON.stringify(updatedIndex, null, 2),
+        message: `📚 Index mis à jour: ${title}`,
+      });
+
+      toast.success("✅ Texte publié avec succès !");
+      router.push(`/texts/${id}`);
     } catch (err) {
       console.error(err);
-      toast.error("❌ Échec de publication");
+      toast.error("Erreur lors de la publication.");
     } finally {
       setLoading(false);
     }
@@ -65,10 +106,12 @@ export default function TextPublishingForm({ user }) {
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
+      onSubmit={handlePublish}
+      className="max-w-3xl mx-auto bg-white shadow rounded-xl p-6 space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
+      <h1 className="text-2xl font-semibold text-center mb-4">
+        ✍️ Publier un texte
+      </h1>
 
       <input
         type="text"
@@ -79,25 +122,40 @@ export default function TextPublishingForm({ user }) {
       />
 
       <textarea
-        placeholder="Écris ton texte ici..."
+        placeholder="Contenu du texte..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        rows={8}
+        rows={10}
         className="w-full p-2 border rounded"
       />
 
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImageFile(e.target.files[0])}
-      />
+      <div>
+        <label className="text-sm text-gray-600 mb-1 block">Image (facultative)</label>
+        {image && (
+          <img
+            src={image}
+            alt="aperçu"
+            className="w-full h-48 object-cover mb-2 rounded"
+          />
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => setImage(reader.result);
+            if (file) reader.readAsDataURL(file);
+          }}
+        />
+      </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
       >
-        {loading ? "Publication..." : "Publier"}
+        {loading ? "Publication en cours..." : "Publier"}
       </button>
     </form>
   );
