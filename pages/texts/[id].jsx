@@ -3,21 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
+import { Heart, Share2, Eye } from "lucide-react";
 
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
+
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
   const [comments, setComments] = useState([]);
-  const [user, setUser] = useState(null); // ici tu mettras la session Firebase si tu veux
+  const [user, setUser] = useState(null);
   const [commentText, setCommentText] = useState("");
 
-  // Charger le texte depuis le dossier public/data/texts
+  // Charger la session utilisateur (exemple : localStorage ou Firebase)
+  useEffect(() => {
+    const storedUser = localStorage.getItem("lisibleUser");
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
+  // Charger le texte
   useEffect(() => {
     if (!id) return;
-
     async function fetchText() {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
@@ -25,25 +32,54 @@ export default function TextPage() {
         const data = await res.json();
         setText(data);
         setLoading(false);
-        incrementViews(id);
+        trackView(id);
       } catch (error) {
         console.error("Erreur:", error);
         toast.error("Impossible de charger le texte");
       }
     }
-
     fetchText();
-  }, [id]);
+  }, [id, user]);
 
-  // Simuler un compteur de vues (localStorage)
-  const incrementViews = (textId) => {
-    const key = `views-${textId}`;
-    const current = parseInt(localStorage.getItem(key) || "0") + 1;
-    localStorage.setItem(key, current);
-    setViews(current);
+  /**
+   * ✅ Compteur de vues fiable :
+   * - 1 vue par utilisateur connecté (basée sur son UID)
+   * - 1 vue par appareil (visiteur non connecté)
+   * - aucune duplication possible
+   */
+  const trackView = (textId) => {
+    if (!textId) return;
+
+    // Identifiant unique : userId si connecté, sinon deviceId stocké localement
+    let uniqueViewerId;
+    if (user?.uid) {
+      uniqueViewerId = `user-${user.uid}`;
+    } else {
+      let deviceId = localStorage.getItem("lisibleDeviceId");
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem("lisibleDeviceId", deviceId);
+      }
+      uniqueViewerId = `device-${deviceId}`;
+    }
+
+    // Récupérer la liste des viewers pour ce texte
+    const key = `viewers-${textId}`;
+    let viewers = JSON.parse(localStorage.getItem(key) || "[]");
+
+    // Si déjà vu par cet utilisateur/appareil, ne rien faire
+    if (viewers.includes(uniqueViewerId)) {
+      setViews(viewers.length);
+      return;
+    }
+
+    // Ajouter et sauvegarder
+    viewers.push(uniqueViewerId);
+    localStorage.setItem(key, JSON.stringify(viewers));
+    setViews(viewers.length);
   };
 
-  // Gérer les commentaires locaux
+  // 🔹 Commentaire
   const handleComment = () => {
     if (!user) {
       toast.error("Veuillez vous connecter pour commenter.");
@@ -53,25 +89,37 @@ export default function TextPage() {
 
     if (!commentText.trim()) return;
     const newComment = {
-      author: user.displayName || "Utilisateur",
+      author: user.displayName || user.name || "Utilisateur",
       content: commentText,
       date: new Date().toISOString(),
     };
     setComments((prev) => [...prev, newComment]);
     setCommentText("");
+    toast.success("💬 Commentaire publié !");
   };
 
-  // Gérer les likes
+  // 🔹 Like
   const handleLike = () => {
     if (!user) {
       toast.error("Veuillez vous connecter pour aimer ce texte.");
       router.push(`/login?redirect=/texts/${id}`);
       return;
     }
+
+    const key = `likes-${id}`;
+    const likes = JSON.parse(localStorage.getItem(key) || "[]");
+
+    if (likes.includes(user.uid)) {
+      toast("💔 Tu as déjà aimé ce texte.");
+      return;
+    }
+
+    likes.push(user.uid);
+    localStorage.setItem(key, JSON.stringify(likes));
     toast.success("❤️ Merci pour ton like !");
   };
 
-  // Partage
+  // 🔹 Partage
   const handleShare = async () => {
     try {
       await navigator.share({
@@ -81,7 +129,7 @@ export default function TextPage() {
       });
     } catch {
       navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié dans le presse-papier !");
+      toast.success("🔗 Lien copié dans le presse-papier !");
     }
   };
 
@@ -109,21 +157,23 @@ export default function TextPage() {
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
-      <div className="flex gap-4 pt-4 border-t">
+      <div className="flex gap-4 pt-4 border-t items-center">
         <button
           onClick={handleLike}
-          className="px-3 py-1 bg-pink-500 text-white rounded hover:bg-pink-600"
+          className="flex items-center gap-2 px-3 py-1 bg-pink-500 text-white rounded hover:bg-pink-600 transition"
         >
-          ❤️ Aimer
+          <Heart size={18} /> Aimer
         </button>
+
         <button
           onClick={handleShare}
-          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
-          🔗 Partager
+          <Share2 size={18} /> Partager
         </button>
-        <span className="ml-auto text-sm text-gray-500">
-          👁️ {views} vues
+
+        <span className="ml-auto text-sm text-gray-500 flex items-center gap-1">
+          <Eye size={16} /> {views} vue{text?.views > 1 ? "s" : ""}
         </span>
       </div>
 
