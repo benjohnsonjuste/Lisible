@@ -3,58 +3,61 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
-import { useAuth } from "@/context/AuthContext"; // 🔥 ton AuthProvider Firebase
+import { useAuth } from "@/context/AuthContext"; // <-- pour récupérer l’utilisateur connecté
+import { createOrUpdateFile, getFileContent } from "@/lib/githubClient"; // <-- ton client GitHub
 
 export default function TextPublishingForm() {
   const router = useRouter();
-  const { user } = useAuth(); // ✅ utilisateur connecté Firebase
-
+  const { user } = useAuth(); // récupère l’utilisateur connecté
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [image, setImage] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 🧠 Pour créer un ID unique basé sur la date
-  const generateId = () => Date.now();
+  // Convertir fichier image en Base64
+  const toDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-  // 📤 Gestion de la publication
-  const handlePublish = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!user) {
-      toast.error("⚠️ Vous devez être connecté pour publier un texte.");
-      router.push("/login");
-      return;
-    }
-
-    if (!title.trim() || !content.trim()) {
-      toast.error("Veuillez remplir le titre et le contenu.");
+    if (!title || !content) {
+      toast.error("Le titre et le contenu sont requis.");
       return;
     }
 
     setLoading(true);
-
     try {
-      const id = generateId();
-      const authorName =
-        user.displayName ||
-        user.email?.split("@")[0] ||
-        "Auteur inconnu";
+      // 1️⃣ — Conversion image en base64 si présente
+      let imageBase64 = null;
+      let imageName = null;
+      if (imageFile) {
+        imageBase64 = await toDataUrl(imageFile);
+        imageName = imageFile.name;
+      }
 
-      const authorId = user.uid || null;
+      // 2️⃣ — Création du texte complet
+      const id = Date.now();
+      const authorName =
+        user?.displayName ||
+        user?.email?.split("@")[0] ||
+        "Auteur inconnu";
 
       const newText = {
         id,
         title,
         content,
         authorName,
-        authorId,
+        authorId: user?.uid || null,
         date: new Date().toISOString(),
-        image: image || "/default-placeholder.png",
+        image: imageBase64,
       };
 
-      // 1️⃣ — Créer le fichier du texte individuel
+      // 3️⃣ — Créer le fichier individuel du texte
       await createOrUpdateFile({
         owner: "benjohnsonjuste",
         repo: "Lisible",
@@ -63,7 +66,7 @@ export default function TextPublishingForm() {
         message: `📝 Nouveau texte: ${title}`,
       });
 
-      // 2️⃣ — Mettre à jour l’index général
+      // 4️⃣ — Charger l’index existant
       let indexData = [];
       try {
         const res = await getFileContent({
@@ -72,20 +75,23 @@ export default function TextPublishingForm() {
           path: "public/data/texts/index.json",
         });
         indexData = JSON.parse(res || "[]");
-      } catch (err) {
-        console.warn("⚠️ Aucun index trouvé, création d’un nouveau.");
+      } catch {
+        console.warn("Aucun index trouvé, création d’un nouveau fichier index.json");
       }
 
-      const newEntry = {
-        id,
-        title,
-        authorName,
-        authorId,
+      // 5️⃣ — Ajouter le résumé du texte
+      const newTextSummary = {
+        id: newText.id,
+        title: newText.title,
+        authorName: newText.authorName,
+        authorId: newText.authorId,
         date: newText.date,
-        image: newText.image,
+        image: newText.image || null,
       };
 
-      const updatedIndex = [newEntry, ...indexData];
+      const updatedIndex = [newTextSummary, ...indexData];
+
+      // 6️⃣ — Sauvegarder l’index mis à jour
       await createOrUpdateFile({
         owner: "benjohnsonjuste",
         repo: "Lisible",
@@ -94,11 +100,14 @@ export default function TextPublishingForm() {
         message: `📚 Index mis à jour: ${title}`,
       });
 
-      toast.success("✅ Texte publié avec succès !");
-      router.push(`/texts/${id}`);
+      toast.success("✅ Publication réussie !");
+      setTitle("");
+      setContent("");
+      setImageFile(null);
+      router.push("/bibliotheque");
     } catch (err) {
-      console.error(err);
-      toast.error("Erreur lors de la publication.");
+      console.error("Erreur de publication:", err);
+      toast.error("❌ Erreur lors de la publication");
     } finally {
       setLoading(false);
     }
@@ -106,56 +115,55 @@ export default function TextPublishingForm() {
 
   return (
     <form
-      onSubmit={handlePublish}
-      className="max-w-3xl mx-auto bg-white shadow rounded-xl p-6 space-y-4"
+      onSubmit={handleSubmit}
+      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h1 className="text-2xl font-semibold text-center mb-4">
-        ✍️ Publier un texte
-      </h1>
-
-      <input
-        type="text"
-        placeholder="Titre du texte"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full p-2 border rounded"
-      />
-
-      <textarea
-        placeholder="Contenu du texte..."
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={10}
-        className="w-full p-2 border rounded"
-      />
+      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
 
       <div>
-        <label className="text-sm text-gray-600 mb-1 block">Image (facultative)</label>
-        {image && (
-          <img
-            src={image}
-            alt="aperçu"
-            className="w-full h-48 object-cover mb-2 rounded"
-          />
-        )}
+        <label className="block text-sm font-medium mb-1">Titre</label>
+        <input
+          type="text"
+          name="title"
+          placeholder="Titre du texte"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full p-2 border rounded"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Contenu</label>
+        <textarea
+          name="content"
+          placeholder="Écris ton texte ici..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={8}
+          className="w-full p-2 border rounded min-h-[150px]"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Image d'illustration (optionnel)
+        </label>
         <input
           type="file"
+          name="image"
           accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => setImage(reader.result);
-            if (file) reader.readAsDataURL(file);
-          }}
+          onChange={(e) => setImageFile(e.target.files[0])}
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
       >
-        {loading ? "Publication en cours..." : "Publier"}
+        {loading ? "Publication en cours..." : "Publier sur GitHub"}
       </button>
     </form>
   );
