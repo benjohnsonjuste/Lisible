@@ -118,4 +118,4 @@ export default function UserProfilePage({ currentUser }) {
       </div>
     </div>
   );
-}
+} 
