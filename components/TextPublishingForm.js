@@ -14,11 +14,13 @@ export default function TextPublishingForm() {
 
   const MAX_CHARACTERS = 50000;
 
+  // Charger la session utilisateur depuis localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("lisibleUser");
     if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
+  // Convertir fichier image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -40,23 +42,23 @@ export default function TextPublishingForm() {
       return;
     }
 
-    if (!user) {
-      toast.error("Vous devez être connecté pour publier un texte.");
-      router.push("/login?redirect=/bibliotheque");
-      return;
-    }
-
     setLoading(true);
     try {
       let imageBase64 = null;
-      if (imageFile) imageBase64 = await toDataUrl(imageFile);
+      let imageName = null;
+
+      if (imageFile) {
+        imageBase64 = await toDataUrl(imageFile);
+        imageName = imageFile.name;
+      }
 
       const payload = {
         title,
         content,
-        authorName: user.displayName || user.email || "Auteur inconnu",
-        authorId: user.uid || null,
+        authorName: user?.displayName || user?.email || "Auteur inconnu",
+        authorEmail: user?.email || "",
         imageBase64,
+        imageName,
       };
 
       const res = await fetch("/api/publish-github", {
@@ -68,39 +70,48 @@ export default function TextPublishingForm() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Échec publication");
 
-      toast.success("✅ Texte publié avec succès !");
+      toast.success("✅ Publication réussie !");
       setTitle("");
       setContent("");
       setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
-      console.error("Erreur publication :", err);
-      toast.error("❌ Impossible de publier le texte");
+      console.error("Erreur côté client:", err);
+      toast.error("❌ Erreur de publication");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
+    >
       <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
-      <input
-        type="text"
-        placeholder="Titre du texte"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="w-full p-2 border rounded"
-        required
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1">Titre</label>
+        <input
+          type="text"
+          name="title"
+          placeholder="Titre du texte"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full p-2 border rounded"
+          required
+        />
+      </div>
 
       <div className="relative">
+        <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
+          name="content"
           placeholder="Écris ton texte ici..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={10}
-          className="w-full p-2 border rounded"
+          rows={8}
+          className="w-full p-2 border rounded min-h-[150px]"
           required
         />
         <div
@@ -112,11 +123,17 @@ export default function TextPublishingForm() {
         </div>
       </div>
 
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImageFile(e.target.files[0])}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Image d'illustration (optionnel)
+        </label>
+        <input
+          type="file"
+          name="image"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files[0])}
+        />
+      </div>
 
       <button
         type="submit"
