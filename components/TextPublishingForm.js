@@ -1,20 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext"; // <-- pour récupérer l’utilisateur connecté
-import { createOrUpdateFile, getFileContent } from "@/lib/githubClient"; // <-- ton client GitHub
 
 export default function TextPublishingForm() {
   const router = useRouter();
-  const { user } = useAuth(); // récupère l’utilisateur connecté
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
 
-  // Convertir fichier image en Base64
+  const MAX_CHARACTERS = 50000;
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("lisibleUser");
+    if (storedUser) setUser(JSON.parse(storedUser));
+  }, []);
+
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -25,145 +29,101 @@ export default function TextPublishingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!title || !content) {
       toast.error("Le titre et le contenu sont requis.");
       return;
     }
 
+    if (content.length > MAX_CHARACTERS) {
+      toast.error(`Le texte ne doit pas dépasser ${MAX_CHARACTERS} caractères.`);
+      return;
+    }
+
+    if (!user) {
+      toast.error("Vous devez être connecté pour publier un texte.");
+      router.push("/login?redirect=/bibliotheque");
+      return;
+    }
+
     setLoading(true);
     try {
-      // 1️⃣ — Conversion image en base64 si présente
       let imageBase64 = null;
-      let imageName = null;
-      if (imageFile) {
-        imageBase64 = await toDataUrl(imageFile);
-        imageName = imageFile.name;
-      }
+      if (imageFile) imageBase64 = await toDataUrl(imageFile);
 
-      // 2️⃣ — Création du texte complet
-      const id = Date.now();
-      const authorName =
-        user?.displayName ||
-        user?.email?.split("@")[0] ||
-        "Auteur inconnu";
-
-      const newText = {
-        id,
+      const payload = {
         title,
         content,
-        authorName,
-        authorId: user?.uid || null,
-        date: new Date().toISOString(),
-        image: imageBase64,
+        authorName: user.displayName || user.email || "Auteur inconnu",
+        authorId: user.uid || null,
+        imageBase64,
       };
 
-      // 3️⃣ — Créer le fichier individuel du texte
-      await createOrUpdateFile({
-        owner: "benjohnsonjuste",
-        repo: "Lisible",
-        path: `public/data/texts/${id}.json`,
-        content: JSON.stringify(newText, null, 2),
-        message: `📝 Nouveau texte: ${title}`,
+      const res = await fetch("/api/publish-github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      // 4️⃣ — Charger l’index existant
-      let indexData = [];
-      try {
-        const res = await getFileContent({
-          owner: "benjohnsonjuste",
-          repo: "Lisible",
-          path: "public/data/texts/index.json",
-        });
-        indexData = JSON.parse(res || "[]");
-      } catch {
-        console.warn("Aucun index trouvé, création d’un nouveau fichier index.json");
-      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Échec publication");
 
-      // 5️⃣ — Ajouter le résumé du texte
-      const newTextSummary = {
-        id: newText.id,
-        title: newText.title,
-        authorName: newText.authorName,
-        authorId: newText.authorId,
-        date: newText.date,
-        image: newText.image || null,
-      };
-
-      const updatedIndex = [newTextSummary, ...indexData];
-
-      // 6️⃣ — Sauvegarder l’index mis à jour
-      await createOrUpdateFile({
-        owner: "benjohnsonjuste",
-        repo: "Lisible",
-        path: "public/data/texts/index.json",
-        content: JSON.stringify(updatedIndex, null, 2),
-        message: `📚 Index mis à jour: ${title}`,
-      });
-
-      toast.success("✅ Publication réussie !");
+      toast.success("✅ Texte publié avec succès !");
       setTitle("");
       setContent("");
       setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
-      console.error("Erreur de publication:", err);
-      toast.error("❌ Erreur lors de la publication");
+      console.error("Erreur publication :", err);
+      toast.error("❌ Impossible de publier le texte");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
-    >
-      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
+    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4">
+      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Titre</label>
-        <input
-          type="text"
-          name="title"
-          placeholder="Titre du texte"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Titre du texte"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="w-full p-2 border rounded"
+        required
+      />
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Contenu</label>
+      <div className="relative">
         <textarea
-          name="content"
           placeholder="Écris ton texte ici..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={8}
-          className="w-full p-2 border rounded min-h-[150px]"
+          rows={10}
+          className="w-full p-2 border rounded"
           required
         />
+        <div
+          className={`absolute bottom-1 right-2 text-xs ${
+            content.length > MAX_CHARACTERS ? "text-red-500" : "text-gray-500"
+          }`}
+        >
+          {content.length}/{MAX_CHARACTERS}
+        </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Image d'illustration (optionnel)
-        </label>
-        <input
-          type="file"
-          name="image"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0])}
-        />
-      </div>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImageFile(e.target.files[0])}
+      />
 
       <button
         type="submit"
         disabled={loading}
         className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
       >
-        {loading ? "Publication en cours..." : "Publier sur GitHub"}
+        {loading ? "Publication en cours..." : "Publier"}
       </button>
     </form>
   );
