@@ -32,6 +32,15 @@ export default function TextPublishingForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Vérifier user directement depuis localStorage si null
+    const currentUser = user || JSON.parse(localStorage.getItem("lisibleUser") || "null");
+
+    if (!currentUser) {
+      toast.error("Vous devez être connecté pour publier un texte.");
+      router.push("/login?redirect=/bibliotheque");
+      return;
+    }
+
     if (!title || !content) {
       toast.error("Le titre et le contenu sont requis.");
       return;
@@ -55,8 +64,8 @@ export default function TextPublishingForm() {
       const payload = {
         title,
         content,
-        authorName: user?.displayName || user?.email || "Auteur inconnu",
-        authorEmail: user?.email || "",
+        authorName: currentUser.displayName || currentUser.email || "Auteur inconnu",
+        authorEmail: currentUser.email || "",
         imageBase64,
         imageName,
       };
@@ -88,7 +97,7 @@ export default function TextPublishingForm() {
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
 
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
