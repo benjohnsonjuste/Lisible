@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { Heart, Share2, Eye } from "lucide-react";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 export default function TextPage() {
   const router = useRouter();
@@ -14,15 +15,14 @@ export default function TextPage() {
   const [views, setViews] = useState(0);
   const [likes, setLikes] = useState(0);
   const [comments, setComments] = useState([]);
-  const [user, setUser] = useState(null);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
 
-  // Charger la session utilisateur (exemple : localStorage ou Firebase)
-  useEffect(() => {
-    const storedUser = localStorage.getItem("lisibleUser");
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
+  const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
+
+  // Fonction pour afficher le nom complet / pseudo / email comme sur la page auteurs
+  const getDisplayName = (author) =>
+    author.displayName || author.name || author.email || "Utilisateur";
 
   // Charger le texte
   useEffect(() => {
@@ -45,19 +45,17 @@ export default function TextPage() {
     fetchText();
   }, [id, user]);
 
-  // Vues fiables
+  // Vues uniques
   const trackView = (textId) => {
-    let uniqueViewerId = user?.uid || localStorage.getItem("deviceId");
-    if (!uniqueViewerId) {
-      uniqueViewerId = crypto.randomUUID();
-      localStorage.setItem("deviceId", uniqueViewerId);
+    let uniqueId = user?.uid || localStorage.getItem("deviceId");
+    if (!uniqueId) {
+      uniqueId = crypto.randomUUID();
+      localStorage.setItem("deviceId", uniqueId);
     }
-
     const key = `viewers-${textId}`;
     let viewers = JSON.parse(localStorage.getItem(key) || "[]");
-
-    if (!viewers.includes(uniqueViewerId)) {
-      viewers.push(uniqueViewerId);
+    if (!viewers.includes(uniqueId)) {
+      viewers.push(uniqueId);
       localStorage.setItem(key, JSON.stringify(viewers));
     }
     setViews(viewers.length);
@@ -74,15 +72,12 @@ export default function TextPage() {
   };
 
   const handleLike = () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
+
     const key = `likes-${id}`;
-    const currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
+    let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
 
-    let likeId = user?.uid || localStorage.getItem("deviceId");
-    if (!likeId) {
-      likeId = crypto.randomUUID();
-      localStorage.setItem("deviceId", likeId);
-    }
-
+    const likeId = user.uid;
     if (currentLikes.includes(likeId)) return;
 
     const updatedLikes = [...currentLikes, likeId];
@@ -100,11 +95,12 @@ export default function TextPage() {
   };
 
   const handleComment = () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
 
     const key = `comments-${id}`;
     const newComment = {
-      author: user?.displayName || user?.name || "Utilisateur",
+      author: getDisplayName(user), // ← Utiliser le même nom que sur la page auteurs
       content: commentText,
       date: new Date().toISOString(),
     };
@@ -112,7 +108,7 @@ export default function TextPage() {
     localStorage.setItem(key, JSON.stringify(updatedComments));
     setComments(updatedComments);
     setCommentText("");
-    toast.success("💬 Commentaire publié !");
+    toast.success("✔️ Commentaire publié !");
   };
 
   // Partage
@@ -125,11 +121,11 @@ export default function TextPage() {
       });
     } catch {
       navigator.clipboard.writeText(window.location.href);
-      toast.success("🔗 Lien copié dans le presse-papier !");
+
     }
   };
 
-  if (loading) return <p className="text-center mt-10">Chargement...</p>;
+  if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
   if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
 
   return (
@@ -145,29 +141,25 @@ export default function TextPage() {
       <h1 className="text-3xl font-bold">{text.title}</h1>
 
       <div className="text-gray-600 text-sm flex justify-between">
-        <p>✍️ <strong>{text.authorName}</strong></p>
+        <p>
+<strong>{getDisplayName(text)}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
       <div className="flex gap-4 pt-4 border-t items-center">
-        <button
-          onClick={handleLike}
-          disabled={liked}
-          className={`flex items-center gap-2 px-3 py-1 rounded transition ${
-            liked ? "bg-pink-500 text-white cursor-default" : "bg-transparent text-pink-500 hover:bg-pink-100"
-          }`}
-        >
-          <Heart size={18} />
-          {likes}
+        <button onClick={handleLike} className="flex items-center gap-2 transition">
+          <Heart
+            size={24}
+            className={liked ? "text-pink-500" : "text-gray-400"}
+            fill={liked ? "currentColor" : "none"}
+          />
+          <span>{likes}</span>
         </button>
 
-        <button
-          onClick={handleShare}
-          className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
-          <Share2 size={18} /> Partager
+        <button onClick={handleShare} className="flex items-center gap-2 text-gray-600 transition">
+          <Share2 size={24} />
         </button>
 
         <span className="ml-auto text-sm text-gray-500 flex items-center gap-1">
@@ -176,7 +168,7 @@ export default function TextPage() {
       </div>
 
       <div className="pt-4 border-t">
-        <h3 className="font-semibold mb-2">💬 Commentaires ({comments.length})</h3>
+        <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
         {comments.length === 0 ? (
           <p className="text-gray-500 text-sm">Aucun commentaire pour l’instant.</p>
         ) : (
