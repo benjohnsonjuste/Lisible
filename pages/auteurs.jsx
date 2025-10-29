@@ -1,46 +1,61 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { UserPlus, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useUserProfile } from "@/hooks/useUserProfile"; // ✅ Hook personnalisé
+import { toast } from "sonner";
 
 export default function AuteursPage() {
+  const { user, loading } = useUserProfile(); // ✅ Données utilisateur
   const [authors, setAuthors] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [following, setFollowing] = useState([]);
   const [followersCount, setFollowersCount] = useState({});
+  const router = useRouter();
 
+  // 🔹 Récupération des auteurs
   useEffect(() => {
-    const storedUser = localStorage.getItem("lisibleUser");
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-
     const fetchAuthors = async () => {
-      const res = await fetch("/api/get-authors");
-      const data = await res.json();
-      setAuthors(data);
+      try {
+        const res = await fetch("/api/get-authors");
+        const data = await res.json();
+        setAuthors(data);
 
-      // Charger compteurs
-      data.forEach(async (author) => {
-        const resCount = await fetch(
-          `/api/get-followers-count?authorId=${author.uid}`
-        );
-        const json = await resCount.json();
-        setFollowersCount((prev) => ({
-          ...prev,
-          [author.uid]: json.followersCount || 0,
-        }));
-      });
+        // Charger compteurs d'abonnés
+        data.forEach(async (author) => {
+          const resCount = await fetch(
+            `/api/get-followers-count?authorId=${author.uid}`
+          );
+          const json = await resCount.json();
+          setFollowersCount((prev) => ({
+            ...prev,
+            [author.uid]: json.followersCount || 0,
+          }));
+        });
+      } catch (err) {
+        console.error("Erreur récupération auteurs :", err);
+      }
     };
     fetchAuthors();
   }, []);
 
+  // 🔹 Suivre / Se désabonner d’un auteur
   const toggleFollow = async (author) => {
-    if (!currentUser) return alert("Connectez-vous pour suivre un auteur.");
+    if (loading) return toast("Chargement du profil...");
+    if (!user) {
+      toast.warning("Connectez-vous pour suivre un auteur.");
+      router.push("/auth-dialog"); // 🔁 Redirection vers AuthDialog
+      return;
+    }
 
     try {
       const res = await fetch("/api/toggle-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ follower: currentUser, author }),
+        body: JSON.stringify({ follower: user, author }),
       });
       const data = await res.json();
+
       if (data.success) {
         setFollowing((prev) =>
           data.isFollowing
@@ -51,15 +66,20 @@ export default function AuteursPage() {
           ...prev,
           [author.uid]: data.followersCount,
         }));
+      } else {
+        toast.error("Erreur : impossible de mettre à jour l’abonnement.");
       }
     } catch (err) {
-      console.error("Erreur abonnement :", err);
+      console.error("Erreur toggleFollow:", err);
+      toast.error("Erreur lors de l’abonnement.");
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6">
-      <h1 className="text-3xl font-bold text-center mb-8">✍️ Auteurs Lisible</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">Auteurs Lisible</h1>
+
+      {/* 🔹 Liste d’auteurs */}
       <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {authors.map((author) => {
           const isFollowing = following.includes(author.uid);
@@ -75,6 +95,7 @@ export default function AuteursPage() {
                 alt={author.displayName || author.email}
                 className="w-20 h-20 rounded-full object-cover"
               />
+
               <h3 className="font-semibold text-center">
                 {author.displayName || author.email}
               </h3>
