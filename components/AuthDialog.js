@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth, db } from "@/lib/firebaseConfig";
 import {
   GoogleAuthProvider,
@@ -10,30 +10,57 @@ import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { FcGoogle } from "react-icons/fc"; // ✅ Icône Google (alternative à lucide)
-import ForgotPasswordModal from "@/components/ForgotPasswordModal"; // ✅ Ton composant modal
+import { FcGoogle } from "react-icons/fc";
+import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { toast } from "sonner";
+
+// 🔹 Fonction utilitaire pour enregistrer sur GitHub
+async function saveUserToGitHub(user) {
+  try {
+    await fetch("/api/save-user-github", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: user.uid,
+        authorName: user.displayName || user.email || "Auteur inconnu",
+        authorEmail: user.email,
+        penName: "",
+        birthday: "",
+        paymentMethod: "",
+        paypalEmail: "",
+        wuMoneyGram: null,
+        subscribers: [],
+      }),
+    });
+  } catch (error) {
+    console.error("Erreur enregistrement GitHub:", error);
+  }
+}
 
 export default function AuthDialog() {
   const [mode, setMode] = useState("login"); // "login" ou "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false); // ✅ état du modal
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const router = useRouter();
+  const params = useSearchParams();
   const provider = new GoogleAuthProvider();
 
-  // Redirection automatique si l'utilisateur est déjà connecté
+  // 🔹 Récupérer la redirection après login (par ex: /bibliotheque)
+  const redirect = params.get("redirect") || "/bibliotheque";
+
+  // 🔹 Rediriger si déjà connecté
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        router.replace("/author-dashboard");
+        router.replace(redirect);
       }
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [router, redirect]);
 
-  // Connexion ou inscription par email
+  // 🔹 Authentification par email
   const handleEmailAuth = async () => {
     setError("");
     try {
@@ -42,8 +69,11 @@ export default function AuthDialog() {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
         userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+        const user = userCredential.user;
+        // Enregistrer sur Firebase
         await setDoc(
-          doc(db, "authors", userCredential.user.uid),
+          doc(db, "authors", user.uid),
           {
             email,
             followers: 0,
@@ -52,30 +82,44 @@ export default function AuthDialog() {
           },
           { merge: true }
         );
+
+        // Enregistrer aussi sur GitHub
+        await saveUserToGitHub(user);
       }
-      router.push("/author-dashboard");
+
+      toast.success("Connexion réussie !");
+      router.push(redirect);
     } catch (e) {
       setError(e.message);
       toast.error("Erreur : " + e.message);
     }
   };
 
-  // Connexion Google
+  // 🔹 Authentification Google
   const handleGoogleAuth = async () => {
     setError("");
     try {
       const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Enregistrer sur Firebase
       await setDoc(
-        doc(db, "authors", result.user.uid),
+        doc(db, "authors", user.uid),
         {
-          email: result.user.email,
+          email: user.email,
+          name: user.displayName || "",
           followers: 0,
           views: 0,
           createdAt: new Date().toISOString(),
         },
         { merge: true }
       );
-      router.push("/author-dashboard");
+
+      // Enregistrer aussi sur GitHub
+      await saveUserToGitHub(user);
+
+      toast.success("Connexion réussie avec Google !");
+      router.push(redirect);
     } catch (e) {
       setError(e.message);
       toast.error("Erreur Google : " + e.message);
@@ -90,12 +134,12 @@ export default function AuthDialog() {
 
       {error && <div className="text-red-600 mb-2 text-sm">{error}</div>}
 
-      {/* 🔹 Connexion Google avec icône */}
+      {/* 🔹 Connexion Google */}
       <button
         onClick={handleGoogleAuth}
-        className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2 rounded mb-4 hover:bg-black-600 transition"
+        className="w-full flex items-center justify-center gap-2 bg-black-500 text-white py-2 rounded mb-4 hover:bg-black transition"
       >
-        <FcGoogle size={20} /> {/* ✅ Icône Google */}
+        <FcGoogle size={20} />
         <span>Continuer avec Google</span>
       </button>
 
@@ -123,7 +167,6 @@ export default function AuthDialog() {
           {mode === "login" ? "Se connecter" : "S'inscrire"}
         </button>
 
-        {/* 🔹 Lien vers modal Mot de passe oublié */}
         {mode === "login" && (
           <button
             type="button"
@@ -135,7 +178,6 @@ export default function AuthDialog() {
         )}
       </div>
 
-      {/* 🔹 Changement de mode */}
       <div className="text-center mt-4">
         {mode === "login" ? (
           <p className="text-sm">
@@ -160,7 +202,7 @@ export default function AuthDialog() {
         )}
       </div>
 
-      {/* 🔹 Composant modal pour réinitialisation */}
+      {/* 🔹 Modal mot de passe oublié */}
       {isForgotModalOpen && (
         <ForgotPasswordModal
           onClose={() => setIsForgotModalOpen(false)}
