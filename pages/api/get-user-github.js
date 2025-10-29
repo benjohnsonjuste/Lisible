@@ -7,34 +7,40 @@ export default async function handler(req, res) {
 
   try {
     const { uid } = req.query;
+
     if (!uid) {
       return res.status(400).json({ error: "UID manquant" });
     }
 
+    // 🔐 Initialisation de GitHub API
     const octokit = new Octokit({
       auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
     });
 
     const path = `data/users/${uid}.json`;
 
-    const { data: fileData } = await octokit.request(
-      "GET /repos/{owner}/{repo}/contents/{path}",
-      {
+    try {
+      // 📦 Lecture du fichier utilisateur sur GitHub
+      const { data: fileData } = await octokit.repos.getContent({
         owner: process.env.GITHUB_OWNER,
         repo: process.env.GITHUB_REPO,
         path,
+      });
+
+      // Décoder le contenu Base64
+      const content = Buffer.from(fileData.content, "base64").toString("utf-8");
+      const userData = JSON.parse(content);
+
+      return res.status(200).json({ success: true, data: userData });
+    } catch (err) {
+      // Fichier non trouvé
+      if (err.status === 404) {
+        return res.status(404).json({ error: "Utilisateur non trouvé sur GitHub" });
       }
-    );
-
-    const content = Buffer.from(fileData.content, "base64").toString();
-    const userData = JSON.parse(content);
-
-    // Retourner le profil complet, y compris la liste des abonnés
-    return res.status(200).json({ success: true, data: userData });
+      throw err;
+    }
   } catch (err) {
     console.error("Erreur GitHub API:", err);
-    return res
-      .status(500)
-      .json({ error: "Impossible de récupérer les données depuis GitHub" });
+    return res.status(500).json({ error: "Impossible de récupérer les données utilisateur" });
   }
 }
