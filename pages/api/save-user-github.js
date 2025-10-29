@@ -8,16 +8,17 @@ export default async function handler(req, res) {
   try {
     const {
       uid,
-      title,
-      content,
       authorName,
       authorEmail,
+      firstName,
+      lastName,
       penName,
       birthday,
       paymentMethod,
       paypalEmail,
       wuMoneyGram,
       subscribers,
+      profilePic,
     } = req.body;
 
     if (!uid) {
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
     }
 
     const octokit = new Octokit({
-      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN, // 🔑 Ton token GitHub
+      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
     });
 
     const path = `data/users/${uid}.json`;
@@ -33,12 +34,15 @@ export default async function handler(req, res) {
       uid,
       authorName,
       authorEmail,
+      firstName,
+      lastName,
       penName,
       birthday,
       paymentMethod,
       paypalEmail,
       wuMoneyGram,
       subscribers: subscribers || [],
+      profilePic: profilePic || "/avatar.png",
     };
 
     // Vérifier si le fichier existe pour récupérer le sha
@@ -71,6 +75,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, data: contentData });
   } catch (err) {
     console.error("Erreur GitHub API:", err);
-    return res.status(500).json({ error: "Impossible de sauvegarder sur GitHub" });
+    return res
+      .status(500)
+      .json({ error: "Impossible de sauvegarder sur GitHub" });
   }
 }
