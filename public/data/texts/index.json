@@ -4,7 +4,10 @@
     "title": "Hi",
     "authorName": "Auteur inconnu",
     "authorId": null,
-    "date": "2025-10-28T12:19:00.391Z"
+    "date": "2025-10-28T12:19:00.391Z",
+    "views": 2,
+    "likes": 0,
+    "comments": 0
   },
   {
     "id": 1761543173317,
@@ -97,4 +100,4 @@
     "authorId": null,
     "date": "2025-10-26T15:13:32.330Z"
   }
-] 
+]
