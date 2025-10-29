@@ -1,4 +1,4 @@
-import { Octokit } from "octokit";
+import { Octokit } from "@octokit/rest";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
