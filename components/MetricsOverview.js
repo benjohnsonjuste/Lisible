@@ -96,4 +96,4 @@ function MetricCard({ title, value, icon }) {
       </div>
     </div>
   );
-}
+} 
