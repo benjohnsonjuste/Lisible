@@ -1,4 +1,3 @@
-// pages/data/texts/[id].jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -47,10 +46,10 @@ export default function TextPage() {
       }
     }
     fetchText();
-  }, [id]);
+  }, [id, user]);
 
   // Vue unique
-  const trackView = async (textId, storedViews) => {
+  const trackView = (textId, storedViews) => {
     let viewerId = user?.uid || localStorage.getItem("deviceId");
     if (!viewerId) {
       viewerId = crypto.randomUUID();
@@ -62,64 +61,48 @@ export default function TextPage() {
     const newViews = [...storedViews, viewerId];
     localStorage.setItem(`viewers-${textId}`, JSON.stringify(newViews));
     setViews(newViews.length);
-
-    await updateStats(textId, newViews.length, likes, comments.length);
   };
 
   // Like
-  const handleLike = async () => {
-    if (!user) {
-      toast.error("Connecte-toi pour aimer ce texte.");
-      router.push(`/login?redirect=/texts/${id}`);
-      return;
-    }
-
+  const handleLike = () => {
     const key = `likes-${id}`;
     const currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
-    if (currentLikes.includes(user.uid)) return;
 
-    const updatedLikes = [...currentLikes, user.uid];
+    const likeId = user?.uid || localStorage.getItem("deviceId");
+    if (!likeId) {
+      const newDeviceId = crypto.randomUUID();
+      localStorage.setItem("deviceId", newDeviceId);
+      likeId = newDeviceId;
+    }
+
+    if (currentLikes.includes(likeId)) return;
+
+    const updatedLikes = [...currentLikes, likeId];
     localStorage.setItem(key, JSON.stringify(updatedLikes));
     setLikes(updatedLikes.length);
     toast.success("❤️ Merci pour ton like !");
-
-    await updateStats(id, views, updatedLikes.length, comments.length);
   };
 
   // Commentaire
-  const handleComment = async () => {
-    if (!user) {
-      toast.error("Connecte-toi pour commenter.");
-      router.push(`/login?redirect=/texts/${id}`);
-      return;
-    }
-
+  const handleComment = () => {
     if (!commentText.trim()) return;
+
+    const commenterId = user?.uid || localStorage.getItem("deviceId") || crypto.randomUUID();
+    if (!user && !localStorage.getItem("deviceId")) localStorage.setItem("deviceId", commenterId);
+
     const newComment = {
-      author: user.displayName || user.name || "Utilisateur",
+      id: crypto.randomUUID(),
+      author: user?.displayName || "Invité",
+      deviceId: commenterId,
       content: commentText,
       date: new Date().toISOString(),
     };
+
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
     localStorage.setItem(`comments-${id}`, JSON.stringify(updatedComments));
     setCommentText("");
-
     toast.success("💬 Commentaire ajouté !");
-    await updateStats(id, views, likes, updatedComments.length);
-  };
-
-  // Synchroniser sur GitHub
-  const updateStats = async (textId, views, likes, comments) => {
-    try {
-      await fetch("/api/update-stats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ textId: Number(textId), views, likes, comments }),
-      });
-    } catch (err) {
-      console.warn("⚠️ Erreur sync GitHub:", err.message);
-    }
   };
 
   if (!text) return <p className="text-center mt-10">Chargement...</p>;
@@ -145,10 +128,8 @@ export default function TextPage() {
       <div className="flex gap-6 pt-4 border-t items-center text-gray-700">
         <button
           onClick={handleLike}
-          className={`flex items-center gap-1 ${
-            likes > 0 ? "text-pink-600" : "text-gray-400"
-          }`}
-          disabled={likes > 0}
+          className={`flex items-center gap-1 ${likes>0 ? 'text-pink-600':'text-gray-400'}`}
+          disabled={likes>0}
         >
           <Heart size={20} />
           <span>{likes}</span>
@@ -165,11 +146,7 @@ export default function TextPage() {
         <button
           onClick={async () => {
             try {
-              await navigator.share({
-                title: text.title,
-                text: "Lis ce texte sur Lisible",
-                url: window.location.href,
-              });
+              await navigator.share({ title: text.title, text: "Lis ce texte sur Lisible", url: window.location.href });
             } catch {
               navigator.clipboard.writeText(window.location.href);
               toast.success("🔗 Lien copié !");
@@ -181,14 +158,11 @@ export default function TextPage() {
         </button>
       </div>
 
-      {/* Zone commentaires */}
       <div className="pt-4 border-t">
-        <h3 className="font-semibold mb-2">
-          💬 Commentaires ({comments.length})
-        </h3>
+        <h3 className="font-semibold mb-2">💬 Commentaires ({comments.length})</h3>
 
-        {comments.map((c, i) => (
-          <div key={i} className="border p-2 rounded mb-2">
+        {comments.map((c) => (
+          <div key={c.id} className="border p-2 rounded mb-2">
             <p className="text-sm text-gray-700">
               <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
             </p>
