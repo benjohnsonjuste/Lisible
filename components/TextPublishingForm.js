@@ -1,6 +1,7 @@
+// components/TextPublishingForm.jsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -10,15 +11,6 @@ export default function TextPublishingForm() {
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
-
-  const MAX_CHARACTERS = 50000;
-
-  // Charger la session utilisateur depuis localStorage
-  useEffect(() => {
-    const storedUser = localStorage.getItem("lisibleUser");
-    if (storedUser) setUser(JSON.parse(storedUser));
-  }, []);
 
   // Convertir fichier image en Base64
   const toDataUrl = (file) =>
@@ -31,23 +23,8 @@ export default function TextPublishingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Vérifier user directement depuis localStorage si null
-    const currentUser = user || JSON.parse(localStorage.getItem("lisibleUser") || "null");
-
-    if (!currentUser) {
-      toast.error("Vous devez être connecté pour publier un texte.");
-      router.push("/login?redirect=/bibliotheque");
-      return;
-    }
-
     if (!title || !content) {
       toast.error("Le titre et le contenu sont requis.");
-      return;
-    }
-
-    if (content.length > MAX_CHARACTERS) {
-      toast.error(`Le texte ne doit pas dépasser ${MAX_CHARACTERS} caractères.`);
       return;
     }
 
@@ -64,8 +41,8 @@ export default function TextPublishingForm() {
       const payload = {
         title,
         content,
-        authorName: currentUser.displayName || currentUser.email || "Auteur inconnu",
-        authorEmail: currentUser.email || "",
+        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
+        authorEmail: "",
         imageBase64,
         imageName,
       };
@@ -77,7 +54,11 @@ export default function TextPublishingForm() {
       });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Échec publication");
+
+      if (!res.ok) {
+        console.error("Erreur publication GitHub:", json);
+        throw new Error(json.error || "Échec publication");
+      }
 
       toast.success("✅ Publication réussie !");
       setTitle("");
@@ -112,7 +93,7 @@ export default function TextPublishingForm() {
         />
       </div>
 
-      <div className="relative">
+      <div>
         <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
           name="content"
@@ -123,13 +104,6 @@ export default function TextPublishingForm() {
           className="w-full p-2 border rounded min-h-[150px]"
           required
         />
-        <div
-          className={`absolute bottom-1 right-2 text-xs ${
-            content.length > MAX_CHARACTERS ? "text-red-500" : "text-gray-500"
-          }`}
-        >
-          {content.length}/{MAX_CHARACTERS}
-        </div>
       </div>
 
       <div>
