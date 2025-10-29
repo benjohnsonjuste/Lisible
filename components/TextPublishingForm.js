@@ -1,11 +1,10 @@
-// components/TextPublishingForm.jsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-export default function TextPublishingForm() {
+export default function TextPublishingForm({ user }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -23,7 +22,7 @@ export default function TextPublishingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !content) {
+    if (!title.trim() || !content.trim()) {
       toast.error("Le titre et le contenu sont requis.");
       return;
     }
@@ -34,15 +33,20 @@ export default function TextPublishingForm() {
       let imageName = null;
 
       if (imageFile) {
+        if (!imageFile.type.startsWith("image/")) {
+          toast.error("Le fichier doit être une image.");
+          setLoading(false);
+          return;
+        }
         imageBase64 = await toDataUrl(imageFile);
         imageName = imageFile.name;
       }
 
       const payload = {
-        title,
-        content,
-        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
-        authorEmail: "",
+        title: title.trim(),
+        content: content.trim(),
+        authorName: user?.displayName || "Auteur inconnu",
+        authorEmail: user?.email || "",
         imageBase64,
         imageName,
       };
@@ -78,7 +82,7 @@ export default function TextPublishingForm() {
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
@@ -114,7 +118,7 @@ export default function TextPublishingForm() {
           type="file"
           name="image"
           accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0])}
+          onChange={(e) => setImageFile(e.target.files[0] || null)}
         />
       </div>
 
