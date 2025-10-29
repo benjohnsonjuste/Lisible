@@ -1,54 +1,42 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { Rocket, Users, Eye, BookOpen, DollarSign } from "lucide-react";
 
-/**
- * Composant pour afficher les métriques de l'auteur
- * - abonnés
- * - vues mensuelles
- * - textes publiés
- * - gains totaux
- */
-export default function MetricsOverview() {
+export default function MetricsOverview({ userId }) {
   const [metrics, setMetrics] = useState({
     subscribers: 0,
-    monthlyViews: 0,
+    totalViews: 0,
     textsPublished: 0,
     totalEarnings: 0,
   });
-
-  const [previousMetrics, setPreviousMetrics] = useState(null);
   const [isMonetizationUnlocked, setIsMonetizationUnlocked] = useState(false);
 
-  // Simuler les mises à jour automatiques des métriques
+  // Charger les métriques depuis l'API GitHub
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPreviousMetrics(metrics);
-      setMetrics((prev) => ({
-        ...prev,
-        subscribers: prev.subscribers + Math.floor(Math.random() * 10),
-        monthlyViews: prev.monthlyViews + Math.floor(Math.random() * 3000),
-        textsPublished: prev.textsPublished + (Math.random() > 0.9 ? 1 : 0),
-      }));
-    }, 5000); // simulation toutes les 5 sec
+    async function fetchMetrics() {
+      try {
+        const res = await fetch(`/api/author/${userId}/metrics`);
+        if (!res.ok) throw new Error("Erreur lors de la récupération des métriques");
+        const data = await res.json();
 
-    return () => clearInterval(interval);
-  }, [metrics]);
+        const monetizationUnlocked = data.subscribers >= 250;
+        const earnings = monetizationUnlocked ? (data.totalViews / 1000) * 0.2 : 0;
 
-  // Vérifier si la monétisation est débloquée (250 abonnés)
-  useEffect(() => {
-    if (metrics?.subscribers >= 250) {
-      setIsMonetizationUnlocked(true);
+        setMetrics({
+          subscribers: data.subscribers,
+          totalViews: data.totalViews,
+          textsPublished: data.textsPublished,
+          totalEarnings: earnings.toFixed(2),
+        });
+        setIsMonetizationUnlocked(monetizationUnlocked);
+      } catch (err) {
+        console.error("Erreur fetch metrics:", err);
+      }
     }
-  }, [metrics]);
 
-  // Calcul des gains (0.2 € pour 1000 vues)
-  useEffect(() => {
-    const earnings = (metrics.monthlyViews / 1000) * 0.2;
-    setMetrics((prev) => ({
-      ...prev,
-      totalEarnings: earnings.toFixed(2),
-    }));
-  }, [metrics.monthlyViews]);
+    fetchMetrics();
+  }, [userId]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -56,15 +44,13 @@ export default function MetricsOverview() {
       <MetricCard
         title="Abonnés"
         value={metrics.subscribers}
-        previous={previousMetrics?.subscribers}
         icon={<Users className="text-blue-500" size={28} />}
       />
 
-      {/* Vues mensuelles */}
+      {/* Vues totales */}
       <MetricCard
-        title="Vues mensuelles"
-        value={metrics.monthlyViews}
-        previous={previousMetrics?.monthlyViews}
+        title="Vues totales"
+        value={metrics.totalViews}
         icon={<Eye className="text-green-500" size={28} />}
       />
 
@@ -72,15 +58,13 @@ export default function MetricsOverview() {
       <MetricCard
         title="Textes publiés"
         value={metrics.textsPublished}
-        previous={previousMetrics?.textsPublished}
         icon={<BookOpen className="text-purple-500" size={28} />}
       />
 
       {/* Gains totaux */}
       <MetricCard
-        title="Gains totaux (€)"
+        title="Gains totaux (USD)"
         value={metrics.totalEarnings}
-        previous={previousMetrics?.totalEarnings}
         icon={<DollarSign className="text-yellow-500" size={28} />}
       />
 
@@ -100,13 +84,7 @@ export default function MetricsOverview() {
   );
 }
 
-// === Carte individuelle pour chaque métrique ===
-function MetricCard({ title, value, previous, icon }) {
-  const change =
-    previous !== undefined && previous !== null
-      ? value - previous
-      : null;
-
+function MetricCard({ title, value, icon }) {
   return (
     <div className="p-4 border rounded-lg shadow-md bg-white">
       <div className="flex items-center space-x-3">
@@ -114,16 +92,6 @@ function MetricCard({ title, value, previous, icon }) {
         <div>
           <h3 className="text-lg font-semibold">{title}</h3>
           <p className="text-2xl font-bold">{value}</p>
-          {change !== null && (
-            <p
-              className={`text-sm ${
-                change >= 0 ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              {change >= 0 ? "+" : ""}
-              {change}
-            </p>
-          )}
         </div>
       </div>
     </div>
