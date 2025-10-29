@@ -8,8 +8,6 @@ export default async function handler(req, res) {
   try {
     const {
       uid,
-      authorName,
-      authorEmail,
       firstName,
       lastName,
       penName,
@@ -18,13 +16,15 @@ export default async function handler(req, res) {
       paypalEmail,
       wuMoneyGram,
       subscribers,
-      profilePic,
+      profileImage, // base64 ou URL
+      email,
     } = req.body;
 
     if (!uid) {
       return res.status(400).json({ error: "UID manquant" });
     }
 
+    // 🔐 Initialiser Octokit avec ton token GitHub
     const octokit = new Octokit({
       auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
     });
@@ -32,51 +32,46 @@ export default async function handler(req, res) {
     const path = `data/users/${uid}.json`;
     const contentData = {
       uid,
-      authorName,
-      authorEmail,
-      firstName,
-      lastName,
-      penName,
-      birthday,
-      paymentMethod,
-      paypalEmail,
-      wuMoneyGram,
+      firstName: firstName || "",
+      lastName: lastName || "",
+      penName: penName || "",
+      birthday: birthday || "",
+      email: email || "",
+      paymentMethod: paymentMethod || "",
+      paypalEmail: paypalEmail || "",
+      wuMoneyGram: wuMoneyGram || {},
       subscribers: subscribers || [],
-      profilePic: profilePic || "/avatar.png",
+      profileImage: profileImage || "/avatar.png", // 🔹 image par défaut
+      updatedAt: new Date().toISOString(),
     };
 
-    // Vérifier si le fichier existe pour récupérer le sha
+    // 🔍 Vérifier si le fichier existe déjà
     let sha = undefined;
     try {
-      const { data: existingFile } = await octokit.request(
-        "GET /repos/{owner}/{repo}/contents/{path}",
-        {
-          owner: process.env.GITHUB_OWNER,
-          repo: process.env.GITHUB_REPO,
-          path,
-        }
-      );
+      const { data: existingFile } = await octokit.repos.getContent({
+        owner: process.env.GITHUB_OWNER,
+        repo: process.env.GITHUB_REPO,
+        path,
+      });
       sha = existingFile.sha;
     } catch (err) {
-      // Si le fichier n'existe pas, sha reste undefined → création
+      // Fichier inexistant → nouvelle création
+      console.log("Création d’un nouveau profil utilisateur sur GitHub…");
     }
 
-    await octokit.request("PUT /repos/{owner}/{repo}/contents/{path}", {
+    // 💾 Sauvegarde sur GitHub
+    await octokit.repos.createOrUpdateFileContents({
       owner: process.env.GITHUB_OWNER,
       repo: process.env.GITHUB_REPO,
       path,
-      message: `Sauvegarde du profil utilisateur ${uid}`,
-      content: Buffer.from(JSON.stringify(contentData, null, 2)).toString(
-        "base64"
-      ),
-      sha, // undefined si création
+      message: `Mise à jour du profil utilisateur ${uid}`,
+      content: Buffer.from(JSON.stringify(contentData, null, 2)).toString("base64"),
+      sha,
     });
 
     return res.status(200).json({ success: true, data: contentData });
   } catch (err) {
     console.error("Erreur GitHub API:", err);
-    return res
-      .status(500)
-      .json({ error: "Impossible de sauvegarder sur GitHub" });
+    return res.status(500).json({ error: "Impossible de sauvegarder sur GitHub" });
   }
 }
