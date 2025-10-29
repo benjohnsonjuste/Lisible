@@ -1,35 +1,28 @@
+// pages/data/texts/[id].jsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
-import { Heart, Share2, Eye } from "lucide-react";
-import { getFileContent, createOrUpdateFile } from "@/lib/githubClient";
-
-const GITHUB_OWNER = "benjohnsonjuste";
-const GITHUB_REPO = "Lisible";
-const GITHUB_BRANCH = "main";
+import { Heart, Share2, Eye, MessageSquare } from "lucide-react";
 
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
-
   const [text, setText] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
   const [likes, setLikes] = useState(0);
-  const [liked, setLiked] = useState(false);
+  const [comments, setComments] = useState([]);
   const [user, setUser] = useState(null);
+  const [commentText, setCommentText] = useState("");
 
-  const token = process.env.NEXT_PUBLIC_GITHUB_TOKEN;
-
-  // Charger utilisateur local
+  // Charger session utilisateur
   useEffect(() => {
     const storedUser = localStorage.getItem("lisibleUser");
     if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
-  // Charger texte depuis GitHub
+  // Charger le texte
   useEffect(() => {
     if (!id) return;
     async function fetchText() {
@@ -38,175 +31,98 @@ export default function TextPage() {
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
-        setLikes(data.likes || 0);
-        setViews(data.views || 0);
-        setLoading(false);
-        handleViewSync(id);
-        checkLikeStatus(id);
-      } catch (error) {
-        console.error("Erreur:", error);
-        toast.error("Impossible de charger le texte");
+
+        const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
+        const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
+        const storedViews = JSON.parse(localStorage.getItem(`viewers-${id}`) || "[]");
+
+        setLikes(storedLikes.length);
+        setComments(storedComments);
+        setViews(storedViews.length);
+
+        trackView(id, storedViews);
+      } catch (err) {
+        console.error(err);
+        toast.error("Erreur de chargement du texte.");
       }
     }
     fetchText();
-  }, [id, user]);
+  }, [id]);
 
-  // Vérifie si déjà liké
-  const checkLikeStatus = (textId) => {
-    const key = `likes-${textId}`;
-    const likesList = JSON.parse(localStorage.getItem(key) || "[]");
-
-    let uniqueId;
-    if (user?.uid) uniqueId = `user-${user.uid}`;
-    else {
-      let deviceId = localStorage.getItem("lisibleDeviceId");
-      if (!deviceId) {
-        deviceId = crypto.randomUUID();
-        localStorage.setItem("lisibleDeviceId", deviceId);
-      }
-      uniqueId = `device-${deviceId}`;
+  // Vue unique
+  const trackView = async (textId, storedViews) => {
+    let viewerId = user?.uid || localStorage.getItem("deviceId");
+    if (!viewerId) {
+      viewerId = crypto.randomUUID();
+      localStorage.setItem("deviceId", viewerId);
     }
 
-    setLiked(likesList.includes(uniqueId));
+    if (storedViews.includes(viewerId)) return;
+
+    const newViews = [...storedViews, viewerId];
+    localStorage.setItem(`viewers-${textId}`, JSON.stringify(newViews));
+    setViews(newViews.length);
+
+    await updateStats(textId, newViews.length, likes, comments.length);
   };
 
-  /**
-   * 👁️ Vue unique + synchro GitHub
-   */
-  const handleViewSync = async (textId) => {
-    if (!textId) return;
-
-    let uniqueViewerId;
-    if (user?.uid) {
-      uniqueViewerId = `user-${user.uid}`;
-    } else {
-      let deviceId = localStorage.getItem("lisibleDeviceId");
-      if (!deviceId) {
-        deviceId = crypto.randomUUID();
-        localStorage.setItem("lisibleDeviceId", deviceId);
-      }
-      uniqueViewerId = `device-${deviceId}`;
-    }
-
-    const key = `viewers-${textId}`;
-    let viewers = JSON.parse(localStorage.getItem(key) || "[]");
-
-    // Déjà compté ? On ne double pas
-    if (viewers.includes(uniqueViewerId)) {
-      setViews(viewers.length);
+  // Like
+  const handleLike = async () => {
+    if (!user) {
+      toast.error("Connecte-toi pour aimer ce texte.");
+      router.push(`/login?redirect=/texts/${id}`);
       return;
     }
 
-    // Ajouter la vue localement
-    viewers.push(uniqueViewerId);
-    localStorage.setItem(key, JSON.stringify(viewers));
-    const newCount = viewers.length;
-    setViews(newCount);
+    const key = `likes-${id}`;
+    const currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
+    if (currentLikes.includes(user.uid)) return;
 
-    // 🔁 Mise à jour GitHub
-    try {
-      const path = `data/texts/${textId}.json`;
-      const fileData = await getFileContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path,
-        branch: GITHUB_BRANCH,
-        token,
-      });
-
-      const content = JSON.parse(atob(fileData.content));
-      content.views = (content.views || 0) + 1;
-
-      await createOrUpdateFile({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path,
-        branch: GITHUB_BRANCH,
-        token,
-        message: `👁️ +1 vue pour ${content.title}`,
-        content: JSON.stringify(content, null, 2),
-        sha: fileData.sha,
-      });
-    } catch (err) {
-      console.error("Erreur synchro vues:", err);
-    }
-  };
-
-  /**
-   * ❤️ Like unique + synchro GitHub
-   */
-  const handleLike = async () => {
-    if (!id || liked) return;
-
-    let uniqueId;
-    if (user?.uid) uniqueId = `user-${user.uid}`;
-    else {
-      let deviceId = localStorage.getItem("lisibleDeviceId");
-      if (!deviceId) {
-        deviceId = crypto.randomUUID();
-        localStorage.setItem("lisibleDeviceId", deviceId);
-      }
-      uniqueId = `device-${deviceId}`;
-    }
-
-    const localKey = `likes-${id}`;
-    const likesList = JSON.parse(localStorage.getItem(localKey) || "[]");
-
-    if (likesList.includes(uniqueId)) return;
-
-    likesList.push(uniqueId);
-    localStorage.setItem(localKey, JSON.stringify(likesList));
-
-    setLikes((prev) => prev + 1);
-    setLiked(true);
+    const updatedLikes = [...currentLikes, user.uid];
+    localStorage.setItem(key, JSON.stringify(updatedLikes));
+    setLikes(updatedLikes.length);
     toast.success("❤️ Merci pour ton like !");
 
-    // 🔁 Mise à jour GitHub
+    await updateStats(id, views, updatedLikes.length, comments.length);
+  };
+
+  // Commentaire
+  const handleComment = async () => {
+    if (!user) {
+      toast.error("Connecte-toi pour commenter.");
+      router.push(`/login?redirect=/texts/${id}`);
+      return;
+    }
+
+    if (!commentText.trim()) return;
+    const newComment = {
+      author: user.displayName || user.name || "Utilisateur",
+      content: commentText,
+      date: new Date().toISOString(),
+    };
+    const updatedComments = [...comments, newComment];
+    setComments(updatedComments);
+    localStorage.setItem(`comments-${id}`, JSON.stringify(updatedComments));
+    setCommentText("");
+
+    toast.success("💬 Commentaire ajouté !");
+    await updateStats(id, views, likes, updatedComments.length);
+  };
+
+  // Synchroniser sur GitHub
+  const updateStats = async (textId, views, likes, comments) => {
     try {
-      const path = `data/texts/${id}.json`;
-      const fileData = await getFileContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path,
-        branch: GITHUB_BRANCH,
-        token,
-      });
-
-      const content = JSON.parse(atob(fileData.content));
-      content.likes = (content.likes || 0) + 1;
-
-      await createOrUpdateFile({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path,
-        branch: GITHUB_BRANCH,
-        token,
-        message: `❤️ +1 like pour ${content.title}`,
-        content: JSON.stringify(content, null, 2),
-        sha: fileData.sha,
+      await fetch("/api/update-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ textId: Number(textId), views, likes, comments }),
       });
     } catch (err) {
-      console.error("Erreur synchro likes:", err);
-      toast.error("⚠️ Like local enregistré, mais synchro GitHub échouée.");
+      console.warn("⚠️ Erreur sync GitHub:", err.message);
     }
   };
 
-  // 🔗 Partage
-  const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: text?.title,
-        text: `Découvre ce texte sur Lisible : ${text?.title}`,
-        url: window.location.href,
-      });
-    } catch {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("🔗 Lien copié !");
-    }
-  };
-
-  if (loading) return <p className="text-center mt-10">Chargement...</p>;
-  if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
+  if (!text) return <p className="text-center mt-10">Chargement...</p>;
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
@@ -219,7 +135,6 @@ export default function TextPage() {
       )}
 
       <h1 className="text-3xl font-bold">{text.title}</h1>
-
       <div className="text-gray-600 text-sm flex justify-between">
         <p>✍️ <strong>{text.authorName}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
@@ -227,36 +142,72 @@ export default function TextPage() {
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
-      {/* Actions */}
-      <div className="flex items-center gap-6 border-t pt-4 text-gray-700">
-        {/* ❤️ Like */}
+      <div className="flex gap-6 pt-4 border-t items-center text-gray-700">
         <button
           onClick={handleLike}
-          disabled={liked}
-          className="flex items-center gap-2 focus:outline-none disabled:cursor-not-allowed"
+          className={`flex items-center gap-1 ${
+            likes > 0 ? "text-pink-600" : "text-gray-400"
+          }`}
+          disabled={likes > 0}
         >
-          <Heart
-            size={22}
-            className={`transition ${
-              liked ? "fill-pink-500 text-pink-500" : "text-gray-400 hover:text-pink-500"
-            }`}
-          />
-          <span className="text-sm">{likes}</span>
+          <Heart size={20} />
+          <span>{likes}</span>
         </button>
 
-        {/* 🔗 Share */}
+        <span className="flex items-center gap-1">
+          <Eye size={18} /> {views}
+        </span>
+
+        <span className="flex items-center gap-1">
+          <MessageSquare size={18} /> {comments.length}
+        </span>
+
         <button
-          onClick={handleShare}
-          className="flex items-center gap-2 text-gray-400 hover:text-blue-500 transition"
+          onClick={async () => {
+            try {
+              await navigator.share({
+                title: text.title,
+                text: "Lis ce texte sur Lisible",
+                url: window.location.href,
+              });
+            } catch {
+              navigator.clipboard.writeText(window.location.href);
+              toast.success("🔗 Lien copié !");
+            }
+          }}
+          className="ml-auto text-blue-600 hover:underline"
         >
-          <Share2 size={20} />
+          <Share2 size={18} />
         </button>
+      </div>
 
-        {/* 👁️ Views */}
-        <div className="ml-auto flex items-center gap-1 text-sm text-gray-500">
-          <Eye size={16} />
-          <span>{views}</span>
-        </div>
+      {/* Zone commentaires */}
+      <div className="pt-4 border-t">
+        <h3 className="font-semibold mb-2">
+          💬 Commentaires ({comments.length})
+        </h3>
+
+        {comments.map((c, i) => (
+          <div key={i} className="border p-2 rounded mb-2">
+            <p className="text-sm text-gray-700">
+              <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
+            </p>
+            <p>{c.content}</p>
+          </div>
+        ))}
+
+        <textarea
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          placeholder="Écris ton commentaire..."
+          className="w-full border rounded p-2 mt-2"
+        />
+        <button
+          onClick={handleComment}
+          className="mt-2 bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700"
+        >
+          Publier
+        </button>
       </div>
     </div>
   );
