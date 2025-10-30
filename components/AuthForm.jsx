@@ -48,7 +48,7 @@ export default function AuthForm() {
       }
 
       toast.success(isLogin ? "Connexion réussie !" : "Inscription réussie !");
-      router.push("/profile"); // redirection vers page profil ou dashboard
+      router.push("/author-dashboard"); // redirection vers page profil ou dashboard
     } catch (err) {
       console.error("Erreur Auth:", err);
       toast.error(err.message);
