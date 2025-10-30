@@ -1,126 +1,126 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { UserPlus, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useUserProfile } from "@/hooks/useUserProfile"; // ✅ Hook personnalisé
+import { useEffect, useState } from "react";
+import { UserPlus, UserCheck } from "lucide-react";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { db } from "@/firebase";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react"; // si tu utilises NextAuth
 
 export default function AuteursPage() {
-  const { user, loading } = useUserProfile(); // ✅ Données utilisateur
-  const [authors, setAuthors] = useState([]);
+  const { data: session } = useSession(); // utilisateur connecté
+  const [users, setUsers] = useState([]);
   const [following, setFollowing] = useState([]);
-  const [followersCount, setFollowersCount] = useState({});
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  // 🔹 Récupération des auteurs
   useEffect(() => {
-    const fetchAuthors = async () => {
+    async function fetchUsers() {
       try {
-        const res = await fetch("/api/get-authors");
-        const data = await res.json();
-        setAuthors(data);
-
-        // Charger compteurs d'abonnés
-        data.forEach(async (author) => {
-          const resCount = await fetch(
-            `/api/get-followers-count?authorId=${author.uid}`
-          );
-          const json = await resCount.json();
-          setFollowersCount((prev) => ({
-            ...prev,
-            [author.uid]: json.followersCount || 0,
-          }));
-        });
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setUsers(data);
       } catch (err) {
-        console.error("Erreur récupération auteurs :", err);
+        console.error("Erreur de chargement:", err);
+        toast.error("Impossible de charger les auteurs.");
+      } finally {
+        setLoading(false);
       }
-    };
-    fetchAuthors();
+    }
+    fetchUsers();
   }, []);
 
-  // 🔹 Suivre / Se désabonner d’un auteur
-  const toggleFollow = async (author) => {
-    if (loading) return toast("Chargement du profil...");
-    if (!user) {
-      toast.warning("Connectez-vous pour suivre un auteur.");
-      router.push("/auth-dialog"); // 🔁 Redirection vers AuthDialog
+  // 🔹 Fonction pour suivre/désuivre via GitHub
+  const handleFollow = async (authorId) => {
+    if (!session?.user) {
+      toast.error("Connecte-toi pour suivre un auteur !");
       return;
     }
 
+    const isFollowing = following.includes(authorId);
+    setFollowing((prev) =>
+      isFollowing ? prev.filter((id) => id !== authorId) : [...prev, authorId]
+    );
+
     try {
-      const res = await fetch("/api/toggle-subscription", {
+      const res = await fetch("/api/follow-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ follower: user, author }),
+        body: JSON.stringify({
+          authorId,
+          followerId: session.user.id || session.user.email,
+          followerName: session.user.name,
+          followerEmail: session.user.email,
+        }),
       });
-      const data = await res.json();
 
-      if (data.success) {
-        setFollowing((prev) =>
-          data.isFollowing
-            ? [...prev, author.uid]
-            : prev.filter((id) => id !== author.uid)
-        );
-        setFollowersCount((prev) => ({
-          ...prev,
-          [author.uid]: data.followersCount,
-        }));
-      } else {
-        toast.error("Erreur : impossible de mettre à jour l’abonnement.");
-      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+
+      toast.success(
+        json.isFollowing
+          ? "✅ Vous suivez maintenant cet auteur !"
+          : "🚫 Vous ne suivez plus cet auteur."
+      );
     } catch (err) {
-      console.error("Erreur toggleFollow:", err);
-      toast.error("Erreur lors de l’abonnement.");
+      console.error("Erreur abonnement:", err);
+      toast.error("Erreur lors de la mise à jour de l’abonnement.");
     }
   };
 
+  if (loading)
+    return <p className="text-center mt-10 text-gray-600">Chargement...</p>;
+
+  if (users.length === 0)
+    return (
+      <p className="text-center mt-10 text-gray-600">
+        Aucun auteur inscrit pour le moment.
+      </p>
+    );
+
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-6">
-      <h1 className="text-3xl font-bold text-center mb-8">Auteurs Lisible</h1>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-5xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-center mb-8">✍️ Auteurs Lisible</h1>
 
-      {/* 🔹 Liste d’auteurs */}
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        {authors.map((author) => {
-          const isFollowing = following.includes(author.uid);
-          const count = followersCount[author.uid] || 0;
-
-          return (
-            <div
-              key={author.uid}
-              className="bg-white rounded-xl shadow p-5 flex flex-col items-center space-y-3 hover:shadow-lg transition"
-            >
-              <img
-                src={author.photoURL || "/avatar.png"}
-                alt={author.displayName || author.email}
-                className="w-20 h-20 rounded-full object-cover"
-              />
-
-              <h3 className="font-semibold text-center">
-                {author.displayName || author.email}
-              </h3>
-
-              <button
-                onClick={() => toggleFollow(author)}
-                className="mt-2 transition"
-                title={isFollowing ? "Se désabonner" : "Suivre"}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {users.map((user) => {
+            const isFollowing = following.includes(user.id);
+            return (
+              <div
+                key={user.id}
+                className="bg-white rounded-xl shadow-md flex flex-col items-center p-6 hover:shadow-lg transition"
               >
-                <UserPlus
-                  size={24}
-                  className={`${
-                    isFollowing ? "text-blue-600" : "text-gray-400"
-                  } transition`}
-                  fill={isFollowing ? "currentColor" : "none"}
+                <img
+                  src={user.photoURL || "/avatar.png"}
+                  alt={user.name || user.email}
+                  className="w-24 h-24 rounded-full object-cover mb-4 border"
                 />
-              </button>
+                <h2 className="text-lg font-semibold mb-1 text-center">
+                  {user.name || user.email}
+                </h2>
 
-              <div className="flex items-center gap-1 text-gray-600 text-sm mt-1">
-                <Users size={16} />
-                <span>{count}</span>
+                <button
+                  onClick={() => handleFollow(user.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
+                    isFollowing
+                      ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                      : "bg-transparent text-blue-600 border-blue-600 hover:bg-blue-50"
+                  }`}
+                >
+                  {isFollowing ? (
+                    <>
+                      <UserCheck size={18} /> Abonné
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus size={18} /> Suivre
+                    </>
+                  )}
+                </button>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
