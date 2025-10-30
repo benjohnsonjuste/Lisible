@@ -10,7 +10,7 @@ export default function AuthPage() {
           Bienvenue sur Lisible
         </h1>
         <p className="text-center text-gray-500 mb-6">
-          Connectez-vous ou inscrivez-vous pour continuer
+          Connectez-vous ou inscrivez-vous
         </p>
 
         <AuthForm />
