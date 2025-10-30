@@ -1,30 +1,20 @@
 "use client";
-export const dynamic = "force-dynamic";
 
-import { useEffect } from "react";
-import { useRouter } from "next/router";
-import AuthDialog from "@/components/AuthDialog";
+import AuthForm from "@/components/AuthForm";
 
-export default function LoginPage() {
-  const router = useRouter();
-
-  // 🔒 Vérifie si l’utilisateur est déjà connecté
-  useEffect(() => {
-    const estAuth = localStorage.getItem("estauthentifié");
-    if (estAuth === "vrai") {
-      router.push("/author-dashboard");
-    }
-  }, [router]);
-
-  // 🔁 Callback après authentification réussie
-  const handleAuthSuccess = () => {
-    localStorage.setItem("estauthentifié", "vrai");
-    router.push("/author-dashboard");
-  };
-
+export default function AuthPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-4">
-      <AuthDialog onAuthSuccess={handleAuthSuccess} />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center mb-4">
+          Bienvenue sur Lisible
+        </h1>
+        <p className="text-center text-gray-500 mb-6">
+          Connectez-vous ou inscrivez-vous pour continuer
+        </p>
+
+        <AuthForm />
+      </div>
     </div>
   );
 }
