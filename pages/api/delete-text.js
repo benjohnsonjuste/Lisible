@@ -1,59 +1,65 @@
-import { createOrUpdateFile, getFileContent } from "@/lib/githubClient";
-
-const OWNER = "benjohnsonjuste";
-const REPO = "Lisible";
-const BRANCH = "main";
-const TOKEN = process.env.GITHUB_TOKEN;
+import { getFileContent, createOrUpdateFile } from "@/lib/githubClient";
 
 export default async function handler(req, res) {
-  if (req.method !== "DELETE")
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
-
-  const { id } = req.query;
-  if (!id) return res.status(400).json({ error: "ID manquant" });
+  }
 
   try {
-    // 1️⃣ Charger index.json
-    const indexPath = "public/data/texts/index.json";
-    const indexData = await getFileContent({
-      owner: OWNER,
-      repo: REPO,
-      path: indexPath,
-      branch: BRANCH,
-      token: TOKEN,
+    const { path } = req.body; // ex: public/data/texts/texte123.json
+    if (!path) {
+      return res.status(400).json({ error: "Chemin du fichier manquant" });
+    }
+
+    // Vérifie si le fichier existe
+    let fileData;
+    try {
+      fileData = await getFileContent({ path });
+    } catch (err) {
+      return res.status(404).json({ error: "Fichier introuvable sur GitHub" });
+    }
+
+    // Supprime le fichier sur GitHub
+    const API_BASE = "https://api.github.com";
+    const OWNER = "benjohnsonjuste";
+    const REPO = "Lisible";
+    const TOKEN = process.env.GITHUB_TOKEN;
+
+    const headers = {
+      Authorization: `token ${TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+    };
+
+    // On récupère le SHA du fichier pour la suppression
+    const getRes = await fetch(`${API_BASE}/repos/${OWNER}/${REPO}/contents/${path}`, {
+      headers,
     });
-    const index = JSON.parse(
-      Buffer.from(indexData.content, "base64").toString("utf-8")
-    );
 
-    // 2️⃣ Retirer le texte de l’index
-    const newIndex = index.filter((t) => String(t.id) !== String(id));
+    if (!getRes.ok) {
+      return res.status(404).json({ error: "Impossible de localiser le fichier" });
+    }
 
-    // 3️⃣ Sauvegarder le nouvel index
-    await createOrUpdateFile({
-      path: indexPath,
-      content: JSON.stringify(newIndex, null, 2),
-      message: `🗑️ Suppression texte ${id}`,
-    });
+    const fileInfo = await getRes.json();
 
-    // 4️⃣ Supprimer aussi le fichier individuel s’il existe
-    const textFilePath = `public/data/texts/${id}.json`;
-    await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${textFilePath}`, {
+    const deleteRes = await fetch(`${API_BASE}/repos/${OWNER}/${REPO}/contents/${path}`, {
       method: "DELETE",
-      headers: {
-        Authorization: `token ${TOKEN}`,
-        Accept: "application/vnd.github+json",
-      },
+      headers,
       body: JSON.stringify({
-        message: `🗑️ Suppression du texte ${id}`,
-        sha: indexData.sha, // tu peux aussi obtenir le SHA du fichier individuel
-        branch: BRANCH,
+        message: `Suppression du texte ${path}`,
+        sha: fileInfo.sha,
+        branch: "main",
       }),
     });
 
-    res.status(200).json({ success: true });
-  } catch (err) {
-    console.error("Erreur suppression texte:", err);
-    res.status(500).json({ error: "Erreur suppression texte" });
+    if (!deleteRes.ok) {
+      const text = await deleteRes.text();
+      throw new Error(`Erreur GitHub: ${text}`);
+    }
+
+    return res.status(200).json({ message: "Texte supprimé avec succès !" });
+  } catch (error) {
+    console.error("Erreur suppression texte:", error);
+    return res.status(500).json({ error: "Erreur lors de la suppression du texte" });
   }
-} 
+}
