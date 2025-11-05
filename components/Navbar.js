@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // ✅ utilise "next/navigation" (et non "next/router")
+import { useRouter } from "next/navigation"; 
 import { auth } from "@/lib/firebaseConfig";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import NotificationBell from "@/components/NotificationBell";
 
 // Icônes lucide-react
 import {
@@ -19,6 +18,7 @@ import {
   MessageCircle,
   Calendar,
   FileText,
+  Bell,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -43,6 +43,10 @@ export default function Navbar() {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const handleMenuClick = () => setIsMenuOpen(false);
 
+  const goToNotifications = () => {
+    router.push("/notifications");
+  };
+
   return (
     <>
       {/* ======= HEADER ======= */}
@@ -55,7 +59,14 @@ export default function Navbar() {
 
           {/* Zone droite */}
           <div className="flex items-center gap-5">
-            <NotificationBell />
+            {/* Icône notification */}
+            <button
+              onClick={goToNotifications}
+              className="relative cursor-pointer"
+              title="Notifications"
+            >
+              <Bell className="w-8 h-8 text-white hover:text-yellow-300 transition" />
+            </button>
 
             <Link href="/index" className="cursor-pointer">
               <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
@@ -127,4 +138,4 @@ export default function Navbar() {
       )}
     </>
   );
-    }
+}
