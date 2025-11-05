@@ -11,7 +11,7 @@ export default function TextPublishingForm({ user }) {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir fichier image en Base64
+  // Convertir le fichier image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -42,10 +42,17 @@ export default function TextPublishingForm({ user }) {
         imageName = imageFile.name;
       }
 
+      // ✅ Priorité au nom complet enregistré dans Firestore
+      const authorName =
+        user?.fullName ||
+        user?.displayName ||
+        user?.name ||
+        "Auteur inconnu";
+
       const payload = {
         title: title.trim(),
         content: content.trim(),
-        authorName: user?.displayName || "Auteur inconnu",
+        authorName,
         authorEmail: user?.email || "",
         imageBase64,
         imageName,
@@ -64,14 +71,14 @@ export default function TextPublishingForm({ user }) {
         throw new Error(json.error || "Échec publication");
       }
 
-      toast.success("✅ Publication réussie !");
+      toast.success("Publication réussie !");
       setTitle("");
       setContent("");
       setImageFile(null);
       router.push("/bibliotheque");
     } catch (err) {
       console.error("Erreur côté client:", err);
-      toast.error("❌ Erreur de publication");
+      toast.error("Erreur de publication");
     } finally {
       setLoading(false);
     }
