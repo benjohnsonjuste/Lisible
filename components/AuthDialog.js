@@ -8,6 +8,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  updateProfile,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { FcGoogle } from "react-icons/fc";
@@ -22,9 +23,10 @@ async function saveUserToGitHub(user) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         uid: user.uid,
-        authorName: user.displayName || user.email || "Auteur inconnu",
+        authorName:
+          user.fullName || user.displayName || user.email || "Auteur inconnu",
         authorEmail: user.email,
-        penName: "",
+        penName: user.fullName || "",
         birthday: "",
         paymentMethod: "",
         paypalEmail: "",
@@ -41,26 +43,24 @@ export default function AuthDialog() {
   const [mode, setMode] = useState("login"); // "login" ou "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState(""); // ← ajouté
   const [error, setError] = useState("");
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const router = useRouter();
   const params = useSearchParams();
   const provider = new GoogleAuthProvider();
 
-  // 🔹 Récupérer la redirection après login (par ex: /bibliotheque)
   const redirect = params.get("redirect") || "/bibliotheque";
 
   // 🔹 Rediriger si déjà connecté
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        router.replace(redirect);
-      }
+      if (user) router.replace(redirect);
     });
     return () => unsubscribe();
   }, [router, redirect]);
 
-  // 🔹 Authentification par email
+  // 🔹 Authentification Email / Mot de passe
   const handleEmailAuth = async () => {
     setError("");
     try {
@@ -68,14 +68,27 @@ export default function AuthDialog() {
       if (mode === "login") {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
       } else {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        if (!fullName.trim()) {
+          toast.error("Veuillez entrer votre nom complet.");
+          return;
+        }
 
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
         const user = userCredential.user;
-        // Enregistrer sur Firebase
+
+        // Mettre à jour le profil Firebase Auth avec nom complet
+        await updateProfile(user, { displayName: fullName });
+
+        // Enregistrer sur Firestore
         await setDoc(
           doc(db, "authors", user.uid),
           {
             email,
+            fullName,
             followers: 0,
             views: 0,
             createdAt: new Date().toISOString(),
@@ -83,13 +96,14 @@ export default function AuthDialog() {
           { merge: true }
         );
 
-        // Enregistrer aussi sur GitHub
-        await saveUserToGitHub(user);
+        // Enregistrer sur GitHub
+        await saveUserToGitHub({ ...user, fullName });
       }
 
       toast.success("Connexion réussie !");
       router.push(redirect);
     } catch (e) {
+      console.error(e);
       setError(e.message);
       toast.error("Erreur : " + e.message);
     }
@@ -102,12 +116,12 @@ export default function AuthDialog() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Enregistrer sur Firebase
+      // Enregistrer sur Firestore
       await setDoc(
         doc(db, "authors", user.uid),
         {
           email: user.email,
-          name: user.displayName || "",
+          fullName: user.displayName || "",
           followers: 0,
           views: 0,
           createdAt: new Date().toISOString(),
@@ -115,12 +129,16 @@ export default function AuthDialog() {
         { merge: true }
       );
 
-      // Enregistrer aussi sur GitHub
-      await saveUserToGitHub(user);
+      // Enregistrer sur GitHub
+      await saveUserToGitHub({
+        ...user,
+        fullName: user.displayName || "",
+      });
 
       toast.success("Connexion réussie avec Google !");
       router.push(redirect);
     } catch (e) {
+      console.error(e);
       setError(e.message);
       toast.error("Erreur Google : " + e.message);
     }
@@ -137,13 +155,23 @@ export default function AuthDialog() {
       {/* 🔹 Connexion Google */}
       <button
         onClick={handleGoogleAuth}
-        className="w-full flex items-center justify-center gap-2 bg-black-500 text-white py-2 rounded mb-4 hover:bg-black transition"
+        className="w-full flex items-center justify-center gap-2 bg-gray-800 text-white py-2 rounded mb-4 hover:bg-black transition"
       >
         <FcGoogle size={20} />
         <span>Continuer avec Google</span>
       </button>
 
-      {/* 🔹 Email et mot de passe */}
+      {/* 🔹 Champs formulaire */}
+      {mode === "signup" && (
+        <input
+          type="text"
+          placeholder="Nom complet"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          className="w-full border p-2 rounded mb-2"
+        />
+      )}
+
       <input
         type="email"
         placeholder="Email"
@@ -151,6 +179,7 @@ export default function AuthDialog() {
         onChange={(e) => setEmail(e.target.value)}
         className="w-full border p-2 rounded mb-2"
       />
+
       <input
         type="password"
         placeholder="Mot de passe"
@@ -202,7 +231,6 @@ export default function AuthDialog() {
         )}
       </div>
 
-      {/* 🔹 Modal mot de passe oublié */}
       {isForgotModalOpen && (
         <ForgotPasswordModal
           onClose={() => setIsForgotModalOpen(false)}
