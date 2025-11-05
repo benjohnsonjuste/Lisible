@@ -6,6 +6,21 @@ import { toast } from "sonner";
 import { Heart, Share2, Eye } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
+// 🔹 Enregistre les modifications sur GitHub
+async function saveTextToGitHub(id, updatedData) {
+  try {
+    const res = await fetch("/api/update-text-github", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, updatedData }),
+    });
+    if (!res.ok) throw new Error("Échec de la mise à jour sur GitHub");
+    console.log("✅ Données enregistrées sur GitHub :", updatedData);
+  } catch (error) {
+    console.error("❌ Erreur GitHub :", error);
+  }
+}
+
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -13,50 +28,44 @@ export default function TextPage() {
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
-  const [likes, setLikes] = useState([]); // ← tableau d’objets {uid, name}
+  const [likes, setLikes] = useState([]); // [{uid, name}]
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
 
   const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
-  // Utilitaire : obtenir nom complet ou identifiant visible
-  const getDisplayName = (author) => {
-    if (!author) return "Utilisateur";
-    return (
-      author.fullName ||
-      author.displayName ||
-      author.name ||
-      author.email ||
-      "Utilisateur"
-    );
-  };
+  const getDisplayName = (author) =>
+    author?.fullName ||
+    author?.displayName ||
+    author?.name ||
+    author?.email ||
+    "Utilisateur";
 
-  // Charger le texte
+  // 🔹 Charger le texte
   useEffect(() => {
     if (!id) return;
-
     async function fetchText() {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
-        setLoading(false);
-        trackView(id);
-        trackLikes(id);
-        trackComments(id);
+        trackView(id, data);
+        trackLikes(id, data);
+        trackComments(id, data);
       } catch (error) {
-        console.error("Erreur:", error);
         toast.error("Impossible de charger le texte");
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
     }
-
     fetchText();
   }, [id, user]);
 
-  // Vues uniques
-  const trackView = (textId) => {
+  // 🔹 Vues uniques
+  const trackView = async (textId, currentText) => {
     let uniqueId = user?.uid || localStorage.getItem("deviceId");
     if (!uniqueId) {
       uniqueId = crypto.randomUUID();
@@ -68,83 +77,88 @@ export default function TextPage() {
     if (!viewers.includes(uniqueId)) {
       viewers.push(uniqueId);
       localStorage.setItem(key, JSON.stringify(viewers));
+      const newViews = viewers.length;
+      setViews(newViews);
+
+      // 🔸 Enregistrer sur GitHub
+      await saveTextToGitHub(textId, {
+        ...currentText,
+        views: newViews,
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      setViews(viewers.length);
     }
-    setViews(viewers.length);
   };
 
-  // Likes
-  const trackLikes = (textId) => {
+  // 🔹 Likes
+  const trackLikes = (textId, currentText) => {
     const key = `likes-${textId}`;
     const storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
-
-    // Migration pour compatibilité (anciens likes = tableau d'uid)
     const formattedLikes = storedLikes.map((l) =>
       typeof l === "string" ? { uid: l, name: "Utilisateur" } : l
     );
-
     setLikes(formattedLikes);
-
-    if (user && formattedLikes.some((l) => l.uid === user.uid)) {
-      setLiked(true);
-    }
+    if (user && formattedLikes.some((l) => l.uid === user.uid)) setLiked(true);
   };
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!user) return redirectToAuth(`/texts/${id}`);
-
     const key = `likes-${id}`;
     let storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
-
-    // S’assurer du format {uid, name}
     storedLikes = storedLikes.map((l) =>
       typeof l === "string" ? { uid: l, name: "Utilisateur" } : l
     );
 
     if (storedLikes.some((l) => l.uid === user.uid)) return;
 
-    const newLike = {
-      uid: user.uid,
-      name: getDisplayName(user),
-    };
-
+    const newLike = { uid: user.uid, name: getDisplayName(user) };
     const updatedLikes = [...storedLikes, newLike];
     localStorage.setItem(key, JSON.stringify(updatedLikes));
-
     setLikes(updatedLikes);
     setLiked(true);
-    toast.success("❤️ Merci pour ton like !");
+    toast.success("Merci pour ton like !");
+
+    // 🔸 Enregistrer sur GitHub
+    await saveTextToGitHub(id, {
+      ...text,
+      likes: updatedLikes,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
-  // Commentaires
-  const trackComments = (textId) => {
+  // 🔹 Commentaires
+  const trackComments = (textId, currentText) => {
     const key = `comments-${textId}`;
     const storedComments = JSON.parse(localStorage.getItem(key) || "[]");
     setComments(storedComments);
   };
 
-  const handleComment = () => {
+  const handleComment = async () => {
     if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
 
     const key = `comments-${id}`;
     const newComment = {
-      author: {
-        fullName: getDisplayName(user),
-        uid: user.uid,
-      },
+      author: { fullName: getDisplayName(user), uid: user.uid },
       content: commentText.trim(),
       date: new Date().toISOString(),
     };
-
     const updatedComments = [...comments, newComment];
     localStorage.setItem(key, JSON.stringify(updatedComments));
-
     setComments(updatedComments);
     setCommentText("");
-    toast.success("✔️ Commentaire publié !");
+    toast.success("Commentaire publié !");
+
+    // 🔸 Enregistrer sur GitHub
+    await saveTextToGitHub(id, {
+      ...text,
+      comments: updatedComments,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
-  // Partage
+  // 🔹 Partage
   const handleShare = async () => {
     try {
       await navigator.share({
@@ -153,8 +167,8 @@ export default function TextPage() {
         url: window.location.href,
       });
     } catch {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("✔️ Partage réussi !");
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Texte partagé !");
     }
   };
 
@@ -175,9 +189,7 @@ export default function TextPage() {
 
       <div className="text-gray-600 text-sm flex justify-between">
         <p>
-          <strong>
-            {getDisplayName(text.author)}
-          </strong>
+          <strong>{getDisplayName(text.author)}</strong>
         </p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
