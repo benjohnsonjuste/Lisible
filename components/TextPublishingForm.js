@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addNotification } from "@/lib/notifications";
 
 export default function TextPublishingForm({ user }) {
   const router = useRouter();
@@ -12,7 +11,7 @@ export default function TextPublishingForm({ user }) {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir le fichier image en Base64
+  // Convertir fichier image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -43,17 +42,10 @@ export default function TextPublishingForm({ user }) {
         imageName = imageFile.name;
       }
 
-      // ✅ Priorité au nom complet enregistré dans Firestore
-      const authorName =
-        user?.fullName ||
-        user?.displayName ||
-        user?.name ||
-        "Auteur inconnu";
-
       const payload = {
         title: title.trim(),
         content: content.trim(),
-        authorName,
+        authorName: user?.displayName || "Auteur inconnu",
         authorEmail: user?.email || "",
         imageBase64,
         imageName,
@@ -73,13 +65,6 @@ export default function TextPublishingForm({ user }) {
       }
 
       toast.success("Publication réussie !");
-addNotification({
-  type: "new_text",
-  title: "Nouveau texte publié",
-  message: `${user.fullName || user.email} a publié : "${title}"`,
-  author: { uid: user.uid, fullName: user.fullName || user.email },
-  textId: fileName,
-});
       setTitle("");
       setContent("");
       setImageFile(null);
