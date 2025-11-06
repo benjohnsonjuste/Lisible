@@ -2,12 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebaseConfig";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+} from "firebase/firestore";
+import { useUserProfile } from "@/hooks/useUserProfile";
+
+// 🔹 Enregistre les utilisateurs sur GitHub
+async function saveUsersToGitHub(updatedUsers) {
+  try {
+    const res = await fetch("/api/update-users-github", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ updatedUsers }),
+    });
+    if (!res.ok) throw new Error("Échec de la mise à jour sur GitHub");
+    console.log("✅ Utilisateurs mis à jour sur GitHub");
+  } catch (error) {
+    console.error("❌ Erreur GitHub :", error);
+  }
+}
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useUserProfile();
 
+  // 🔹 Charger les utilisateurs depuis Firestore
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -15,6 +42,7 @@ export default function UsersPage() {
         const querySnapshot = await getDocs(q);
         const usersData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
+          followers: [], // valeur par défaut
           ...doc.data(),
         }));
         setUsers(usersData);
@@ -27,6 +55,49 @@ export default function UsersPage() {
 
     fetchUsers();
   }, []);
+
+  // 🔹 Suivre / Ne plus suivre un utilisateur
+  const toggleFollow = async (targetUser) => {
+    if (!user) {
+      alert("Connectez-vous pour suivre un utilisateur !");
+      return;
+    }
+
+    const targetRef = doc(db, "authors", targetUser.id);
+
+    try {
+      let updatedUsersCopy;
+
+      if (targetUser.followers?.includes(user.uid)) {
+        // Déjà suivi → retirer
+        await updateDoc(targetRef, {
+          followers: arrayRemove(user.uid),
+        });
+        updatedUsersCopy = users.map((u) =>
+          u.id === targetUser.id
+            ? { ...u, followers: u.followers.filter((uid) => uid !== user.uid) }
+            : u
+        );
+      } else {
+        // Ajouter le follow
+        await updateDoc(targetRef, {
+          followers: arrayUnion(user.uid),
+        });
+        updatedUsersCopy = users.map((u) =>
+          u.id === targetUser.id
+            ? { ...u, followers: [...(u.followers || []), user.uid] }
+            : u
+        );
+      }
+
+      setUsers(updatedUsersCopy);
+
+      // 🔹 Sauvegarder sur GitHub
+      await saveUsersToGitHub(updatedUsersCopy);
+    } catch (err) {
+      console.error("Erreur suivi utilisateur :", err);
+    }
+  };
 
   if (loading) {
     return (
@@ -55,6 +126,7 @@ export default function UsersPage() {
                 <th className="px-4 py-3 border-b">Nom complet</th>
                 <th className="px-4 py-3 border-b">Email</th>
                 <th className="px-4 py-3 border-b">Date d’inscription</th>
+                <th className="px-4 py-3 border-b">Suivre</th>
               </tr>
             </thead>
             <tbody>
@@ -84,6 +156,22 @@ export default function UsersPage() {
                     {u.createdAt
                       ? new Date(u.createdAt).toLocaleDateString()
                       : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.id === user?.uid ? (
+                      <span className="text-gray-400 italic">C’est toi</span>
+                    ) : (
+                      <button
+                        onClick={() => toggleFollow(u)}
+                        className={`px-3 py-1 rounded text-white ${
+                          u.followers?.includes(user?.uid)
+                            ? "bg-gray-500 hover:bg-gray-600"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        }`}
+                      >
+                        {u.followers?.includes(user?.uid) ? "Suivi" : "Suivre"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
