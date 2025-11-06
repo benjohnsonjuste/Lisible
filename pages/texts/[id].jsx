@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { Heart, Share2, Eye } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { addNotification } from "@/lib/notifications";
 
 // 🔹 Enregistre les modifications sur GitHub
 async function saveTextToGitHub(id, updatedData) {
@@ -118,6 +119,16 @@ export default function TextPage() {
     setLikes(updatedLikes);
     setLiked(true);
     toast.success("Merci pour ton like !");
+if (text.author?.uid && text.author.uid !== user.uid) {
+  addNotification({
+    type: "like",
+    title: "Nouveau Like sur ton texte",
+    message: `${user.fullName || user.email} a aimé ton texte : "${text.title}"`,
+    author: { uid: user.uid, fullName: user.fullName || user.email },
+    textId: id,
+    targetUid: text.author.uid, // 👈 seulement pour l’auteur
+  });
+}
 
     // 🔸 Enregistrer sur GitHub
     await saveTextToGitHub(id, {
@@ -149,6 +160,16 @@ export default function TextPage() {
     setComments(updatedComments);
     setCommentText("");
     toast.success("Commentaire publié !");
+if (text.author?.uid && text.author.uid !== user.uid) {
+  addNotification({
+    type: "comment",
+    title: "Nouveau commentaire sur ton texte",
+    message: `${user.fullName || user.email} a commenté ton texte : "${text.title}"`,
+    author: { uid: user.uid, fullName: user.fullName || user.email },
+    textId: id,
+    targetUid: text.author.uid, // 👈 seulement pour l’auteur
+  });
+}
 
     // 🔸 Enregistrer sur GitHub
     await saveTextToGitHub(id, {
