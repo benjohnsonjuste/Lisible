@@ -73,13 +73,12 @@ export default function TextPublishingForm({ user }) {
       }
 
       toast.success("Publication réussie !");
-// 🔹 Créer une notification de publication
 addNotification({
   type: "new_text",
   title: "Nouveau texte publié",
-  message: `${user.fullName || user.email} a publié un nouveau texte : ${title}`,
+  message: `${user.fullName || user.email} a publié : "${title}"`,
   author: { uid: user.uid, fullName: user.fullName || user.email },
-  textId: fileName, // ou id du texte
+  textId: fileName,
 });
       setTitle("");
       setContent("");
