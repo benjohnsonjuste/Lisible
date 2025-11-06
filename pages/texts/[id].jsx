@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Heart, Share2, Eye } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
-// 🔹 Fonction utilitaire : enregistre sur GitHub
+// 🔹 Enregistre les modifications sur GitHub
 async function saveTextToGitHub(id, updatedData) {
   try {
     const res = await fetch("/api/update-text-github", {
@@ -35,18 +35,12 @@ export default function TextPage() {
 
   const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
-  // ✅ Fonction pour récupérer le nom complet d'un utilisateur
-  const getDisplayName = (author) => {
-    if (!author) return "Utilisateur";
-    return (
-      author.fullName ||
-      author.displayName ||
-      author.name ||
-      author.username ||
-      author.email?.split("@")[0] ||
-      "Utilisateur"
-    );
-  };
+  const getDisplayName = (author) =>
+    author?.fullName ||
+    author?.displayName ||
+    author?.name ||
+    author?.email ||
+    "Utilisateur";
 
   // 🔹 Charger le texte
   useEffect(() => {
@@ -56,15 +50,6 @@ export default function TextPage() {
         const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
-
-        // ✅ S'assurer que l'auteur a le bon champ de nom
-        if (data.author) {
-          data.author = {
-            ...data.author,
-            displayName: getDisplayName(data.author),
-          };
-        }
-
         setText(data);
         trackView(id, data);
         trackLikes(id, data);
@@ -95,6 +80,7 @@ export default function TextPage() {
       const newViews = viewers.length;
       setViews(newViews);
 
+      // 🔸 Enregistrer sur GitHub
       await saveTextToGitHub(textId, {
         ...currentText,
         views: newViews,
@@ -110,9 +96,7 @@ export default function TextPage() {
     const key = `likes-${textId}`;
     const storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
     const formattedLikes = storedLikes.map((l) =>
-      typeof l === "string"
-        ? { uid: l, name: "Utilisateur" }
-        : { ...l, name: getDisplayName(l) }
+      typeof l === "string" ? { uid: l, name: "Utilisateur" } : l
     );
     setLikes(formattedLikes);
     if (user && formattedLikes.some((l) => l.uid === user.uid)) setLiked(true);
@@ -123,9 +107,7 @@ export default function TextPage() {
     const key = `likes-${id}`;
     let storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
     storedLikes = storedLikes.map((l) =>
-      typeof l === "string"
-        ? { uid: l, name: "Utilisateur" }
-        : { ...l, name: getDisplayName(l) }
+      typeof l === "string" ? { uid: l, name: "Utilisateur" } : l
     );
 
     if (storedLikes.some((l) => l.uid === user.uid)) return;
@@ -137,6 +119,7 @@ export default function TextPage() {
     setLiked(true);
     toast.success("Merci pour ton like !");
 
+    // 🔸 Enregistrer sur GitHub
     await saveTextToGitHub(id, {
       ...text,
       likes: updatedLikes,
@@ -148,14 +131,7 @@ export default function TextPage() {
   const trackComments = (textId, currentText) => {
     const key = `comments-${textId}`;
     const storedComments = JSON.parse(localStorage.getItem(key) || "[]");
-    const formatted = storedComments.map((c) => ({
-      ...c,
-      author: {
-        ...c.author,
-        displayName: getDisplayName(c.author),
-      },
-    }));
-    setComments(formatted);
+    setComments(storedComments);
   };
 
   const handleComment = async () => {
@@ -164,10 +140,7 @@ export default function TextPage() {
 
     const key = `comments-${id}`;
     const newComment = {
-      author: {
-        uid: user.uid,
-        displayName: getDisplayName(user),
-      },
+      author: { fullName: getDisplayName(user), uid: user.uid },
       content: commentText.trim(),
       date: new Date().toISOString(),
     };
@@ -177,6 +150,7 @@ export default function TextPage() {
     setCommentText("");
     toast.success("Commentaire publié !");
 
+    // 🔸 Enregistrer sur GitHub
     await saveTextToGitHub(id, {
       ...text,
       comments: updatedComments,
@@ -194,15 +168,13 @@ export default function TextPage() {
       });
     } catch {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié !");
+      toast.success("Partage réussi !");
     }
   };
 
-  if (loading || userLoading)
-    return <p className="text-center mt-10">Chargement...</p>;
+  if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
   if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
 
-  // 🔹 Affichage
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
       {text.image && (
@@ -250,9 +222,7 @@ export default function TextPage() {
         <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
 
         {comments.length === 0 ? (
-          <p className="text-gray-500 text-sm">
-            Aucun commentaire pour l’instant.
-          </p>
+          <p className="text-gray-500 text-sm">Aucun commentaire pour l’instant.</p>
         ) : (
           <ul className="space-y-2">
             {comments.map((c, i) => (
