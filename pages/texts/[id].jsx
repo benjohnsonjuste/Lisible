@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { Heart, Share2, Eye } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import AdScript from "@/components/AdScript"; // ✅ AJOUT ICI
 
 // 🔹 Enregistre les modifications sur GitHub
 async function saveTextToGitHub(id, updatedData) {
@@ -28,7 +29,7 @@ export default function TextPage() {
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
-  const [likes, setLikes] = useState([]); // [{uid, name}]
+  const [likes, setLikes] = useState([]);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
@@ -52,8 +53,8 @@ export default function TextPage() {
         const data = await res.json();
         setText(data);
         trackView(id, data);
-        trackLikes(id, data);
-        trackComments(id, data);
+        trackLikes(id);
+        trackComments(id);
       } catch (error) {
         toast.error("Impossible de charger le texte");
         console.error(error);
@@ -80,7 +81,6 @@ export default function TextPage() {
       const newViews = viewers.length;
       setViews(newViews);
 
-      // 🔸 Enregistrer sur GitHub
       await saveTextToGitHub(textId, {
         ...currentText,
         views: newViews,
@@ -92,7 +92,7 @@ export default function TextPage() {
   };
 
   // 🔹 Likes
-  const trackLikes = (textId, currentText) => {
+  const trackLikes = (textId) => {
     const key = `likes-${textId}`;
     const storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
     const formattedLikes = storedLikes.map((l) =>
@@ -102,8 +102,12 @@ export default function TextPage() {
     if (user && formattedLikes.some((l) => l.uid === user.uid)) setLiked(true);
   };
 
-  const handleLike = async () => {
+  const handleLike = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!user) return redirectToAuth(`/texts/${id}`);
+
     const key = `likes-${id}`;
     let storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
     storedLikes = storedLikes.map((l) =>
@@ -119,7 +123,6 @@ export default function TextPage() {
     setLiked(true);
     toast.success("Merci pour ton like !");
 
-    // 🔸 Enregistrer sur GitHub
     await saveTextToGitHub(id, {
       ...text,
       likes: updatedLikes,
@@ -128,13 +131,16 @@ export default function TextPage() {
   };
 
   // 🔹 Commentaires
-  const trackComments = (textId, currentText) => {
+  const trackComments = (textId) => {
     const key = `comments-${textId}`;
     const storedComments = JSON.parse(localStorage.getItem(key) || "[]");
     setComments(storedComments);
   };
 
-  const handleComment = async () => {
+  const handleComment = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
 
@@ -150,7 +156,6 @@ export default function TextPage() {
     setCommentText("");
     toast.success("Commentaire publié !");
 
-    // 🔸 Enregistrer sur GitHub
     await saveTextToGitHub(id, {
       ...text,
       comments: updatedComments,
@@ -196,8 +201,18 @@ export default function TextPage() {
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
+      {/* 🔸 INSÉRER UNE PUBLICITÉ ICI */}
+      <div className="my-6">
+        <AdScript />
+      </div>
+
+      {/* --- Actions (Like, Share, Views) --- */}
       <div className="flex gap-4 pt-4 border-t items-center">
-        <button onClick={handleLike} className="flex items-center gap-2 transition">
+        <button
+          type="button"
+          onClick={handleLike}
+          className="flex items-center gap-2 transition"
+        >
           <Heart
             size={24}
             className={liked ? "text-pink-500" : "text-gray-400"}
@@ -207,6 +222,7 @@ export default function TextPage() {
         </button>
 
         <button
+          type="button"
           onClick={handleShare}
           className="flex items-center gap-2 text-gray-600 transition"
         >
@@ -218,6 +234,7 @@ export default function TextPage() {
         </span>
       </div>
 
+      {/* --- Commentaires --- */}
       <div className="pt-4 border-t">
         <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
 
@@ -237,7 +254,7 @@ export default function TextPage() {
           </ul>
         )}
 
-        <div className="mt-3 flex flex-col gap-2">
+        <form onSubmit={handleComment} className="mt-3 flex flex-col gap-2">
           <textarea
             placeholder="Écrire un commentaire..."
             value={commentText}
@@ -245,12 +262,17 @@ export default function TextPage() {
             className="w-full border rounded p-2"
           />
           <button
-            onClick={handleComment}
+            type="submit"
             className="self-end px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
             Publier
           </button>
-        </div>
+        </form>
+      </div>
+
+      {/* 🔸 PUBLICITÉ EN BAS DE PAGE */}
+      <div className="mt-10">
+        <AdScript />
       </div>
     </div>
   );
