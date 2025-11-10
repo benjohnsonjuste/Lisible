@@ -14,6 +14,19 @@ import {
 } from "firebase/firestore";
 import { useUserProfile } from "@/hooks/useUserProfile";
 
+// 🔹 Charge les utilisateurs depuis GitHub
+async function getUsersFromGitHub() {
+  try {
+    const res = await fetch("/api/get-users-github");
+    if (!res.ok) throw new Error("Aucune donnée GitHub trouvée");
+    const data = await res.json();
+    return data.users || [];
+  } catch (err) {
+    console.warn("⚠️ Impossible de charger depuis GitHub :", err);
+    return [];
+  }
+}
+
 // 🔹 Enregistre les utilisateurs sur GitHub
 async function saveUsersToGitHub(updatedUsers) {
   try {
@@ -22,7 +35,7 @@ async function saveUsersToGitHub(updatedUsers) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ updatedUsers }),
     });
-    if (!res.ok) throw new Error("Échec de la mise à jour sur GitHub");
+    if (!res.ok) throw new Error("Échec de la sauvegarde sur GitHub");
     console.log("✅ Utilisateurs mis à jour sur GitHub");
   } catch (error) {
     console.error("❌ Erreur GitHub :", error);
@@ -34,18 +47,30 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const { user } = useUserProfile();
 
-  // 🔹 Charger les utilisateurs depuis Firestore
+  // 🔹 Charger les utilisateurs depuis GitHub puis Firestore
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        // 1️⃣ On essaie GitHub d’abord
+        const githubUsers = await getUsersFromGitHub();
+        if (githubUsers.length > 0) {
+          setUsers(githubUsers);
+          setLoading(false);
+          return;
+        }
+
+        // 2️⃣ Si GitHub vide, on récupère Firestore
         const q = query(collection(db, "authors"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const usersData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          followers: [], // valeur par défaut
+          followers: [],
           ...doc.data(),
         }));
+
         setUsers(usersData);
+        // 3️⃣ On sauvegarde sur GitHub pour la persistance
+        await saveUsersToGitHub(usersData);
       } catch (err) {
         console.error("Erreur lors du chargement des utilisateurs :", err);
       } finally {
@@ -64,12 +89,10 @@ export default function UsersPage() {
     }
 
     const targetRef = doc(db, "authors", targetUser.id);
-
     try {
       let updatedUsersCopy;
 
       if (targetUser.followers?.includes(user.uid)) {
-        // Déjà suivi → retirer
         await updateDoc(targetRef, {
           followers: arrayRemove(user.uid),
         });
@@ -79,7 +102,6 @@ export default function UsersPage() {
             : u
         );
       } else {
-        // Ajouter le follow
         await updateDoc(targetRef, {
           followers: arrayUnion(user.uid),
         });
@@ -91,8 +113,6 @@ export default function UsersPage() {
       }
 
       setUsers(updatedUsersCopy);
-
-      // 🔹 Sauvegarder sur GitHub
       await saveUsersToGitHub(updatedUsersCopy);
     } catch (err) {
       console.error("Erreur suivi utilisateur :", err);
@@ -131,10 +151,7 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr
-                  key={u.id}
-                  className="hover:bg-gray-50 transition-colors border-b"
-                >
+                <tr key={u.id} className="hover:bg-gray-50 transition-colors border-b">
                   <td className="px-4 py-3">
                     {u.photoURL ? (
                       <img
