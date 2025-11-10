@@ -17,14 +17,26 @@ export default function TextPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
-
   const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
-  // Fonction pour afficher le nom complet / pseudo / email comme sur la page auteurs
   const getDisplayName = (author) =>
     author.displayName || author.name || author.email || "Utilisateur";
 
-  // Charger le texte
+  // 🔹 Enregistrer les données sur GitHub
+  const saveToGitHub = async (updatedData) => {
+    try {
+      const res = await fetch("/api/github-save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, data: updatedData }),
+      });
+      if (!res.ok) throw new Error("Erreur GitHub");
+      console.log("✅ Données sauvegardées sur GitHub !");
+    } catch (err) {
+      console.error("❌ Sauvegarde GitHub échouée:", err);
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
     async function fetchText() {
@@ -33,96 +45,70 @@ export default function TextPage() {
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
+        trackView(data);
         setLoading(false);
-        trackView(id);
-        trackLikes(id);
-        trackComments(id);
-      } catch (error) {
-        console.error("Erreur:", error);
+      } catch {
         toast.error("Impossible de charger le texte");
       }
     }
     fetchText();
-  }, [id, user]);
+  }, [id]);
 
-  // Vues uniques
-  const trackView = (textId) => {
-    let uniqueId = user?.uid || localStorage.getItem("deviceId");
-    if (!uniqueId) {
-      uniqueId = crypto.randomUUID();
-      localStorage.setItem("deviceId", uniqueId);
-    }
-    const key = `viewers-${textId}`;
-    let viewers = JSON.parse(localStorage.getItem(key) || "[]");
+  const trackView = async (currentText) => {
+    const key = `viewers-${id}`;
+    const uniqueId = user?.uid || localStorage.getItem("deviceId") || crypto.randomUUID();
+    localStorage.setItem("deviceId", uniqueId);
+
+    const viewers = JSON.parse(localStorage.getItem(key) || "[]");
     if (!viewers.includes(uniqueId)) {
       viewers.push(uniqueId);
       localStorage.setItem(key, JSON.stringify(viewers));
+      setViews(viewers.length);
+
+      const updated = { ...currentText, views: viewers.length };
+      setText(updated);
+      await saveToGitHub(updated);
+    } else {
+      setViews(viewers.length);
     }
-    setViews(viewers.length);
   };
 
-  // Likes
-  const trackLikes = (textId) => {
-    const key = `likes-${textId}`;
-    const currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
-    setLikes(currentLikes.length);
-
-    const likeId = user?.uid || localStorage.getItem("deviceId");
-    if (currentLikes.includes(likeId)) setLiked(true);
-  };
-
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!user) return redirectToAuth(`/texts/${id}`);
 
     const key = `likes-${id}`;
     let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
-
     const likeId = user.uid;
     if (currentLikes.includes(likeId)) return;
 
-    const updatedLikes = [...currentLikes, likeId];
-    localStorage.setItem(key, JSON.stringify(updatedLikes));
-    setLikes(updatedLikes.length);
+    currentLikes.push(likeId);
+    localStorage.setItem(key, JSON.stringify(currentLikes));
+    setLikes(currentLikes.length);
     setLiked(true);
     toast.success("Merci pour ton like !");
+
+    const updated = { ...text, likes: currentLikes.length };
+    setText(updated);
+    await saveToGitHub(updated);
   };
 
-  // Commentaires
-  const trackComments = (textId) => {
-    const key = `comments-${textId}`;
-    const storedComments = JSON.parse(localStorage.getItem(key) || "[]");
-    setComments(storedComments);
-  };
-
-  const handleComment = () => {
+  const handleComment = async () => {
     if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
 
-    const key = `comments-${id}`;
     const newComment = {
-      author: getDisplayName(user), // ← Utiliser le même nom que sur la page auteurs
+      author: getDisplayName(user),
       content: commentText,
       date: new Date().toISOString(),
     };
     const updatedComments = [...comments, newComment];
-    localStorage.setItem(key, JSON.stringify(updatedComments));
     setComments(updatedComments);
     setCommentText("");
     toast.success("Commentaire publié !");
-  };
 
-  // Partage
-  const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: text?.title,
-        text: `Découvre ce texte sur Lisible : ${text?.title}`,
-        url: window.location.href,
-      });
-    } catch {
-      navigator.clipboard.writeText(window.location.href);
-
-    }
+    const updated = { ...text, comments: updatedComments };
+    setText(updated);
+    await saveToGitHub(updated);
   };
 
   if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
@@ -131,18 +117,12 @@ export default function TextPage() {
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
       {text.image && (
-        <img
-          src={text.image}
-          alt={text.title}
-          className="w-full h-64 object-cover rounded-xl"
-        />
+        <img src={text.image} alt={text.title} className="w-full h-64 object-cover rounded-xl" />
       )}
 
       <h1 className="text-3xl font-bold">{text.title}</h1>
-
       <div className="text-gray-600 text-sm flex justify-between">
-        <p>
-<strong>{getDisplayName(text)}</strong></p>
+        <p><strong>{getDisplayName(text.author)}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
@@ -158,7 +138,7 @@ export default function TextPage() {
           <span>{likes}</span>
         </button>
 
-        <button onClick={handleShare} className="flex items-center gap-2 text-gray-600 transition">
+        <button onClick={() => navigator.share({ title: text.title, url: window.location.href })}>
           <Share2 size={24} />
         </button>
 
@@ -169,20 +149,14 @@ export default function TextPage() {
 
       <div className="pt-4 border-t">
         <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
-        {comments.length === 0 ? (
-          <p className="text-gray-500 text-sm">Aucun commentaire pour l’instant.</p>
-        ) : (
-          <ul className="space-y-2">
-            {comments.map((c, i) => (
-              <li key={i} className="p-2 border rounded">
-                <p className="text-sm text-gray-700">
-                  <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
-                </p>
-                <p>{c.content}</p>
-              </li>
-            ))}
-          </ul>
-        )}
+        {comments.map((c, i) => (
+          <div key={i} className="p-2 border rounded mb-2">
+            <p className="text-sm text-gray-700">
+              <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
+            </p>
+            <p>{c.content}</p>
+          </div>
+        ))}
 
         <div className="mt-3 flex flex-col gap-2">
           <textarea
