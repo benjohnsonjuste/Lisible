@@ -20,7 +20,7 @@ function MyApp({ Component, pageProps }) {
 
         {/* Icônes PWA pour mobile */}
         <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" />
-        <link rel="manifest" href="/favicon.ico" />
+        <link rel="manifest" href="/manifest.json" />
 
         {/* Couleur de thème pour la barre du navigateur et notifications */}
         <meta name="theme-color" content="#0d6efd" />
