@@ -20,9 +20,9 @@ export default function TextPage() {
   const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
   const getDisplayName = (author) =>
-    author.displayName || author.name || author.email || "Utilisateur";
+    author?.displayName || author?.name || author?.email || "Utilisateur";
 
-  // 🔹 Enregistrer les données sur GitHub
+  // 🔹 Sauvegarde sur GitHub
   const saveToGitHub = async (updatedData) => {
     try {
       const res = await fetch("/api/github-save", {
@@ -31,12 +31,12 @@ export default function TextPage() {
         body: JSON.stringify({ id, data: updatedData }),
       });
       if (!res.ok) throw new Error("Erreur GitHub");
-      console.log("✅ Données sauvegardées sur GitHub !");
     } catch (err) {
       console.error("❌ Sauvegarde GitHub échouée:", err);
     }
   };
 
+  // 🔹 Charger le texte + initialiser likes & comments
   useEffect(() => {
     if (!id) return;
     async function fetchText() {
@@ -44,7 +44,16 @@ export default function TextPage() {
         const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
+
+        // Initialiser likes et commentaires depuis localStorage
+        const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
+        const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
+
         setText(data);
+        setLikes(storedLikes.length);
+        setLiked(user ? storedLikes.includes(user.uid) : false);
+        setComments(storedComments);
+
         trackView(data);
         setLoading(false);
       } catch {
@@ -52,8 +61,9 @@ export default function TextPage() {
       }
     }
     fetchText();
-  }, [id]);
+  }, [id, user]);
 
+  // 🔹 Compter les vues uniques
   const trackView = async (currentText) => {
     const key = `viewers-${id}`;
     const uniqueId = user?.uid || localStorage.getItem("deviceId") || crypto.randomUUID();
@@ -63,23 +73,26 @@ export default function TextPage() {
     if (!viewers.includes(uniqueId)) {
       viewers.push(uniqueId);
       localStorage.setItem(key, JSON.stringify(viewers));
-      setViews(viewers.length);
-
-      const updated = { ...currentText, views: viewers.length };
-      setText(updated);
-      await saveToGitHub(updated);
-    } else {
-      setViews(viewers.length);
     }
+    setViews(viewers.length);
+
+    const updated = { ...currentText, views: viewers.length };
+    setText(updated);
+    await saveToGitHub(updated);
   };
 
+  // 🔹 Like sans reload
   const handleLike = async () => {
     if (!user) return redirectToAuth(`/texts/${id}`);
 
     const key = `likes-${id}`;
     let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
     const likeId = user.uid;
-    if (currentLikes.includes(likeId)) return;
+
+    if (currentLikes.includes(likeId)) {
+      toast.info("Tu as déjà liké !");
+      return;
+    }
 
     currentLikes.push(likeId);
     localStorage.setItem(key, JSON.stringify(currentLikes));
@@ -92,6 +105,7 @@ export default function TextPage() {
     await saveToGitHub(updated);
   };
 
+  // 🔹 Commentaires avec auteur enregistré
   const handleComment = async () => {
     if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
@@ -101,11 +115,15 @@ export default function TextPage() {
       content: commentText,
       date: new Date().toISOString(),
     };
+
     const updatedComments = [...comments, newComment];
     setComments(updatedComments);
     setCommentText("");
-    toast.success("Commentaire publié !");
 
+    // Sauvegarde locale pour persistance
+    localStorage.setItem(`comments-${id}`, JSON.stringify(updatedComments));
+
+    toast.success("Commentaire publié !");
     const updated = { ...text, comments: updatedComments };
     setText(updated);
     await saveToGitHub(updated);
