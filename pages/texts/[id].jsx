@@ -17,96 +17,122 @@ export default function TextPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(false);
+
   const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
   const getDisplayName = (author) =>
     author?.displayName || author?.name || author?.email || "Utilisateur";
 
-  // 🔹 Sauvegarde sur GitHub
-  const saveToGitHub = async (updatedData) => {
+  // -----------------------------------------------------
+  // 🔹 API GitHub — Ne met jamais à jour tout le document
+  // -----------------------------------------------------
+  const saveToGitHub = async (partialUpdate) => {
     try {
-      const res = await fetch("/api/github-save", {
+      await fetch("/api/github-save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, data: updatedData }),
+        body: JSON.stringify({
+          id,
+          update: partialUpdate,
+        }),
       });
-      if (!res.ok) throw new Error("Erreur GitHub");
     } catch (err) {
-      console.error("❌ Sauvegarde GitHub échouée:", err);
+      console.error("Erreur GitHub :", err);
     }
   };
 
-  // 🔹 Charger le texte + initialiser likes & comments
+  // -----------------------------------------------------
+  // 🔹 Charger le texte local
+  // -----------------------------------------------------
   useEffect(() => {
     if (!id) return;
-    async function fetchText() {
+
+    async function loadText() {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
-        if (!res.ok) throw new Error("Texte introuvable");
+        if (!res.ok) throw new Error();
+
         const data = await res.json();
 
-        // Initialiser likes et commentaires depuis localStorage
+        // Local likes
         const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
-        const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
 
-        setText(data);
         setLikes(storedLikes.length);
         setLiked(user ? storedLikes.includes(user.uid) : false);
+
+        // Local comments
+        const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
         setComments(storedComments);
 
         trackView(data);
+        setText(data);
         setLoading(false);
       } catch {
-        toast.error("Impossible de charger le texte");
+        toast.error("Texte introuvable.");
       }
     }
-    fetchText();
+
+    loadText();
   }, [id, user]);
 
-  // 🔹 Compter les vues uniques
+  // -----------------------------------------------------
+  // 🔹 Vues uniques
+  // -----------------------------------------------------
   const trackView = async (currentText) => {
     const key = `viewers-${id}`;
-    const uniqueId = user?.uid || localStorage.getItem("deviceId") || crypto.randomUUID();
+    const uniqueId =
+      user?.uid || localStorage.getItem("deviceId") || crypto.randomUUID();
+
     localStorage.setItem("deviceId", uniqueId);
 
     const viewers = JSON.parse(localStorage.getItem(key) || "[]");
+
     if (!viewers.includes(uniqueId)) {
       viewers.push(uniqueId);
       localStorage.setItem(key, JSON.stringify(viewers));
     }
+
     setViews(viewers.length);
 
-    const updated = { ...currentText, views: viewers.length };
-    setText(updated);
-    await saveToGitHub(updated);
+    await saveToGitHub({ views: viewers.length });
   };
 
-  // 🔹 Like sans reload
-  const handleLike = async () => {
+  // -----------------------------------------------------
+  // 🔹 LIKE instantané + sauvegarde local + GitHub
+  // -----------------------------------------------------
+  const handleLike = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!user) return redirectToAuth(`/texts/${id}`);
 
     const key = `likes-${id}`;
     let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
-    const likeId = user.uid;
 
-    if (currentLikes.includes(likeId)) {
-      toast.info("Tu as déjà liké !");
-      return;
+    if (currentLikes.includes(user.uid)) {
+      setLiked(true);
+      return toast.info("Tu as déjà liké !");
     }
 
-    currentLikes.push(likeId);
+    currentLikes.push(user.uid);
     localStorage.setItem(key, JSON.stringify(currentLikes));
+
+    // UI instantanée
     setLikes(currentLikes.length);
     setLiked(true);
+
     toast.success("Merci pour ton like !");
 
-    const updated = { ...text, likes: currentLikes.length };
-    setText(updated);
-    await saveToGitHub(updated);
+    await saveToGitHub({ likes: currentLikes.length });
   };
 
-  // 🔹 Commentaires avec auteur enregistré
-  const handleComment = async () => {
+  // -----------------------------------------------------
+  // 🔹 Commentaire instantané
+  // -----------------------------------------------------
+  const handleComment = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
 
@@ -116,29 +142,39 @@ export default function TextPage() {
       date: new Date().toISOString(),
     };
 
-    const updatedComments = [...comments, newComment];
-    setComments(updatedComments);
+    const updated = [...comments, newComment];
+
+    setComments(updated);
     setCommentText("");
 
-    // Sauvegarde locale pour persistance
-    localStorage.setItem(`comments-${id}`, JSON.stringify(updatedComments));
+    localStorage.setItem(`comments-${id}`, JSON.stringify(updated));
 
     toast.success("Commentaire publié !");
-    const updated = { ...text, comments: updatedComments };
-    setText(updated);
-    await saveToGitHub(updated);
+
+    await saveToGitHub({ comments: updated });
   };
 
-  if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
+  // -----------------------------------------------------
+  // 🔹 UI
+  // -----------------------------------------------------
+  if (loading || userLoading)
+    return <p className="text-center mt-10">Chargement...</p>;
+
   if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
+
       {text.image && (
-        <img src={text.image} alt={text.title} className="w-full h-64 object-cover rounded-xl" />
+        <img
+          src={text.image}
+          alt={text.title}
+          className="w-full h-64 object-cover rounded-xl"
+        />
       )}
 
       <h1 className="text-3xl font-bold">{text.title}</h1>
+
       <div className="text-gray-600 text-sm flex justify-between">
         <p><strong>{getDisplayName(text.author)}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
@@ -146,8 +182,14 @@ export default function TextPage() {
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
+      {/* ACTIONS */}
       <div className="flex gap-4 pt-4 border-t items-center">
-        <button onClick={handleLike} className="flex items-center gap-2 transition">
+
+        <button
+          onClick={handleLike}
+          disabled={liked}
+          className="flex items-center gap-2 transition"
+        >
           <Heart
             size={24}
             className={liked ? "text-pink-500" : "text-gray-400"}
@@ -156,7 +198,11 @@ export default function TextPage() {
           <span>{likes}</span>
         </button>
 
-        <button onClick={() => navigator.share({ title: text.title, url: window.location.href })}>
+        <button
+          onClick={() =>
+            navigator.share({ title: text.title, url: window.location.href })
+          }
+        >
           <Share2 size={24} />
         </button>
 
@@ -165,12 +211,15 @@ export default function TextPage() {
         </span>
       </div>
 
+      {/* COMMENTAIRES */}
       <div className="pt-4 border-t">
         <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
+
         {comments.map((c, i) => (
           <div key={i} className="p-2 border rounded mb-2">
             <p className="text-sm text-gray-700">
-              <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
+              <strong>{c.author}</strong> ·{" "}
+              {new Date(c.date).toLocaleString()}
             </p>
             <p>{c.content}</p>
           </div>
