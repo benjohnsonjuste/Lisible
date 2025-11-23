@@ -5,21 +5,23 @@ import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { Heart, Share2, Eye } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import CommentSection from "@/components/CommentSection";
 
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
-  const { user, isLoading: userLoading, redirectToAuth } =
-    typeof useUserProfile === "function" ? useUserProfile() : { user: null, isLoading: false, redirectToAuth: () => {} };
+
+  // 🔹 Hook pour récupérer l’utilisateur connecté
+  const { user: currentUser, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
   const [views, setViews] = useState(0);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
 
-  // Charger le texte + initialiser likes & vues
+  // Charger le texte + initialiser likes, vues et commentaires
   useEffect(() => {
     if (!id) return;
 
@@ -29,25 +31,26 @@ export default function TextPage() {
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
 
-        // Initialiser likes et comments depuis localStorage
+        // Charger likes et commentaires depuis localStorage
         const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
         const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
 
-        setText({ ...data, comments: storedComments, likes: storedLikes });
+        setText({ ...data, likes: storedLikes, comments: storedComments });
         setLikes(storedLikes.length);
-        setLiked(user ? storedLikes.includes(user.uid) : false);
+        setLiked(currentUser ? storedLikes.includes(currentUser.uid) : false);
+        setComments(storedComments);
 
-        // Track views
         await trackView(data);
-        setLoading(false);
       } catch (err) {
         console.error(err);
         toast.error("Impossible de charger le texte");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchText();
-  }, [id, user]);
+  }, [id, currentUser]);
 
   const ensureDeviceId = () => {
     let dev = localStorage.getItem("deviceId");
@@ -60,7 +63,7 @@ export default function TextPage() {
 
   const trackView = async (currentText) => {
     const key = `viewers-${id}`;
-    const uniqueId = user?.uid || ensureDeviceId();
+    const uniqueId = currentUser?.uid || ensureDeviceId();
 
     const viewers = JSON.parse(localStorage.getItem(key) || "[]");
     if (!viewers.includes(uniqueId)) {
@@ -68,7 +71,6 @@ export default function TextPage() {
       localStorage.setItem(key, JSON.stringify(viewers));
       setViews(viewers.length);
 
-      // Persister sur GitHub
       const updated = { ...currentText, views: viewers.length };
       setText(updated);
       try {
@@ -85,24 +87,23 @@ export default function TextPage() {
     }
   };
 
-  // Gestion du like
+  // Gestion du Like
   const handleLike = async () => {
-    if (!user) return redirectToAuth(`/texts/${id}`);
+    if (!currentUser) return redirectToAuth(`/texts/${id}`);
 
     const key = `likes-${id}`;
     let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
-    if (currentLikes.includes(user.uid)) {
+    if (currentLikes.includes(currentUser.uid)) {
       toast.info("Tu as déjà liké !");
       return;
     }
 
-    currentLikes.push(user.uid);
+    currentLikes.push(currentUser.uid);
     localStorage.setItem(key, JSON.stringify(currentLikes));
     setLikes(currentLikes.length);
     setLiked(true);
     toast.success("Merci pour ton like !");
 
-    // Persister sur GitHub
     const updated = { ...text, likes: currentLikes };
     setText(updated);
     try {
@@ -116,11 +117,47 @@ export default function TextPage() {
     }
   };
 
+  // Gestion du commentaire
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!currentUser) return redirectToAuth(`/texts/${id}`);
+    if (!newComment.trim()) return;
+
+    const comment = {
+      author: currentUser?.displayName || currentUser?.fullName || "Utilisateur",
+      content: newComment.trim(),
+      date: new Date().toISOString(),
+    };
+
+    const updatedComments = [...comments, comment];
+    setComments(updatedComments);
+    setNewComment("");
+
+    // Persistance locale
+    localStorage.setItem(`comments-${id}`, JSON.stringify(updatedComments));
+
+    toast.success("Commentaire publié !");
+
+    // Persistance GitHub
+    if (text) {
+      const updatedText = { ...text, comments: updatedComments };
+      setText(updatedText);
+      try {
+        await fetch("/api/github-save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, updatedFields: { comments: updatedComments } }),
+        });
+      } catch (err) {
+        console.error("Erreur sauvegarde commentaires :", err);
+      }
+    }
+  };
+
   if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
   if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
-
-  const getDisplayName = (author) =>
-    author?.displayName || author?.name || author?.email || "Utilisateur";
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
@@ -131,7 +168,8 @@ export default function TextPage() {
       <h1 className="text-3xl font-bold">{text.title}</h1>
 
       <div className="text-gray-600 text-sm flex justify-between">
-        <p>✍️ <strong>{getDisplayName(text.author)}</strong></p>
+        {/* 🔹 Affichage du nom complet de l’auteur via useUserProfile */}
+        <p> <strong>{currentUser?.displayName || currentUser?.fullName || "Auteur inconnu"}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
@@ -153,18 +191,39 @@ export default function TextPage() {
         </span>
       </div>
 
-      {/* Comments */}
-      <CommentSection textId={id} text={text} setText={setText} saveToGitHub={async (updated) => {
-        try {
-          await fetch("/api/github-save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id, updatedFields: { comments: updated.comments } }),
-          });
-        } catch (err) {
-          console.error("Erreur sauvegarde commentaires :", err);
-        }
-      }} />
+      {/* Commentaires */}
+      <div className="pt-4 border-t">
+        <h3 className="text-lg font-semibold mb-2">
+          Commentaires ({comments.length})
+        </h3>
+
+        <ul className="space-y-2 mb-4">
+          {comments.map((c, i) => (
+            <li key={i} className="p-2 bg-gray-100 rounded">
+              <p className="text-sm text-gray-600">
+                {c.author} • {new Date(c.date).toLocaleString()}
+              </p>
+              <p>{c.content}</p>
+            </li>
+          ))}
+        </ul>
+
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          rows={3}
+          placeholder="Ajouter un commentaire..."
+          className="w-full p-2 border rounded mb-2"
+        />
+
+        <button
+          type="button"
+          onClick={handleAddComment}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Commenter
+        </button>
+      </div>
     </div>
   );
 }
