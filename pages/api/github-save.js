@@ -1,56 +1,25 @@
-import { Octokit } from "@octokit/rest";
+import { saveFileToGitHub } from "@/lib/githubClient";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
+  }
 
   try {
-    const { id, update } = req.body;
+    const { id, data } = req.body;
 
-    if (!id || !update)
-      return res.status(400).json({ error: "ID ou update manquant" });
+    if (!id || !data) {
+      return res.status(400).json({ error: "ID ou données manquantes" });
+    }
 
-    const octokit = new Octokit({
-      auth: process.env.GITHUB_TOKEN,
-    });
+    const path = `public/data/texts/${id}.json`;
 
-    const owner = process.env.GITHUB_OWNER;
-    const repo = process.env.GITHUB_REPO;
-    const path = `data/texts/${id}.json`;
+    await saveFileToGitHub(path, data, `Mise à jour du texte ${id}`);
 
-    // 1. Télécharger la version actuelle
-    const file = await octokit.repos.getContent({
-      owner,
-      repo,
-      path,
-    });
-
-    const sha = file.data.sha;
-    const content = JSON.parse(
-      Buffer.from(file.data.content, "base64").toString()
-    );
-
-    // 2. Mise à jour partielle
-    const newContent = {
-      ...content,
-      ...update,
-    };
-
-    // 3. Upload vers GitHub
-    await octokit.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path,
-      message: `Update ${id}.json`,
-      content: Buffer.from(JSON.stringify(newContent, null, 2)).toString(
-        "base64"
-      ),
-      sha,
-    });
-
-    res.json({ ok: true });
+    return res.status(200).json({ success: true });
+    
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur GitHub" });
+    console.error("Erreur API:", err);
+    return res.status(500).json({ error: "Erreur serveur" });
   }
 }
