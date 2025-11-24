@@ -9,55 +9,41 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
-
-  const {
-    user: currentUser,
-    isLoading: userLoading,
-    redirectToAuth,
-  } = useUserProfile();
+  const { user, isLoading: userLoading, redirectToAuth } =
+    typeof useUserProfile === "function"
+      ? useUserProfile()
+      : { user: null, isLoading: false, redirectToAuth: () => {} };
 
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
-
   const [views, setViews] = useState(0);
-
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
 
-  //---------------------------------------
-  // 🔥 CHARGEMENT DU TEXTE
-  //---------------------------------------
+  // Charger le texte + initialiser likes, vues et commentaires
   useEffect(() => {
     if (!id) return;
 
     const fetchText = async () => {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
-
         if (!res.ok) throw new Error("Texte introuvable");
-
         const data = await res.json();
 
-        // localStorage
+        // Charger likes et commentaires depuis localStorage
         const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
         const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
 
-        setText({
-          ...data,
-          likes: storedLikes,
-          comments: storedComments,
-        });
-
+        setText({ ...data, likes: storedLikes, comments: storedComments });
         setLikes(storedLikes.length);
-        setLiked(currentUser ? storedLikes.includes(currentUser.uid) : false);
+        setLiked(user ? storedLikes.includes(user.uid) : false);
         setComments(storedComments);
 
         await trackView(data);
-
       } catch (err) {
+        console.error(err);
         toast.error("Impossible de charger le texte");
       } finally {
         setLoading(false);
@@ -65,11 +51,8 @@ export default function TextPage() {
     };
 
     fetchText();
-  }, [id, currentUser]);
+  }, [id, user]);
 
-  //---------------------------------------
-  // 🔥 VUES UNIQUES
-  //---------------------------------------
   const ensureDeviceId = () => {
     let dev = localStorage.getItem("deviceId");
     if (!dev) {
@@ -81,19 +64,16 @@ export default function TextPage() {
 
   const trackView = async (currentText) => {
     const key = `viewers-${id}`;
-    const uniqueId = currentUser?.uid || ensureDeviceId();
+    const uniqueId = user?.uid || ensureDeviceId();
 
     const viewers = JSON.parse(localStorage.getItem(key) || "[]");
-
     if (!viewers.includes(uniqueId)) {
       viewers.push(uniqueId);
       localStorage.setItem(key, JSON.stringify(viewers));
-
       setViews(viewers.length);
 
       const updated = { ...currentText, views: viewers.length };
       setText(updated);
-
       try {
         await fetch("/api/github-save", {
           method: "POST",
@@ -108,29 +88,25 @@ export default function TextPage() {
     }
   };
 
-  //---------------------------------------
-  // ❤️ LIKE
-  //---------------------------------------
+  // Gestion du Like
   const handleLike = async () => {
-    if (!currentUser) return redirectToAuth(`/texts/${id}`);
+    if (!user) return redirectToAuth(`/texts/${id}`);
 
     const key = `likes-${id}`;
     let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
-
-    if (currentLikes.includes(currentUser.uid)) {
+    if (currentLikes.includes(user.uid)) {
       toast.info("Tu as déjà liké !");
       return;
     }
 
-    currentLikes.push(currentUser.uid);
+    currentLikes.push(user.uid);
     localStorage.setItem(key, JSON.stringify(currentLikes));
-
     setLikes(currentLikes.length);
     setLiked(true);
+    toast.success("Merci pour ton like !");
 
     const updated = { ...text, likes: currentLikes };
     setText(updated);
-
     try {
       await fetch("/api/github-save", {
         method: "POST",
@@ -138,25 +114,20 @@ export default function TextPage() {
         body: JSON.stringify({ id, updatedFields: { likes: currentLikes } }),
       });
     } catch (err) {
-      console.error("Erreur likes :", err);
+      console.error("Erreur sauvegarde likes :", err);
     }
-
-    toast.success("Merci pour ton like !");
   };
 
-  //---------------------------------------
-  // 💬 COMMENTAIRES
-  //---------------------------------------
-  const handleAddComment = async () => {
-    if (!currentUser) return redirectToAuth(`/texts/${id}`);
+  // Gestion du commentaire
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) return redirectToAuth(`/texts/${id}`);
     if (!newComment.trim()) return;
 
     const comment = {
-      author:
-        currentUser?.fullName ||
-        currentUser?.displayName ||
-        currentUser?.name ||
-        "Utilisateur",
+      author: user?.displayName || user?.fullName || "Utilisateur",
       content: newComment.trim(),
       date: new Date().toISOString(),
     };
@@ -165,67 +136,54 @@ export default function TextPage() {
     setComments(updatedComments);
     setNewComment("");
 
+    // Persistance locale
     localStorage.setItem(`comments-${id}`, JSON.stringify(updatedComments));
 
-    const updatedText = { ...text, comments: updatedComments };
-    setText(updatedText);
+    toast.success("Commentaire publié !");
 
-    try {
-      await fetch("/api/github-save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, updatedFields: { comments: updatedComments } }),
-      });
-    } catch (err) {
-      console.error("Erreur commentaires :", err);
+    // Persistance GitHub
+    if (text) {
+      const updatedText = { ...text, comments: updatedComments };
+      setText(updatedText);
+      try {
+        await fetch("/api/github-save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, updatedFields: { comments: updatedComments } }),
+        });
+      } catch (err) {
+        console.error("Erreur sauvegarde commentaires :", err);
+      }
     }
   };
 
-  //---------------------------------------
-  // RENDU
-  //---------------------------------------
   if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
   if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
-
       {text.image && (
-        <img
-          src={text.image}
-          alt={text.title}
-          className="w-full h-64 object-cover rounded-xl"
-        />
+        <img src={text.image} alt={text.title} className="w-full h-64 object-cover rounded-xl" />
       )}
 
       <h1 className="text-3xl font-bold">{text.title}</h1>
 
       <div className="text-gray-600 text-sm flex justify-between">
-        {/* 🔥 ❗ AFFICHE LE VRAI AUTEUR DU TEXTE ❗ */}
-        <p>
-          ✍️ <strong>{text.authorName || "Auteur inconnu"}</strong>
-        </p>
+        {/* 🔹 Afficher le nom complet de la personne qui a publié le texte */}
+        <p> <strong>{text.author?.displayName || text.author?.fullName || "Auteur inconnu"}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
-      {/* Actions */}
+      {/* Actions: Like / Share / Views */}
       <div className="flex gap-4 pt-4 border-t items-center">
-        <button onClick={handleLike} className="flex items-center gap-2">
-          <Heart
-            size={24}
-            className={liked ? "text-pink-500" : "text-gray-400"}
-            fill={liked ? "currentColor" : "none"}
-          />
+        <button onClick={handleLike} className="flex items-center gap-2 transition">
+          <Heart size={24} className={liked ? "text-pink-500" : "text-gray-400"} fill={liked ? "currentColor" : "none"} />
           <span>{likes}</span>
         </button>
 
-        <button
-          onClick={() =>
-            navigator.share({ title: text.title, url: window.location.href })
-          }
-        >
+        <button onClick={() => navigator.share({ title: text.title, url: window.location.href })}>
           <Share2 size={24} />
         </button>
 
@@ -267,7 +225,6 @@ export default function TextPage() {
           Commenter
         </button>
       </div>
-
     </div>
   );
 }
