@@ -1,0 +1,16 @@
+{
+  "id": 1763873605354,
+  "title": "Hi",
+  "content": "Test",
+  "authorName": "Auteur inconnu",
+  "authorId": null,
+  "date": "2025-11-23T04:53:25.354Z",
+  "image": null,
+  "imageName": null,
+  "views": 1,
+  "likes": [
+    "fe83b68f-1e8f-4b66-975b-434fcb715c8e"
+  ],
+  "updatedAt": "2025-11-23T22:40:09.845Z",
+  "comments": []
+}
