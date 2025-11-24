@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
-export default function TextPublishingForm({ user }) {
+export default function TextPublishingForm() {
   const router = useRouter();
+  const { user, isLoading } = useUserProfile();
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
@@ -27,6 +30,11 @@ export default function TextPublishingForm({ user }) {
       return;
     }
 
+    if (!user) {
+      toast.error("Connectez-vous pour publier.");
+      return;
+    }
+
     setLoading(true);
     try {
       let imageBase64 = null;
@@ -42,12 +50,9 @@ export default function TextPublishingForm({ user }) {
         imageName = imageFile.name;
       }
 
-      // ✅ Priorité au nom complet enregistré dans Firestore
+      // Nom complet depuis useUserProfile
       const authorName =
-        user?.fullName ||
-        user?.displayName ||
-        user?.name ||
-        "Auteur inconnu";
+        user?.fullName || user?.displayName || user?.name || "Auteur inconnu";
 
       const payload = {
         title: title.trim(),
@@ -84,6 +89,8 @@ export default function TextPublishingForm({ user }) {
     }
   };
 
+  if (isLoading) return <p className="text-center mt-10">Chargement...</p>;
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -111,7 +118,7 @@ export default function TextPublishingForm({ user }) {
           placeholder="Écris ton texte ici..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={8}
+          rows={12}
           className="w-full p-2 border rounded min-h-[150px]"
           required
         />
