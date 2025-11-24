@@ -1,49 +1,50 @@
-// /pages/texts/[id].js
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
-import TextActions from "@/components/TextActions";
-import CommentSection from "@/components/CommentSection";
-import AdScript from "@/components/AdScript";         // ✅ AJOUT ICI
+import { Heart, Share2, Eye } from "lucide-react";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import CommentSection from "@/components/CommentSection";
 
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
-
-  const { user, isLoading: userLoading } =
-    typeof useUserProfile === "function"
-      ? useUserProfile()
-      : { user: null, isLoading: false };
+  const { user, isLoading: userLoading, redirectToAuth } =
+    typeof useUserProfile === "function" ? useUserProfile() : { user: null, isLoading: false, redirectToAuth: () => {} };
 
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [likes, setLikes] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [views, setViews] = useState(0);
 
-  // Charger les données du texte
+  // Charger le texte + initialiser likes & vues
   useEffect(() => {
     if (!id) return;
 
-    async function fetchText() {
+    const fetchText = async () => {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
-
         const data = await res.json();
-        data.likes = data.likes || [];
-        data.comments = data.comments || [];
-        data.views = data.views || 0;
 
-        setText(data);
-        await trackViewAndSave(id, data);
+        // Initialiser likes et comments depuis localStorage
+        const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
+        const storedComments = JSON.parse(localStorage.getItem(`comments-${id}`) || "[]");
+
+        setText({ ...data, comments: storedComments, likes: storedLikes });
+        setLikes(storedLikes.length);
+        setLiked(user ? storedLikes.includes(user.uid) : false);
+
+        // Track views
+        await trackView(data);
+        setLoading(false);
       } catch (err) {
         console.error(err);
         toast.error("Impossible de charger le texte");
-      } finally {
-        setLoading(false);
       }
-    }
+    };
 
     fetchText();
   }, [id, user]);
@@ -57,81 +58,113 @@ export default function TextPage() {
     return dev;
   };
 
-  // Compteur de vues
-  const trackViewAndSave = async (textId, currentData) => {
-    const key = `viewers-${textId}`;
+  const trackView = async (currentText) => {
+    const key = `viewers-${id}`;
+    const uniqueId = user?.uid || ensureDeviceId();
+
     const viewers = JSON.parse(localStorage.getItem(key) || "[]");
-    const myId = user?.uid || ensureDeviceId();
+    if (!viewers.includes(uniqueId)) {
+      viewers.push(uniqueId);
+      localStorage.setItem(key, JSON.stringify(viewers));
+      setViews(viewers.length);
 
-    if (!viewers.includes(myId)) {
-      const updatedViewers = [...viewers, myId];
-      localStorage.setItem(key, JSON.stringify(updatedViewers));
-      const newViews = updatedViewers.length;
-
-      setText((prev) => ({ ...prev, views: newViews }));
-
+      // Persister sur GitHub
+      const updated = { ...currentText, views: viewers.length };
+      setText(updated);
       try {
         await fetch("/api/github-save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: textId,
-            updatedFields: { views: newViews }
-          }),
+          body: JSON.stringify({ id, updatedFields: { views: viewers.length } }),
         });
       } catch (err) {
-        console.error("Erreur lors de la sauvegarde des vues :", err);
+        console.error("Erreur sauvegarde vues :", err);
       }
     } else {
-      setText((prev) => ({ ...prev, views: viewers.length }));
+      setViews(viewers.length);
     }
   };
 
-  if (loading || userLoading)
-    return <p className="text-center mt-10">Chargement...</p>;
+  // Gestion du like
+  const handleLike = async () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
 
-  if (!text)
-    return <p className="text-center mt-10">Texte introuvable.</p>;
+    const key = `likes-${id}`;
+    let currentLikes = JSON.parse(localStorage.getItem(key) || "[]");
+    if (currentLikes.includes(user.uid)) {
+      toast.info("Tu as déjà liké !");
+      return;
+    }
+
+    currentLikes.push(user.uid);
+    localStorage.setItem(key, JSON.stringify(currentLikes));
+    setLikes(currentLikes.length);
+    setLiked(true);
+    toast.success("Merci pour ton like !");
+
+    // Persister sur GitHub
+    const updated = { ...text, likes: currentLikes };
+    setText(updated);
+    try {
+      await fetch("/api/github-save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, updatedFields: { likes: currentLikes } }),
+      });
+    } catch (err) {
+      console.error("Erreur sauvegarde likes :", err);
+    }
+  };
+
+  if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
+  if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
+
+  const getDisplayName = (author) =>
+    author?.displayName || author?.name || author?.email || "Utilisateur";
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
       {text.image && (
-        <img
-          src={text.image}
-          alt={text.title}
-          className="w-full h-64 object-cover rounded-xl"
-        />
+        <img src={text.image} alt={text.title} className="w-full h-64 object-cover rounded-xl" />
       )}
 
       <h1 className="text-3xl font-bold">{text.title}</h1>
 
       <div className="text-gray-600 text-sm flex justify-between">
-        <p>
-          ✍️ <strong>{text.authorName || text.author?.displayName || text.author?.email || "Auteur inconnu"}</strong>
-        </p>
+        <p>✍️ <strong>{getDisplayName(text.author)}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
-      <p className="leading-relaxed whitespace-pre-line">
-        {text.content}
-      </p>
+      <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
-      {/* ⭐ Composant Like / Share / Vue */}
-      <TextActions
-        id={id}
-        initialLikes={text.likes || []}
-        initialViews={text.views || 0}
-      />
+      {/* Actions: Like / Share / Views */}
+      <div className="flex gap-4 pt-4 border-t items-center">
+        <button onClick={handleLike} className="flex items-center gap-2 transition">
+          <Heart size={24} className={liked ? "text-pink-500" : "text-gray-400"} fill={liked ? "currentColor" : "none"} />
+          <span>{likes}</span>
+        </button>
 
-      {/* ⭐ Commentaires */}
-      <div className="pt-4 border-t">
-        <CommentSection id={id} initialComments={text.comments || []} />
+        <button onClick={() => navigator.share({ title: text.title, url: window.location.href })}>
+          <Share2 size={24} />
+        </button>
+
+        <span className="ml-auto text-sm text-gray-500 flex items-center gap-1">
+          <Eye size={16} /> {views} vue{views > 1 ? "s" : ""}
+        </span>
       </div>
 
-      {/* ⭐ insertion publicité */}
-      <div className="pt-6">
-        <AdScript /> {/* <<<  Ajout propre */}
-      </div>
+      {/* Comments */}
+      <CommentSection textId={id} text={text} setText={setText} saveToGitHub={async (updated) => {
+        try {
+          await fetch("/api/github-save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, updatedFields: { comments: updated.comments } }),
+          });
+        } catch (err) {
+          console.error("Erreur sauvegarde commentaires :", err);
+        }
+      }} />
     </div>
   );
 }
