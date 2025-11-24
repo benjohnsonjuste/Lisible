@@ -72,6 +72,7 @@ export default function TextPage() {
       localStorage.setItem(key, JSON.stringify(viewers));
       setViews(viewers.length);
 
+      // Persister sur GitHub
       const updated = { ...currentText, views: viewers.length };
       setText(updated);
       try {
@@ -105,6 +106,7 @@ export default function TextPage() {
     setLiked(true);
     toast.success("Merci pour ton like !");
 
+    // Persister sur GitHub
     const updated = { ...text, likes: currentLikes };
     setText(updated);
     try {
@@ -169,8 +171,7 @@ export default function TextPage() {
       <h1 className="text-3xl font-bold">{text.title}</h1>
 
       <div className="text-gray-600 text-sm flex justify-between">
-        {/* 🔹 Afficher le nom complet de la personne qui a publié le texte */}
-        <p> <strong>{text.author?.displayName || text.author?.fullName || "Auteur inconnu"}</strong></p>
+        <p>✍️ <strong>{text.authorName || text.author?.displayName || "Auteur inconnu"}</strong></p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
