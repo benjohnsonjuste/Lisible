@@ -1,99 +1,91 @@
-// /components/TextActions.js
 "use client";
 
 import { useEffect, useState } from "react";
 import { Heart, Share2, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { useUserProfile } from "@/hooks/useUserProfile"; // si tu as ce hook ; sinon il retournera undefined
+import { useUserProfile } from "@/hooks/useUserProfile";
 
-export default function TextActions({ id, initialLikes = [], initialViews = 0 }) {
-  const { user, isLoading: userLoading, redirectToAuth } = (typeof useUserProfile === "function" ? useUserProfile() : { user: null, isLoading: false, redirectToAuth: (r)=>{ window.location.href = `/login?redirect=${r}` } });
-  const [views, setViews] = useState(initialViews || 0);
-  const [likes, setLikes] = useState(Array.isArray(initialLikes) ? initialLikes : []);
+export default function TextActions({ id, text, onUpdate }) {
+  const { user, redirectToAuth } = useUserProfile();
+
+  const [likes, setLikes] = useState(text.likes.length);
   const [liked, setLiked] = useState(false);
+  const [views, setViews] = useState(text.views);
 
-  // init from localStorage
+  // Vérifier si déjà liké
   useEffect(() => {
-    const viewers = JSON.parse(localStorage.getItem(`viewers-${id}`) || "[]");
-    setViews(viewers.length);
+    const stored = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
+    setLiked(user && stored.includes(user.uid));
+    setLikes(stored.length);
+  }, [user, id]);
 
-    const storedLikes = JSON.parse(localStorage.getItem(`likes-${id}`) || "[]");
-    setLikes(storedLikes);
-    const myId = user?.uid || localStorage.getItem("deviceId");
-    if (myId && storedLikes.includes(myId)) setLiked(true);
-  }, [id, user]);
+  // Suivi des vues uniques
+  useEffect(() => {
+    const key = `views-${id}`;
+    const deviceId = localStorage.getItem("deviceId") || crypto.randomUUID();
+    localStorage.setItem("deviceId", deviceId);
 
-  const ensureDeviceId = () => {
-    let dev = localStorage.getItem("deviceId");
-    if (!dev) {
-      dev = crypto.randomUUID();
-      localStorage.setItem("deviceId", dev);
+    const viewers = JSON.parse(localStorage.getItem(key) || "[]");
+
+    if (!viewers.includes(deviceId)) {
+      viewers.push(deviceId);
+      localStorage.setItem(key, JSON.stringify(viewers));
+      setViews(viewers.length);
+
+      saveToGitHub({ ...text, views: viewers.length });
+      onUpdate((prev) => ({ ...prev, views: viewers.length }));
     }
-    return dev;
+  }, [id]);
+
+  const saveToGitHub = async (data) => {
+    await fetch("/api/github-save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, data }),
+    });
   };
 
-  const handleLike = async (e) => {
-    e?.preventDefault?.();
-    if (!user) {
-      // allow like for anonymous? earlier you said non-logged users can like but sometimes required login
-      // here we will allow anonymous like but store by device; if you want force login, uncomment redirect
-      // return redirectToAuth(`/texts/${id}`);
-    }
+  const handleLike = async () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
 
     const key = `likes-${id}`;
-    const storedLikes = JSON.parse(localStorage.getItem(key) || "[]");
-    const likeId = user?.uid || ensureDeviceId();
+    let stored = JSON.parse(localStorage.getItem(key) || "[]");
 
-    if (storedLikes.includes(likeId)) {
-      toast.info("Tu as déjà aimé.");
-      setLiked(true);
-      return;
-    }
+    if (stored.includes(user.uid)) return toast.info("Déjà liké");
 
-    const updated = [...storedLikes, likeId];
-    localStorage.setItem(key, JSON.stringify(updated));
-    setLikes(updated);
+    stored.push(user.uid);
+    localStorage.setItem(key, JSON.stringify(stored));
+
+    setLikes(stored.length);
     setLiked(true);
-    toast.success("Merci pour ton like !");
 
-    // Sauvegarde serveur -> GitHub
-    try {
-      await fetch("/api/github-save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, updatedFields: { likes: updated } }),
-      });
-    } catch (err) {
-      console.error("Erreur sauvegarde like:", err);
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      await navigator.share?.({
-        title: document.title,
-        url: window.location.href,
-      });
-    } catch {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié !");
-    }
+    const updated = { ...text, likes: stored };
+    onUpdate(updated);
+    saveToGitHub(updated);
   };
 
   return (
-    <div className="flex gap-4 items-center">
-      <button type="button" onClick={handleLike} className="flex items-center gap-2">
-        <Heart size={20} className={liked ? "text-pink-500" : "text-gray-400"} fill={liked ? "currentColor" : "none"} />
-        <span>{likes.length}</span>
+    <div className="flex gap-4 pt-4 border-t items-center">
+      <button onClick={handleLike} className="flex items-center gap-2">
+        <Heart
+          size={24}
+          className={liked ? "text-pink-500" : "text-gray-400"}
+          fill={liked ? "currentColor" : "none"}
+        />
+        <span>{likes}</span>
       </button>
 
-      <button type="button" onClick={handleShare} className="flex items-center gap-2 text-gray-600">
-        <Share2 size={20} />
+      <button
+        onClick={() =>
+          navigator.share?.({ title: text.title, url: window.location.href })
+        }
+      >
+        <Share2 size={24} />
       </button>
 
-      <div className="flex items-center gap-1 text-sm text-gray-500 ml-auto">
-        <Eye size={16} /> <span>{views}</span>
-      </div>
+      <span className="ml-auto text-gray-500 flex items-center gap-1">
+        <Eye size={16} /> {views} vue{views > 1 ? "s" : ""}
+      </span>
     </div>
   );
 }
