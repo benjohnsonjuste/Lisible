@@ -2,68 +2,61 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
-export default function CommentSection({ textId }) {
+export default function CommentSection({ textId, saveToGitHub, text, setText }) {
   const { data: session } = useSession();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
 
+  // Charger les commentaires depuis localStorage
   useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        const res = await fetch("/api/github-comments");
-        if (!res.ok) throw new Error("Erreur récupération commentaires");
-        const json = await res.json();
-        setComments(json.data.filter((c) => c.textId === textId));
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchComments();
+    const stored = JSON.parse(localStorage.getItem(`comments-${textId}`) || "[]");
+    setComments(stored);
   }, [textId]);
 
+  const getDisplayName = () => session?.user?.name || "Invité";
+
   const handleAddComment = async (e) => {
-    e.preventDefault(); // Empêche le reload de page
+    e.preventDefault();
     e.stopPropagation();
 
     if (!newComment.trim()) return;
 
     const comment = {
-      textId,
-      authorName: session?.user?.name || "Invité",
+      author: getDisplayName(),
       content: newComment.trim(),
       date: new Date().toISOString(),
     };
 
-    try {
-      const res = await fetch("/api/github-comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(comment),
-      });
+    const updatedComments = [...comments, comment];
+    setComments(updatedComments);
+    setNewComment("");
 
-      if (res.ok) {
-        setComments([...comments, comment]);
-        setNewComment("");
-      } else {
-        console.error("Erreur ajout commentaire:", await res.text());
-      }
-    } catch (err) {
-      console.error("Erreur fetch API:", err);
+    // Persistance locale
+    localStorage.setItem(`comments-${textId}`, JSON.stringify(updatedComments));
+
+    toast.success("Commentaire publié !");
+
+    // Persistance sur GitHub
+    if (text && saveToGitHub) {
+      const updatedText = { ...text, comments: updatedComments };
+      setText(updatedText);
+      await saveToGitHub(updatedText);
     }
   };
 
   return (
-    <div>
+    <div className="pt-4 border-t">
       <h3 className="text-lg font-semibold mb-2">
-        💬 Commentaires ({comments.length})
+        Commentaires ({comments.length})
       </h3>
 
       <ul className="space-y-2 mb-4">
         {comments.map((c, i) => (
           <li key={i} className="p-2 bg-gray-100 rounded">
             <p className="text-sm text-gray-600">
-              {c.authorName} • {new Date(c.date).toLocaleString()}
+              {c.author} • {new Date(c.date).toLocaleString()}
             </p>
             <p>{c.content}</p>
           </li>
@@ -79,7 +72,7 @@ export default function CommentSection({ textId }) {
       />
 
       <button
-        type="button" // 🔹 Très important pour éviter le submit par défaut
+        type="button" // Empêche le submit par défaut
         onClick={handleAddComment}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
