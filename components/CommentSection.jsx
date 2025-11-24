@@ -1,82 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
-export default function CommentSection({ textId, saveToGitHub, text, setText }) {
-  const { data: session } = useSession();
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
+export default function CommentSection({ id, comments, onUpdate }) {
+  const { user, redirectToAuth } = useUserProfile();
+  const [commentText, setCommentText] = useState("");
 
-  // Charger les commentaires depuis localStorage
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem(`comments-${textId}`) || "[]");
-    setComments(stored);
-  }, [textId]);
+  const saveToGitHub = async (data) => {
+    await fetch("/api/github-save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, data }),
+    });
+  };
 
-  const getDisplayName = () => session?.user?.name || "Invité";
+  const handleComment = async () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
+    if (!commentText.trim()) return;
 
-  const handleAddComment = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!newComment.trim()) return;
-
-    const comment = {
-      author: getDisplayName(),
-      content: newComment.trim(),
+    const newComment = {
+      author: user.displayName || user.email,
+      content: commentText,
       date: new Date().toISOString(),
     };
 
-    const updatedComments = [...comments, comment];
-    setComments(updatedComments);
-    setNewComment("");
+    const updated = {
+      ...comments,
+      list: [...comments, newComment],
+    };
 
-    // Persistance locale
-    localStorage.setItem(`comments-${textId}`, JSON.stringify(updatedComments));
+    const newComments = [...comments, newComment];
+
+    localStorage.setItem(`comments-${id}`, JSON.stringify(newComments));
 
     toast.success("Commentaire publié !");
+    setCommentText("");
 
-    // Persistance sur GitHub
-    if (text && saveToGitHub) {
-      const updatedText = { ...text, comments: updatedComments };
-      setText(updatedText);
-      await saveToGitHub(updatedText);
-    }
+    onUpdate((prev) => ({ ...prev, comments: newComments }));
+    saveToGitHub({ ...prev, comments: newComments });
   };
 
   return (
     <div className="pt-4 border-t">
-      <h3 className="text-lg font-semibold mb-2">
-        Commentaires ({comments.length})
-      </h3>
+      <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
 
-      <ul className="space-y-2 mb-4">
-        {comments.map((c, i) => (
-          <li key={i} className="p-2 bg-gray-100 rounded">
-            <p className="text-sm text-gray-600">
-              {c.author} • {new Date(c.date).toLocaleString()}
-            </p>
-            <p>{c.content}</p>
-          </li>
-        ))}
-      </ul>
+      {comments.map((c, i) => (
+        <div key={i} className="p-2 border rounded mb-2">
+          <p className="text-sm text-gray-700">
+            <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
+          </p>
+          <p>{c.content}</p>
+        </div>
+      ))}
 
       <textarea
-        value={newComment}
-        onChange={(e) => setNewComment(e.target.value)}
-        rows={3}
-        placeholder="Ajouter un commentaire..."
-        className="w-full p-2 border rounded mb-2"
+        placeholder="Écrire un commentaire..."
+        value={commentText}
+        onChange={(e) => setCommentText(e.target.value)}
+        className="w-full border rounded p-2 mt-2"
       />
 
       <button
-        type="button" // Empêche le submit par défaut
-        onClick={handleAddComment}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        onClick={handleComment}
+        className="px-4 py-2 mt-2 bg-green-600 text-white rounded"
       >
-        Commenter
+        Publier
       </button>
     </div>
   );
