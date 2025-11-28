@@ -12,10 +12,11 @@ export default function TextPublishingForm() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir le fichier image en Base64
-  const toDataUrl = (file) =>
+  /** Convert image to Base64 unlimited size */
+  const toBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target.result);
@@ -23,37 +24,45 @@ export default function TextPublishingForm() {
       reader.readAsDataURL(file);
     });
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) {
-      toast.error("Le titre et le contenu sont requis.");
-      return;
-    }
 
     if (!user) {
       toast.error("Connectez-vous pour publier.");
       return;
     }
 
+    if (!title.trim() || !content.trim()) {
+      toast.error("Veuillez écrire un titre et un contenu.");
+      return;
+    }
+
     setLoading(true);
+
     try {
       let imageBase64 = null;
       let imageName = null;
 
+      // ------ IMAGE OPTIONAL ------
       if (imageFile) {
         if (!imageFile.type.startsWith("image/")) {
           toast.error("Le fichier doit être une image.");
           setLoading(false);
           return;
         }
-        imageBase64 = await toDataUrl(imageFile);
-        imageName = imageFile.name;
+
+        imageBase64 = await toBase64(imageFile);
+        imageName = Date.now() + "-" + imageFile.name.replace(/\s+/g, "_");
       }
 
-      // Nom complet depuis useUserProfile
+      // ------ GET USER NAME ------
       const authorName =
-        user?.fullName || user?.displayName || user?.name || "Auteur inconnu";
+        user?.fullName ||
+        user?.displayName ||
+        user?.name ||
+        "Auteur inconnu";
 
+      // ------ PAYLOAD ------
       const payload = {
         title: title.trim(),
         content: content.trim(),
@@ -61,8 +70,10 @@ export default function TextPublishingForm() {
         authorEmail: user?.email || "",
         imageBase64,
         imageName,
+        createdAt: new Date().toISOString(),
       };
 
+      // ------ SEND TO /api/publish-github ------
       const res = await fetch("/api/publish-github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,33 +87,47 @@ export default function TextPublishingForm() {
         throw new Error(json.error || "Échec publication");
       }
 
-      toast.success("Publication réussie !");
+      toast.success("Texte publié avec succès !");
+
       setTitle("");
       setContent("");
       setImageFile(null);
+      setPreview(null);
+
       router.push("/bibliotheque");
     } catch (err) {
       console.error("Erreur côté client:", err);
-      toast.error("Erreur de publication");
+      toast.error("Échec lors de la publication.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  if (isLoading) return <p className="text-center mt-10">Chargement...</p>;
+  /** PREVIEW IMAGE BEFORE UPLOAD */
+  function handleImage(e) {
+    const f = e.target.files[0];
+    setImageFile(f || null);
+    if (f) setPreview(URL.createObjectURL(f));
+    else setPreview(null);
+  }
+
+  if (isLoading)
+    return <p className="text-center mt-10">Chargement...</p>;
 
   return (
     <form
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">
+        Publier un texte
+      </h2>
 
+      {/* Titre */}
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
         <input
           type="text"
-          name="title"
           placeholder="Titre du texte"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -111,37 +136,47 @@ export default function TextPublishingForm() {
         />
       </div>
 
+      {/* Contenu */}
       <div>
         <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
-          name="content"
-          placeholder="Écris ton texte ici..."
+          placeholder="Écris ton texte..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={12}
-          className="w-full p-2 border rounded min-h-[150px]"
+          rows={15}
+          className="w-full p-2 border rounded min-h-[200px]"
           required
         />
       </div>
 
+      {/* Image */}
       <div>
         <label className="block text-sm font-medium mb-1">
-          Image d'illustration (optionnel)
+          Image d’illustration (optionnel)
         </label>
+
         <input
           type="file"
-          name="image"
           accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0] || null)}
+          onChange={handleImage}
         />
+
+        {preview && (
+          <img
+            src={preview}
+            className="mt-3 w-full max-h-72 object-cover rounded"
+            alt="Preview"
+          />
+        )}
       </div>
 
+      {/* Submit */}
       <button
         type="submit"
         disabled={loading}
         className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
       >
-        {loading ? "Publication en cours..." : "Publier"}
+        {loading ? "Publication…" : "Publier"}
       </button>
     </form>
   );
