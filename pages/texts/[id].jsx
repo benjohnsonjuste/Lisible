@@ -224,7 +224,7 @@ export default function TextPage() {
             onShare={() => handleShare(t)}
             commentValue={commentInputs[t.id] || ""}
             onCommentChange={(v) => setCommentInputs((s) => ({ ...s, [t.id]: v }))}
-            onAddComment={() => handleAddComment(t.id)}\            currentUser={user}
+            onAddComment={() => handleAddComment(t.id)}            currentUser={user}
           />
         ))}
       </main>
