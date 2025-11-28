@@ -46,7 +46,9 @@ const GITHUB_COMMIT_ENDPOINT = process.env.REACT_APP_GITHUB_COMMIT_ENDPOINT || "
 // -----------------------------
 // Initialize Firebase
 // -----------------------------
-const app = initializeApp(firebaseConfig);
+import { getApps, initializeApp } from "firebase/app";
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 const auth = getAuth(app);
 
