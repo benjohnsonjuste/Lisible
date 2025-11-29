@@ -1,48 +1,51 @@
-import { Octokit } from "@octokit/rest";
+import type { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(req, res) {
+/**
+ * Exemple d'API pour sauvegarder un utilisateur sur GitHub (ou un backend).
+ * Ici, on simule l'enregistrement en loggant les données reçues.
+ * Tu peux remplacer la logique par un appel réel à l'API GitHub ou à ta base.
+ */
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }
 
   try {
-    const userData = req.body;
+    const {
+      uid,
+      authorName,
+      authorEmail,
+      penName,
+      birthday,
+      paymentMethod,
+      paypalEmail,
+      wuMoneyGram,
+      subscribers,
+    } = req.body;
 
-    if (!userData?.uid) {
-      return res.status(400).json({ error: "UID manquant" });
+    if (!uid || !authorEmail) {
+      return res.status(400).json({ error: "uid et email sont requis" });
     }
 
-    const octokit = new Octokit({
-      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
+    // 🔹 Ici tu peux remplacer par un vrai appel à GitHub ou à ta DB
+    // Exemple : await fetch("https://api.github.com/...")
+
+    console.log("Nouvel utilisateur enregistré sur GitHub :", {
+      uid,
+      authorName,
+      authorEmail,
+      penName,
+      birthday,
+      paymentMethod,
+      paypalEmail,
+      wuMoneyGram,
+      subscribers,
     });
 
-    const path = `data/users/${userData.uid}.json`;
-
-    let sha;
-    // Vérifier si le fichier existe déjà
-    try {
-      const { data } = await octokit.repos.getContent({
-        owner: process.env.GITHUB_OWNER,
-        repo: process.env.GITHUB_REPO,
-        path,
-      });
-      sha = data.sha;
-    } catch {
-      sha = undefined; // fichier inexistant → création
-    }
-
-    await octokit.repos.createOrUpdateFileContents({
-      owner: process.env.GITHUB_OWNER,
-      repo: process.env.GITHUB_REPO,
-      path,
-      message: `Mise à jour profil ${userData.firstName || userData.uid}`,
-      content: Buffer.from(JSON.stringify(userData, null, 2)).toString("base64"),
-      sha,
-    });
-
-    return res.status(200).json({ success: true });
-  } catch (err) {
-    console.error("Erreur save-user-github :", err);
-    return res.status(500).json({ error: err.message });
+    // Réponse de succès
+    return res.status(200).json({ success: true, message: "Utilisateur sauvegardé sur GitHub" });
+  } catch (error: any) {
+    console.error("Erreur API save-user-github:", error);
+    return res.status(500).json({ error: "Erreur interne serveur" });
   }
 }
