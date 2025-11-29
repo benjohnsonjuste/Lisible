@@ -1,51 +1,27 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-
-/**
- * Exemple d'API pour sauvegarder un utilisateur sur GitHub (ou un backend).
- * Ici, on simule l'enregistrement en loggant les données reçues.
- * Tu peux remplacer la logique par un appel réel à l'API GitHub ou à ta base.
- */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }
 
   try {
-    const {
-      uid,
-      authorName,
-      authorEmail,
-      penName,
-      birthday,
-      paymentMethod,
-      paypalEmail,
-      wuMoneyGram,
-      subscribers,
-    } = req.body;
+    const user = req.body;
 
-    if (!uid || !authorEmail) {
-      return res.status(400).json({ error: "uid et email sont requis" });
-    }
-
-    // 🔹 Ici tu peux remplacer par un vrai appel à GitHub ou à ta DB
-    // Exemple : await fetch("https://api.github.com/...")
-
-    console.log("Nouvel utilisateur enregistré sur GitHub :", {
-      uid,
-      authorName,
-      authorEmail,
-      penName,
-      birthday,
-      paymentMethod,
-      paypalEmail,
-      wuMoneyGram,
-      subscribers,
+    const githubRes = await fetch(process.env.GITHUB_USERS_FILE_URL, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(user),
     });
 
-    // Réponse de succès
-    return res.status(200).json({ success: true, message: "Utilisateur sauvegardé sur GitHub" });
-  } catch (error: any) {
-    console.error("Erreur API save-user-github:", error);
-    return res.status(500).json({ error: "Erreur interne serveur" });
+    if (!githubRes.ok) {
+      return res.status(500).json({ error: "Erreur enregistrement GitHub" });
+    }
+
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Erreur API save-user-github:", err);
+    return res.status(500).json({ error: "Erreur serveur" });
   }
 }
