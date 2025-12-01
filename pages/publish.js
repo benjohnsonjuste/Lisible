@@ -1,9 +1,10 @@
+// components/TextPublishingForm.jsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useUserProfile } from "@/hooks/useUserProfile";
+import useUserProfile from "@/hooks/useUserProfile";
 
 export default function TextPublishingForm() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export default function TextPublishingForm() {
   const [loading, setLoading] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState(null);
 
-  /** Convert image to Base64 */
+  /** Convert image to Base64 (data URL) */
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -28,21 +29,18 @@ export default function TextPublishingForm() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    /** ⛔ Attendre fin du chargement avant test */
     if (userLoading) {
-      toast.info("Vérification de votre session…");
+      toast("Vérification de votre session…", { type: "info" });
       return;
     }
 
-    /** ⛔ Vérifier que l’utilisateur est connecté */
     if (!user) {
-      toast.error("Vous devez être connecté pour publier.");
+      toast("Vous devez être connecté pour publier.", { type: "error" });
       return;
     }
 
-    /** Validation du formulaire */
     if (!title.trim() || !content.trim()) {
-      toast.error("Veuillez écrire un titre et un contenu.");
+      toast("Veuillez écrire un titre et un contenu.", { type: "error" });
       return;
     }
 
@@ -53,26 +51,28 @@ export default function TextPublishingForm() {
       let imageBase64 = null;
       let imageName = null;
 
-      /** ⬆️ Convertir l’image */
       if (imageFile) {
         if (!imageFile.type.startsWith("image/")) {
-          toast.error("Le fichier doit être une image.");
+          toast("Le fichier doit être une image.", { type: "error" });
           setLoading(false);
           return;
         }
 
-        imageBase64 = await toBase64(imageFile);
+        // size limit: 2 MB
+        const MAX_BYTES = 2 * 1024 * 1024;
+        if (imageFile.size > MAX_BYTES) {
+          toast("Image trop lourde. Max 2 Mo.", { type: "error" });
+          setLoading(false);
+          return;
+        }
+
+        imageBase64 = await toBase64(imageFile); // data URL
         imageName = Date.now() + "-" + imageFile.name.replace(/\s+/g, "_");
       }
 
-      /** Identité de l’auteur */
       const authorName =
-        user?.fullName ||
-        user?.displayName ||
-        user?.name ||
-        "Auteur inconnu";
+        (user && (user.fullName || user.displayName || user.name)) || "Auteur inconnu";
 
-      /** Payload envoyé à l’API */
       const payload = {
         title: title.trim(),
         content: content.trim(),
@@ -83,7 +83,6 @@ export default function TextPublishingForm() {
         createdAt: new Date().toISOString(),
       };
 
-      /** 🚀 Envoi au backend GitHub */
       const res = await fetch("/api/publish-github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,17 +96,19 @@ export default function TextPublishingForm() {
         throw new Error(json.error || "Échec publication");
       }
 
-      toast.success("Texte publié avec succès !");
+      toast("Texte publié avec succès !", { type: "success" });
       setPublishedUrl(json.url);
 
-      /** Reset du formulaire */
       setTitle("");
       setContent("");
       setImageFile(null);
       setPreview(null);
+
+      // Optionnel : redirect vers la page publiée (laisser le toast visible)
+      // router.push(json.url);
     } catch (err) {
       console.error("Erreur:", err);
-      toast.error("Échec lors de la publication.");
+      toast("Échec lors de la publication.", { type: "error" });
     } finally {
       setLoading(false);
     }
@@ -115,11 +116,15 @@ export default function TextPublishingForm() {
 
   function handleImage(e) {
     const f = e.target.files[0];
-    setImageFile(f || null);
-    setPreview(f ? URL.createObjectURL(f) : null);
+    if (!f) {
+      setImageFile(null);
+      setPreview(null);
+      return;
+    }
+    setImageFile(f);
+    setPreview(URL.createObjectURL(f));
   }
 
-  /** Chargement de la session */
   if (userLoading)
     return <p className="text-center mt-10">Chargement de la session...</p>;
 
@@ -130,7 +135,6 @@ export default function TextPublishingForm() {
     >
       <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
-      {/* Titre */}
       <div>
         <label className="block text-sm font-medium mb-1">Titre</label>
         <input
@@ -143,7 +147,6 @@ export default function TextPublishingForm() {
         />
       </div>
 
-      {/* Contenu */}
       <div>
         <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
@@ -156,14 +159,11 @@ export default function TextPublishingForm() {
         />
       </div>
 
-      {/* Image */}
       <div>
         <label className="block text-sm font-medium mb-1">
           Image d’illustration (optionnel)
         </label>
-
         <input type="file" accept="image/*" onChange={handleImage} />
-
         {preview && (
           <img
             src={preview}
@@ -173,7 +173,6 @@ export default function TextPublishingForm() {
         )}
       </div>
 
-      {/* Submit */}
       <button
         type="submit"
         disabled={loading}
@@ -182,17 +181,11 @@ export default function TextPublishingForm() {
         {loading ? "Publication…" : "Publier"}
       </button>
 
-      {/* Lien GitHub */}
       {publishedUrl && (
         <div className="mt-4 text-center">
           <p className="text-green-600">
             Votre texte est publié :{" "}
-            <a
-              href={publishedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
+            <a href={publishedUrl} target="_blank" rel="noopener noreferrer" className="underline">
               Voir ce texte
             </a>
           </p>
