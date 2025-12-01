@@ -1,246 +1,178 @@
-// /app/api/publish-github/route.js
+// app/api/publish-github/route.js
 import { NextResponse } from "next/server";
 
-// FIREBASE
-import { initializeApp, getApps } from "firebase/app";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+/**
+ * POST /api/publish-github
+ *
+ * Exige dans les env:
+ * - GITHUB_TOKEN          (token avec scope 'repo' pour écrire dans le repo)
+ * - GITHUB_REPO_OWNER     (owner du repo)
+ * - GITHUB_REPO_NAME      (nom du repo)
+ * - GITHUB_REPO_BRANCH    (branch cible, ex: main) — optionnel, défaut "main"
+ *
+ * Payload attendu (JSON):
+ * {
+ *   title, content, authorName, authorEmail,
+ *   imageBase64 (data URL or base64), imageName, createdAt
+ * }
+ *
+ * Réponse:
+ * { ok: true, url: "https://github.com/…/blob/main/posts/2025-12-01-title.md" }
+ */
 
-// Node global Buffer should be available in Next.js runtime.
-// If your runtime is edge you will need to adapt (edge doesn't support Buffer or Firebase Admin).
-// This implementation targets Node server runtime.
+const GITHUB_API = "https://api.github.com";
 
-const {
-  FIREBASE_API_KEY,
-  FIREBASE_AUTH_DOMAIN,
-  FIREBASE_PROJECT_ID,
-  GITHUB_TOKEN,
-  GITHUB_REPO,
-  GITHUB_BRANCH = "main",
-  GITHUB_FOLDER = "library",
-} = process.env;
-
-// Initialize Firebase (only once)
-if (!getApps().length) {
-  if (!FIREBASE_API_KEY || !FIREBASE_AUTH_DOMAIN || !FIREBASE_PROJECT_ID) {
-    console.warn("Firebase env vars missing - Firestore writes will fail if not set.");
-  } else {
-    initializeApp({
-      apiKey: FIREBASE_API_KEY,
-      authDomain: FIREBASE_AUTH_DOMAIN,
-      projectId: FIREBASE_PROJECT_ID,
-    });
-  }
-}
-let db;
-try {
-  db = getFirestore();
-} catch (e) {
-  // getFirestore can throw if Firebase wasn't initialized properly in some serverless runtimes.
-  console.warn("Firestore not initialized:", e?.message || e);
-  db = null;
+function slugify(s) {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
 }
 
-// Helper: GitHub API helpers
-async function githubGet(path) {
-  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodeURIComponent(path)}?ref=${GITHUB_BRANCH}`;
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      Accept: "application/vnd.github+json",
-      "User-Agent": "publish-github-endpoint",
-    },
-  });
-  return res;
-}
-
-async function githubPut(path, base64Content, message, sha) {
-  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${encodeURIComponent(path)}`;
-  const body = {
-    message,
-    content: base64Content,
-    branch: GITHUB_BRANCH,
-  };
-  if (sha) body.sha = sha;
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      Accept: "application/vnd.github+json",
-      "User-Agent": "publish-github-endpoint",
-    },
-    body: JSON.stringify(body),
-  });
-  return res;
-}
-
-function parseDataUri(dataUri) {
-  // example: data:image/png;base64,AAAA...
-  const match = dataUri.match(/^data:(.+);base64,(.*)$/s);
-  if (!match) return null;
-  return { mime: match[1], base64: match[2] };
+function basenameWithoutExt(filename) {
+  return filename.replace(/\.[^/.]+$/, "");
 }
 
 export async function POST(req) {
   try {
-    if (!GITHUB_REPO || !GITHUB_TOKEN) {
-      // still allow Firestore-only operation if Github not configured
-      console.warn("GITHUB_REPO or GITHUB_TOKEN not set — GitHub sync will be skipped.");
+    const env = process.env;
+    const token = env.GITHUB_TOKEN;
+    const owner = env.GITHUB_REPO_OWNER;
+    const repo = env.GITHUB_REPO_NAME;
+    const branch = env.GITHUB_REPO_BRANCH || "main";
+
+    if (!token || !owner || !repo) {
+      return NextResponse.json(
+        { error: "Server misconfigured: missing GITHUB_TOKEN / OWNER / NAME" },
+        { status: 500 }
+      );
     }
 
-    const payload = await req.json();
-
-    // Accept payload shape from client:
-    // { title, content, authorName, authorEmail, imageBase64 (optional data URI), imageName (optional), createdAt (optional) }
-    const {
-      title,
-      content,
-      authorName,
-      authorEmail,
-      imageBase64,
-      imageName,
-      createdAt,
-    } = payload || {};
+    const body = await req.json();
+    const { title, content, authorName, authorEmail, imageBase64, imageName, createdAt } = body;
 
     if (!title || !content) {
-      return NextResponse.json({ error: "Le titre et le contenu sont requis." }, { status: 400 });
+      return NextResponse.json({ error: "title and content are required" }, { status: 400 });
     }
 
-    // ------- 1) Save to Firestore (if available) -------
-    let firestoreId = null;
-    try {
-      if (!db) throw new Error("Firestore non initialisé");
-      const docRef = await addDoc(collection(db, "library"), {
-        title,
-        content,
-        author: authorName || "Anonyme",
-        authorEmail: authorEmail || "",
-        imageName: imageName || null,
-        hasImage: !!imageBase64,
-        createdAt: serverTimestamp(),
-        clientCreatedAt: createdAt || new Date().toISOString(),
+    // create slug and file path
+    const date = new Date(createdAt || Date.now()).toISOString().slice(0, 10);
+    const slug = slugify(title).slice(0, 80) || "post";
+    const postPath = `posts/${date}-${slug}.md`;
+
+    // If image provided, validate size roughly (base64 length)
+    let imagePath = null;
+    if (imageBase64) {
+      // imageBase64 may be "data:image/png;base64,...." or just base64
+      const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
+      let mime = null;
+      let b64 = imageBase64;
+      if (match) {
+        mime = match[1];
+        b64 = match[2];
+      }
+      // approximate bytes
+      const approxBytes = Math.ceil((b64.length * 3) / 4);
+      const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+      if (approxBytes > MAX_BYTES) {
+        return NextResponse.json(
+          { error: "Image trop grande. Maximum 2 MB" },
+          { status: 400 }
+        );
+      }
+
+      // sanitize imageName
+      const safeName = imageName
+        ? basenameWithoutExt(imageName).replace(/\s+/g, "_")
+        : `${date}-${slug}`;
+      const extFromMime = mime ? mime.split("/")[1] : null;
+      const ext = extFromMime || (imageName && imageName.split(".").pop()) || "png";
+      const finalImageName = `${safeName}.${ext}`;
+      imagePath = `images/${finalImageName}`;
+
+      // create image file in repo
+      const imageContent = b64; // already base64 if matched; else might be plain base64 so treat as-is
+
+      // PUT to /repos/{owner}/{repo}/contents/{path}
+      const putImageUrl = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(imagePath)}`;
+
+      const imagePayload = {
+        message: `Add image for post ${postPath}`,
+        content: imageContent,
+        branch,
+      };
+
+      const putImageRes = await fetch(putImageUrl, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/vnd.github+json",
+        },
+        body: JSON.stringify(imagePayload),
       });
-      firestoreId = docRef.id;
-    } catch (e) {
-      // Log but continue — we can still push to GitHub
-      console.error("Erreur Firestore:", e?.message || e);
+
+      if (!putImageRes.ok) {
+        const txt = await putImageRes.text();
+        return NextResponse.json(
+          { error: "GitHub image upload failed", details: txt },
+          { status: 500 }
+        );
+      }
     }
 
-    // ------- 2) Push image (optional) and markdown to GitHub -------
-    const results = { github: { image: null, markdown: null } };
+    // build markdown content with frontmatter
+    const imageUrl = imagePath
+      ? `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imagePath}`
+      : null;
 
-    if (GITHUB_REPO && GITHUB_TOKEN) {
-      // Ensure folders: GITHUB_FOLDER/images/...
-      // Build file names
-      const safeTitle = (title || "post").replace(/[^\w\- ]+/g, "").slice(0, 60).replace(/\s+/g, "-");
-      const ts = Date.now();
-      const mdFileName = `${ts}-${safeTitle}${firestoreId ? "-" + firestoreId : ""}.md`;
-      let mdPath = `${GITHUB_FOLDER}/${mdFileName}`;
+    const md = `---
+title: "${title.replace(/"/g, '\\"')}"
+date: "${new Date(createdAt || Date.now()).toISOString()}"
+author: "${(authorName || "").replace(/"/g, '\\"')}"
+email: "${(authorEmail || "").replace(/"/g, '\\"')}"
+image: ${imageUrl ? `"${imageUrl}"` : "null"}
+---
 
-      // If there's an image data URI, push it as a separate file
-      let imagePath = null;
-      if (imageBase64) {
-        const parsed = parseDataUri(imageBase64);
-        if (!parsed) {
-          console.warn("Image Base64 non reconnue comme data URI; skipping image upload.");
-        } else {
-          // Build image filename
-          const ext = parsed.mime.split("/")[1] || "png";
-          const imgName = (imageName || `img-${ts}`).replace(/\s+/g, "_");
-          const imageFileName = `${ts}-${imgName}.${ext}`;
-          imagePath = `${GITHUB_FOLDER}/images/${imageFileName}`;
+${content}
+`;
 
-          // Prepare base64 content (must be raw base64 without data: prefix)
-          const imageBase64Content = parsed.base64;
+    const mdB64 = Buffer.from(md, "utf8").toString("base64");
 
-          // Check if file exists to get sha (we'll attempt to PUT directly; GitHub will create it if not exists)
-          try {
-            const getRes = await githubGet(imagePath);
-            let sha = undefined;
-            if (getRes.ok) {
-              const j = await getRes.json();
-              sha = j.sha;
-            }
-            const putRes = await githubPut(
-              imagePath,
-              imageBase64Content,
-              `Add image for post ${safeTitle}`,
-              sha
-            );
-            const putJson = await putRes.json();
-            if (putRes.ok) {
-              results.github.image = { path: imagePath, response: putJson };
-            } else {
-              console.error("GitHub image upload failed:", putJson);
-            }
-          } catch (e) {
-            console.error("Erreur upload image GitHub:", e?.message || e);
-          }
-        }
-      }
+    // create markdown file
+    const putMdUrl = `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(postPath)}`;
+    const mdPayload = {
+      message: `Publish post: ${title}`,
+      content: mdB64,
+      branch,
+    };
 
-      // Build markdown content. Reference image relatively if uploaded
-      const mdLines = [];
-      mdLines.push(`# ${title}`);
-      mdLines.push("");
-      mdLines.push(`**Auteur :** ${authorName || "Anonyme"}`);
-      if (authorEmail) mdLines.push(`**Email :** ${authorEmail}`);
-      if (firestoreId) mdLines.push(`**ID Firestore :** ${firestoreId}`);
-      mdLines.push("");
-      mdLines.push("---");
-      mdLines.push("");
-      mdLines.push(content);
-      mdLines.push("");
-      mdLines.push("---");
-      mdLines.push("");
-      if (imagePath) {
-        // relative link to images folder in repo
-        const imageFileNameInMd = `./images/${imagePath.split("/").pop()}`;
-        mdLines.push(`![illustration](${imageFileNameInMd})`);
-      } else {
-        mdLines.push("_Aucune image fournie_");
-      }
-      mdLines.push("");
-      const mdContent = mdLines.join("\n");
-
-      const mdBase64 = Buffer.from(mdContent, "utf-8").toString("base64");
-
-      try {
-        // check existing md file sha (unlikely) and commit
-        const getMdRes = await githubGet(mdPath);
-        let mdSha = undefined;
-        if (getMdRes.ok) {
-          const j = await getMdRes.json();
-          mdSha = j.sha;
-        }
-        const putMdRes = await githubPut(mdPath, mdBase64, `Publish post: ${title}`, mdSha);
-        const putMdJson = await putMdRes.json();
-        if (putMdRes.ok) {
-          results.github.markdown = { path: mdPath, response: putMdJson };
-        } else {
-          console.error("GitHub markdown upload failed:", putMdJson);
-        }
-      } catch (e) {
-        console.error("Erreur commit markdown sur GitHub:", e?.message || e);
-      }
-    } else {
-      // GitHub not configured — skip push
-    }
-
-    // ------- 3) Return success + infos -------
-    return NextResponse.json({
-      ok: true,
-      firestoreId,
-      github: results.github,
-      message: "Publication traitée (Firestore et/ou GitHub).",
+    const putMdRes = await fetch(putMdUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/vnd.github+json",
+      },
+      body: JSON.stringify(mdPayload),
     });
-  } catch (error) {
-    console.error("PUBLISH ERROR:", error?.message || error);
-    return NextResponse.json({ error: "Erreur lors de la publication." }, { status: 500 });
+
+    const putMdJson = await putMdRes.json();
+
+    if (!putMdRes.ok) {
+      return NextResponse.json(
+        { error: "GitHub markdown upload failed", details: putMdJson },
+        { status: 500 }
+      );
+    }
+
+    const fileUrl = `https://github.com/${owner}/${repo}/blob/${branch}/${postPath}`;
+
+    return NextResponse.json({ ok: true, url: fileUrl }, { status: 201 });
+  } catch (err) {
+    console.error("publish-github error:", err);
+    return NextResponse.json({ error: "internal_error", details: String(err) }, { status: 500 });
   }
 }
