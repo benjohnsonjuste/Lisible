@@ -1,78 +1,203 @@
-import { useState } from "react";
-import { db, auth } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { useRouter } from "next/router";
-import toast, { Toaster } from "react-hot-toast";
+"use client";
 
-export default function Publish() {
-  const [user, loadingUser] = useAuthState(auth);
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useUserProfile } from "@/hooks/useUserProfile";
+
+export default function TextPublishingForm() {
+  const router = useRouter();
+  const { user, isLoading: userLoading } = useUserProfile();
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [publishedUrl, setPublishedUrl] = useState(null);
 
-  if (loadingUser) return <p>Chargement...</p>;
-  if (!user) return <p>Connectez-vous pour publier un texte.</p>;
+  /** Convert image to Base64 */
+  const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return toast.error("Veuillez remplir tous les champs.");
+
+    /** ⛔ Attendre fin du chargement avant test */
+    if (userLoading) {
+      toast.info("Vérification de votre session…");
+      return;
+    }
+
+    /** ⛔ Vérifier que l’utilisateur est connecté */
+    if (!user) {
+      toast.error("Vous devez être connecté pour publier.");
+      return;
+    }
+
+    /** Validation du formulaire */
+    if (!title.trim() || !content.trim()) {
+      toast.error("Veuillez écrire un titre et un contenu.");
+      return;
+    }
 
     setLoading(true);
+    setPublishedUrl(null);
 
     try {
-      await addDoc(collection(db, "posts"), {
-        title,
-        content,
-        authorName: user.displayName || "Utilisateur",
-        uid: user.uid,
-        createdAt: serverTimestamp(),
-        likeCount: 0,
-        likedBy: []
+      let imageBase64 = null;
+      let imageName = null;
+
+      /** ⬆️ Convertir l’image */
+      if (imageFile) {
+        if (!imageFile.type.startsWith("image/")) {
+          toast.error("Le fichier doit être une image.");
+          setLoading(false);
+          return;
+        }
+
+        imageBase64 = await toBase64(imageFile);
+        imageName = Date.now() + "-" + imageFile.name.replace(/\s+/g, "_");
+      }
+
+      /** Identité de l’auteur */
+      const authorName =
+        user?.fullName ||
+        user?.displayName ||
+        user?.name ||
+        "Auteur inconnu";
+
+      /** Payload envoyé à l’API */
+      const payload = {
+        title: title.trim(),
+        content: content.trim(),
+        authorName,
+        authorEmail: user?.email || "",
+        imageBase64,
+        imageName,
+        createdAt: new Date().toISOString(),
+      };
+
+      /** 🚀 Envoi au backend GitHub */
+      const res = await fetch("/api/publish-github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
+      const json = await res.json();
+
+      if (!res.ok) {
+        console.error("Erreur publication GitHub:", json);
+        throw new Error(json.error || "Échec publication");
+      }
+
       toast.success("Texte publié avec succès !");
+      setPublishedUrl(json.url);
+
+      /** Reset du formulaire */
       setTitle("");
       setContent("");
-      setTimeout(() => router.push("/"), 1000); // Laisser le toast visible avant redirection
-    } catch (error) {
-      console.error("Erreur lors de la publication :", error);
-      toast.error("Impossible de publier le texte, réessayez.");
+      setImageFile(null);
+      setPreview(null);
+    } catch (err) {
+      console.error("Erreur:", err);
+      toast.error("Échec lors de la publication.");
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  function handleImage(e) {
+    const f = e.target.files[0];
+    setImageFile(f || null);
+    setPreview(f ? URL.createObjectURL(f) : null);
+  }
+
+  /** Chargement de la session */
+  if (userLoading)
+    return <p className="text-center mt-10">Chargement de la session...</p>;
 
   return (
-    <div className="publish-container" style={{ maxWidth: "600px", margin: "auto", padding: "2rem" }}>
-      <Toaster position="top-right" />
-      <h2>Publier un texte</h2>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <form
+      onSubmit={handleSubmit}
+      className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
+    >
+      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
+
+      {/* Titre */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Titre</label>
         <input
           type="text"
           placeholder="Titre du texte"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          className="w-full p-2 border rounded"
           required
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
         />
+      </div>
+
+      {/* Contenu */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Contenu</label>
         <textarea
-          placeholder="Écrivez votre texte ici..."
+          placeholder="Écris ton texte..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          rows={15}
+          className="w-full p-2 border rounded min-h-[200px]"
           required
-          rows={10}
-          style={{ padding: "0.5rem", fontSize: "1rem" }}
         />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: "0.7rem", fontSize: "1rem", backgroundColor: "#0070f3", color: "#fff", border: "none", cursor: "pointer" }}
-        >
-          {loading ? "Publication..." : "Publier"}
-        </button>
-      </form>
-    </div>
+      </div>
+
+      {/* Image */}
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Image d’illustration (optionnel)
+        </label>
+
+        <input type="file" accept="image/*" onChange={handleImage} />
+
+        {preview && (
+          <img
+            src={preview}
+            className="mt-3 w-full max-h-72 object-cover rounded"
+            alt="Preview"
+          />
+        )}
+      </div>
+
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+      >
+        {loading ? "Publication…" : "Publier"}
+      </button>
+
+      {/* Lien GitHub */}
+      {publishedUrl && (
+        <div className="mt-4 text-center">
+          <p className="text-green-600">
+            Votre texte est publié :{" "}
+            <a
+              href={publishedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Voir ce texte
+            </a>
+          </p>
+        </div>
+      )}
+    </form>
   );
 }
