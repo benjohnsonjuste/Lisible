@@ -1,35 +1,228 @@
-import { useRouter } from "next/router";
+"use client";
+
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { toast } from "sonner";
+import { Heart, Share2, Eye } from "lucide-react";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import AdScript from "@/components/AdScript";
 
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
+
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [views, setViews] = useState(0);
+  const [likes, setLikes] = useState(0);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [liked, setLiked] = useState(false);
+
+  const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
+
+  const getDisplayName = (author) => {
+    if (!author) return "Utilisateur";
+    return author.displayName || author.name || author.email || "Utilisateur";
+  };
 
   useEffect(() => {
     if (!id) return;
 
-    fetch(`/api/texts/${id}`)
-      .then((res) => res.json())
-      .then((data) => {
+    async function fetchText() {
+      try {
+        const res = await fetch(`/data/texts/${id}.json`);
+        if (!res.ok) throw new Error("Texte introuvable");
+
+        const data = await res.json();
         setText(data);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+
+        trackView(id);
+        trackLikes(id);
+        trackComments(id);
+
+      } catch (error) {
+        console.error("Erreur:", error);
+        toast.error("Impossible de charger le texte");
+        setLoading(false);
+      }
+    }
+
+    fetchText();
   }, [id]);
 
-  if (loading) return <div className="p-10 text-center">Chargement…</div>;
-  if (!text) return <div className="p-10 text-center">Texte non trouvé</div>;
+  const getUserId = () => {
+    if (user?.id) return user.id;
+
+    let deviceId = localStorage.getItem("deviceId");
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem("deviceId", deviceId);
+    }
+    return deviceId;
+  };
+
+  const trackView = (textId) => {
+    const viewerId = getUserId();
+    const key = `viewers-${textId}`;
+    const viewers = JSON.parse(localStorage.getItem(key) || "[]");
+
+    if (!viewers.includes(viewerId)) {
+      viewers.push(viewerId);
+      localStorage.setItem(key, JSON.stringify(viewers));
+    }
+
+    setViews(viewers.length);
+  };
+
+  const trackLikes = (textId) => {
+    const key = `likes-${textId}`;
+    const list = JSON.parse(localStorage.getItem(key) || "[]");
+
+    const userId = getUserId();
+    setLikes(list.length);
+    setLiked(list.includes(userId));
+  };
+
+  const handleLike = () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
+
+    const key = `likes-${id}`;
+    const current = JSON.parse(localStorage.getItem(key) || "[]");
+
+    const userId = getUserId();
+    if (current.includes(userId)) return;
+
+    const updated = [...current, userId];
+    localStorage.setItem(key, JSON.stringify(updated));
+
+    setLikes(updated.length);
+    setLiked(true);
+    toast.success("Merci pour ton like !");
+  };
+
+  const trackComments = (textId) => {
+    const key = `comments-${textId}`;
+    const stored = JSON.parse(localStorage.getItem(key) || "[]");
+    setComments(stored);
+  };
+
+  const handleComment = () => {
+    if (!user) return redirectToAuth(`/texts/${id}`);
+    if (!commentText.trim()) return;
+
+    const key = `comments-${id}`;
+
+    const newComment = {
+      author: getDisplayName(user),
+      content: commentText.trim(),
+      date: new Date().toISOString(),
+    };
+
+    const updated = [...comments, newComment];
+
+    localStorage.setItem(key, JSON.stringify(updated));
+    setComments(updated);
+    setCommentText("");
+    toast.success("Commentaire publié !");
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.share({
+        title: text?.title,
+        text: `Découvre ce texte sur Lisible.`,
+        url: window.location.href,
+      });
+    } catch {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Lien copié !");
+    }
+  };
+
+  if (loading || userLoading)
+    return <p className="text-center mt-10">Chargement...</p>;
+
+  if (!text)
+    return <p className="text-center mt-10">Texte introuvable.</p>;
 
   return (
-    <div className="max-w-3xl mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-4">{text.title}</h1>
-      <article className="prose">
-        {text.content.split("\n").map((line, i) => (
-          <p key={i}>{line}</p>
-        ))}
-      </article>
+    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow mt-6 space-y-6">
+      
+      {text.image && (
+        <img
+          src={text.image}
+          alt={text.title}
+          className="w-full h-64 object-cover rounded-xl"
+        />
+      )}
+
+      <h1 className="text-3xl font-bold">{text.title}</h1>
+
+      <AdScript />
+
+      <div className="text-gray-600 text-sm flex justify-between">
+        <p><strong>{getDisplayName(text.author)}</strong></p>
+        <p>{new Date(text.date).toLocaleString()}</p>
+      </div>
+
+      <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
+
+      <AdScript />
+
+      <div className="flex gap-4 pt-4 border-t items-center">
+        <button onClick={handleLike} className="flex items-center gap-2 transition">
+          <Heart
+            size={24}
+            className={liked ? "text-pink-500" : "text-gray-400"}
+            fill={liked ? "currentColor" : "none"}
+          />
+          <span>{likes}</span>
+        </button>
+
+        <button onClick={handleShare} className="flex items-center gap-2 text-gray-600">
+          <Share2 size={24} />
+        </button>
+
+        <span className="ml-auto text-sm text-gray-500 flex items-center gap-1">
+          <Eye size={16} /> {views} vue{views > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <div className="pt-4 border-t">
+        <h3 className="font-semibold mb-2">Commentaires ({comments.length})</h3>
+
+        {comments.length === 0 ? (
+          <p className="text-gray-500 text-sm">Aucun commentaire pour l’instant.</p>
+        ) : (
+          <ul className="space-y-2">
+            {comments.map((c, i) => (
+              <li key={i} className="p-2 border rounded">
+                <p className="text-sm text-gray-700">
+                  <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
+                </p>
+                <p>{c.content}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-3 flex flex-col gap-2">
+          <textarea
+            placeholder="Écrire un commentaire..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            className="w-full border rounded p-2"
+          />
+          <button
+            onClick={handleComment}
+            className="self-end px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Publier
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
