@@ -1,0 +1,11 @@
+{
+  "id": "12345678",
+  "title": "Titre du texte",
+  "content": "Contenu du texte ici...",
+  "image": "/images/mon-image.jpg",
+  "author": {
+    "id": "uid123",
+    "name": "Auteur Exemple"
+  },
+  "date": "2025-12-10T12:00:00Z"
+}
