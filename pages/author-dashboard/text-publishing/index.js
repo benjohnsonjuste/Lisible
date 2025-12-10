@@ -6,7 +6,7 @@ import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { db, storage, auth } from "@/lib/firebaseConfig";
 import { commitTextToGithub } from "@/lib/github";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function TextPublishingPage() {
@@ -31,18 +31,24 @@ export default function TextPublishingPage() {
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      // 1️⃣ Upload image si présente
+    try {
+      // 🔹 Étape 1 : upload de l'image si elle existe
       let imageURL = null;
       if (imageFile) {
-        const storageRef = ref(storage, `texts/images/${Date.now()}-${imageFile.name}`);
+        toast("Téléversement de l'image en cours...", { duration: 3000 });
+        const storageRef = ref(
+          storage,
+          `texts/images/${Date.now()}-${imageFile.name}`
+        );
+
         await uploadBytes(storageRef, imageFile);
         imageURL = await getDownloadURL(storageRef);
+        toast.success("Image téléversée avec succès !");
       }
 
-      // 2️⃣ Générer un ID unique pour le texte
+      // 🔹 Étape 2 : générer un ID unique pour le texte
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
       const textData = {
@@ -54,13 +60,15 @@ export default function TextPublishingPage() {
           id: user.uid,
           name: user.displayName || user.email,
         },
-        date: serverTimestamp(),
+        date: Date.now(),
       };
 
-      // 3️⃣ Enregistrer dans Firestore
+      // 🔹 Étape 3 : sauvegarde Firestore
+      toast("Enregistrement de votre texte...", { duration: 3000 });
       await addDoc(collection(db, "texts"), textData);
+      toast.success("Texte enregistré dans notre base de données !");
 
-      // 4️⃣ Préparer JSON pour GitHub
+      // 🔹 Étape 4 : commit sur GitHub
       const githubFormat = {
         id,
         title,
@@ -73,13 +81,18 @@ export default function TextPublishingPage() {
         },
       };
 
+      toast("Publication sur GitHub...", { duration: 3000 });
       await commitTextToGithub(`data/texts/${id}.json`, githubFormat);
+      toast.success("Texte disponible sur Lisible !");
 
-      toast.success("Texte publié avec succès !");
+      // 🔹 Étape 5 : succès final
+      toast.success("Publication réussie !");
       router.push(`/texts/${id}`);
     } catch (error) {
-      console.error(error);
-      toast.error("Erreur lors de la publication.");
+      console.error("Erreur lors de la publication :", error);
+      toast.error(
+        `Erreur lors de la publication : ${error.message || error}`
+      );
     } finally {
       setLoading(false);
     }
@@ -127,9 +140,9 @@ export default function TextPublishingPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "Publication..." : "Publier"}
+            {loading ? "Publication en cours..." : "Publier"}
           </button>
         </form>
       </div>
