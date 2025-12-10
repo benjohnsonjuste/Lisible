@@ -20,14 +20,14 @@ export default function TextPage() {
 
   const { user, isLoading: userLoading, redirectToAuth } = useUserProfile();
 
-  // Fonction pour afficher le nom complet / pseudo / email comme sur la page auteurs
   const getDisplayName = (author) =>
     author.displayName || author.name || author.email || "Utilisateur";
 
-  // Charger le texte
+  // Charger le texte + statistiques
   useEffect(() => {
     if (!id) return;
-    async function fetchText() {
+
+    const fetchText = async () => {
       try {
         const res = await fetch(`/data/texts/${id}.json`);
         if (!res.ok) throw new Error("Texte introuvable");
@@ -37,11 +37,12 @@ export default function TextPage() {
         trackView(id);
         trackLikes(id);
         trackComments(id);
-      } catch (error) {
-        console.error("Erreur:", error);
+      } catch (err) {
+        console.error(err);
         toast.error("Impossible de charger le texte");
       }
-    }
+    };
+
     fetchText();
   }, [id, user]);
 
@@ -94,13 +95,14 @@ export default function TextPage() {
     setComments(storedComments);
   };
 
-  const handleComment = () => {
+  const handleComment = (e) => {
+    e.preventDefault();
     if (!user) return redirectToAuth(`/texts/${id}`);
     if (!commentText.trim()) return;
 
     const key = `comments-${id}`;
     const newComment = {
-      author: getDisplayName(user), // ← Utiliser le même nom que sur la page auteurs
+      author: getDisplayName(user),
       content: commentText,
       date: new Date().toISOString(),
     };
@@ -121,11 +123,12 @@ export default function TextPage() {
       });
     } catch {
       navigator.clipboard.writeText(window.location.href);
-
+      toast.success("URL copiée dans le presse-papier !");
     }
   };
 
-  if (loading || userLoading) return <p className="text-center mt-10">Chargement...</p>;
+  if (loading || userLoading)
+    return <p className="text-center mt-10">Chargement...</p>;
   if (!text) return <p className="text-center mt-10">Texte introuvable.</p>;
 
   return (
@@ -142,14 +145,18 @@ export default function TextPage() {
 
       <div className="text-gray-600 text-sm flex justify-between">
         <p>
-<strong>{getDisplayName(text)}</strong></p>
+          <strong>{getDisplayName(text)}</strong>
+        </p>
         <p>{new Date(text.date).toLocaleString()}</p>
       </div>
 
       <p className="leading-relaxed whitespace-pre-line">{text.content}</p>
 
       <div className="flex gap-4 pt-4 border-t items-center">
-        <button onClick={handleLike} className="flex items-center gap-2 transition">
+        <button
+          onClick={handleLike}
+          className="flex items-center gap-2 transition cursor-pointer"
+        >
           <Heart
             size={24}
             className={liked ? "text-pink-500" : "text-gray-400"}
@@ -158,7 +165,10 @@ export default function TextPage() {
           <span>{likes}</span>
         </button>
 
-        <button onClick={handleShare} className="flex items-center gap-2 text-gray-600 transition">
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-2 text-gray-600 transition cursor-pointer"
+        >
           <Share2 size={24} />
         </button>
 
@@ -176,7 +186,8 @@ export default function TextPage() {
             {comments.map((c, i) => (
               <li key={i} className="p-2 border rounded">
                 <p className="text-sm text-gray-700">
-                  <strong>{c.author}</strong> · {new Date(c.date).toLocaleString()}
+                  <strong>{c.author}</strong> ·{" "}
+                  {new Date(c.date).toLocaleString()}
                 </p>
                 <p>{c.content}</p>
               </li>
@@ -184,7 +195,10 @@ export default function TextPage() {
           </ul>
         )}
 
-        <div className="mt-3 flex flex-col gap-2">
+        <form
+          onSubmit={handleComment}
+          className="mt-3 flex flex-col gap-2"
+        >
           <textarea
             placeholder="Écrire un commentaire..."
             value={commentText}
@@ -192,12 +206,12 @@ export default function TextPage() {
             className="w-full border rounded p-2"
           />
           <button
-            onClick={handleComment}
+            type="submit"
             className="self-end px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
             Publier
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
