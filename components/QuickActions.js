@@ -25,7 +25,7 @@ export default function QuickActions() {
       title: "Analyser les performances",
       description: "Consultez vos statistiques détaillées",
       icon: <BarChart3 className="text-accent" size={25} />,
-      bgColor: "bg-accent-100",
+      bgColor: "bg-accent/10",
       action: () => router.push("/analytics"),
     },
   ];
