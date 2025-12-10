@@ -1,4 +1,3 @@
-// pages/author-dashboard/text-publishing/index.js
 "use client";
 
 import { useState } from "react";
@@ -42,7 +41,6 @@ export default function TextPublishingPage() {
           storage,
           `texts/images/${Date.now()}-${imageFile.name}`
         );
-
         await uploadBytes(storageRef, imageFile);
         imageURL = await getDownloadURL(storageRef);
         toast.success("Image téléversée avec succès !");
