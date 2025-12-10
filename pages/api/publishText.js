@@ -1,63 +1,33 @@
-import { db, storage, auth } from "@/lib/firebaseConfig";
-import { commitTextToGithub } from "@/lib/github";
-import { collection, addDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+// /pages/api/publishText.js
+import { commitFileToGithub } from "@/lib/github";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { title, content, imageBase64, user } = req.body;
+    const { title, content, imageBase64, author } = req.body;
 
-    if (!title || !content || !user) {
-      return res.status(400).json({ error: "Paramètres manquants" });
-    }
+    if (!title || !content || !author) return res.status(400).json({ error: "Missing fields" });
 
-    let imageURL = null;
-
-    // Upload de l'image si présente
-    if (imageBase64) {
-      const buffer = Buffer.from(imageBase64.split(",")[1], "base64");
-      const storageRef = ref(storage, `texts/images/${Date.now()}-${user.id}.png`);
-      await uploadBytes(storageRef, buffer, { contentType: "image/png" });
-      imageURL = await getDownloadURL(storageRef);
-    }
-
-    // Génération ID unique
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-    const textData = {
+    const data = {
       id,
       title,
       content,
-      image: imageURL,
-      author: {
-        id: user.uid,
-        name: user.displayName || user.email,
-      },
-      date: Date.now(),
-    };
-
-    // Enregistrement Firestore
-    await addDoc(collection(db, "texts"), textData);
-
-    // Commit sur GitHub
-    const githubFormat = {
-      id,
-      title,
-      content,
-      image: imageURL,
+      image: imageBase64 || null,
+      author,
       date: new Date().toISOString(),
-      author: {
-        id: user.uid,
-        name: user.displayName || user.email,
-      },
+      likes: [],
+      comments: [],
     };
-    await commitTextToGithub(`data/texts/${id}.json`, githubFormat);
 
-    res.status(200).json({ success: true, id });
-  } catch (error) {
-    console.error("Erreur publishText:", error);
-    res.status(500).json({ error: error.message });
+    const path = `data/texts/${id}.json`;
+    await commitFileToGithub(path, data, `Publish text ${title}`);
+
+    res.status(200).json({ message: "Published", id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to publish" });
   }
 }
