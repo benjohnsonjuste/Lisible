@@ -3,9 +3,6 @@ import React from "react";
 import { useRouter } from "next/router";
 import { PenTool, User, BarChart3 } from "lucide-react";
 
-/**
- * QuickActions : Section d'actions rapides pour le tableau de bord auteur
- */
 export default function QuickActions() {
   const router = useRouter();
 
@@ -13,22 +10,22 @@ export default function QuickActions() {
     {
       title: "Publier un nouveau texte",
       description: "Partagez gratuitement sur Lisible",
-      icon: <PenTool className="text-primary" size={28} />,
+      icon: <PenTool className="text-primary" size={25} />,
       bgColor: "bg-blue-100",
       action: () => router.push("/author-dashboard/text-publishing"),
     },
     {
       title: "Gérer mon compte",
       description: "Modifiez vos informations personnelles",
-      icon: <User className="text-secondary" size={28} />,
+      icon: <User className="text-secondary" size={25} />,
       bgColor: "bg-pink-100",
       action: () => router.push("/account"),
     },
     {
       title: "Analyser les performances",
       description: "Consultez vos statistiques détaillées",
-      icon: <BarChart3 className="text-accent" size={28} />,
-      bgColor: "bg-accent/10",
+      icon: <BarChart3 className="text-accent" size={25} />,
+      bgColor: "bg-accent-100",
       action: () => router.push("/analytics"),
     },
   ];
