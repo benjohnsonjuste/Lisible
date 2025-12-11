@@ -1,28 +1,32 @@
-// /pages/api/like.js
-import { commitFileToGithub, octokit, GITHUB_REPO } from "@/lib/github";
+// /app/api/like/route.js
+import { NextResponse } from "next/server";
+import { getFile, createOrUpdateFile } from "@/lib/githubClient";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  const { textId, username } = req.body;
-  if (!textId || !username) return res.status(400).json({ error: "Missing fields" });
-
+export async function POST(req) {
   try {
-    const path = `data/texts/${textId}.json`;
-    const { data } = await octokit.repos.getContent({
-      owner: GITHUB_REPO.owner,
-      repo: GITHUB_REPO.repo,
-      path,
-    });
+    const { postPath, username } = await req.json(); // postPath example: posts/2025-12-01-slug.md
+    if (!postPath || !username) return NextResponse.json({ error: "postPath and username required" }, { status: 400 });
 
-    const textData = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
+    // derive id from postPath: e.g. replace slashes and .md
+    const id = postPath.replace(/\//g, "__").replace(/\./g, "_");
+    const likesPath = `data/likes/${id}.json`;
 
-    if (!textData.likes.includes(username)) textData.likes.push(username);
+    const existing = await getFile(likesPath);
+    let likes = [];
+    let sha = undefined;
+    if (existing) {
+      sha = existing.sha;
+      likes = JSON.parse(Buffer.from(existing.content, "base64").toString("utf8")) || [];
+    }
 
-    await commitFileToGithub(path, textData, `Like text ${textId}`);
+    if (!likes.includes(username)) likes.push(username);
 
-    res.status(200).json({ likes: textData.likes.length });
+    const contentB64 = Buffer.from(JSON.stringify(likes, null, 2), "utf8").toString("base64");
+    await createOrUpdateFile(likesPath, contentB64, `Like ${postPath} by ${username}`, sha);
+
+    return NextResponse.json({ ok: true, likes: likes.length });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to like" });
+    console.error("like error", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
