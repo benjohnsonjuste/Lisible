@@ -1,67 +1,77 @@
-// /api/github-commit.js
+// pages/api/github-commit.js
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }
 
-  const token = process.env.GITHUB_TOKEN;       // Ton token GitHub (serveur)
-  const repo = process.env.GITHUB_REPO;         // "owner/nom-du-repo"
+  // 🔥 IMPORTANT → variable réellement utilisée sur Vercel
+  const token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+  const repoOwner = process.env.GITHUB_OWNER;
+  const repoName = process.env.GITHUB_REPO;
   const branch = process.env.GITHUB_BRANCH || "main";
-  const filePath = process.env.GITHUB_PATH || "data/events.json";
+  const filePath = req.body.filePath || "data/events.json";
 
-  if (!token || !repo) {
+  if (!token || !repoOwner || !repoName) {
     return res.status(500).json({
-      error: "Variables d'environnement GitHub manquantes",
+      error: "Variables d'environnement GitHub manquantes.",
+      missing: {
+        token: !!token,
+        owner: !!repoOwner,
+        repo: !!repoName,
+      },
     });
   }
 
-  const payload = req.body;
+  const payload = req.body.data;
+  const apiURL = "https://api.github.com";
 
-  const API = "https://api.github.com";
-
-  // Étape 1 : récupérer le fichier existant (events.json)
-  const getUrl = `${API}/repos/${repo}/contents/${filePath}?ref=${branch}`;
+  // 1️⃣ Récupérer ancien fichier (pour obtenir le SHA)
   let sha = null;
-  let events = [];
+  let existingData = [];
 
-  const getRes = await fetch(getUrl, {
-    headers: { Authorization: `token ${token}` },
+  const getURL = `${apiURL}/repos/${repoOwner}/${repoName}/contents/${filePath}?ref=${branch}`;
+
+  const getRes = await fetch(getURL, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (getRes.status === 200) {
+  if (getRes.ok) {
     const file = await getRes.json();
     sha = file.sha;
 
-    const content = Buffer.from(file.content, "base64").toString();
+    const decoded = Buffer.from(file.content, "base64").toString("utf8");
+
     try {
-      events = JSON.parse(content);
-    } catch {
-      events = [];
+      existingData = JSON.parse(decoded);
+    } catch (e) {
+      existingData = [];
     }
   }
 
-  // Étape 2 : ajouter le nouvel event
-  events.push({
+  // 2️⃣ Ajouter la nouvelle entrée
+  existingData.push({
     ...payload,
-    ts: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
   });
 
-  // Étape 3 : commit vers GitHub
-  const newContent = Buffer.from(JSON.stringify(events, null, 2)).toString(
-    "base64"
-  );
+  // 3️⃣ Encoder le nouveau contenu
+  const newContent = Buffer.from(
+    JSON.stringify(existingData, null, 2),
+    "utf8"
+  ).toString("base64");
 
-  const commitRes = await fetch(
-    `${API}/repos/${repo}/contents/${filePath}`,
+  // 4️⃣ Commit vers GitHub
+  const putRes = await fetch(
+    `${apiURL}/repos/${repoOwner}/${repoName}/contents/${filePath}`,
     {
       method: "PUT",
       headers: {
-        Authorization: `token ${token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: "Event update (TextPage)",
+        message: `Update ${filePath}`,
         content: newContent,
         sha: sha || undefined,
         branch,
@@ -69,11 +79,15 @@ export default async function handler(req, res) {
     }
   );
 
-  const commitJson = await commitRes.json();
+  const putJson = await putRes.json();
 
-  if (commitRes.status >= 200 && commitRes.status < 300) {
-    return res.status(200).json({ ok: true, commit: commitJson });
+  if (!putRes.ok) {
+    return res.status(500).json({ error: putJson });
   }
 
-  return res.status(500).json({ error: commitJson });
+  return res.status(200).json({
+    ok: true,
+    file: filePath,
+    commit: putJson.commit,
+  });
 }
