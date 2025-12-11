@@ -4,22 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-export default function TextPublishingPage() {
+export default function Page() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [authorName, setAuthorName] = useState("AuteurTest");
   const [authorEmail, setAuthorEmail] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  // Convertit un fichier en base64
   const toDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Erreur lecture fichier"));
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
+    new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onerror = () => rej(new Error("File read error"));
+      r.onload = () => res(r.result);
+      r.readAsDataURL(file);
     });
 
   const handleSubmit = async (e) => {
@@ -29,7 +28,6 @@ export default function TextPublishingPage() {
     }
 
     setLoading(true);
-
     try {
       let imageBase64 = null;
       let imageName = null;
@@ -48,23 +46,23 @@ export default function TextPublishingPage() {
           authorEmail,
           imageBase64,
           imageName,
-          createdAt: new Date().toISOString(),
         }),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        const text = await res.text();
+        throw new Error("Réponse serveur invalide : " + text);
+      }
 
       if (!res.ok) throw new Error(data?.error || JSON.stringify(data));
 
-      toast.success("Publié avec succès !");
-      // Redirection vers le post GitHub
-      window.open(data.url, "_blank");
-      // Optionnel : reset form
-      setTitle("");
-      setContent("");
-      setImageFile(null);
+      toast.success("Texte publié avec succès !");
+      router.push(data.url.replace("https://github.com", "")); // ajuste selon ton besoin
     } catch (err) {
-      console.error("Erreur publication:", err);
+      console.error("publish error", err);
       toast.error(err.message || "Erreur publication");
     } finally {
       setLoading(false);
@@ -72,20 +70,20 @@ export default function TextPublishingPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="p-6 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Publier un texte</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           value={authorName}
           onChange={(e) => setAuthorName(e.target.value)}
           className="w-full border p-2 rounded"
-          placeholder="Nom de l'auteur"
+          placeholder="Nom auteur"
         />
         <input
           value={authorEmail}
           onChange={(e) => setAuthorEmail(e.target.value)}
           className="w-full border p-2 rounded"
-          placeholder="Email de l'auteur"
+          placeholder="Email auteur (optionnel)"
         />
         <input
           value={title}
@@ -102,13 +100,11 @@ export default function TextPublishingPage() {
         />
         <input
           type="file"
-          accept="image/*"
           onChange={(e) => setImageFile(e.target.files?.[0] || null)}
         />
         <button
-          type="submit"
           disabled={loading}
-          className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="w-full py-2 bg-blue-600 text-white rounded"
         >
           {loading ? "Publication..." : "Publier"}
         </button>
