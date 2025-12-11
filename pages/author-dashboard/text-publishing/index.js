@@ -4,27 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-export default function PublishPage() {
+export default function TextPublishingPage() {
   const router = useRouter();
-  const [authorName, setAuthorName] = useState("AuteurTest");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
+  const [authorName, setAuthorName] = useState("AuteurTest");
+  const [authorEmail, setAuthorEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Convert file → base64
-  const toBase64 = (file) => {
-    return new Promise((resolve, reject) => {
+  // Convertit un fichier en base64
+  const toDataUrl = (file) =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error("Erreur lecture fichier"));
       reader.onload = () => resolve(reader.result);
       reader.readAsDataURL(file);
     });
-  };
 
-  const handlePublish = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!title.trim() || !content.trim()) {
       return toast.error("Titre et contenu requis");
     }
@@ -34,9 +33,8 @@ export default function PublishPage() {
     try {
       let imageBase64 = null;
       let imageName = null;
-
       if (imageFile) {
-        imageBase64 = await toBase64(imageFile);
+        imageBase64 = await toDataUrl(imageFile);
         imageName = imageFile.name;
       }
 
@@ -47,66 +45,70 @@ export default function PublishPage() {
           title,
           content,
           authorName,
-          authorEmail: "",
-          createdAt: Date.now(),
+          authorEmail,
           imageBase64,
           imageName,
+          createdAt: new Date().toISOString(),
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || "Erreur publication");
+      if (!res.ok) throw new Error(data?.error || JSON.stringify(data));
 
-      toast.success("Texte publié avec succès !");
-
-      // Change URL GitHub vers ton site
-      const id = data.url.split("/").pop().replace(".md", "");
-
-      router.push(`/texts/${id}`);
+      toast.success("Publié avec succès !");
+      // Redirection vers le post GitHub
+      window.open(data.url, "_blank");
+      // Optionnel : reset form
+      setTitle("");
+      setContent("");
+      setImageFile(null);
     } catch (err) {
-      console.error("ERROR PUBLISH:", err);
-      toast.error(err.message);
+      console.error("Erreur publication:", err);
+      toast.error(err.message || "Erreur publication");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Publier un texte</h1>
-
-      <form onSubmit={handlePublish} className="space-y-4">
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Publier un texte</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input
           value={authorName}
           onChange={(e) => setAuthorName(e.target.value)}
           className="w-full border p-2 rounded"
           placeholder="Nom de l'auteur"
         />
-
+        <input
+          value={authorEmail}
+          onChange={(e) => setAuthorEmail(e.target.value)}
+          className="w-full border p-2 rounded"
+          placeholder="Email de l'auteur"
+        />
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="w-full border p-2 rounded"
           placeholder="Titre"
         />
-
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          rows={10}
+          rows={8}
           className="w-full border p-2 rounded"
           placeholder="Contenu"
         />
-
         <input
           type="file"
+          accept="image/*"
           onChange={(e) => setImageFile(e.target.files?.[0] || null)}
         />
-
         <button
+          type="submit"
           disabled={loading}
-          className="w-full py-3 bg-blue-600 text-white rounded disabled:opacity-50"
+          className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? "Publication..." : "Publier"}
         </button>
