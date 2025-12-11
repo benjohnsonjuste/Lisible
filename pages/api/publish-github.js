@@ -1,77 +1,89 @@
-// /app/api/publish-github/route.js
-import { NextResponse } from "next/server";
-import { getFile, createOrUpdateFile } from "@/lib/githubClient";
+import { Octokit } from "@octokit/rest";
 
-function slugify(s) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
-function basenameWithoutExt(filename) {
-  return filename.replace(/\.[^/.]+$/, "");
-}
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Méthode non autorisée" });
+  }
 
-export async function POST(req) {
   try {
-    const body = await req.json();
-    const { title, content, authorName, authorEmail, imageBase64, imageName, createdAt } = body;
+    const {
+      title,
+      content,
+      authorName,
+      authorEmail,
+      imageBase64,
+      imageName
+    } = req.body;
 
-    if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_REPO_OWNER || !process.env.GITHUB_REPO_NAME) {
-      return NextResponse.json({ error: "Server misconfigured: missing GITHUB_TOKEN / OWNER / NAME" }, { status: 500 });
+    if (!title?.trim() || !content?.trim() || !authorName?.trim()) {
+      return res.status(400).json({ error: "Titre, contenu et auteur requis" });
     }
 
-    if (!title || !content) return NextResponse.json({ error: "title and content required" }, { status: 400 });
+    // Vérification token GitHub
+    const TOKEN = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+    const OWNER = process.env.GITHUB_OWNER;
+    const REPO = process.env.GITHUB_REPO;
 
-    const date = new Date(createdAt || Date.now()).toISOString().slice(0, 10);
-    const slug = slugify(title).slice(0, 80) || "post";
-    const postPath = `posts/${date}-${slug}.md`;
+    if (!TOKEN || !OWNER || !REPO) {
+      return res.status(500).json({
+        error: "Variables GITHUB_PERSONAL_ACCESS_TOKEN, GITHUB_OWNER ou GITHUB_REPO manquantes"
+      });
+    }
 
+    const octokit = new Octokit({ auth: TOKEN });
+
+    // ID unique
+    const id = Date.now().toString();
+
+    // 1️⃣ Upload image si présente
     let imagePath = null;
-    if (imageBase64) {
-      const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
-      let mime = null;
-      let b64 = imageBase64;
-      if (match) {
-        mime = match[1];
-        b64 = match[2];
-      }
-      const approxBytes = Math.ceil((b64.length * 3) / 4);
-      const MAX_BYTES = 2 * 1024 * 1024;
-      if (approxBytes > MAX_BYTES) return NextResponse.json({ error: "Image size > 2MB" }, { status: 400 });
+    if (imageBase64 && imageName) {
+      const base64Data = imageBase64.split(",")[1]; // enlever le header data:image/...
 
-      const safeName = imageName ? basenameWithoutExt(imageName).replace(/\s+/g, "_") : `${date}-${slug}`;
-      const extFromMime = mime ? mime.split("/")[1] : null;
-      const ext = extFromMime || (imageName && imageName.split(".").pop()) || "png";
-      const finalImageName = `${safeName}.${ext}`;
-      imagePath = `images/${finalImageName}`;
+      imagePath = `data/images/${id}-${imageName}`;
 
-      // write image (b64) to repo
-      await createOrUpdateFile(imagePath, b64, `Add image for ${postPath}`);
+      await octokit.repos.createOrUpdateFileContents({
+        owner: OWNER,
+        repo: REPO,
+        path: imagePath,
+        message: `Upload image for text ${id}`,
+        content: base64Data
+      });
     }
 
-    const imageUrl = imagePath ? `https://raw.githubusercontent.com/${process.env.GITHUB_REPO_OWNER}/${process.env.GITHUB_REPO_NAME}/${process.env.GITHUB_REPO_BRANCH || "main"}/${imagePath}` : null;
+    // 2️⃣ créer le fichier texte dans GitHub
+    const textPath = `data/texts/${id}.json`;
 
-    const md = `---
-title: "${title.replace(/"/g, '\\"')}"
-date: "${new Date(createdAt || Date.now()).toISOString()}"
-author: "${(authorName || "").replace(/"/g, '\\"')}"
-email: "${(authorEmail || "").replace(/"/g, '\\"')}"
-image: ${imageUrl ? `"${imageUrl}"` : "null"}
----
+    const body = {
+      id,
+      title,
+      content,
+      authorName,
+      authorEmail,
+      image: imagePath || null,
+      createdAt: new Date().toISOString()
+    };
 
-${content}
-`;
+    const contentBase64 = Buffer.from(JSON.stringify(body, null, 2)).toString("base64");
 
-    const mdB64 = Buffer.from(md, "utf8").toString("base64");
-    await createOrUpdateFile(postPath, mdB64, `Publish post: ${title}`);
+    const createRes = await octokit.repos.createOrUpdateFileContents({
+      owner: OWNER,
+      repo: REPO,
+      path: textPath,
+      message: `Publish text ${id}`,
+      content: contentBase64
+    });
 
-    const fileUrl = `https://github.com/${process.env.GITHUB_REPO_OWNER}/${process.env.GITHUB_REPO_NAME}/blob/${process.env.GITHUB_REPO_BRANCH || "main"}/${postPath}`;
-    return NextResponse.json({ ok: true, url: fileUrl }, { status: 201 });
+    const githubUrl = createRes.data?.content?.html_url;
+
+    return res.status(200).json({
+      ok: true,
+      id,
+      url: githubUrl || null
+    });
+
   } catch (err) {
-    console.error("publish-github error:", err);
-    return NextResponse.json({ error: "internal_error", details: String(err) }, { status: 500 });
+    console.error("publish error", err);
+    return res.status(500).json({ error: err.message });
   }
 }
