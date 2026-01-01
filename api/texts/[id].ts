@@ -1,30 +1,76 @@
-import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth"
+import { useRouter } from "next/router"
+import useSWR from "swr"
+import { useState } from "react"
 
-export default async function handler(req, res) {
-  const { id } = req.query
-  const session = await getServerSession(req, res)
+const fetcher = (url: string) => fetch(url).then(r => r.json())
 
-  const text = await prisma.text.findUnique({
-    where: { id },
-    include: {
-      comments: {
-        include: { user: true },
-        orderBy: { createdAt: "desc" }
-      },
-      likes: true
-    }
-  })
+export default function TextPage() {
+  const { query } = useRouter()
+  const { data, mutate } = useSWR(
+    query.id ? `/api/texts/${query.id}` : null,
+    fetcher
+  )
 
-  if (!text) return res.status(404).end()
+  const [comment, setComment] = useState("")
 
-  const likedByUser = session
-    ? text.likes.some(l => l.userId === session.user.id)
-    : false
+  if (!data) return null
 
-  res.json({
-    ...text,
-    likes: text.likes.length,
-    likedByUser
-  })
+  async function like() {
+    await fetch("/api/like", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ textId: data.id })
+    })
+    mutate()
+  }
+
+  async function sendComment(e) {
+    e.preventDefault()
+    await fetch("/api/comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ textId: data.id, content: comment })
+    })
+    setComment("")
+    mutate()
+  }
+
+  return (
+    <div>
+      <h1>{data.title}</h1>
+      <p>{data.content}</p>
+
+      <button
+        onClick={like}
+        style={{ color: data.likedByUser ? "red" : "gray" }}
+      >
+        ❤️ {data.likes}
+      </button>
+
+      <button
+        onClick={() =>
+          navigator.share?.({
+            title: data.title,
+            url: window.location.href
+          })
+        }
+      >
+        Partager
+      </button>
+
+      <form onSubmit={sendComment}>
+        <textarea
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+        />
+        <button>Commenter</button>
+      </form>
+
+      {data.comments.map(c => (
+        <p key={c.id}>
+          <b>{c.user_id}</b> : {c.content}
+        </p>
+      ))}
+    </div>
+  )
 }
