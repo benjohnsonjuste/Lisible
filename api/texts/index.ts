@@ -1,24 +1,18 @@
-import useSWR from "swr"
-import Link from "next/link"
+import { supabase } from "../../../lib/supabase"
+import type { NextApiRequest, NextApiResponse } from "next"
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { data, error } = await supabase
+    .from("texts")
+    .select("*")
+    .order("created_at", { ascending: false })
 
-export default function TextsPage() {
-  const { data } = useSWR("/api/texts", fetcher)
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
 
-  if (!data) return null
-
-  return (
-    <div>
-      {data.map(t => (
-        <Link key={t.id} href={`/texts/${t.id}`}>
-          <div>
-            <h3>{t.title}</h3>
-            <p>{t.preview}</p>
-            ❤️ {t.likes}
-          </div>
-        </Link>
-      ))}
-    </div>
-  )
+  res.status(200).json(data)
 }
