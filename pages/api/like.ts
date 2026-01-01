@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabase"
 import type { NextApiRequest, NextApiResponse } from "next"
+import { supabase } from "../lib/supabase"
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,6 +10,10 @@ export default async function handler(
   }
 
   const { user_id, text_id } = req.body
+
+  if (!user_id || !text_id) {
+    return res.status(400).json({ error: "Missing fields" })
+  }
 
   const { error } = await supabase
     .from("likes")
