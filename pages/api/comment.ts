@@ -1,21 +1,23 @@
-import { supabase } from "@/lib/supabase"
-import { getServerSession } from "next-auth"
+import { supabase } from "../../lib/supabase"
+import type { NextApiRequest, NextApiResponse } from "next"
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end()
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" })
+  }
 
-  const session = await getServerSession(req, res)
-  if (!session) return res.status(401).end()
+  const { content, user_id, text_id } = req.body
 
-  const { textId, content } = req.body
+  if (!content || !user_id || !text_id) {
+    return res.status(400).json({ error: "Missing fields" })
+  }
 
   const { data, error } = await supabase
     .from("comments")
-    .insert({
-      text_id: textId,
-      content,
-      user_id: session.user.id
-    })
+    .insert([{ content, user_id, text_id }])
     .select()
     .single()
 
@@ -23,5 +25,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message })
   }
 
-  res.json(data)
+  res.status(200).json(data)
 }
