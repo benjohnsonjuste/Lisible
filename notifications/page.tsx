@@ -1,74 +1,73 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react"
+import { supabase } from "@/lib/supabase"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+
+interface Notification {
+  id: string
+  message: string
+  created_at: string
+}
 
 export default function NotificationsPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const { data: session } = useSession()
+  const router = useRouter()
 
   useEffect(() => {
-    if (!session?.user?.id) return;
+    if (!session) return
 
-    const q = query(
-      collection(db, "users", session.user.id, "notifications"),
-      orderBy("createdAt", "desc")
-    );
+    // On récupère toutes les notifications de l'utilisateur
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from<Notification>("notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .eq("user_id", session.user?.email) // ou session.user?.id selon ton schema
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setNotifications(notifs);
-    });
+      if (error) {
+        console.error("Erreur notifications:", error.message)
+      } else if (data) {
+        setNotifications(data)
+      }
+    }
 
-    return () => unsubscribe();
-  }, [session?.user?.id]);
+    fetchNotifications()
 
-  const markAsRead = async (notifId: string, link?: string) => {
-    if (!session?.user?.id) return;
-    const notifRef = doc(db, "users", session.user.id, "notifications", notifId);
-    await updateDoc(notifRef, { read: true });
+    // Subscription temps réel si tu veux
+    const subscription = supabase
+      .channel("public:notifications")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications" },
+        (payload) => {
+          if (payload.new.user_id === session.user?.email) {
+            setNotifications((prev) => [payload.new as Notification, ...prev])
+          }
+        }
+      )
+      .subscribe()
 
-    if (link) router.push(link);
-  };
+    return () => {
+      supabase.removeChannel(subscription)
+    }
+  }, [session])
 
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Connectez-vous pour voir vos notifications.</p>
-      </div>
-    );
-  }
-
-  if (!notifications.length) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-gray-500">Vous n'avez aucune notification pour le moment.</p>
-      </div>
-    );
-  }
+  if (!session) return <p>Vous devez être connecté pour voir vos notifications.</p>
 
   return (
-    <main className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow mt-10">
-      <h1 className="text-3xl font-bold mb-6">Notifications</h1>
-      <div className="space-y-3">
+    <div>
+      <h1>Notifications</h1>
+      {notifications.length === 0 && <p>Aucune notification</p>}
+      <ul>
         {notifications.map((notif) => (
-          <div
-            key={notif.id}
-            onClick={() => markAsRead(notif.id, notif.link)}
-            className={`p-4 rounded-xl shadow cursor-pointer transition ${
-              notif.read ? "bg-gray-100" : "bg-blue-600 text-white"
-            }`}
-          >
-            <h4 className="font-bold">{notif.title}</h4>
-            <p className="text-sm">{notif.message}</p>
-            {notif.link && <p className="text-xs text-gray-200 mt-1">Cliquez pour voir</p>}
-          </div>
+          <li key={notif.id}>
+            {notif.message} — <small>{new Date(notif.created_at).toLocaleString()}</small>
+          </li>
         ))}
-      </div>
-    </main>
-  );
-    }
+      </ul>
+    </div>
+  )
+}
