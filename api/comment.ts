@@ -1,21 +1,27 @@
-import { prisma } from "@/lib/prisma"
-import { requireAuth } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
+import { getServerSession } from "next-auth"
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end()
 
-  const session = await requireAuth(req, res)
-  if (!session) return
+  const session = await getServerSession(req, res)
+  if (!session) return res.status(401).end()
 
   const { textId, content } = req.body
 
-  const comment = await prisma.comment.create({
-    data: {
-      textId,
+  const { data, error } = await supabase
+    .from("comments")
+    .insert({
+      text_id: textId,
       content,
-      userId: session.user.id
-    }
-  })
+      user_id: session.user.id
+    })
+    .select()
+    .single()
 
-  res.json(comment)
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
+  res.json(data)
 }
