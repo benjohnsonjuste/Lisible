@@ -1,21 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next"
-import { supabase } from "../lib/supabase"
+import { supabase } from "@/lib/supabase"
+import { requireAuth } from "@/lib/auth"
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const { text_id } = req.query
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "POST") {
+    const session = await requireAuth(req, res)
+    if (!session) return
 
-  const { data, error } = await supabase
-    .from("comments")
-    .select("*")
-    .eq("text_id", text_id)
-    .order("created_at", { ascending: false })
+    const { textId, content } = req.body
+    const { data, error } = await supabase
+      .from("comments")
+      .insert([{ text_id: textId, content, user_id: session.user.id }])
+      .select()
 
-  if (error) {
-    return res.status(500).json({ error: error.message })
+    if (error) return res.status(400).json({ error: error.message })
+    res.status(200).json(data)
+  } else {
+    res.status(405).end()
   }
-
-  res.status(200).json(data)
 }
