@@ -9,6 +9,7 @@ interface Notification {
   id: string
   message: string
   created_at: string
+  user_id: string
 }
 
 export default function NotificationsPage() {
@@ -19,40 +20,33 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!session) return
 
-    // On récupère toutes les notifications de l'utilisateur
     const fetchNotifications = async () => {
       const { data, error } = await supabase
         .from<Notification>("notifications")
         .select("*")
         .order("created_at", { ascending: false })
-        .eq("user_id", session.user?.email) // ou session.user?.id selon ton schema
+        .eq("user_id", session.user?.id)
 
-      if (error) {
-        console.error("Erreur notifications:", error.message)
-      } else if (data) {
-        setNotifications(data)
-      }
+      if (error) console.error("Erreur notifications:", error.message)
+      else if (data) setNotifications(data)
     }
 
     fetchNotifications()
 
-    // Subscription temps réel si tu veux
     const subscription = supabase
       .channel("public:notifications")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
-          if (payload.new.user_id === session.user?.email) {
+          if (payload.new.user_id === session.user?.id) {
             setNotifications((prev) => [payload.new as Notification, ...prev])
           }
         }
       )
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(subscription)
-    }
+    return () => supabase.removeChannel(subscription)
   }, [session])
 
   if (!session) return <p>Vous devez être connecté pour voir vos notifications.</p>
