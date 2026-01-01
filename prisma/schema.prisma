@@ -1,0 +1,27 @@
+model Text {
+  id        String    @id @default(cuid())
+  title     String
+  content   String
+  preview   String
+  authorId  String
+  createdAt DateTime  @default(now())
+
+  likes     Like[]
+  comments  Comment[]
+}
+
+model Like {
+  id     String @id @default(cuid())
+  userId String
+  textId String
+
+  @@unique([userId, textId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  textId    String
+  createdAt DateTime @default(now())
+}
