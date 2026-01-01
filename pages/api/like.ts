@@ -5,16 +5,19 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { text_id } = req.query
-
-  const { count, error } = await supabase
-    .from("likes")
-    .select("*", { count: "exact", head: true })
-    .eq("text_id", text_id)
-
-  if (error) {
-    return res.status(500).json({ error: error.message })
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" })
   }
 
-  res.status(200).json({ count })
+  const { user_id, text_id } = req.body
+
+  const { error } = await supabase
+    .from("likes")
+    .insert([{ user_id, text_id }])
+
+  if (error) {
+    return res.status(400).json({ error: "Already liked" })
+  }
+
+  res.status(200).json({ success: true })
 }
