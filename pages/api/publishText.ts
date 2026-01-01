@@ -1,22 +1,25 @@
-import { supabase } from "@/lib/supabase"
-import { getServerSession } from "next-auth"
+import { supabase } from "../../lib/supabase"
+import type { NextApiRequest, NextApiResponse } from "next"
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end()
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" })
+  }
 
-  const session = await getServerSession(req, res)
-  if (!session) return res.status(401).end()
+  const { title, content, preview, author_id } = req.body
 
-  const { title, content } = req.body
+  const { data, error } = await supabase
+    .from("texts")
+    .insert([{ title, content, preview, author_id }])
+    .select()
+    .single()
 
-  const { error } = await supabase.from("texts").insert({
-    title,
-    content,
-    preview: content.slice(0, 150),
-    author_id: session.user.id
-  })
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
 
-  if (error) return res.status(500).json(error)
-
-  res.json({ success: true })
+  res.status(200).json(data)
 }
