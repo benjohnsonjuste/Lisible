@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabase"
 import type { NextApiRequest, NextApiResponse } from "next"
+import { supabase } from "../lib/supabase"
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,6 +10,10 @@ export default async function handler(
   }
 
   const { title, content, preview, author_id } = req.body
+
+  if (!title || !content || !preview || !author_id) {
+    return res.status(400).json({ error: "Missing fields" })
+  }
 
   const { data, error } = await supabase
     .from("texts")
