@@ -1,11 +1,7 @@
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/pages/api/auth/[...nextauth]"
+import { authOptions } from "../lib/authOptions"
 
-export async function requireAuth(req, res) {
+export async function requireAuth(req: any, res: any) {
   const session = await getServerSession(req, res, authOptions)
-  if (!session) {
-    res.status(401).json({ error: "Unauthorized" })
-    return null
-  }
   return session
 }
