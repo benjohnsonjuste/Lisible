@@ -9,11 +9,19 @@ export default async function handler(req, res) {
 
   const { textId, content } = req.body
 
-  const { data } = await supabase.from("comments").insert({
-    text_id: textId,
-    content,
-    user_id: session.user.id
-  }).select().single()
+  const { data, error } = await supabase
+    .from("comments")
+    .insert({
+      text_id: textId,
+      content,
+      user_id: session.user.id
+    })
+    .select()
+    .single()
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
 
   res.json(data)
 }
