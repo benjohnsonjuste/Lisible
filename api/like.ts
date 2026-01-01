@@ -1,34 +1,34 @@
-import { prisma } from "@/lib/prisma"
-import { requireAuth } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
+import { getServerSession } from "next-auth"
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end()
 
-  const session = await requireAuth(req, res)
-  if (!session) return
+  const session = await getServerSession(req, res)
+  if (!session) return res.status(401).end()
 
   const { textId } = req.body
 
-  const existing = await prisma.like.findUnique({
-    where: {
-      userId_textId: {
-        userId: session.user.id,
-        textId
-      }
-    }
-  })
+  const { data: existing } = await supabase
+    .from("likes")
+    .select("id")
+    .eq("user_id", session.user.id)
+    .eq("text_id", textId)
+    .maybeSingle()
 
   if (existing) {
-    await prisma.like.delete({ where: { id: existing.id } })
+    await supabase.from("likes").delete().eq("id", existing.id)
   } else {
-    await prisma.like.create({
-      data: {
-        userId: session.user.id,
-        textId
-      }
+    await supabase.from("likes").insert({
+      user_id: session.user.id,
+      text_id: textId
     })
   }
 
-  const count = await prisma.like.count({ where: { textId } })
+  const { count } = await supabase
+    .from("likes")
+    .select("*", { count: "exact", head: true })
+    .eq("text_id", textId)
+
   res.json({ likes: count })
 }
