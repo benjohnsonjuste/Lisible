@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth"
 import type { NextApiRequest, NextApiResponse } from "next"
-import { authOptions } from "@/pages/api/auth/[...nextauth]"
+import { authOptions } from "@/lib/authOptions"
 
 export async function requireAuth(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
