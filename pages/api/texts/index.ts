@@ -1,25 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next"
 import { supabase } from "@/lib/supabase"
-import { requireAuth } from "@/lib/auth"
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === "POST") {
-    const session = await requireAuth(req, res)
-    if (!session) return
+  if (req.method !== "GET") return res.status(405).end()
 
-    const { title, content, preview } = req.body
-    const { data, error } = await supabase
-      .from("texts")
-      .insert([{ title, content, preview, author_id: session.user.id }])
-      .select()
+  const { data, error } = await supabase.from("texts").select("*")
+  if (error) return res.status(500).json({ error: error.message })
 
-    if (error) return res.status(400).json({ error: error.message })
-    res.status(200).json(data)
-  } else if (req.method === "GET") {
-    const { data, error } = await supabase.from("texts").select("*")
-    if (error) return res.status(400).json({ error: error.message })
-    res.status(200).json(data)
-  } else {
-    res.status(405).end()
-  }
+  res.status(200).json(data)
 }
