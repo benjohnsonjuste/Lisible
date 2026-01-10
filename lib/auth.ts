@@ -1,17 +1,59 @@
-import { getServerSession } from "next-auth/next"
-import type { NextApiRequest, NextApiResponse } from "next"
-import { authOptions } from "@/pages/api/auth/[...nextauth]"
+import type { NextAuthConfig } from "next-auth"
+import GitHub from "next-auth/providers/github"
+import Credentials from "next-auth/providers/credentials"
 
-export async function requireAuth(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const session = await getServerSession(req, res, authOptions)
+export const authConfig: NextAuthConfig = {
+  providers: [
+    GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
 
-  if (!session) {
-    res.status(401).json({ error: "Unauthorized" })
-    return null
-  }
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Mot de passe", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) return null
 
-  return session
+        if (
+          credentials.email === "test@lisible.com" &&
+          credentials.password === "123456"
+        ) {
+          return {
+            id: "1",
+            name: "Utilisateur Test",
+            email: credentials.email,
+          }
+        }
+
+        return null
+      },
+    }),
+  ],
+
+  session: {
+    strategy: "jwt",
+  },
+
+  pages: {
+    signIn: "/login",
+  },
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) token.id = user.id
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string
+      }
+      return session
+    },
+  },
+
+  secret: process.env.NEXTAUTH_SECRET,
 }
