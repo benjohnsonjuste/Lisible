@@ -5,7 +5,6 @@ import { UserPlus, UserCheck } from "lucide-react";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase";
 import { toast } from "sonner";
-import { useSession } from "next-auth/react"; // si tu utilises NextAuth
 
 export default function AuteursPage() {
   const { data: session } = useSession(); // utilisateur connecté
