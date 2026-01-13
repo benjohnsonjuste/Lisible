@@ -1,36 +1,25 @@
+"use client";
+import { auth, db } from "@/lib/firebaseConfig";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db, auth } from "../lib/firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
 
-export default function CommentForm({ postId }) {
-  const [user] = useAuthState(auth);
-  const [comment, setComment] = useState("");
+export default function CommentForm({ textId }) {
+  const [msg, setMsg] = useState("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!user) return alert("Connectez-vous pour commenter");
-    if (!comment.trim()) return;
-
-    const commentRef = collection(db, "posts", postId, "comments");
-    await addDoc(commentRef, {
-      authorName: user.displayName,
-      uid: user.uid,
-      content: comment,
+  const send = async () => {
+    if (!msg || !auth.currentUser) return;
+    await addDoc(collection(db, "texts", textId, "comments"), {
+      message: msg,
+      author: auth.currentUser.displayName,
       createdAt: serverTimestamp()
     });
-    setComment("");
+    setMsg("");
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        placeholder="Votre commentaire..."
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-      />
-      <button type="submit">Commenter</button>
-    </form>
+    <div className="mt-6">
+      <textarea value={msg} onChange={e => setMsg(e.target.value)} />
+      <button onClick={send}>Commenter</button>
+    </div>
   );
 }
