@@ -1,18 +1,20 @@
-// components/TextPublishingForm.jsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function TextPublishingForm() {
   const router = useRouter();
+  const fileInputRef = useRef(null);
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [authorName, setAuthorName] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir image en Base64
+  // 🔁 Convertir image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -24,8 +26,8 @@ export default function TextPublishingForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!title.trim() || !content.trim()) {
-      toast.error("Le titre et le contenu sont requis.");
+    if (!title.trim() || !content.trim() || !authorName.trim()) {
+      toast.error("Titre, contenu et nom de l’auteur sont requis.");
       return;
     }
 
@@ -42,27 +44,32 @@ export default function TextPublishingForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          content,
-          authorName: "Auteur inconnu",
+          title: title.trim(),
+          content: content.trim(),
+          authorName: authorName.trim(),
           imageBase64,
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error("Erreur API");
+        throw new Error(data.error || "Erreur serveur");
       }
 
-      toast.success("Texte publié !");
+      toast.success("✅ Texte publié avec succès");
+
+      // 🔄 Reset complet
       setTitle("");
       setContent("");
+      setAuthorName("");
       setImageFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
-      // 🔴 REDIRECTION VERS LA BIBLIOTHÈQUE
       router.push("/texts");
     } catch (err) {
       console.error(err);
-      toast.error("❌ Erreur de publication");
+      toast.error(err.message || "❌ Erreur de publication");
     } finally {
       setLoading(false);
     }
@@ -73,7 +80,18 @@ export default function TextPublishingForm() {
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">
+        Publier un texte
+      </h2>
+
+      <input
+        type="text"
+        placeholder="Nom de l’auteur"
+        value={authorName}
+        onChange={(e) => setAuthorName(e.target.value)}
+        className="w-full p-2 border rounded"
+        required
+      />
 
       <input
         type="text"
@@ -94,15 +112,16 @@ export default function TextPublishingForm() {
       />
 
       <input
+        ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={(e) => setImageFile(e.target.files[0])}
+        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
       />
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded"
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
       >
         {loading ? "Publication..." : "Publier"}
       </button>
