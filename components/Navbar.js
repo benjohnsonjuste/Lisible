@@ -75,7 +75,7 @@ export default function Navbar() {
               <Library className="w-8 h-8 hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/author-dashboard">
+            <Link href="/dashboard">
               <LayoutDashboard className="w-8 h-8 hover:text-blue-300 transition" />
             </Link>
 
