@@ -1,67 +1,136 @@
-import fs from "fs";
-import path from "path";
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
-const filePath = path.join(process.cwd(), "data", "texts.json");
+export default function TextPage({ params }) {
+  const { id } = params;
+  const { data: session } = useSession();
+  const [text, setText] = useState(null);
+  const [liked, setLiked] = useState(false);
+  const [comment, setComment] = useState("");
+  const router = useRouter();
 
-export default function handler(req, res) {
-  // Lire tous les textes
-  const texts = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  const { id } = req.query;
-  const text = texts.find(t => t.id === id);
+  const localStorageLikesKey = `liked-${id}`;
+  const localStorageViewsKey = `viewed-${id}`;
 
-  if (!text) return res.status(404).json({ error: "Texte non trouvé" });
+  // Récupérer le texte et compter la vue unique
+  useEffect(() => {
+    const fetchText = async () => {
+      const res = await fetch(`/api/text/${id}`);
+      const data = await res.json();
+      setText(data);
 
-  // GET → récupérer le texte
-  if (req.method === "GET") {
-    return res.status(200).json(text);
-  }
+      // Compteur de vue unique par appareil
+      if (!localStorage.getItem(localStorageViewsKey)) {
+        const updated = { ...data, views: data.views + 1 };
+        localStorage.setItem(localStorageViewsKey, "true");
+        await fetch(`/api/text/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ views: updated.views })
+        });
+        setText(updated);
+      }
 
-  // POST → ajouter un commentaire
-  if (req.method === "POST") {
-    const { authorName, authorId, message } = req.body;
-    if (!authorName || !authorId || !message) {
-      return res.status(400).json({ error: "Informations manquantes" });
-    }
-
-    const comment = {
-      id: Date.now().toString(),
-      authorName,
-      authorId,
-      message,
-      createdAt: Date.now()
+      // Vérifier si déjà liké sur cet appareil
+      if (localStorage.getItem(localStorageLikesKey)) setLiked(true);
     };
+    fetchText();
+  }, [id]);
 
-    text.comments = text.comments || [];
-    text.comments.push(comment);
-    text.commentsCount = text.comments.length;
-
-    fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
-    return res.status(201).json(comment);
-  }
-
-  // PATCH → mise à jour likes ou vues
-  if (req.method === "PATCH") {
-    const { likesCount, views } = req.body;
-    let updated = false;
-
-    if (typeof likesCount === "number") {
-      text.likesCount = likesCount;
-      updated = true;
+  // Like animé unique
+  const handleLike = async () => {
+    if (!session) {
+      alert("Vous devez être connecté pour liker.");
+      return;
     }
+    if (liked) return; // unique like
+    const updated = { ...text, likesCount: text.likesCount + 1 };
+    setText(updated);
+    setLiked(true);
+    localStorage.setItem(localStorageLikesKey, "true");
 
-    if (typeof views === "number") {
-      text.views = views;
-      updated = true;
+    // Enregistrer le like dans le fichier JSON
+    await fetch(`/api/text/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ likesCount: updated.likesCount })
+    });
+  };
+
+  // Ajouter un commentaire
+  const handleComment = async (e) => {
+    e.preventDefault();
+    if (!session) {
+      alert("Vous devez être connecté pour commenter.");
+      return;
     }
+    const res = await fetch(`/api/text/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        authorName: session.user.name,
+        authorId: session.user.id,
+        message: comment
+      })
+    });
+    const newComment = await res.json();
+    setText((prev) => ({
+      ...prev,
+      comments: [...prev.comments, newComment],
+      commentsCount: prev.commentsCount + 1
+    }));
+    setComment("");
+  };
 
-    if (!updated) {
-      return res.status(400).json({ error: "Aucune donnée valide fournie" });
-    }
+  if (!text) return <p>Chargement...</p>;
 
-    fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
-    return res.status(200).json(text);
-  }
+  return (
+    <div className="max-w-3xl mx-auto p-6 space-y-4">
+      <h1 className="text-3xl font-bold">{text.title}</h1>
+      {text.imageUrl && <img src={text.imageUrl} alt={text.title} className="w-full rounded" />}
+      <p className="mt-4">{text.content}</p>
 
-  res.setHeader("Allow", ["GET", "POST", "PATCH"]);
-  res.status(405).end(`Méthode ${req.method} non autorisée`);
+      <div className="flex items-center space-x-4 mt-4">
+        <button
+          onClick={handleLike}
+          className={`btn px-4 py-2 rounded font-bold transition-colors ${
+            liked ? "bg-red-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          ❤️ {text.likesCount}
+        </button>
+        <span className="text-gray-500">👁 {text.views}</span>
+        <span className="text-gray-500">💬 {text.commentsCount}</span>
+        <button
+          onClick={() => navigator.share && navigator.share({ title: text.title, text: text.content })}
+          className="btn bg-blue-500 text-white hover:bg-blue-600"
+        >
+          🔗 Partager
+        </button>
+      </div>
+
+      {/* Commentaires */}
+      <div className="mt-6 space-y-4">
+        <h2 className="text-xl font-semibold">Commentaires</h2>
+        {text.comments.map((c) => (
+          <div key={c.id} className="p-2 border rounded bg-gray-50">
+            <span className="font-bold">{c.authorName}</span> : {c.message}
+          </div>
+        ))}
+        <form onSubmit={handleComment} className="flex space-x-2 mt-2">
+          <input
+            type="text"
+            placeholder="Ajouter un commentaire..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="flex-1 p-2 border rounded"
+            required
+          />
+          <button type="submit" className="btn btn-primary">Envoyer</button>
+        </form>
+      </div>
+    </div>
+  );
 }
