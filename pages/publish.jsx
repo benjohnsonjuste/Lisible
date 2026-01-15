@@ -1,75 +1,56 @@
 "use client";
-
 import { useState } from "react";
-import { useRouter } from "next/router";
-import { db, auth } from "@/lib/firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { texts, authors } from "@/lib/data";
 
-export default function PublishPage() {
-  const router = useRouter();
-  const user = auth.currentUser;
-
+export default function Publish() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  if (!user) return <p className="p-6">Connexion requise</p>;
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    await addDoc(collection(db, "texts"), {
+  const handleSubmit = () => {
+    const author = authors[0];
+    texts.push({
+      id: "text" + (texts.length + 1),
       title,
       content,
-      imageUrl: imageUrl || null,
-      authorId: user.uid,
-      authorName: user.displayName || user.email,
-      createdAt: serverTimestamp(),
+      imageUrl,
+      authorId: author.uid,
+      authorName: author.fullName,
+      createdAt: Date.now(),
       views: 0,
       likesCount: 0,
-      commentsCount: 0
+      commentsCount: 0,
+      likes: [],
+      viewsList: [],
+      comments: []
     });
-
-    router.push("/texts");
+    alert("Texte publié !");
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div>
       <h1 className="text-2xl font-bold mb-4">Publier un texte</h1>
-
-      <form onSubmit={submit} className="space-y-4">
-        <input
-          className="w-full border p-2"
-          placeholder="Titre"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
-
-        <textarea
-          className="w-full border p-2 h-40"
-          placeholder="Contenu"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          required
-        />
-
-        <input
-          className="w-full border p-2"
-          placeholder="URL image GitHub (optionnel)"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-        />
-
-        <button
-          className="bg-black text-white px-4 py-2"
-          disabled={loading}
-        >
-          Publier
-        </button>
-      </form>
+      <input
+        placeholder="Titre"
+        className="border p-2 mb-2 w-full"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <textarea
+        placeholder="Contenu"
+        className="border p-2 mb-2 w-full"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+      />
+      <input
+        placeholder="URL image"
+        className="border p-2 mb-2 w-full"
+        value={imageUrl}
+        onChange={(e) => setImageUrl(e.target.value)}
+      />
+      <button onClick={handleSubmit} className="bg-blue-600 text-white p-2">
+        Publier
+      </button>
     </div>
   );
 }
