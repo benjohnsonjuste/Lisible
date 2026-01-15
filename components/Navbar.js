@@ -76,7 +76,7 @@ export default function Navbar() {
               <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/publish" className="cursor-pointer">
+            <Link href="/author-dashboard/index" className="cursor-pointer">
               <LayoutDashboard className="w-8 h-8 text-white hover:text-blue-300 transition" />
             </Link>
 
