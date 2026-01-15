@@ -53,7 +53,7 @@ export default function TextPublishingForm() {
         throw new Error("Erreur API");
       }
 
-      toast.success("✅ Texte publié dans la bibliothèque !");
+      toast.success("Texte publié !");
       setTitle("");
       setContent("");
       setImageFile(null);
@@ -73,7 +73,7 @@ export default function TextPublishingForm() {
       onSubmit={handleSubmit}
       className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow space-y-4"
     >
-      <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
+      <h2 className="text-xl font-semibold text-center">Publier un texte</h2>
 
       <input
         type="text"
