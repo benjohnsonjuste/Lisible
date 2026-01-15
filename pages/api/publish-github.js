@@ -1,149 +1,96 @@
-import { NextResponse } from "next/server";
+import { Buffer } from "buffer";
 
-const GITHUB_API = "https://api.github.com";
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Méthode non autorisée" });
+  }
 
-function slugify(s) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
+  const {
+    title,
+    content,
+    authorName,
+    authorEmail,
+    imageBase64,
+    imageName,
+  } = req.body;
 
-function basenameWithoutExt(filename) {
-  return filename.replace(/\.[^/.]+$/, "");
-}
+  if (!title || !content) {
+    return res.status(400).json({ error: "Titre et contenu requis" });
+  }
 
-export async function POST(req) {
   try {
-    const env = process.env;
-    const token = env.GITHUB_PERSONAL_ACCESS_TOKEN;
-    const owner = env.GITHUB_OWNER;
-    const repo = env.GITHUB_REPO;
-    const branch = env.GITHUB_BRANCH || "main";
+    const token = process.env.GITHUB_TOKEN;
+    const owner = "benjohnsonjuste";          // ⚠️ à adapter
+    const repo = "Lisible";                   // ⚠️ à adapter
+    const branch = "main";
 
-    if (!token || !owner || !repo) {
-      return NextResponse.json(
-        { error: "Variables GITHUB_PERSONAL_ACCESS_TOKEN, GITHUB_OWNER ou GITHUB_REPO manquantes" },
-        { status: 500 }
-      );
+    if (!token) {
+      throw new Error("GITHUB_TOKEN manquant");
     }
 
-    const body = await req.json();
-    const { title, content, authorName, authorEmail, imageBase64, imageName, createdAt } = body;
+    const timestamp = Date.now();
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
-    if (!title || !content) {
-      return NextResponse.json({ error: "title and content required" }, { status: 400 });
-    }
+    const textPath = `data/texts/${timestamp}-${slug}.json`;
 
-    const date = new Date(createdAt || Date.now()).toISOString().slice(0, 10);
-    const slug = slugify(title).slice(0, 80) || "post";
-    const postPath = `posts/${date}-${slug}.md`;
+    const textData = {
+      id: timestamp.toString(),
+      title,
+      content,
+      authorName,
+      authorEmail,
+      createdAt: new Date().toISOString(),
+      image: imageName ? `images/${timestamp}-${imageName}` : null,
+      views: 0,
+      likes: 0,
+      comments: [],
+    };
 
-    let imageUrl = null;
-
-    if (imageBase64) {
-      const match = imageBase64.match(/^data:(image\/[a-zA-Z+]+);base64,(.*)$/);
-      let mime = null;
-      let b64 = imageBase64;
-      if (match) {
-        mime = match[1];
-        b64 = match[2];
-      }
-
-      const safeName = imageName
-        ? basenameWithoutExt(imageName).replace(/\s+/g, "_")
-        : `${date}-${slug}`;
-      const ext = mime ? mime.split("/")[1] : "png";
-      const finalImageName = `${safeName}.${ext}`;
-      const imagePath = `images/${finalImageName}`;
-
-      const putImageRes = await fetch(
-        `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(imagePath)}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/vnd.github+json",
-          },
-          body: JSON.stringify({
-            message: `Add image for post ${postPath}`,
-            content: b64,
-            branch,
-          }),
-        }
-      );
-
-      let putImageJson = {};
-      try {
-        putImageJson = await putImageRes.json();
-      } catch {
-        putImageJson = { text: await putImageRes.text() };
-      }
-
-      if (!putImageRes.ok) {
-        return NextResponse.json(
-          { error: "GitHub image upload failed", details: putImageJson },
-          { status: 500 }
-        );
-      }
-
-      imageUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imagePath}`;
-    }
-
-    const md = `---
-title: "${title.replace(/"/g, '\\"')}"
-date: "${new Date(createdAt || Date.now()).toISOString()}"
-author: "${(authorName || "").replace(/"/g, '\\"')}"
-email: "${(authorEmail || "").replace(/"/g, '\\"')}"
-image: ${imageUrl ? `"${imageUrl}"` : "null"}
----
-
-${content}
-`;
-
-    const mdB64 = Buffer.from(md, "utf8").toString("base64");
-
-    const putMdRes = await fetch(
-      `${GITHUB_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(postPath)}`,
+    // 🔹 1. Commit du texte
+    await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`,
       {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
           Accept: "application/vnd.github+json",
         },
         body: JSON.stringify({
-          message: `Publish post: ${title}`,
-          content: mdB64,
+          message: `📚 Nouveau texte : ${title}`,
+          content: Buffer.from(JSON.stringify(textData, null, 2)).toString("base64"),
           branch,
         }),
       }
     );
 
-    let putMdJson = {};
-    try {
-      putMdJson = await putMdRes.json();
-    } catch {
-      putMdJson = { text: await putMdRes.text() };
-    }
+    // 🔹 2. Commit de l’image (si présente)
+    if (imageBase64 && imageName) {
+      const imagePath = `public/images/${timestamp}-${imageName}`;
+      const base64Data = imageBase64.split(",")[1];
 
-    if (!putMdRes.ok) {
-      return NextResponse.json(
-        { error: "GitHub markdown upload failed", details: putMdJson },
-        { status: 500 }
+      await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${imagePath}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json",
+          },
+          body: JSON.stringify({
+            message: `🖼 Image pour : ${title}`,
+            content: base64Data,
+            branch,
+          }),
+        }
       );
     }
 
-    const fileUrl = `https://github.com/${owner}/${repo}/blob/${branch}/${postPath}`;
-    return NextResponse.json({ ok: true, url: fileUrl }, { status: 201 });
-  } catch (err) {
-    console.error("publish-github error:", err);
-    return NextResponse.json(
-      { error: "internal_error", details: String(err) },
-      { status: 500 }
-    );
+    return res.status(201).json({ success: true });
+  } catch (error) {
+    console.error("GitHub commit error:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
