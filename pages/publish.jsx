@@ -12,61 +12,56 @@ export default function TextPublishingForm() {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Convertir fichier image en Base64
+  // Convertir image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
+      reader.onload = () => resolve(reader.result);
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title || !content) {
+
+    if (!title.trim() || !content.trim()) {
       toast.error("Le titre et le contenu sont requis.");
       return;
     }
 
     setLoading(true);
+
     try {
       let imageBase64 = null;
-      let imageName = null;
 
       if (imageFile) {
         imageBase64 = await toDataUrl(imageFile);
-        imageName = imageFile.name;
       }
 
-      const payload = {
-        title,
-        content,
-        authorName: "Auteur inconnu", // ou user.displayName si Auth disponible
-        authorEmail: "",
-        imageBase64,
-        imageName,
-      };
-
-      const res = await fetch("/api/publish-github", {
+      const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          title,
+          content,
+          authorName: "Auteur inconnu",
+          imageBase64,
+        }),
       });
 
-      const json = await res.json();
-
       if (!res.ok) {
-        console.error("Erreur publication GitHub:", json);
-        throw new Error(json.error || "Échec publication");
+        throw new Error("Erreur API");
       }
 
-      toast.success("✅ Publication réussie !");
+      toast.success("✅ Texte publié dans la bibliothèque !");
       setTitle("");
       setContent("");
       setImageFile(null);
-      router.push("/bibliotheque");
+
+      // 🔴 REDIRECTION VERS LA BIBLIOTHÈQUE
+      router.push("/texts");
     } catch (err) {
-      console.error("Erreur côté client:", err);
+      console.error(err);
       toast.error("❌ Erreur de publication");
     } finally {
       setLoading(false);
@@ -80,50 +75,36 @@ export default function TextPublishingForm() {
     >
       <h2 className="text-xl font-semibold text-center">📝 Publier un texte</h2>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Titre</label>
-        <input
-          type="text"
-          name="title"
-          placeholder="Titre du texte"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Titre du texte"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="w-full p-2 border rounded"
+        required
+      />
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Contenu</label>
-        <textarea
-          name="content"
-          placeholder="Écris ton texte ici..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={8}
-          className="w-full p-2 border rounded min-h-[150px]"
-          required
-        />
-      </div>
+      <textarea
+        placeholder="Écris ton texte ici..."
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        rows={8}
+        className="w-full p-2 border rounded"
+        required
+      />
 
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Image d'illustration (optionnel)
-        </label>
-        <input
-          type="file"
-          name="image"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files[0])}
-        />
-      </div>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImageFile(e.target.files[0])}
+      />
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded"
       >
-        {loading ? "Publication en cours..." : "Publier sur GitHub"}
+        {loading ? "Publication..." : "Publier"}
       </button>
     </form>
   );
