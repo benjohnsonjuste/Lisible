@@ -1,15 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./pages/**/*.{js,jsx}",
-    "./components/**/*.{js,jsx}",
-    "./app/**/*.{js,jsx}"
+    "./pages/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+    "./app/**/*.{js,jsx,ts,tsx}"
   ],
   theme: {
     extend: {
       colors: {
-        primary: "#0f172a", // bleu foncé
-        accent: "#0ea5a4",  // teal
+        primary: "#0f172a", // texte principal / bleu foncé
+        accent: "#0ea5a4",  // teal, couleur accent principale
+        muted: "#64748b",    // texte secondaire
+        bg: "#f8fafc"        // fond général
       },
       container: {
         center: true,
@@ -17,12 +19,12 @@ module.exports = {
       },
       keyframes: {
         slideDown: {
-          '0%': { transform: 'translateY(-100%)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
+          "0%": { transform: "translateY(-100%)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
         },
       },
       animation: {
-        slideDown: 'slideDown 0.5s ease-out',
+        slideDown: "slideDown 0.4s ease-out forwards",
       },
     },
   },
