@@ -8,45 +8,65 @@ export default function handler(req, res) {
   const { id } = req.query;
   const text = texts.find(t => t.id === id);
 
-  if (!text) return res.status(404).json({ error: "Texte non trouvé" });
+  if (!text) return res.status(404).json({ message: "Texte non trouvé" });
 
-  // GET → récupérer texte
   if (req.method === "GET") {
     return res.status(200).json(text);
   }
 
-  // PATCH → vues ou likes
-  if (req.method === "PATCH") {
-    const { views, likesCount } = req.body;
-
-    if (typeof views === "number") text.views = views;
-    if (typeof likesCount === "number") text.likesCount = likesCount;
-
-    fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
-    return res.status(200).json(text);
-  }
-
-  // POST → commentaire
   if (req.method === "POST") {
-    const { authorName, authorId, message } = req.body;
-    if (!authorName || !authorId || !message)
-      return res.status(400).json({ error: "Informations manquantes" });
+    const { type } = req.query;
 
-    const comment = {
-      id: Date.now().toString(),
-      authorName,
-      authorId,
-      message,
-      createdAt: Date.now()
-    };
+    // Ajouter commentaire
+    if (type === "comment") {
+      const { authorName, authorId, message } = req.body;
+      if (!message || !authorName) {
+        return res.status(400).json({ message: "Message et nom obligatoires." });
+      }
 
-    text.comments.push(comment);
-    text.commentsCount = text.comments.length;
+      const comment = {
+        id: Date.now().toString(),
+        authorName,
+        authorId,
+        message,
+        createdAt: Date.now()
+      };
 
-    fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
-    return res.status(201).json(comment);
+      text.comments.push(comment);
+      text.commentsCount = text.comments.length;
+      fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
+      return res.status(201).json(comment);
+    }
+
+    // Ajouter Like unique
+    if (type === "like") {
+      const { authorId } = req.body;
+      if (!authorId) return res.status(400).json({ message: "ID utilisateur obligatoire" });
+
+      if (!text.likes.includes(authorId)) {
+        text.likes.push(authorId);
+        text.likesCount = text.likes.length;
+        fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
+      }
+      return res.status(200).json({ likesCount: text.likesCount });
+    }
+
+    // Ajouter vue unique
+    if (type === "view") {
+      const { authorId } = req.body;
+      if (!authorId) return res.status(400).json({ message: "ID utilisateur obligatoire" });
+
+      if (!text.viewsBy.includes(authorId)) {
+        text.viewsBy.push(authorId);
+        text.views = text.viewsBy.length;
+        fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
+      }
+      return res.status(200).json({ views: text.views });
+    }
+
+    return res.status(400).json({ message: "Type non reconnu" });
   }
 
-  res.setHeader("Allow", ["GET", "PATCH", "POST"]);
-  res.status(405).end(`Méthode ${req.method} non autorisée`);
+  res.setHeader("Allow", ["GET", "POST"]);
+  res.status(405).end(`Method ${req.method} Not Allowed`);
 }
