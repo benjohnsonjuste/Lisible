@@ -1,36 +1,67 @@
-import { db } from "@/lib/firebaseAdmin";
-import { octokit, GITHUB_REPO } from "@/lib/github";
+import fs from "fs";
+import path from "path";
 
-export default async function handler(req, res) {
+const filePath = path.join(process.cwd(), "data", "texts.json");
+
+export default function handler(req, res) {
+  // Lire tous les textes
+  const texts = JSON.parse(fs.readFileSync(filePath, "utf-8"));
   const { id } = req.query;
+  const text = texts.find(t => t.id === id);
 
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+  if (!text) return res.status(404).json({ error: "Texte non trouvé" });
+
+  // GET → récupérer le texte
+  if (req.method === "GET") {
+    return res.status(200).json(text);
   }
 
-  // 1. Check Firestore first
-  const doc = await db.collection("texts").doc(id).get();
+  // POST → ajouter un commentaire
+  if (req.method === "POST") {
+    const { authorName, authorId, message } = req.body;
+    if (!authorName || !authorId || !message) {
+      return res.status(400).json({ error: "Informations manquantes" });
+    }
 
-  if (doc.exists) {
-    return res.status(200).json(doc.data());
+    const comment = {
+      id: Date.now().toString(),
+      authorName,
+      authorId,
+      message,
+      createdAt: Date.now()
+    };
+
+    text.comments = text.comments || [];
+    text.comments.push(comment);
+    text.commentsCount = text.comments.length;
+
+    fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
+    return res.status(201).json(comment);
   }
 
-  // 2. Check GitHub
-  try {
-    const file = await octokit.repos.getContent({
-      ...GITHUB_REPO,
-      path: `texts/${id}.md`,
-    });
+  // PATCH → mise à jour likes ou vues
+  if (req.method === "PATCH") {
+    const { likesCount, views } = req.body;
+    let updated = false;
 
-    const mdBase64 = file.data.content;
-    const md = Buffer.from(mdBase64, "base64").toString("utf-8");
+    if (typeof likesCount === "number") {
+      text.likesCount = likesCount;
+      updated = true;
+    }
 
-    const [titleLine, ...contentLines] = md.split("\n");
-    const title = titleLine.replace("# ", "");
-    const content = contentLines.join("\n");
+    if (typeof views === "number") {
+      text.views = views;
+      updated = true;
+    }
 
-    return res.status(200).json({ id, title, content, from: "github" });
-  } catch (e) {
-    return res.status(404).json({ error: "Text not found" });
+    if (!updated) {
+      return res.status(400).json({ error: "Aucune donnée valide fournie" });
+    }
+
+    fs.writeFileSync(filePath, JSON.stringify(texts, null, 2));
+    return res.status(200).json(text);
   }
+
+  res.setHeader("Allow", ["GET", "POST", "PATCH"]);
+  res.status(405).end(`Méthode ${req.method} non autorisée`);
 }
