@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebaseConfig";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 
@@ -50,47 +50,42 @@ export default function Navbar() {
   return (
     <>
       {/* ======= HEADER ======= */}
-      <header className="bg-primary shadow fixed top-0 left-0 w-full z-50">
-        <div className="container mx-auto flex items-center justify-between py-3 px-4 text-white">
+      <header className="bg-primary shadow fixed top-0 left-0 w-full z-50 h-16">
+        <div className="container mx-auto h-full flex items-center justify-between px-4 text-white">
           {/* Bouton menu latéral */}
           <button onClick={toggleMenu} className="cursor-pointer z-[60]">
-            <Menu className="w-8 h-8 text-white hover:text-blue-300 transition" />
+            <Menu className="w-8 h-8 hover:text-blue-300 transition" />
           </button>
 
           {/* Zone droite */}
           <div className="flex items-center gap-5">
-            {/* Icône notification */}
             <button
               onClick={goToNotifications}
               className="relative cursor-pointer"
               title="Notifications"
             >
-              <Bell className="w-8 h-8 text-white hover:text-yellow-300 transition" />
+              <Bell className="w-8 h-8 hover:text-yellow-300 transition" />
             </button>
 
-            <Link href="/index" className="cursor-pointer">
-              <Home className="w-8 h-8 text-white hover:text-blue-300 transition" />
+            <Link href="/index">
+              <Home className="w-8 h-8 hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/texts" className="cursor-pointer">
-              <Library className="w-8 h-8 text-white hover:text-blue-300 transition" />
+            <Link href="/texts">
+              <Library className="w-8 h-8 hover:text-blue-300 transition" />
             </Link>
 
-            <Link href="/author-dashboard" className="cursor-pointer">
-              <LayoutDashboard className="w-8 h-8 text-white hover:text-blue-300 transition" />
+            <Link href="/author-dashboard">
+              <LayoutDashboard className="w-8 h-8 hover:text-blue-300 transition" />
             </Link>
 
             {user ? (
-              <button
-                onClick={handleLogout}
-                className="cursor-pointer"
-                title="Déconnexion"
-              >
-                <LogOut className="w-8 h-8 text-white hover:text-red-500 transition" />
+              <button onClick={handleLogout} title="Déconnexion">
+                <LogOut className="w-8 h-8 hover:text-red-500 transition" />
               </button>
             ) : (
-              <Link href="/login" className="cursor-pointer">
-                <LogIn className="w-8 h-8 text-white hover:text-green-500 transition" />
+              <Link href="/login">
+                <LogIn className="w-8 h-8 hover:text-green-500 transition" />
               </Link>
             )}
           </div>
@@ -99,11 +94,11 @@ export default function Navbar() {
 
       {/* ======= SIDEBAR ======= */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 z-50 ${
+        className={`fixed top-16 left-0 h-[calc(100%-4rem)] w-64 bg-white shadow-lg transform transition-transform duration-300 z-50 ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-5 pt-6">
+        <div className="p-5">
           <h2 className="text-xl font-semibold mb-6 text-gray-800">Menu</h2>
 
           <ul className="space-y-4">
@@ -118,7 +113,7 @@ export default function Navbar() {
                 <Link
                   href={item.href}
                   onClick={handleMenuClick}
-                  className="flex items-center gap-3 text-gray-700 hover:text-blue-600 cursor-pointer"
+                  className="flex items-center gap-3 text-gray-700 hover:text-blue-600"
                 >
                   {item.icon}
                   {item.label}
@@ -133,7 +128,7 @@ export default function Navbar() {
       {isMenuOpen && (
         <div
           onClick={toggleMenu}
-          className="fixed inset-0 bg-black bg-opacity-40 z-40 cursor-pointer"
+          className="fixed inset-0 bg-black bg-opacity-40 z-40"
         />
       )}
     </>
