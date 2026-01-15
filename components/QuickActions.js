@@ -12,7 +12,7 @@ export default function QuickActions() {
       description: "Partagez gratuitement sur Lisible",
       icon: <PenTool className="text-primary" size={25} />,
       bgColor: "bg-blue-100",
-      action: () => router.push("/author-dashboard/text-publishing"),
+      action: () => router.push("/publish"),
     },
     {
       title: "Gérer mon compte",
