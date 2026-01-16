@@ -1,20 +1,21 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner"; // <-- toast de sonner
+import { toast } from "sonner";
 
 export default function PublishPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [authorName, setAuthorName] = useState("");
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!authorName.trim()) {
-      toast.error("Veuillez entrer votre nom d'auteur !");
+    if (!authorName.trim() || !title.trim() || !content.trim()) {
+      toast.error("Tous les champs sont obligatoires");
       return;
     }
 
@@ -27,31 +28,32 @@ export default function PublishPage() {
         body: JSON.stringify({
           title: title.trim(),
           content: content.trim(),
-          authorName: authorName.trim(),
-          authorId: "user-" + Date.now(),
-          imageUrl: ""
+          authorName: authorName.trim()
         })
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error?.message || "Erreur inconnue lors de la publication.");
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Réponse serveur invalide");
       }
 
-      // Réinitialiser le formulaire
+      if (!res.ok) {
+        throw new Error(data?.error || "Erreur de publication");
+      }
+
+      toast.success("Texte publié avec succès");
+
       setTitle("");
       setContent("");
       setAuthorName("");
 
-      toast.success("Texte publié !");
-
-      // Redirection vers la bibliothèque après un petit délai pour le toast
-      setTimeout(() => {
-        router.push("/texts");
-      }, 500);
+      router.push("/texts");
 
     } catch (err) {
-      toast.error(err.message);
+      console.error(err);
+      toast.error(err.message || "Erreur de publication");
     } finally {
       setLoading(false);
     }
@@ -62,43 +64,43 @@ export default function PublishPage() {
       onSubmit={handleSubmit}
       className="bg-white p-6 rounded shadow max-w-lg mx-auto space-y-4"
     >
-      <h1 className="text-2xl font-bold">Publier un texte</h1>
+      <h1 className="text-2xl font-bold text-center">Publier un texte</h1>
 
       <input
         type="text"
+        placeholder="Nom de l’auteur"
         value={authorName}
         onChange={(e) => setAuthorName(e.target.value)}
-        placeholder="Votre nom d'auteur"
         className="w-full p-2 border rounded"
-        required
         disabled={loading}
+        required
       />
 
       <input
         type="text"
+        placeholder="Titre du texte"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Titre du texte"
         className="w-full p-2 border rounded"
-        required
         disabled={loading}
+        required
       />
 
       <textarea
+        placeholder="Contenu du texte"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Contenu du texte"
         className="w-full p-2 border rounded h-40"
-        required
         disabled={loading}
+        required
       />
 
       <button
         type="submit"
-        className={`btn btn-primary ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
         disabled={loading}
+        className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
       >
-        {loading ? "Publication en cours..." : "Publier"}
+        {loading ? "Publication..." : "Publier"}
       </button>
     </form>
   );
