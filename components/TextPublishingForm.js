@@ -14,7 +14,6 @@ export default function TextPublishingForm() {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 🔁 Convertir image en Base64
   const toDataUrl = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -35,12 +34,10 @@ export default function TextPublishingForm() {
 
     try {
       let imageBase64 = null;
-
       if (imageFile) {
         imageBase64 = await toDataUrl(imageFile);
       }
 
-      // 🔴 ENVOI VERS L’API
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,8 +49,7 @@ export default function TextPublishingForm() {
         }),
       });
 
-      // 🔒 PROTECTION CONTRE JSON VIDE
-      let data = null;
+      let data;
       try {
         data = await res.json();
       } catch {
@@ -61,19 +57,17 @@ export default function TextPublishingForm() {
       }
 
       if (!res.ok) {
-        throw new Error(data?.error || “Erreur serveur”);
+        throw new Error(data?.error || "Erreur serveur");
       }
 
       toast.success("✅ Texte publié avec succès");
 
-      // 🔄 Reset formulaire
       setTitle("");
       setContent("");
       setAuthorName("");
       setImageFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
 
-      // 🔁 Redirection vers la bibliothèque
       router.push("/texts");
     } catch (err) {
       console.error(err);
