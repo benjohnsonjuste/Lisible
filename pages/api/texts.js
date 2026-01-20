@@ -9,13 +9,12 @@ export default function handler(req, res) {
       if (!fs.existsSync(filePath)) {
         return res.status(200).json([]);
       }
-
       const texts = JSON.parse(fs.readFileSync(filePath, "utf8"));
       return res.status(200).json(texts);
     }
 
     if (req.method === "POST") {
-      const { title, content, authorName } = req.body;
+      const { title, content, authorName, imageBase64 } = req.body;
 
       if (!title || !content || !authorName) {
         return res.status(400).json({ error: "Champs manquants" });
@@ -30,6 +29,7 @@ export default function handler(req, res) {
         title,
         content,
         authorName,
+        imageBase64: imageBase64 || null,
         createdAt: new Date().toISOString(),
       };
 
@@ -40,9 +40,8 @@ export default function handler(req, res) {
     }
 
     return res.status(405).json({ error: "Méthode non autorisée" });
-
   } catch (err) {
-    console.error("API ERROR:", err);
+    console.error("TEXT API ERROR:", err);
     return res.status(500).json({ error: "Erreur serveur" });
   }
 }
