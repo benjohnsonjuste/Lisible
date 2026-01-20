@@ -1,22 +1,27 @@
-"use client";
-import { useEffect, useState } from "react";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebaseConfig";
-import TextCard from "@/components/TextCard";
+import fs from "fs";
+import path from "path";
 
-export default function Home() {
-  const [texts, setTexts] = useState([]);
+export default function TextsPage() {
+  const filePath = path.join(process.cwd(), "data", "texts.json");
 
-  useEffect(() => {
-    const q = query(collection(db, "texts"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap =>
-      setTexts(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-    );
-  }, []);
+  let texts = [];
+  if (fs.existsSync(filePath)) {
+    texts = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 grid gap-4">
-      {texts.map(t => <TextCard key={t.id} text={t} />)}
+    <div className="max-w-3xl mx-auto p-6 space-y-6">
+      <h1 className="text-2xl font-bold">Bibliothèque</h1>
+
+      {texts.length === 0 && <p>Aucun texte publié.</p>}
+
+      {texts.map((t) => (
+        <div key={t.id} className="border p-4 rounded bg-white">
+          <h2 className="text-xl font-semibold">{t.title}</h2>
+          <p className="text-sm text-gray-500">✍ {t.authorName}</p>
+          <p className="mt-2 whitespace-pre-wrap">{t.content}</p>
+        </div>
+      ))}
     </div>
   );
 }
