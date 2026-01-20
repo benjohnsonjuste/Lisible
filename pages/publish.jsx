@@ -44,7 +44,7 @@ export default function PublishPage() {
       }
 
       toast.success("Texte publié avec succès");
-      router.push("/texts");
+      router.push("/bibliotheque");
 
     } catch (err) {
       console.error(err);
