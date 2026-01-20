@@ -44,11 +44,6 @@ export default function PublishPage() {
       }
 
       toast.success("Texte publié avec succès");
-
-      setTitle("");
-      setContent("");
-      setAuthorName("");
-
       router.push("/texts");
 
     } catch (err) {
