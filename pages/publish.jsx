@@ -55,7 +55,7 @@ export default function PublishPage() {
       toast.success("Texte publié avec succès");
       
       setTimeout(() => {
-        router.push("/bibliotheque");
+        router.push("/librarybook");
       }, 1000);
 
     } catch (err) {
