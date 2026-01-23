@@ -117,7 +117,7 @@ export default function TextPage({ params }) {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 bg-white min-h-screen">
       {/* Bouton Retour */}
-      <Link href="/librarybook" className="flex items-center gap-2 text-gray-400 hover:text-blue-600 mb-8 transition-colors">
+      <Link href="/bibliotheque" className="flex items-center gap-2 text-gray-400 hover:text-blue-600 mb-8 transition-colors">
         <ArrowLeft size={20} />
         <span>Retour à la bibliothèque</span>
       </Link>
