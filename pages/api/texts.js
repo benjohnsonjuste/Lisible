@@ -1,5 +1,13 @@
 // pages/api/texts.js
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Augmente la limite pour accepter les images Base64
+    },
+  },
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Méthode non autorisée' });
@@ -8,18 +16,11 @@ export default async function handler(req, res) {
   try {
     const { authorName, title, content, imageBase64 } = req.body;
 
-    // Vérification de sécurité
-    if (!authorName || !title || !content) {
-      return res.status(400).json({ error: 'Champs manquants' });
-    }
+    // Simulation de sauvegarde (Remplace ceci par ta logique de base de données)
+    console.log("Nouveau texte reçu :", title);
 
-    // ICI : Vous devriez normalement enregistrer dans une base de données (MongoDB, Prisma, etc.)
-    // Pour l'instant, on simule une réussite
-    console.log("Données reçues :", { authorName, title, imageBase64: imageBase64 ? "Image présente" : "Pas d'image" });
-
-    return res.status(201).json({ message: "Texte enregistré avec succès" });
+    return res.status(201).json({ message: "Succès" });
   } catch (error) {
-    console.error("Erreur API:", error);
-    return res.status(500).json({ error: "Erreur interne du serveur" });
+    return res.status(500).json({ error: "Erreur lors du traitement" });
   }
 }
