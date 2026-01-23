@@ -52,7 +52,7 @@ export default function PublishPage() {
 
       if (!res.ok) throw new Error(data.error || "Erreur serveur");
 
-      toast.success("✅ Texte publié avec succès");
+      toast.success("Texte publié avec succès");
       
       setTimeout(() => {
         router.push("/bibliotheque");
