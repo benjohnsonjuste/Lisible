@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/router"; // Import correct pour Pages Router
+import { useRouter } from "next/router"; 
 import { toast } from "sonner";
 import { Heart, Share2, User, MessageSquare, Send, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default function TextPage() {
   const router = useRouter();
-  const { id } = router.query; // Récupération de l'ID depuis l'URL
+  const { id } = router.query;
 
   const [text, setText] = useState(null);
   const [comment, setComment] = useState("");
@@ -16,8 +16,16 @@ export default function TextPage() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 1. Vérifier au chargement si cet appareil a déjà liké ce texte
   useEffect(() => {
-    if (!id) return; // Attendre que l'ID soit disponible
+    if (!id) return;
+
+    const checkLikeStatus = () => {
+      const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
+      if (likedTexts.includes(id)) {
+        setIsLiked(true);
+      }
+    };
 
     const fetchText = async () => {
       try {
@@ -25,6 +33,7 @@ export default function TextPage() {
         if (!res.ok) throw new Error("Texte introuvable");
         const data = await res.json();
         setText(data);
+        checkLikeStatus(); // Vérifier le like local après avoir chargé le texte
       } catch (err) {
         console.error(err);
         toast.error("Impossible de charger le texte.");
@@ -35,7 +44,9 @@ export default function TextPage() {
   }, [id]);
 
   const handleLike = async () => {
+    // Si déjà liké (en local ou state), on bloque
     if (isLiked || !text) return;
+
     setIsLiked(true);
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 800);
@@ -46,11 +57,23 @@ export default function TextPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type: 'like' })
       });
+
       if (res.ok) {
+        // Enregistrer le like dans le stockage de l'appareil
+        const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
+        likedTexts.push(id);
+        localStorage.setItem("lisible_likes", JSON.stringify(likedTexts));
+        
         setText(prev => ({ ...prev, likesCount: (prev.likesCount || 0) + 1 }));
+        toast.success("Votre like a été enregistré !");
+      } else {
+        // En cas d'erreur serveur, on réinitialise le state
+        setIsLiked(false);
+        throw new Error();
       }
     } catch (err) {
-      console.error("Erreur Like");
+      toast.error("Erreur lors de l'enregistrement du like");
+      setIsLiked(false);
     }
   };
 
@@ -91,13 +114,12 @@ export default function TextPage() {
       setComment("");
       toast.success("Commentaire ajouté !", { id: loadingToast });
     } catch (err) {
-      toast.error("Erreur GitHub", { id: loadingToast });
+      toast.error("Erreur de sauvegarde sur GitHub", { id: loadingToast });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Empêche le crash si le texte n'est pas encore chargé
   if (!text) return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
@@ -130,7 +152,11 @@ export default function TextPage() {
 
       <div className="flex items-center justify-between py-6 border-t border-b border-gray-100 mb-12">
         <div className="flex gap-8">
-          <button onClick={handleLike} className={`flex items-center gap-2 transition-all ${isLiked ? 'text-red-500 scale-110' : 'text-gray-400 hover:text-red-400'}`}>
+          <button 
+            onClick={handleLike} 
+            disabled={isLiked}
+            className={`flex items-center gap-2 transition-all ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-400'}`}
+          >
             <div className={isAnimating ? "animate-bounce" : ""}>
                <Heart size={28} fill={isLiked ? "currentColor" : "none"} strokeWidth={2.5} />
             </div>
@@ -146,7 +172,7 @@ export default function TextPage() {
       </div>
 
       <section className="bg-gray-50 rounded-[2rem] p-6 md:p-8">
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-800">
           <MessageSquare size={20} className="text-blue-600" />
           Commentaires ({(text.comments || []).length})
         </h3>
