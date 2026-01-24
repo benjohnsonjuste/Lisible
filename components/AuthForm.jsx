@@ -1,249 +1,111 @@
 "use client";
-
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { auth, db } from "@/lib/firebaseConfig";
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  onAuthStateChanged,
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { FcGoogle } from "react-icons/fc";
-import ForgotPasswordModal from "@/components/ForgotPasswordModal";
+import { useState } from "react";
+import { useRouter } from "next/router";
 import { toast } from "sonner";
+import { Mail, User, Lock, ArrowRight } from "lucide-react";
 
-/**
- * Enregistre un utilisateur côté GitHub (data/users.json)
- * Appelle l'API server-side /api/save-user-github
- */
-async function saveUserToGitHub(user) {
-  try {
-    await fetch("/api/save-user-github", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(user),
-    });
-  } catch (error) {
-    console.error("Erreur enregistrement GitHub:", error);
-  }
-}
-
-export default function AuthDialog() {
-  const [mode, setMode] = useState("login"); // "login" | "signup"
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [error, setError] = useState("");
-  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-
+export default function AuthForm() {
   const router = useRouter();
-  const params = useSearchParams();
-  const redirect = params?.get("redirect") || "/bibliotheque";
+  const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const provider = new GoogleAuthProvider();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: ""
+  });
 
-  // redirect if already authenticated
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        // already logged in -> go to redirect
-        router.replace(redirect);
-      }
-    });
-    return () => unsub();
-  }, [router, redirect]);
-
-  // ===== Email sign-in / signup handler =====
-  const handleEmailAuth = async (e) => {
-    // This handler may be triggered by button.click (not a form submit) but still safe to preventDefault
-    e?.preventDefault?.();
-    setError("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      let userCredential;
-      if (mode === "login") {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        // signup
-        if (!fullName.trim()) {
-          toast.error("Veuillez entrer votre nom complet.");
-          return;
-        }
+      // Simulation d'une attente réseau
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // set displayName in Firebase Auth profile
-        await updateProfile(user, { displayName: fullName });
-
-        // Save user in Firestore "authors" collection
-        await setDoc(
-          doc(db, "authors", user.uid),
-          {
-            uid: user.uid,
-            email: user.email || "",
-            fullName,
-            followers: 0,
-            views: 0,
-            createdAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
-
-        // Save to GitHub (non-blocking)
-        saveUserToGitHub({
-          uid: user.uid,
-          fullName,
-          email: user.email || "",
-        });
+      if (!isLogin && !formData.name) {
+        throw new Error("Le nom est obligatoire pour l'inscription");
       }
 
-      toast.success("Connexion réussie !");
-      router.push(redirect);
-    } catch (e) {
-      console.error("Auth error:", e);
-      setError(e?.message || "Erreur");
-      toast.error("Erreur : " + (e?.message || "Erreur"));
-    }
-  };
+      // SAUVEGARDE DE LA SESSION LOCALE
+      const userData = {
+        name: isLogin ? (formData.email.split('@')[0]) : formData.name, // Nom par défaut si login
+        email: formData.email,
+        isLoggedIn: true,
+        joinedAt: new Date().toISOString()
+      };
 
-  // ===== Google Auth handler =====
-  const handleGoogleAuth = async (e) => {
-    e?.preventDefault?.();
-    setError("");
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // normalize display name
-      const name = user.displayName || "";
-
-      await setDoc(
-        doc(db, "authors", user.uid),
-        {
-          uid: user.uid,
-          email: user.email || "",
-          fullName: name,
-          followers: 0,
-          views: 0,
-          createdAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      // Save to GitHub (non-blocking)
-      saveUserToGitHub({
-        uid: user.uid,
-        fullName: name,
-        email: user.email || "",
-      });
-
-      toast.success("Connexion réussie avec Google !");
-      router.push(redirect);
-    } catch (e) {
-      console.error("Google auth error:", e);
-      setError(e?.message || "Erreur Google");
-      toast.error("Erreur Google : " + (e?.message || "Erreur"));
+      localStorage.setItem("lisible_user", JSON.stringify(userData));
+      
+      toast.success(isLogin ? "Heureux de vous revoir !" : "Bienvenue parmi nous !");
+      
+      // Redirection vers la page de publication
+      router.push("/publish");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white p-6 rounded shadow">
-      <h2 className="text-xl font-semibold mb-4 text-center">
-        {mode === "login" ? "Connexion" : "Inscription"}
-      </h2>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {!isLogin && (
+        <div className="relative">
+          <User className="absolute left-3 top-3 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Nom complet"
+            required
+            className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          />
+        </div>
+      )}
 
-      {error && <div className="text-red-600 mb-2 text-sm">{error}</div>}
+      <div className="relative">
+        <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
+        <input
+          type="email"
+          placeholder="Adresse e-mail"
+          required
+          className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+        />
+      </div>
+
+      <div className="relative">
+        <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
+        <input
+          type="password"
+          placeholder="Mot de passe"
+          required
+          className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+        />
+      </div>
 
       <button
-        onClick={handleGoogleAuth}
-        className="w-full flex items-center justify-center gap-2 bg-gray-800 text-white py-2 rounded mb-4 hover:bg-black transition"
-        type="button"
+        type="submit"
+        disabled={loading}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group shadow-lg shadow-blue-100"
       >
-        <FcGoogle size={20} />
-        <span>Continuer avec Google</span>
+        {loading ? "Connexion..." : isLogin ? "Se connecter" : "Créer mon compte"}
+        {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
       </button>
 
-      {mode === "signup" && (
-        <input
-          type="text"
-          placeholder="Nom complet"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className="w-full border p-2 rounded mb-2"
-        />
-      )}
-
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full border p-2 rounded mb-2"
-      />
-
-      <input
-        type="password"
-        placeholder="Mot de passe"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="w-full border p-2 rounded mb-4"
-      />
-
-      <div className="flex flex-col gap-3">
+      <div className="text-center mt-6">
         <button
-          onClick={handleEmailAuth}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
           type="button"
+          onClick={() => setIsLogin(!isLogin)}
+          className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
         >
-          {mode === "login" ? "Se connecter" : "S'inscrire"}
+          {isLogin ? "Pas encore de compte ? S'inscrire" : "Déjà inscrit ? Se connecter"}
         </button>
-
-        {mode === "login" && (
-          <button
-            type="button"
-            onClick={() => setIsForgotModalOpen(true)}
-            className="text-sm text-blue-600 hover:underline self-center"
-          >
-            Mot de passe oublié ?
-          </button>
-        )}
       </div>
-
-      <div className="text-center mt-4">
-        {mode === "login" ? (
-          <p className="text-sm">
-            Pas encore de compte?{" "}
-            <button
-              onClick={() => setMode("signup")}
-              className="text-blue-600 hover:underline"
-              type="button"
-            >
-              S'inscrire
-            </button>
-          </p>
-        ) : (
-          <p className="text-sm">
-            Vous avez déjà un compte?{" "}
-            <button
-              onClick={() => setMode("login")}
-              className="text-blue-600 hover:underline"
-              type="button"
-            >
-              Se connecter
-            </button>
-          </p>
-        )}
-      </div>
-
-      {isForgotModalOpen && (
-        <ForgotPasswordModal onClose={() => setIsForgotModalOpen(false)} email={email} />
-      )}
-    </div>
+    </form>
   );
 }
