@@ -13,6 +13,7 @@ export default function AuthorDashboard() {
 
   useEffect(() => {
     async function initDashboard() {
+      // 1. Récupération des données fraîches du localStorage
       const loggedUser = localStorage.getItem("lisible_user");
       
       if (loggedUser) {
@@ -20,7 +21,7 @@ export default function AuthorDashboard() {
         setUser(parsedUser);
 
         try {
-          // APPEL ANALYTICS : Récupère les données réelles du fichier GitHub
+          // APPEL ANALYTICS : Récupère les données réelles
           const res = await fetch(`/api/get-user-stats?email=${parsedUser.email}`);
           if (res.ok) {
             const data = await res.json();
@@ -60,18 +61,22 @@ export default function AuthorDashboard() {
     );
   }
 
+  // LOGIQUE D'AFFICHAGE DU NOM : 
+  // On cherche d'abord le Nom de Plume, sinon le Prénom, sinon le nom complet, sinon "Auteur"
+  const displayName = user.penName || user.firstName || user.name?.split(' ')[0] || "Auteur";
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 animate-in fade-in duration-700">
       
       {/* SECTION BIENVENUE */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl border border-white/5">
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-teal-400 mb-4">
             <Sparkles size={16} fill="currentColor" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Studio Auteur</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic mb-2">
-            Bonjour, {user.penName || user.name.split(' ')[0]}
+            Bonjour, {displayName}
           </h1>
           <p className="text-slate-400 font-medium max-w-sm">
             Vos statistiques sont à jour selon les dernières lectures.
@@ -79,7 +84,6 @@ export default function AuthorDashboard() {
         </div>
 
         <div className="flex gap-4 relative z-10">
-          {/* AFFICHAGE DES VUES RÉELLES */}
           <StatMini 
             label="Vues Totales" 
             value={stats.views.toLocaleString()} 
@@ -108,10 +112,13 @@ export default function AuthorDashboard() {
             Statut du compte
           </h3>
           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-            <p className="text-slate-900 text-sm font-bold">
-              {stats.views >= 250 ? "✅ Éligible à la monétisation" : `🚀 ${250 - stats.views} vues avant monétisation`}
-            </p>
-            <div className="w-full bg-slate-200 h-2 mt-4 rounded-full overflow-hidden">
+            <div className="flex justify-between items-end mb-2">
+               <p className="text-slate-900 text-sm font-bold">
+                {stats.views >= 250 ? "✅ Éligible à la monétisation" : "🚀 Objectif monétisation"}
+              </p>
+              <span className="text-[10px] font-black text-teal-600">{Math.min(stats.views, 250)} / 250 vues</span>
+            </div>
+            <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
                 <div 
                   className="bg-teal-500 h-full transition-all duration-1000" 
                   style={{ width: `${Math.min((stats.views / 250) * 100, 100)}%` }}
