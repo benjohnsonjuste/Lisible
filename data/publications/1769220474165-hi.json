@@ -4,5 +4,13 @@
   "content": "Test",
   "imageBase64": null,
   "date": "2026-01-24T02:07:54.166Z",
-  "likesCount": 1
+  "likesCount": 1,
+  "comments": [
+    {
+      "id": 1769220536894,
+      "authorName": "jb7management",
+      "message": "Bien",
+      "createdAt": "2026-01-24T02:08:56.894Z"
+    }
+  ]
 }
