@@ -1,53 +1,38 @@
-// pages/api/update-text.js
+import { Octokit } from "@octokit/rest";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' });
+  if (req.method !== "POST") return res.status(405).end();
 
-  const { id, type, payload } = req.body; // type = 'like' ou 'comment'
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-  const REPO_OWNER = "benjohnsonjuste";
-  const REPO_NAME = "Lisible";
-  const FILE_PATH = `data/publications/${id}.json`;
+  const { id, type, payload } = req.body;
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  const owner = "benjohnsonjuste";
+  const repo = "Lisible";
+  const path = `data/publications/${id}.json`;
 
   try {
-    // 1. Récupérer le fichier actuel et son SHA
-    const getRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
-      headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-    });
-    
-    if (!getRes.ok) throw new Error("Fichier introuvable sur GitHub");
-    const fileData = await getRes.json();
-    const currentText = JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+    // Récupérer le fichier actuel
+    const { data: fileData } = await octokit.repos.getContent({ owner, repo, path });
+    const content = JSON.parse(Buffer.from(fileData.content, "base64").toString());
 
-    // 2. Modifier les données selon l'action
-    if (type === 'like') {
-      currentText.likesCount = (currentText.likesCount || 0) + 1;
+    // Appliquer la modification
+    if (type === 'view') {
+      content.views = (content.views || 0) + 1;
+    } else if (type === 'like') {
+      content.likesCount = (content.likesCount || 0) + 1;
     } else if (type === 'comment') {
-      if (!currentText.comments) currentText.comments = [];
-      currentText.comments.push(payload);
+      content.comments = [...(content.comments || []), payload];
     }
 
-    // 3. Renvoyer le fichier mis à jour vers GitHub
-    const updatedContent = Buffer.from(JSON.stringify(currentText, null, 2)).toString('base64');
-    
-    const putRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: `Mise à jour interaction : ${type} sur ${id}`,
-        content: updatedContent,
-        sha: fileData.sha // Obligatoire pour modifier un fichier existant
-      }),
+    // Sauvegarder sur GitHub
+    await octokit.repos.createOrUpdateFileContents({
+      owner, repo, path,
+      message: `📈 Analytics (${type}) : ${id}`,
+      content: Buffer.from(JSON.stringify(content, null, 2)).toString("base64"),
+      sha: fileData.sha
     });
 
-    if (!putRes.ok) throw new Error("Échec de la mise à jour GitHub");
-
-    return res.status(200).json(currentText);
+    res.status(200).json({ success: true, newValue: type === 'view' ? content.views : null });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 }
