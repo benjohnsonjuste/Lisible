@@ -16,7 +16,8 @@ import {
   Calendar,
   FileText,
   X,
-  Sparkles
+  Sparkles,
+  ChevronRight
 } from "lucide-react";
 
 export default function Navbar() {
@@ -56,7 +57,6 @@ export default function Navbar() {
       <header className="bg-white/80 backdrop-blur-md fixed top-0 left-0 w-full z-50 h-20 border-b border-slate-100 shadow-sm">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
           
-          {/* Gauche : Logo & Menu Toggle */}
           <div className="flex items-center gap-6">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -71,9 +71,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Centre/Droite : Navigation Iconique */}
           <div className="flex items-center gap-2 md:gap-4">
-            
             <nav className="hidden md:flex items-center gap-1 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
@@ -82,7 +80,6 @@ export default function Navbar() {
 
             <div className="flex items-center gap-2">
               <NotificationBell />
-
               {user ? (
                 <button 
                   onClick={handleLogout} 
@@ -111,7 +108,6 @@ export default function Navbar() {
         }`}
       >
         <div className="p-8 flex flex-col h-full">
-          {/* Header Sidebar */}
           <div className="flex items-center justify-between mb-10">
             <span className="font-black italic text-xl tracking-tighter text-teal-600">Lisible.</span>
             <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
@@ -119,23 +115,29 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* User Profile Info */}
+          {/* User Profile - MAINTENANT CLIQUABLE VERS /ACCOUNT */}
           {user && (
-            <div className="mb-10 p-5 bg-teal-50 rounded-[2rem] flex items-center gap-4 border border-teal-100/50">
-              <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-teal-200/50">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-sm font-black text-slate-900 truncate">{user.name}</p>
-                <div className="flex items-center gap-1 text-teal-600">
-                  <Sparkles size={10} fill="currentColor" />
-                  <p className="text-[9px] uppercase font-black tracking-widest">Auteur Certifié</p>
+            <Link 
+              href="/account" 
+              onClick={() => setIsMenuOpen(false)}
+              className="mb-10 p-5 bg-slate-50 hover:bg-teal-50 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 hover:border-teal-100 transition-all group"
+            >
+              <div className="flex items-center gap-4 overflow-hidden">
+                <div className="shrink-0 w-12 h-12 bg-teal-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-teal-200/50 transition-transform group-hover:scale-105 group-hover:rotate-3">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="overflow-hidden text-left">
+                  <p className="text-sm font-black text-slate-900 truncate group-hover:text-teal-700 transition-colors">{user.name}</p>
+                  <div className="flex items-center gap-1 text-teal-600/70">
+                    <Sparkles size={10} fill="currentColor" />
+                    <p className="text-[9px] uppercase font-black tracking-widest">Mon Compte</p>
+                  </div>
                 </div>
               </div>
-            </div>
+              <ChevronRight size={18} className="text-slate-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all" />
+            </Link>
           )}
 
-          {/* Menu Links */}
           <nav className="space-y-2">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] ml-4 mb-4">Explorer</p>
             {menuItems.map((item) => (
@@ -171,13 +173,11 @@ export default function Navbar() {
         />
       )}
 
-      {/* Spacer pour compenser le header fixed */}
       <div className="h-20" />
     </>
   );
 }
 
-// Composant utilitaire pour les liens iconiques
 function NavLink({ href, icon, active, title }) {
   return (
     <Link 
