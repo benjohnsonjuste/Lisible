@@ -1,8 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ImageIcon, Send, ArrowLeft, Info } from "lucide-react";
+import { ImageIcon, Send, ArrowLeft, Info, FileText, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -16,7 +16,6 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // LIMITES
   const MAX_IMAGE_SIZE_MB = 2;
   const MAX_WORDS = 2000;
 
@@ -37,7 +36,7 @@ export default function PublishPage() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-        toast.error(`L'image est trop lourde. Limite : ${MAX_IMAGE_SIZE_MB} MB`);
+        toast.error(`Image trop lourde (Max ${MAX_IMAGE_SIZE_MB} MB)`);
         e.target.value = null;
         setImageFile(null);
         return;
@@ -59,11 +58,11 @@ export default function PublishPage() {
     const words = countWords(content);
 
     if (words > MAX_WORDS) {
-      return toast.error(`Votre texte dépasse la limite de ${MAX_WORDS} mots.`);
+      return toast.error(`Limite de ${MAX_WORDS} mots dépassée.`);
     }
 
     setLoading(true);
-    const loadingToast = toast.loading("Publication...");
+    const loadingToast = toast.loading("Mise en ligne de votre œuvre...");
 
     try {
       let imageBase64 = null;
@@ -82,10 +81,10 @@ export default function PublishPage() {
       });
 
       if (!res.ok) throw new Error("Erreur serveur");
-      toast.success("Publié !", { id: loadingToast });
+      toast.success("Publication réussie !", { id: loadingToast });
       router.push("/bibliotheque");
     } catch (err) {
-      toast.error("Erreur de publication", { id: loadingToast });
+      toast.error("Erreur lors de la publication", { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -94,74 +93,105 @@ export default function PublishPage() {
   if (isChecking) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 font-sans">
-      <div className="max-w-2xl mx-auto mb-6">
-        <Link href="/bibliotheque" className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors font-bold text-sm">
-          <ArrowLeft size={18} /> Retour
+    <div className="max-w-3xl mx-auto space-y-8">
+      {/* Retour et En-tête */}
+      <div className="flex items-center justify-between">
+        <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 transition-all shadow-sm border border-slate-100">
+          <ArrowLeft size={20} />
         </Link>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Auteur en ligne</p>
+          <p className="text-sm font-bold text-teal-600 italic">{user?.penName || user?.name}</p>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-8 bg-white rounded-[2.5rem] shadow-sm space-y-8 border border-gray-100">
-        <header className="text-center space-y-2">
-          <h1 className="text-3xl font-black text-gray-900">Publier</h1>
-          <p className="text-sm text-blue-600 font-bold px-4 py-1 bg-blue-50 rounded-full inline-block">
-             {user?.name}
-          </p>
+      <form onSubmit={handleSubmit} className="card-lisible space-y-8 border-none ring-1 ring-slate-100 shadow-xl shadow-slate-200/50">
+        <header className="space-y-2">
+          <div className="flex items-center gap-3 text-slate-900 mb-1">
+            <div className="p-2 bg-slate-900 rounded-lg text-white">
+              <FileText size={20} />
+            </div>
+            <h1 className="text-3xl font-black tracking-tight italic">Nouvelle Publication</h1>
+          </div>
+          <p className="text-slate-400 text-sm font-medium pl-11">Partagez votre récit avec la communauté.</p>
         </header>
 
-        {/* Rappel des limites */}
-        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 text-xs text-gray-500 font-medium">
-          <Info size={16} className="text-blue-500" />
-          <p>Limites : <span className="font-bold text-gray-700">{MAX_WORDS} mots</span> et <span className="font-bold text-gray-700">{MAX_IMAGE_SIZE_MB} MB</span> pour l'image.</p>
+        {/* Rappel des limites stylisé */}
+        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] font-black text-slate-400 uppercase tracking-wider">
+          <Sparkles size={16} className="text-amber-400 shrink-0" />
+          <p>Maximum : <span className="text-slate-700">{MAX_WORDS} mots</span> • Image : <span className="text-slate-700">{MAX_IMAGE_SIZE_MB} MB</span></p>
         </div>
 
         <div className="space-y-6">
-          <input
-            type="text"
-            placeholder="Titre..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-xl"
-            required
-          />
+          <div className="space-y-2">
+             <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Titre de l'œuvre</label>
+             <input
+                type="text"
+                placeholder="Donnez un nom à votre texte..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input-lisible text-lg italic"
+                required
+              />
+          </div>
 
-          <div className="relative">
+          <div className="space-y-2 relative">
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Contenu du texte</label>
             <textarea
-              placeholder="Écrivez ici..."
+              placeholder="Il était une fois..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={12}
-              className="w-full p-5 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-serif text-lg leading-relaxed"
+              className="input-lisible font-serif text-lg leading-relaxed min-h-[300px] py-6"
               required
             />
-            <div className={`absolute bottom-4 right-4 text-[10px] font-black px-2 py-1 rounded-md ${countWords(content) > MAX_WORDS ? 'bg-red-100 text-red-600' : 'bg-white text-gray-400'}`}>
+            <div className={`absolute bottom-6 right-6 text-[10px] font-black px-3 py-1.5 rounded-xl shadow-sm border ${countWords(content) > MAX_WORDS ? 'bg-red-50 border-red-100 text-red-500' : 'bg-white border-slate-100 text-slate-400'}`}>
               {countWords(content)} / {MAX_WORDS} MOTS
             </div>
           </div>
         </div>
 
-        <div className="p-6 bg-blue-50 rounded-3xl border-2 border-dashed border-blue-100 space-y-3">
-          <div className="flex items-center gap-3 text-blue-700">
-            <ImageIcon size={20} />
-            <span className="text-sm font-bold tracking-tight">Image d'illustration ({MAX_IMAGE_SIZE_MB} MB max)</span>
+        {/* Upload d'image stylisé */}
+        <div className="p-8 bg-teal-50/50 rounded-[2rem] border-2 border-dashed border-teal-100 space-y-4 text-center group hover:bg-teal-50 transition-colors">
+          <div className="flex flex-col items-center gap-2">
+            <div className="p-3 bg-white rounded-2xl text-teal-600 shadow-sm group-hover:scale-110 transition-transform">
+              <ImageIcon size={28} />
+            </div>
+            <span className="text-xs font-black text-teal-800 uppercase tracking-widest mt-2">Image de couverture</span>
           </div>
+          
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleImageChange}
-            className="w-full text-xs text-blue-900/50 file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:text-xs file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+            className="block w-full text-xs text-slate-500
+              file:mr-4 file:py-2 file:px-6
+              file:rounded-full file:border-0
+              file:text-[10px] file:font-black file:uppercase file:tracking-widest
+              file:bg-teal-600 file:text-white
+              hover:file:bg-teal-700 file:cursor-pointer"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-[1.5rem] font-black text-lg transition-all shadow-xl shadow-blue-50 active:scale-95 disabled:opacity-50"
+          className="btn-lisible w-full py-6 text-lg shadow-xl shadow-teal-100/50 flex gap-3"
         >
-          {loading ? "Mise en ligne..." : "Publier sur la bibliothèque"}
+          {loading ? (
+            <span className="animate-pulse">PUBLICATION EN COURS...</span>
+          ) : (
+            <>
+              <Send size={20} /> PUBLIER SUR LA BIBLIOTHÈQUE
+            </>
+          )}
         </button>
       </form>
+
+      <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
+        Lisible • Protection des droits d'auteur garantie
+      </p>
     </div>
   );
 }
