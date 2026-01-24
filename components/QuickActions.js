@@ -1,48 +1,74 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/router";
-import { PenTool, User, BarChart3 } from "lucide-react";
+import { useRouter } from "next/navigation"; // Utilisation de navigation pour le App Router
+import { PenTool, User, BarChart3, ChevronRight } from "lucide-react";
 
 export default function QuickActions() {
   const router = useRouter();
 
-  const quickActionItems = [
+  const actions = [
     {
-      title: "Publier un nouveau texte",
-      description: "Partagez gratuitement sur Lisible",
-      icon: <PenTool className="text-primary" size={25} />,
-      bgColor: "bg-blue-100",
-      action: () => router.push("/publish"),
+      title: "Nouvelle œuvre",
+      description: "Publiez un texte sur le label",
+      icon: <PenTool size={22} />,
+      color: "text-teal-600",
+      bgColor: "bg-teal-50",
+      shadow: "shadow-teal-100",
+      href: "/publier",
     },
     {
-      title: "Gérer mon compte",
-      description: "Modifiez vos informations personnelles",
-      icon: <User className="text-secondary" size={25} />,
-      bgColor: "bg-pink-100",
-      action: () => router.push("/account"),
+      title: "Mon Profil",
+      description: "Gérez vos infos d'auteur",
+      icon: <User size={22} />,
+      color: "text-slate-600",
+      bgColor: "bg-slate-50",
+      shadow: "shadow-slate-100",
+      href: "/profil",
     },
     {
-      title: "Analyser les performances",
-      description: "Consultez vos statistiques détaillées",
-      icon: <BarChart3 className="text-accent" size={25} />,
-      bgColor: "bg-accent/10",
-      action: () => router.push("/analytics"),
+      title: "Statistiques",
+      description: "Analysez vos performances",
+      icon: <BarChart3 size={22} />,
+      color: "text-amber-600",
+      bgColor: "bg-amber-50",
+      shadow: "shadow-amber-100",
+      href: "/statistiques",
     },
   ];
 
   return (
-    <div className="bg-card border rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold mb-6">Tableau de bord</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {quickActionItems.map((item, idx) => (
+    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic">Actions rapides</h2>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Gestion du catalogue</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {actions.map((item, idx) => (
           <button
             key={idx}
-            onClick={item.action}
-            className={`flex flex-col items-start p-4 rounded-xl shadow-sm hover:shadow-md transition-all ${item.bgColor}`}
+            onClick={() => router.push(item.href)}
+            className="group relative flex flex-col items-start p-6 rounded-[2rem] bg-white border border-slate-50 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 active:scale-95 text-left"
           >
-            <div className="mb-3">{item.icon}</div>
-            <h3 className="text-lg font-bold">{item.title}</h3>
-            <p className="text-sm text-muted-foreground">{item.description}</p>
+            {/* Icône avec fond doux */}
+            <div className={`mb-5 p-4 ${item.bgColor} ${item.color} rounded-2xl transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300`}>
+              {item.icon}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                {item.title}
+                <ChevronRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-teal-500" />
+              </h3>
+              <p className="text-xs font-medium text-slate-400 leading-relaxed">
+                {item.description}
+              </p>
+            </div>
+
+            {/* Décoration discrète en arrière-plan au survol */}
+            <div className={`absolute top-4 right-4 w-2 h-2 rounded-full ${item.bgColor} opacity-0 group-hover:opacity-100 transition-opacity`} />
           </button>
         ))}
       </div>
