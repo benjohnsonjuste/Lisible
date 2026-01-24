@@ -14,7 +14,7 @@ export default function QuickActions() {
       color: "text-teal-600",
       bgColor: "bg-teal-50",
       shadow: "shadow-teal-100",
-      href: "/publier",
+      href: "/publish",
     },
     {
       title: "Mon Profil",
@@ -23,7 +23,7 @@ export default function QuickActions() {
       color: "text-slate-600",
       bgColor: "bg-slate-50",
       shadow: "shadow-slate-100",
-      href: "/profil",
+      href: "/account",
     },
     {
       title: "Statistiques",
@@ -32,7 +32,7 @@ export default function QuickActions() {
       color: "text-amber-600",
       bgColor: "bg-amber-50",
       shadow: "shadow-amber-100",
-      href: "/statistiques",
+      href: "/statistics",
     },
   ];
 
