@@ -1,154 +1,120 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { User, LogOut, BookText, ChevronRight, MessageSquare, Heart, Sparkles } from "lucide-react";
 import QuickActions from "@/components/QuickActions";
+import { Sparkles, BookOpen, BarChart, Settings } from "lucide-react";
+import Link from "next/link";
 
 export default function AuthorDashboard() {
-  const [user, setUser] = useState(null);
-  const [myTexts, setMyTexts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
-    
-    if (!loggedUser) {
-      router.push("/login");
-    } else {
-      const parsedUser = JSON.parse(loggedUser);
-      setUser(parsedUser);
-      fetchMyTexts(parsedUser.name);
+    if (loggedUser) {
+      setUser(JSON.parse(loggedUser));
     }
-  }, [router]);
-
-  const fetchMyTexts = async (authorName) => {
-    try {
-      const res = await fetch("https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications");
-      const files = await res.json();
-      
-      if (Array.isArray(files)) {
-        const dataPromises = files
-          .filter(file => file.name.endsWith('.json'))
-          .map(async (file) => {
-            const content = await fetch(file.download_url).then(r => r.json());
-            const id = file.name.replace(".json", "");
-            return { ...content, id };
-          });
-        
-        const allTexts = await Promise.all(dataPromises);
-        const filtered = allTexts.filter(t => t.authorName === authorName);
-        setMyTexts(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
-      }
-    } catch (e) {
-      console.error("Erreur chargement mes textes", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("lisible_user");
-    router.push("/login");
-  };
+    setLoading(false);
+  }, []);
 
   if (loading) return (
-    <div className="flex justify-center items-center py-20 text-teal-600">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-current"></div>
+    <div className="flex flex-col justify-center items-center py-40 text-teal-600">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-current mb-4"></div>
+      <p className="text-[10px] font-black uppercase tracking-widest">Initialisation du studio...</p>
     </div>
   );
 
-  return (
-    <div className="space-y-10">
-      {/* Header Profil */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 card-lisible ring-1 ring-slate-100">
-        <div className="flex items-center gap-6">
-          <div className="relative">
-            <div className="w-20 h-20 bg-teal-50 rounded-[1.8rem] flex items-center justify-center text-teal-600 shadow-inner border border-teal-100/50">
-              {user?.profilePic ? (
-                <img src={user.profilePic} alt="" className="w-full h-full object-cover rounded-[1.8rem]" />
-              ) : (
-                <User size={36} />
-              )}
-            </div>
-            <div className="absolute -bottom-1 -right-1 bg-white p-1.5 rounded-full shadow-sm">
-              <Sparkles size={14} className="text-amber-400" />
-            </div>
-          </div>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 leading-tight italic">
-              Salut, {user?.penName || user?.name?.split(' ')[0]} !
-            </h1>
-            <p className="text-teal-600/70 text-xs font-black uppercase tracking-[0.2em] mt-1">Espace Auteur</p>
-          </div>
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto mt-20 p-12 bg-white rounded-[3rem] text-center shadow-2xl shadow-slate-100 border border-slate-50 animate-in fade-in zoom-in duration-500">
+        <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+          <Settings size={40} />
         </div>
-        
-        <button 
-          onClick={handleLogout} 
-          className="flex items-center justify-center gap-2 px-6 py-4 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all font-black text-xs uppercase tracking-widest"
-        >
-          <LogOut size={18} /> Quitter
-        </button>
+        <h1 className="text-2xl font-black text-slate-900 mb-4 italic tracking-tighter">Accès restreint.</h1>
+        <p className="text-slate-500 mb-10 font-medium leading-relaxed">
+          Connectez-vous pour accéder à vos outils d'édition et statistiques.
+        </p>
+        <Link href="/login" className="block w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-[10px] tracking-[0.2em] uppercase hover:bg-teal-600 transition-all shadow-xl shadow-slate-200">
+          SE CONNECTER
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 animate-in fade-in duration-700">
+      
+      {/* SECTION BIENVENUE */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl shadow-slate-200">
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 text-teal-400 mb-4">
+            <Sparkles size={16} fill="currentColor" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Studio Auteur</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic mb-2">
+            Bonjour, {user.name.split(' ')[0]}
+          </h1>
+          <p className="text-slate-400 font-medium max-w-sm">
+            Prêt à enrichir le catalogue avec une nouvelle pépite littéraire ?
+          </p>
+        </div>
+
+        <div className="flex gap-4 relative z-10">
+          <StatMini label="Vues" value="1.2k" icon={<BarChart size={14}/>} />
+          <StatMini label="Textes" value="4" icon={<BookOpen size={14}/>} />
+        </div>
+
+        {/* Décoration abstraite */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
       </header>
 
-      {/* Raccourcis (Publier, etc.) */}
-      <QuickActions />
+      {/* ACTIONS RAPIDES */}
+      <section>
+        <QuickActions />
+      </section>
 
-      {/* Section Mes Publications */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-slate-900 rounded-lg text-white">
-              <BookText size={16} />
-            </div>
-            <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">
-              Mes publications ({myTexts.length})
-            </h2>
+      {/* SECTION COMPLÉMENTAIRE (Suggestion) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+            <BookOpen size={16} className="text-teal-500" />
+            Dernières publications
+          </h3>
+          <div className="text-center py-10 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
+            <p className="text-slate-400 text-sm font-medium italic">Aucun texte récent.</p>
           </div>
-          <Link href={`/bibliotheque?author=${encodeURIComponent(user?.name)}`} className="text-[10px] font-black text-teal-600 uppercase tracking-widest hover:underline">
-            Tout voir
-          </Link>
         </div>
 
-        {myTexts.length === 0 ? (
-          <div className="bg-white p-16 rounded-[3rem] border-2 border-dashed border-slate-100 text-center space-y-4">
-            <p className="text-slate-400 font-medium">Votre plume n'a pas encore laissé de trace ici.</p>
-            <Link href="/publish" className="btn-lisible text-xs">
-              ÉCRIRE MON PREMIER TEXTE
-            </Link>
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+            <Sparkles size={16} className="text-amber-500" />
+            Conseil d'écriture
+          </h3>
+          <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100/50">
+            <p className="text-slate-700 text-sm leading-relaxed font-serif italic">
+              "Le premier jet de n'importe quoi est de la merde. L'important est de commencer." — Hemingway
+            </p>
           </div>
-        ) : (
-          <div className="grid gap-4">
-            {myTexts.slice(0, 5).map((text, idx) => (
-              <div key={idx} className="group card-lisible p-5 flex items-center justify-between hover:border-teal-200 hover:shadow-lg hover:shadow-teal-100/20 transition-all border-slate-50">
-                <div className="flex-grow space-y-2">
-                  <h3 className="font-black text-lg text-slate-800 group-hover:text-teal-600 transition-colors italic leading-tight">
-                    {text.title}
-                  </h3>
-                  <div className="flex items-center gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full text-red-400">
-                        <Heart size={12} fill="currentColor" /> {text.likesCount || 0}
-                    </span>
-                    <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full text-teal-500">
-                        <MessageSquare size={12} fill="currentColor" /> {(text.comments || []).length}
-                    </span>
-                    <span className="hidden sm:block opacity-60">
-                        {new Date(text.date).toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
-                </div>
-                <Link 
-                  href={`/texts/${text.id}`} 
-                  className="ml-4 p-4 bg-slate-50 rounded-2xl text-slate-300 group-hover:bg-teal-600 group-hover:text-white transition-all shadow-sm"
-                >
-                  <ChevronRight size={20} />
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+        </div>
+      </div>
+
+      <footer className="text-center pt-10">
+         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">
+            Lisible © 2026 • Plateforme sécurisée
+         </p>
+      </footer>
+    </div>
+  );
+}
+
+// Petit composant utilitaire pour les chiffres clés
+function StatMini({ label, value, icon }) {
+  return (
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-5 py-4 rounded-3xl min-w-[100px] text-center">
+      <div className="flex justify-center text-teal-400 mb-1">{icon}</div>
+      <p className="text-xl font-black">{value}</p>
+      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
     </div>
   );
 }
