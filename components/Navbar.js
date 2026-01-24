@@ -33,6 +33,7 @@ export default function Navbar() {
     };
 
     checkUser();
+    // Écoute les changements du localStorage (utile quand on change le profil dans /account)
     window.addEventListener('storage', checkUser);
     return () => window.removeEventListener('storage', checkUser);
   }, []);
@@ -75,7 +76,8 @@ export default function Navbar() {
             <nav className="hidden md:flex items-center gap-1 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
-              <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Tableau de bord" />
+              {/* Le Dashboard n'est visible que si connecté */}
+              {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Studio Auteur" />}
             </nav>
 
             <div className="flex items-center gap-2">
@@ -115,7 +117,7 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* User Profile - MAINTENANT CLIQUABLE VERS /ACCOUNT */}
+          {/* User Profile - Affiche maintenant le Nom de Plume et la Photo réelle */}
           {user && (
             <Link 
               href="/account" 
@@ -123,14 +125,23 @@ export default function Navbar() {
               className="mb-10 p-5 bg-slate-50 hover:bg-teal-50 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 hover:border-teal-100 transition-all group"
             >
               <div className="flex items-center gap-4 overflow-hidden">
-                <div className="shrink-0 w-12 h-12 bg-teal-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-teal-200/50 transition-transform group-hover:scale-105 group-hover:rotate-3">
-                  {user.name.charAt(0).toUpperCase()}
+                <div className="shrink-0 w-12 h-12 bg-slate-200 rounded-2xl overflow-hidden border-2 border-white shadow-lg transition-transform group-hover:scale-105 group-hover:rotate-3">
+                  {user.profilePic ? (
+                    <img src={user.profilePic} className="w-full h-full object-cover" alt="Profil" />
+                  ) : (
+                    <div className="w-full h-full bg-teal-600 text-white flex items-center justify-center font-black text-xl">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div className="overflow-hidden text-left">
-                  <p className="text-sm font-black text-slate-900 truncate group-hover:text-teal-700 transition-colors">{user.name}</p>
+                  {/* Priorité au Nom de plume s'il existe */}
+                  <p className="text-sm font-black text-slate-900 truncate group-hover:text-teal-700 transition-colors">
+                    {user.penName || user.name}
+                  </p>
                   <div className="flex items-center gap-1 text-teal-600/70">
                     <Sparkles size={10} fill="currentColor" />
-                    <p className="text-[9px] uppercase font-black tracking-widest">Mon Compte</p>
+                    <p className="text-[9px] uppercase font-black tracking-widest">Gérer mon profil</p>
                   </div>
                 </div>
               </div>
