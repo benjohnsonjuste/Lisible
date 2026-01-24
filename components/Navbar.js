@@ -1,10 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import NotificationBell from "@/components/NotificationBell"; // Import de notre cloche intelligente
+import { useRouter, usePathname } from "next/navigation";
+import NotificationBell from "@/components/NotificationBell";
 
-// Icônes lucide-react
 import {
   Menu,
   Home,
@@ -16,27 +15,23 @@ import {
   MessageCircle,
   Calendar,
   FileText,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Vérification de la session locale au chargement et lors des changements
     const checkUser = () => {
       const loggedUser = localStorage.getItem("lisible_user");
-      if (loggedUser) {
-        setUser(JSON.parse(loggedUser));
-      } else {
-        setUser(null);
-      }
+      setUser(loggedUser ? JSON.parse(loggedUser) : null);
     };
 
     checkUser();
-    // On écoute les changements de stockage (utile si on se déconnecte dans un autre onglet)
     window.addEventListener('storage', checkUser);
     return () => window.removeEventListener('storage', checkUser);
   }, []);
@@ -48,121 +43,156 @@ export default function Navbar() {
     router.push("/login");
   };
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const handleMenuClick = () => setIsMenuOpen(false);
+  const menuItems = [
+    { href: "/communaute", label: "Communauté", icon: <Users size={20} /> },
+    { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
+    { href: "/contact", label: "Contact", icon: <MessageCircle size={20} /> },
+    { href: "/terms", label: "Conditions", icon: <FileText size={20} /> },
+  ];
 
   return (
     <>
       {/* ======= HEADER ======= */}
-      <header className="bg-indigo-900 shadow-xl fixed top-0 left-0 w-full z-50 h-16 border-b border-indigo-800">
-        <div className="container mx-auto h-full flex items-center justify-between px-4 text-white">
+      <header className="bg-white/80 backdrop-blur-md fixed top-0 left-0 w-full z-50 h-20 border-b border-slate-100 shadow-sm">
+        <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
           
-          {/* Gauche : Menu et Logo */}
-          <div className="flex items-center gap-4">
-            <button onClick={toggleMenu} className="cursor-pointer p-2 hover:bg-white/10 rounded-xl transition-all">
-              {isMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+          {/* Gauche : Logo & Menu Toggle */}
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              className="p-3 bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-600 rounded-2xl transition-all active:scale-95 shadow-sm border border-slate-100"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <Link href="/" className="font-black text-xl tracking-tighter hidden sm:block">
-              LISIBLE
+            <Link href="/" className="group flex items-center gap-2">
+              <span className="font-black text-2xl tracking-tighter text-slate-900 italic group-hover:text-teal-600 transition-colors">
+                Lisible.
+              </span>
             </Link>
           </div>
 
-          {/* Zone droite : Actions */}
-          <div className="flex items-center gap-2 sm:gap-5">
+          {/* Centre/Droite : Navigation Iconique */}
+          <div className="flex items-center gap-2 md:gap-4">
             
-            {/* La cloche intelligente adaptée au système GitHub */}
-            <NotificationBell />
+            <nav className="hidden md:flex items-center gap-1 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100">
+              <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
+              <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
+              <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Tableau de bord" />
+            </nav>
 
-            <Link href="/" title="Accueil" className="p-2 hover:bg-white/10 rounded-xl transition-all">
-              <Home className="w-7 h-7" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
 
-            <Link href="/bibliotheque" title="Bibliothèque" className="p-2 hover:bg-white/10 rounded-xl transition-all">
-              <Library className="w-7 h-7" />
-            </Link>
-
-            <Link href="/dashboard" title="Tableau de bord" className="p-2 hover:bg-white/10 rounded-xl transition-all">
-              <LayoutDashboard className="w-7 h-7" />
-            </Link>
-
-            <div className="h-8 w-[1px] bg-white/20 mx-1"></div>
-
-            {user ? (
-              <button 
-                onClick={handleLogout} 
-                title="Déconnexion"
-                className="p-2 hover:bg-red-500/20 text-red-400 rounded-xl transition-all"
-              >
-                <LogOut className="w-7 h-7" />
-              </button>
-            ) : (
-              <Link href="/login" title="Connexion" className="p-2 hover:bg-green-500/20 text-green-400 rounded-xl transition-all">
-                <LogIn className="w-7 h-7" />
-              </Link>
-            )}
+              {user ? (
+                <button 
+                  onClick={handleLogout} 
+                  className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                  title="Déconnexion"
+                >
+                  <LogOut size={22} />
+                </button>
+              ) : (
+                <Link 
+                  href="/login" 
+                  className="p-3 bg-teal-600 text-white rounded-2xl hover:bg-slate-900 transition-all shadow-lg shadow-teal-100"
+                >
+                  <LogIn size={22} />
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      {/* ======= SIDEBAR (MENU LATÉRAL) ======= */}
+      {/* ======= SIDEBAR ======= */}
       <aside
-        className={`fixed top-16 left-0 h-[calc(100%-4rem)] w-72 bg-white shadow-2xl transform transition-transform duration-500 ease-in-out z-50 rounded-r-[2rem] border-r border-gray-100 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-2xl transform transition-transform duration-500 ease-in-out z-[60] border-r border-slate-50 ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="p-8 flex flex-col h-full">
+          {/* Header Sidebar */}
+          <div className="flex items-center justify-between mb-10">
+            <span className="font-black italic text-xl tracking-tighter text-teal-600">Lisible.</span>
+            <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* User Profile Info */}
           {user && (
-            <div className="mb-8 p-4 bg-gray-50 rounded-2xl flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+            <div className="mb-10 p-5 bg-teal-50 rounded-[2rem] flex items-center gap-4 border border-teal-100/50">
+              <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-teal-200/50">
                 {user.name.charAt(0).toUpperCase()}
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-black text-gray-900 truncate">{user.name}</p>
-                <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Auteur</p>
+                <p className="text-sm font-black text-slate-900 truncate">{user.name}</p>
+                <div className="flex items-center gap-1 text-teal-600">
+                  <Sparkles size={10} fill="currentColor" />
+                  <p className="text-[9px] uppercase font-black tracking-widest">Auteur Certifié</p>
+                </div>
               </div>
             </div>
           )}
 
-          <nav className="flex-grow">
-            <ul className="space-y-2">
-              {[
-                { href: "/users", label: "Nos Auteurs", icon: <Users className="w-5 h-5" /> },
-                { href: "/lisible-club", label: "Lisible Club", icon: <MessageCircle className="w-5 h-5" /> },
-                { href: "/evenements", label: "Événements", icon: <Calendar className="w-5 h-5" /> },
-                { href: "/terms", label: "Conditions", icon: <FileText className="w-5 h-5" /> },
-                { href: "/contact", label: "Contact", icon: <MessageCircle className="w-5 h-5" /> },
-              ].map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={handleMenuClick}
-                    className="flex items-center gap-4 px-4 py-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all font-bold text-sm"
-                  >
-                    <span className="p-2 bg-gray-50 rounded-lg group-hover:bg-white transition-colors">
-                        {item.icon}
-                    </span>
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {/* Menu Links */}
+          <nav className="space-y-2">
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] ml-4 mb-4">Explorer</p>
+            {menuItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setIsMenuOpen(false)}
+                className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold text-sm group ${
+                  pathname === item.href ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"
+                }`}
+              >
+                <span className={`${pathname === item.href ? "text-teal-400" : "text-slate-400 group-hover:text-teal-600"} transition-colors`}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </Link>
+            ))}
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-gray-100">
-             <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest text-center">
-                Lisible © 2026
+          <div className="mt-auto pt-8 border-t border-slate-50 text-center">
+             <p className="text-[10px] text-slate-300 font-black uppercase tracking-[0.3em]">
+                Lisible par La Belle Littéraire
              </p>
           </div>
         </div>
       </aside>
 
-      {/* ======= OVERLAY (FLOU DE FOND) ======= */}
+      {/* ======= OVERLAY ======= */}
       {isMenuOpen && (
         <div
-          onClick={toggleMenu}
-          className="fixed inset-0 bg-indigo-950/40 backdrop-blur-sm z-40 transition-opacity"
+          onClick={() => setIsMenuOpen(false)}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity animate-in fade-in"
         />
       )}
+
+      {/* Spacer pour compenser le header fixed */}
+      <div className="h-20" />
     </>
+  );
+}
+
+// Composant utilitaire pour les liens iconiques
+function NavLink({ href, icon, active, title }) {
+  return (
+    <Link 
+      href={href} 
+      title={title}
+      className={`p-3 rounded-2xl transition-all relative group ${
+        active 
+        ? "bg-white text-teal-600 shadow-sm" 
+        : "text-slate-400 hover:text-slate-900 hover:bg-white"
+      }`}
+    >
+      {icon}
+      {active && (
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-teal-600 rounded-full" />
+      )}
+    </Link>
   );
 }
