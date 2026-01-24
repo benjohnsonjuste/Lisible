@@ -9,7 +9,7 @@ export default function Home() {
       <section className="relative group overflow-hidden rounded-[3rem] shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent z-10" />
         <img
-          src="/poster_2025-09-28-031039.png"
+          src="/file_00000000e4d871fdb8efbc744979c8bc.png"
           alt="Lisible par La Belle Littéraire"
           className="w-full h-[500px] object-cover transition-transform duration-1000 group-hover:scale-105"
         />
