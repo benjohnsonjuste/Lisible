@@ -1,16 +1,13 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation"; 
 import { toast } from "sonner";
-import { Heart, Share2, User, MessageSquare, Send, ArrowLeft, Eye, Clock, Loader2 } from "lucide-react";
+import { Heart, Share2, User, Send, ArrowLeft, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 import AdScript from "@/components/AdScript";
 
 export default function TextPage({ params }) {
-  // Déballage sécurisé des params pour Next.js 14/15
-  const unwrappedParams = React.use(params);
-  const id = unwrappedParams?.id;
-
+  // Gestion sécurisée des params
+  const [id, setId] = useState(null);
   const [text, setText] = useState(null);
   const [comment, setComment] = useState("");
   const [user, setUser] = useState(null);
@@ -23,44 +20,48 @@ export default function TextPage({ params }) {
   const startTimeRef = useRef(null);
   const viewCountedRef = useRef(false);
 
-  // 1. Chargement du texte et de l'utilisateur
+  // 1. Déballage de l'ID (Correction du crash)
   useEffect(() => {
+    if (params instanceof Promise) {
+      params.then(p => setId(p.id));
+    } else {
+      setId(params?.id);
+    }
+  }, [params]);
+
+  // 2. Chargement du texte et de l'utilisateur
+  useEffect(() => {
+    if (!id) return;
+
     const loggedUser = localStorage.getItem("lisible_user");
     if (loggedUser) setUser(JSON.parse(loggedUser));
-
-    if (!id) {
-      setError(true);
-      return;
-    }
 
     const fetchText = async () => {
       try {
         const url = `https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/publications/${id}.json?t=${Date.now()}`;
         const res = await fetch(url);
+        
         if (!res.ok) throw new Error("Texte introuvable");
         
         const data = await res.json();
         setText(data);
         
-        // Marquer le début de la lecture
         startTimeRef.current = Date.now();
         
-        // Vérifier le Like local
         const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
         if (likedTexts.includes(id)) setIsLiked(true);
       } catch (err) {
+        console.error(err);
         setError(true);
-        toast.error("Impossible de charger le texte.");
       }
     };
     fetchText();
   }, [id]);
 
-  // 2. Logique de Progression et Vue Unique Automatique
+  // 3. Logique de Progression et Vue Unique
   useEffect(() => {
     if (!text || viewCountedRef.current || !id) return;
 
-    // On calcule le temps nécessaire (ex: 200 mots/min, minimum 8s pour valider une vue)
     const wordCount = text.content ? text.content.split(/\s+/).length : 100;
     const estimatedSeconds = (wordCount / 200) * 60;
     const requiredSeconds = Math.min(Math.max(estimatedSeconds * 0.4, 8), 30); 
@@ -71,7 +72,6 @@ export default function TextPage({ params }) {
       const progress = Math.min((elapsed / requiredSeconds) * 100, 100);
       setReadProgress(progress);
 
-      // Si le lecteur a passé assez de temps, on déclenche la vue
       if (elapsed >= requiredSeconds && !viewCountedRef.current) {
         viewCountedRef.current = true;
         handleIncrementView();
@@ -82,11 +82,8 @@ export default function TextPage({ params }) {
     return () => clearInterval(timer);
   }, [text, id]);
 
-  // FONCTION CLÉ : INC RÉMENTATION UNIQUE
   const handleIncrementView = async () => {
     const viewKey = `lisible_v1_viewed_${id}`;
-    
-    // Empêche de compter deux fois sur le même appareil
     if (localStorage.getItem(viewKey)) return;
 
     try {
@@ -102,8 +99,7 @@ export default function TextPage({ params }) {
 
       if (res.ok) {
         localStorage.setItem(viewKey, "true");
-        // Mise à jour visuelle du compteur sans recharger
-        setText(prev => ({ ...prev, views: (prev.views || 0) + 1 }));
+        setText(prev => ({ ...prev, views: (prev?.views || 0) + 1 }));
       }
     } catch (e) {
       console.error("Analytics Error");
@@ -124,7 +120,7 @@ export default function TextPage({ params }) {
         const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
         likedTexts.push(id);
         localStorage.setItem("lisible_likes", JSON.stringify(likedTexts));
-        setText(prev => ({ ...prev, likesCount: (prev.likesCount || 0) + 1 }));
+        setText(prev => ({ ...prev, likesCount: (prev?.likesCount || 0) + 1 }));
       }
     } catch (err) { setIsLiked(false); }
   };
@@ -134,7 +130,7 @@ export default function TextPage({ params }) {
     if (!comment.trim()) return toast.error("Commentaire vide");
     setIsSubmitting(true);
     const newComment = { 
-      id: Date.now(), authorName: user.name, message: comment.trim(), createdAt: new Date().toISOString() 
+      id: Date.now(), authorName: user.name || "Auteur", message: comment.trim(), createdAt: new Date().toISOString() 
     };
     try {
       const res = await fetch('/api/update-text', {
@@ -143,20 +139,19 @@ export default function TextPage({ params }) {
         body: JSON.stringify({ id, type: 'comment', payload: newComment })
       });
       if (res.ok) {
-        setText(prev => ({ ...prev, comments: [...(prev.comments || []), newComment] }));
+        setText(prev => ({ ...prev, comments: [...(prev?.comments || []), newComment] }));
         setComment("");
         toast.success("Commentaire ajouté !");
       }
     } catch (err) { toast.error("Erreur d'envoi"); } finally { setIsSubmitting(false); }
   };
 
-  if (error) return <div className="py-20 text-center"><p className="text-slate-400 font-black italic uppercase">Texte introuvable</p></div>;
+  if (error) return <div className="py-20 text-center"><p className="text-slate-400 font-black italic uppercase">Texte introuvable ou erreur de lien</p></div>;
   if (!text) return <div className="flex flex-col items-center py-40 text-teal-600"><Loader2 className="animate-spin mb-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Ouverture du manuscrit...</span></div>;
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-20 space-y-8 animate-in fade-in duration-700">
       
-      {/* Barre de lecture unique */}
       <div className="fixed top-0 left-0 w-full h-1 z-50 bg-slate-100">
         <div 
           className="h-full bg-teal-500 transition-all duration-300" 
@@ -175,7 +170,7 @@ export default function TextPage({ params }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-teal-400"><User size={20}/></div>
-              <p className="text-sm font-black text-slate-900 italic">{text.authorName}</p>
+              <p className="text-sm font-black text-slate-900 italic">{text.authorName || "Anonyme"}</p>
             </div>
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl text-slate-600 border border-slate-100">
               <Eye size={14} className="text-teal-500" />
@@ -200,13 +195,14 @@ export default function TextPage({ params }) {
             </button>
             <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Lien copié !"); }} className="p-3 bg-white text-slate-400 rounded-2xl border border-slate-100"><Share2 size={20}/></button>
           </div>
-          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{new Date(text.date).toLocaleDateString()}</span>
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+            {text.date ? new Date(text.date).toLocaleDateString() : 'Date inconnue'}
+          </span>
         </footer>
       </article>
 
       <AdScript />
 
-      {/* Commentaires */}
       <section className="space-y-6">
         <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-4">Discussion ({(text.comments || []).length})</h3>
         
