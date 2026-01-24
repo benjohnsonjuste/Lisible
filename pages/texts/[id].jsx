@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Heart, Share2, User, MessageSquare, Send, ArrowLeft, Eye, Clock } from "lucide-react";
 import Link from "next/link";
-import AdSense from "@/components/AdSense"; // Import du script publicitaire
+import AdScript from "@/components/AdScript"; // Corrigé : pointe vers AdScript.jsx
 
 export default function TextPage({ params }) {
   const router = useRouter();
@@ -42,6 +42,7 @@ export default function TextPage({ params }) {
     fetchText();
   }, [id]);
 
+  // Logique de progression de lecture et calcul de vue unique
   useEffect(() => {
     if (!text || viewCountedRef.current) return;
     const wordCount = text.content.split(/\s+/).length;
@@ -104,7 +105,12 @@ export default function TextPage({ params }) {
     if (!user) return toast.error("Connectez-vous pour commenter");
     if (!comment.trim()) return toast.error("Commentaire vide");
     setIsSubmitting(true);
-    const newComment = { id: Date.now(), authorName: user.name, message: comment.trim(), createdAt: new Date().toISOString() };
+    const newComment = { 
+      id: Date.now(), 
+      authorName: user.name, 
+      message: comment.trim(), 
+      createdAt: new Date().toISOString() 
+    };
     try {
       const res = await fetch('/api/update-text', {
         method: 'POST',
@@ -122,13 +128,14 @@ export default function TextPage({ params }) {
   if (!text) return (
     <div className="flex flex-col justify-center items-center py-20 text-teal-600">
       <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-current mb-4"></div>
-      <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Ouverture de l'œuvre...</span>
+      <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Ouverture...</span>
     </div>
   );
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
+      {/* Barre de lecture fixe en haut */}
       <div className="fixed top-0 left-0 w-full h-1.5 z-50 bg-slate-100">
         <div className="h-full bg-teal-500 transition-all duration-500 ease-out" style={{ width: `${readProgress}%` }} />
       </div>
@@ -173,11 +180,10 @@ export default function TextPage({ params }) {
           </div>
         </div>
 
-        {/* --- ZONE PUBLICITAIRE INTÉGRÉE --- */}
+        {/* --- PUBLICITÉ --- */}
         <div className="px-8 md:px-12">
-            <AdSense />
+            <AdScript />
         </div>
-        {/* ---------------------------------- */}
 
         <footer className="p-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
           <div className="flex gap-4">
@@ -206,7 +212,42 @@ export default function TextPage({ params }) {
         <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">
           Discussion ({(text.comments || []).length})
         </h3>
-        {/* ... (Reste du formulaire et liste des commentaires) */}
+        {/* ... Reste de la logique commentaires ... */}
+        {user ? (
+          <div className="card-lisible p-6 space-y-4 shadow-sm border-none ring-1 ring-slate-100">
+            <textarea
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Exprimez votre ressenti..."
+              className="w-full bg-transparent border-none outline-none text-slate-800 font-medium min-h-[80px] resize-none focus:ring-0"
+            />
+            <div className="flex justify-end">
+              <button 
+                onClick={handleComment}
+                disabled={isSubmitting || !comment.trim()}
+                className="btn-lisible py-2.5 px-6 text-[10px] gap-2 flex items-center"
+              >
+                <Send size={14} /> {isSubmitting ? "ENVOI..." : "PUBLIER"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="card-lisible p-8 text-center bg-slate-50/50 border-dashed border-2 border-slate-200">
+            <Link href="/login" className="text-teal-600 font-black text-xs hover:underline uppercase tracking-widest">Connectez-vous pour commenter</Link>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {(text.comments || []).slice().reverse().map((c, index) => (
+            <div key={index} className="card-lisible p-5 bg-white border-none ring-1 ring-slate-50 shadow-sm transition-all hover:ring-teal-100">
+              <div className="flex justify-between items-center mb-3">
+                <span className="font-black text-teal-600 text-[10px] uppercase tracking-wider">{c.authorName}</span>
+                <span className="text-[9px] text-slate-300 font-bold uppercase">{new Date(c.createdAt).toLocaleDateString()}</span>
+              </div>
+              <p className="text-slate-600 text-sm leading-relaxed pl-2 border-l-2 border-slate-100 ml-1">{c.message}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
