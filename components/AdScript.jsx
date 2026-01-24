@@ -1,23 +1,26 @@
 "use client";
 import { useEffect } from "react";
 
-export default function AdSense() {
+// On renomme la fonction pour qu'elle corresponde au nom du fichier
+export default function AdScript() {
   useEffect(() => {
-    // Éviter les doublons
-    if (document.getElementById("ads-script")) return;
+    if (typeof window !== "undefined") {
+      const existingScript = document.getElementById("ads-script");
+      if (existingScript) return;
 
-    const script = document.createElement("script");
-    script.id = "ads-script";
-    script.type = "text/javascript";
-    script.src = "//pl27639698.effectivegatecpm.com/bd/73/cf/bd73cff968386b2fc7d844b5273c6d75.js";
-    script.async = true;
+      const script = document.createElement("script");
+      script.id = "ads-script";
+      script.type = "text/javascript";
+      script.src = "//pl27639698.effectivegatecpm.com/bd/73/cf/bd73cff968386b2fc7d844b5273c6d75.js";
+      script.async = true;
 
-    document.body.appendChild(script);
+      document.body.appendChild(script);
 
-    return () => {
-      const el = document.getElementById("ads-script");
-      if (el) el.remove();
-    };
+      return () => {
+        const el = document.getElementById("ads-script");
+        if (el) el.remove();
+      };
+    }
   }, []);
 
   return (
@@ -27,13 +30,12 @@ export default function AdSense() {
         <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Sponsorisé</span>
         <div className="h-[1px] flex-grow bg-slate-100"></div>
       </div>
-
-      {/* Zone d'affichage de la pub avec design Lisible */}
+      
       <div 
         id="ads-container" 
-        className="w-full min-h-[100px] flex justify-center bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-100 p-4 transition-all hover:bg-white hover:border-teal-100 shadow-inner"
+        className="w-full min-h-[100px] flex justify-center bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-100 p-4 shadow-inner"
       >
-        {/* Le script injectera la pub ici */}
+        {/* Le script externe injectera la publicité ici */}
       </div>
     </div>
   );
