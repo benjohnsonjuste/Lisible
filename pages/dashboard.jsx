@@ -2,18 +2,17 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QuickActions from "@/components/QuickActions";
-import { Sparkles, BookOpen, BarChart, Settings, Loader2 } from "lucide-react";
+import { Sparkles, BookOpen, BarChart, Settings, Loader2, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ views: 0, texts: 0 });
+  const [stats, setStats] = useState({ views: 0, texts: 0, followers: 0 });
 
   useEffect(() => {
     async function initDashboard() {
-      // 1. Récupération des données fraîches du localStorage
       const loggedUser = localStorage.getItem("lisible_user");
       
       if (loggedUser) {
@@ -21,13 +20,14 @@ export default function AuthorDashboard() {
         setUser(parsedUser);
 
         try {
-          // APPEL ANALYTICS : Récupère les données réelles
+          // APPEL ANALYTICS : Récupère les données réelles (assurez-vous que l'API renvoie totalFollowers)
           const res = await fetch(`/api/get-user-stats?email=${parsedUser.email}`);
           if (res.ok) {
             const data = await res.json();
             setStats({
               views: data.totalViews || 0,
-              texts: data.totalTexts || 0
+              texts: data.totalTexts || 0,
+              followers: data.totalFollowers || 0
             });
           }
         } catch (error) {
@@ -61,8 +61,6 @@ export default function AuthorDashboard() {
     );
   }
 
-  // LOGIQUE D'AFFICHAGE DU NOM : 
-  // On cherche d'abord le Nom de Plume, sinon le Prénom, sinon le nom complet, sinon "Auteur"
   const displayName = user.penName || user.firstName || user.name?.split(' ')[0] || "Auteur";
 
   return (
@@ -79,22 +77,28 @@ export default function AuthorDashboard() {
             Bonjour, {displayName}
           </h1>
           <p className="text-slate-400 font-medium max-w-sm">
-            Vos statistiques sont à jour selon les dernières lectures.
+            Vos statistiques sont à jour selon les dernières interactions.
           </p>
         </div>
 
-        <div className="flex gap-4 relative z-10">
+        <div className="flex flex-wrap gap-3 relative z-10">
           <StatMini 
-            label="Vues Totales" 
-            value={stats.views.toLocaleString()} 
-            icon={<BarChart size={14}/>} 
+            label="Abonnés" 
+            value={stats.followers.toLocaleString()} 
+            icon={<Users size={14}/>} 
             color="text-teal-400"
           />
           <StatMini 
-            label="Publications" 
+            label="Vues" 
+            value={stats.views.toLocaleString()} 
+            icon={<BarChart size={14}/>} 
+            color="text-slate-400"
+          />
+          <StatMini 
+            label="Textes" 
             value={stats.texts} 
             icon={<BookOpen size={14}/>} 
-            color="text-teal-400"
+            color="text-slate-400"
           />
         </div>
 
@@ -106,24 +110,32 @@ export default function AuthorDashboard() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* PROGRESSION MONÉTISATION BASÉE SUR LES ABONNÉS */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-            <BookOpen size={16} className="text-teal-500" />
-            Statut du compte
+            <Users size={16} className="text-teal-500" />
+            Monétisation
           </h3>
           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-            <div className="flex justify-between items-end mb-2">
+            <div className="flex justify-between items-end mb-3">
                <p className="text-slate-900 text-sm font-bold">
-                {stats.views >= 250 ? "✅ Éligible à la monétisation" : "🚀 Objectif monétisation"}
+                {stats.followers >= 250 ? "✅ Éligible aux revenus" : "🚀 Objectif 250 abonnés"}
               </p>
-              <span className="text-[10px] font-black text-teal-600">{Math.min(stats.views, 250)} / 250 vues</span>
+              <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">
+                {Math.min(stats.followers, 250)} / 250
+              </span>
             </div>
-            <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden shadow-inner">
                 <div 
-                  className="bg-teal-500 h-full transition-all duration-1000" 
-                  style={{ width: `${Math.min((stats.views / 250) * 100, 100)}%` }}
+                  className="bg-teal-500 h-full transition-all duration-1000 ease-out" 
+                  style={{ width: `${Math.min((stats.followers / 250) * 100, 100)}%` }}
                 ></div>
             </div>
+            {stats.followers < 250 && (
+              <p className="text-[10px] text-slate-400 mt-4 font-medium italic">
+                Encore {250 - stats.followers} lecteurs fidèles pour débloquer votre portefeuille.
+              </p>
+            )}
           </div>
         </div>
 
@@ -132,9 +144,9 @@ export default function AuthorDashboard() {
             <Sparkles size={16} className="text-amber-500" />
             Conseil du jour
           </h3>
-          <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100/50">
+          <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100/50 flex flex-col justify-center h-[116px]">
             <p className="text-slate-700 text-sm leading-relaxed font-serif italic">
-              "Écrivez sans crainte, retouchez sans pitié."
+              "Un abonné est un lecteur qui attend votre prochain mot. Écrivez pour lui."
             </p>
           </div>
         </div>
@@ -151,10 +163,10 @@ export default function AuthorDashboard() {
 
 function StatMini({ label, value, icon, color }) {
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-5 py-4 rounded-3xl min-w-[120px] text-center">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-4 py-3 rounded-2xl min-w-[100px] text-center">
       <div className={`flex justify-center ${color} mb-1`}>{icon}</div>
-      <p className="text-2xl font-black">{value}</p>
-      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
+      <p className="text-xl font-black">{value}</p>
+      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
     </div>
   );
 }
