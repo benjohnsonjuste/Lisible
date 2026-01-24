@@ -18,13 +18,13 @@
   "lastSync": "2026-01-24T07:02:34.529Z",
   "lastUpdate": "2026-01-24T07:02:34.709Z",
   "name": "jb7management",
-  "paymentMethod": "PayPal",
+  "paymentMethod": "MoneyGram",
   "paypalEmail": "",
   "wuMoneyGram": {
-    "firstName": "",
-    "lastName": "",
-    "country": "",
+    "firstName": "Ben Johnson",
+    "lastName": "Juste",
+    "country": "Haïti",
     "areaCode": "",
-    "phone": ""
+    "phone": "38803719"
   }
 }
