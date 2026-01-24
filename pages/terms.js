@@ -1,95 +1,95 @@
+"use client";
 import Link from "next/link";
+import { ShieldCheck, Scale, FileText, Mail, Facebook, ArrowLeft } from "lucide-react";
 
 export default function Conditions() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold mb-6 text-center">Conditions d’utilisation de Lisible</h1>
+    <div className="max-w-4xl mx-auto space-y-10">
+      {/* Header de la page */}
+      <header className="text-center space-y-4">
+        <div className="inline-flex p-4 bg-teal-50 text-teal-600 rounded-[1.5rem] mb-2">
+          <Scale size={40} />
+        </div>
+        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic leading-tight">
+          Conditions d’utilisation
+        </h1>
+        <p className="text-slate-400 font-medium italic">Dernière mise à jour : Janvier 2026</p>
+      </header>
 
-      <p className="mb-4">
-        Bienvenue sur <strong>Lisible</strong>, plateforme de lecture en streaming produite par le label littéraire <strong>La Belle Littéraire</strong>, structure légale reconnue par l'État haïtien. En utilisant cette plateforme, vous acceptez les présentes Conditions d’utilisation.
-      </p>
+      <article className="card-lisible prose prose-slate max-w-none border-none ring-1 ring-slate-100 shadow-xl shadow-slate-200/50">
+        <div className="space-y-8 text-slate-600 leading-relaxed">
+          
+          <p className="text-lg font-medium text-slate-800 border-l-4 border-teal-500 pl-6 py-2">
+            Bienvenue sur <span className="text-teal-600 font-black">Lisible</span>, plateforme de lecture en streaming produite par le label littéraire <span className="font-bold">La Belle Littéraire</span>, structure légale reconnue par l'État haïtien.
+          </p>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">1. Objet de Lisible</h2>
-      <p className="mb-4">
-        Lisible permet aux lecteurs d’accéder gratuitement à un catalogue d’œuvres littéraires et aux auteurs de publier leurs textes, d’agrandir leur fanbase et de monétiser leurs œuvres à partir de 250 abonnés. Lisible agit uniquement comme un intermédiaire de diffusion et ne revendique aucun droit sur les œuvres publiées.
-      </p>
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-4 uppercase tracking-wider">
+              <span className="text-teal-500">01.</span> Objet de Lisible
+            </h2>
+            <p>
+              Lisible permet aux lecteurs d’accéder gratuitement à un catalogue d’œuvres littéraires et aux auteurs de publier leurs textes, d’agrandir leur fanbase et de monétiser leurs œuvres à partir de <strong>250 abonnés</strong>. Lisible agit uniquement comme un intermédiaire de diffusion et ne revendique aucun droit sur les œuvres publiées.
+            </p>
+          </section>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">2. Données personnelles et confidentialité</h2>
-      <p className="mb-2">
-        Les données collectées (nom, email, informations de profil, abonnements, historique de lecture) sont utilisées uniquement pour faciliter la navigation et les interactions sur la plateforme.
-      </p>
-      <p className="mb-2">
-        Lisible ne vend ni ne partage vos informations personnelles à des tiers à des fins commerciales. Toutes vos données sont stockées de manière sécurisée.
-      </p>
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-4 uppercase tracking-wider">
+              <span className="text-teal-500">02.</span> Confidentialité
+            </h2>
+            <p>
+              Les données collectées (nom, email, informations de profil, abonnements) sont utilisées uniquement pour faciliter la navigation. Lisible ne vend ni ne partage vos informations personnelles à des tiers à des fins commerciales.
+            </p>
+          </section>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">3. Nécessité d’être connecté</h2>
-      <p className="mb-2">
-        Certaines fonctionnalités nécessitent un compte utilisateur :
-      </p>
-      <ul className="list-disc list-inside mb-4">
-        <li>Publier un texte</li>
-        <li>S’abonner à un auteur</li>
-        <li>Aimer un texte</li>
-      </ul>
-      <p className="mb-4">La création d’un compte est gratuite et obligatoire pour ces actions.</p>
+          <section className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-4 uppercase tracking-wider">
+              <span className="text-teal-500">03.</span> Compte Utilisateur
+            </h2>
+            <p className="mb-4 font-medium">Certaines fonctionnalités nécessitent un compte gratuit :</p>
+            <ul className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {["Publier un texte", "S’abonner", "Aimer un texte"].map((item, i) => (
+                <li key={i} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-xs font-black text-slate-500 shadow-sm">
+                  <ShieldCheck size={14} className="text-teal-500" /> {item}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">4. Droits d’auteur et propriété intellectuelle</h2>
-      <p className="mb-2">
-        Chaque auteur conserve tous les droits sur ses œuvres. Lisible n’a aucun droit de reproduction, modification ou redistribution sans autorisation. Les utilisateurs s’engagent à respecter ces droits.
-      </p>
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-4 uppercase tracking-wider">
+              <span className="text-teal-500">04.</span> Droits d’auteur
+            </h2>
+            <p>
+              Chaque auteur conserve <strong>l'intégralité de ses droits</strong> sur ses œuvres. Lisible n’a aucun droit de reproduction ou redistribution sans autorisation.
+            </p>
+          </section>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">5. Utilisation responsable</h2>
-      <p className="mb-2">
-        Les utilisateurs s’engagent à :
-      </p>
-      <ul className="list-disc list-inside mb-4">
-        <li>Ne pas publier de contenus illégaux ou offensants</li>
-        <li>Respecter les autres auteurs et lecteurs</li>
-        <li>Ne pas créer de comptes multiples pour fausser abonnements ou likes</li>
-      </ul>
-      <p className="mb-4">
-        Lisible se réserve le droit de supprimer tout compte ou contenu enfreignant ces règles.
-      </p>
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-4 uppercase tracking-wider">
+              <span className="text-teal-500">05.</span> Contact & Support
+            </h2>
+            <div className="flex flex-col md:flex-row gap-4">
+              <a href="mailto:support@labellelitteraire.ht" className="flex items-center gap-3 p-4 bg-teal-50 text-teal-700 rounded-2xl font-bold text-sm flex-1 hover:bg-teal-100 transition-colors">
+                <Mail size={20} /> support@labellelitteraire.ht
+              </a>
+              <a href="https://www.facebook.com/labellelitteraire" target="_blank" className="flex items-center gap-3 p-4 bg-blue-50 text-blue-700 rounded-2xl font-bold text-sm flex-1 hover:bg-blue-100 transition-colors">
+                <Facebook size={20} /> La Belle Littéraire
+              </a>
+            </div>
+          </section>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">6. Assistance et contact</h2>
-      <p className="mb-4">
-        En cas de problème technique ou de difficulté avec le service, contactez notre équipe : <a href="mailto:support@labellelitteraire.ht" className="text-blue-600 underline">support@labellelitteraire.ht</a>. Nos opérateurs sont disponibles pour assister tous les utilisateurs.
-      </p>
+        </div>
+      </article>
 
-      <h2 className="text-2xl font-semibold mt-6 mb-2">7. Responsabilité</h2>
-      <p className="mb-4">
-        Lisible fournit l’accès aux textes "en l’état". Les auteurs sont responsables de la légalité et de la véracité des contenus. Lisible n’est pas responsable des litiges entre utilisateurs ou d’une mauvaise utilisation des contenus.
-      </p>
-
-      <h2 className="text-2xl font-semibold mt-6 mb-2">8. Modifications des Conditions</h2>
-      <p className="mb-4">
-        Lisible peut modifier ces conditions à tout moment. L’utilisation continue de la plateforme vaut acceptation des nouvelles conditions.
-      </p>
-
-      <h2 className="text-2xl font-semibold mt-6 mb-2">9. Acceptation</h2>
-      <p className="mb-4">
-        En utilisant Lisible, vous confirmez avoir lu et accepté ces conditions, à respecter les droits d’auteur et à utiliser la plateforme de manière responsable.
-      </p>
-
-      {/* Liens supplémentaires */}
-      <div className="text-center mt-8 space-y-4">
-        <p>
-          Suivez-nous sur notre page Facebook :{" "}
-          <a href="https://www.facebook.com/labellelitteraire" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-            La Belle Littéraire
-          </a>
-        </p>
-        <Link href="/signup">
-          <a className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition">
-            S'inscrire pour publier
-          </a>
+      {/* Boutons d'action */}
+      <footer className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+        <Link href="/signup" className="btn-lisible w-full sm:w-auto shadow-xl shadow-teal-100">
+          M'INSCRIRE ET PUBLIER
         </Link>
-        <Link href="/">
-          <a className="inline-block bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold px-6 py-3 rounded-lg transition">
-            Retour à l'accueil
-          </a>
+        <Link href="/" className="flex items-center gap-2 px-8 py-4 bg-white text-slate-400 font-black text-xs uppercase tracking-[0.2em] rounded-2xl border border-slate-100 hover:text-teal-600 transition-all">
+          <ArrowLeft size={16} /> Retour à l'accueil
         </Link>
-      </div>
+      </footer>
     </div>
   );
 }
