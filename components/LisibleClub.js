@@ -1,211 +1,115 @@
-import { useEffect, useState, useRef } from "react";
-import { db, auth, storage } from "@/lib/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  serverTimestamp,
-  updateDoc,
-  arrayUnion,
-  doc,
-} from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+"use client";
+import React, { useEffect, useState, useRef } from "react";
+import { Mic, Video, VideoOff, MicOff, Heart, Send, Users, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-export default function LisibleClub() {
+export default function LisibleClub({ roomId, mode = "video", isHost = false }) {
+  const [joined, setJoined] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [inputMsg, setInputMsg] = useState("");
+  const [stats, setStats] = useState({ viewers: 0, likes: 0 });
   const [user, setUser] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [content, setContent] = useState("");
-  const [media, setMedia] = useState(null);
-  const videoRef = useRef(null);
-  const audioRef = useRef(null);
-  const [streaming, setStreaming] = useState(false);
-  const [streamType, setStreamType] = useState("video");
 
-  // 🔹 Auth
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
-    return () => unsubscribe();
+    const loggedUser = JSON.parse(localStorage.getItem("lisible_user"));
+    setUser(loggedUser);
   }, []);
 
-  // 🔹 Charger les posts
-  const fetchPosts = async () => {
-    const q = query(collection(db, "clubPosts"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  };
-
-  useEffect(() => {
-    if (user) fetchPosts();
-  }, [user]);
-
-  // 🔹 Notifications live
-  useEffect(() => {
-    if (!user || typeof window === "undefined") return;
-    import("@/lib/firebaseMessagingClient").then(async ({ getFCMToken, onMessageListener }) => {
-      const token = await getFCMToken();
-      if (token) await updateDoc(doc(db, "userTokens", user.uid), { token }, { merge: true });
-      onMessageListener(payload => alert(`Live en direct : ${payload.notification?.body}`));
-    });
-  }, [user]);
-
-  // 🔹 Publier post
-  const publishPost = async () => {
-    if (!user) return alert("Vous devez être connecté pour publier");
-    if (!content && !media) return alert("Ajoutez du texte ou un média");
-
-    let mediaUrl = null;
-    if (media) {
-      const storageRef = ref(storage, `club/${user.uid}/${Date.now()}_${media.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, media);
-      mediaUrl = await new Promise((resolve, reject) => {
-        uploadTask.on("state_changed", null, reject, async () => resolve(await getDownloadURL(uploadTask.snapshot.ref)));
+  // Simulation du lancement du Live et notification
+  const startLive = async () => {
+    setJoined(true);
+    if (isHost) {
+      toast.success("Vous êtes en direct !");
+      // Appeler l'API de notification globale
+      await fetch('/api/notifications/broadcast-live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authorName: user?.name || "Un auteur",
+          mode: mode,
+          roomId: roomId
+        })
       });
     }
-
-    await addDoc(collection(db, "clubPosts"), {
-      authorId: user.uid,
-      authorName: user.displayName || "Auteur inconnu",
-      content,
-      mediaUrl,
-      likes: 0,
-      likedBy: [],
-      comments: [],
-      createdAt: serverTimestamp(),
-    });
-
-    setContent("");
-    setMedia(null);
-    fetchPosts();
   };
 
-  // 🔹 Like
-  const likePost = async post => {
-    if (!post.likedBy.includes(user.uid)) {
-      const postRef = doc(db, "clubPosts", post.id);
-      await updateDoc(postRef, {
-        likes: post.likes + 1,
-        likedBy: arrayUnion(user.uid),
-      });
-      fetchPosts();
-    }
+  const sendMessage = (e) => {
+    e.preventDefault();
+    if (!inputMsg.trim()) return;
+    const msg = { id: Date.now(), user: user?.name || "Anonyme", text: inputMsg };
+    setMessages(prev => [...prev, msg].slice(-20)); // Garde les 20 derniers messages
+    setInputMsg("");
   };
-
-  // 🔹 Comment
-  const commentPost = async (postId, text) => {
-    if (!text) return;
-    const postRef = doc(db, "clubPosts", postId);
-    await updateDoc(postRef, {
-      comments: arrayUnion({ uid: user.uid, text, createdAt: serverTimestamp() }),
-    });
-    fetchPosts();
-  };
-
-  // 🔹 Live vidéo/audio avec demande d'autorisation
-  const startStream = async () => {
-    try {
-      const constraints = streamType === "video" ? { video: true, audio: true } : { audio: true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (streamType === "video") videoRef.current.srcObject = stream;
-      else audioRef.current.srcObject = stream;
-      setStreaming(true);
-    } catch {
-      alert("Impossible d'accéder au micro ou à la caméra. Autorisez l'accès pour diffuser en direct.");
-    }
-  };
-
-  const stopStream = () => {
-    [videoRef.current, audioRef.current].forEach(el => {
-      if (el?.srcObject) {
-        el.srcObject.getTracks().forEach(track => track.stop());
-        el.srcObject = null;
-      }
-    });
-    setStreaming(false);
-  };
-
-  if (!user) return <p className="text-center mt-8">Connectez-vous pour accéder à Lisible Club</p>;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">Lisible Club</h1>
-
-      {/* Formulaire Post */}
-      <div className="bg-white p-4 rounded shadow space-y-2">
-        <textarea
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          placeholder="Écrivez quelque chose..."
-          className="w-full border p-2 rounded"
-        />
-        <input type="file" onChange={e => setMedia(e.target.files[0])} className="w-full" />
-        <button onClick={publishPost} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mt-2">
-          Publier
-        </button>
-      </div>
-
-      {/* Live vidéo/audio */}
-      <div className="bg-white p-4 rounded shadow space-y-4">
-        <h2 className="font-bold">Diffusion en direct</h2>
-        <div className="flex gap-6 items-center">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="radio" value="video" checked={streamType === "video"} onChange={() => setStreamType("video")} className="hidden" />
-            <div className={`p-2 rounded-full border-2 ${streamType === "video" ? "border-blue-600" : "border-gray-300"}`}>
-              <img src="/video-94.svg" alt="Vidéo" className="w-8 h-8" />
-            </div>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="radio" value="audio" checked={streamType === "audio"} onChange={() => setStreamType("audio")} className="hidden" />
-            <div className={`p-2 rounded-full border-2 ${streamType === "audio" ? "border-green-600" : "border-gray-300"}`}>
-              <img src="/audio-18.svg" alt="Audio" className="w-8 h-8" />
-            </div>
-          </label>
+    <div className="max-w-4xl mx-auto h-[85vh] relative bg-slate-950 rounded-[3rem] overflow-hidden shadow-2xl">
+      
+      {!joined ? (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
+          <h2 className="text-3xl font-black mb-4 italic">Lisible Club</h2>
+          <p className="text-slate-400 mb-8 max-w-xs text-sm">Prêt à rejoindre la session en direct ?</p>
+          <button onClick={startLive} className="bg-teal-500 text-slate-900 px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-400 transition-all">
+            {isHost ? "Lancer le Live" : "Rejoindre le Live"}
+          </button>
         </div>
-
-        {!streaming ? (
-          <button onClick={startStream} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Démarrer le live</button>
-        ) : (
-          <button onClick={stopStream} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Arrêter le live</button>
-        )}
-
-        {streamType === "video" ? (
-          <video ref={videoRef} autoPlay playsInline className="w-full mt-4 rounded shadow" />
-        ) : (
-          <audio ref={audioRef} autoPlay controls className="w-full mt-4" />
-        )}
-      </div>
-
-      {/* Liste des posts */}
-      <div className="space-y-4">
-        {posts.map(post => (
-          <div key={post.id} className="bg-white p-4 rounded shadow space-y-2">
-            <p className="font-bold">{post.authorName}</p>
-            {post.content && <p>{post.content}</p>}
-            {post.mediaUrl && (
-              <>
-                {post.mediaUrl.endsWith(".mp4") ? (
-                  <video src={post.mediaUrl} controls className="w-full rounded" />
-                ) : post.mediaUrl.endsWith(".mp3") ? (
-                  <audio src={post.mediaUrl} controls className="w-full" />
-                ) : (
-                  <img src={post.mediaUrl} alt="media" className="w-full rounded" />
-                )}
-              </>
+      ) : (
+        <>
+          {/* Flux Vidéo/Audio */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {mode === "video" ? (
+              <div className="w-full h-full bg-slate-800 animate-pulse flex items-center justify-center">
+                 <p className="text-white/20 italic">Flux vidéo en direct...</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-6">
+                <div className="w-32 h-32 bg-teal-500/20 rounded-full flex items-center justify-center border-2 border-teal-500 animate-pulse">
+                  <Mic className="text-teal-500" size={48} />
+                </div>
+                <p className="text-teal-500 font-black tracking-widest text-xs uppercase">Podcast Audio</p>
+              </div>
             )}
-            <div className="flex items-center gap-3 mt-2">
-              <button
-                onClick={() => likePost(post)}
-                disabled={post.likedBy?.includes(user.uid)}
-                className={`flex items-center gap-1 ${post.likedBy?.includes(user.uid) ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <img src="/like.svg" alt="J'aime" className="w-5 h-5" />
-                <span>{post.likes || 0}</span>
-              </button>
-            </div>
           </div>
-        ))}
-      </div>
+
+          {/* Header Stats */}
+          <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-10">
+            <div className="flex gap-2">
+              <div className="bg-red-600 px-3 py-1 rounded-full text-[10px] font-black text-white flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping"/> DIRECT
+              </div>
+              <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-white text-[10px] font-black flex items-center gap-2 border border-white/10">
+                <Users size={12}/> {stats.viewers}
+              </div>
+            </div>
+            <button onClick={() => window.location.href='/bibliotheque'} className="p-2 bg-white/10 backdrop-blur-md rounded-full text-white"><X/></button>
+          </div>
+
+          {/* Chat style Instagram (bas gauche) */}
+          <div className="absolute bottom-28 left-6 w-72 flex flex-col gap-2 z-10 max-h-60 overflow-hidden">
+            {messages.map((m) => (
+              <div key={m.id} className="bg-black/20 backdrop-blur-sm p-2 rounded-xl border border-white/5 self-start animate-in slide-in-from-left-2">
+                <p className="text-teal-400 font-black text-[10px] uppercase">{m.user}</p>
+                <p className="text-white text-xs">{m.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Barre d'action */}
+          <div className="absolute bottom-8 left-6 right-6 flex items-center gap-3 z-10">
+            <form onSubmit={sendMessage} className="flex-grow flex items-center bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-3">
+              <input 
+                value={inputMsg} onChange={e => setInputMsg(e.target.value)}
+                placeholder="Commenter..." 
+                className="bg-transparent border-none outline-none text-white text-sm w-full"
+              />
+              <button type="submit" className="text-teal-400"><Send size={18}/></button>
+            </form>
+            <button onClick={() => setStats(s => ({...s, likes: s.likes + 1}))} className="p-4 bg-white/10 backdrop-blur-xl rounded-2xl text-white hover:bg-red-500/20 transition-all border border-white/10 relative">
+              <Heart size={20} className={stats.likes > 0 ? "fill-red-500 text-red-500" : ""}/>
+              {stats.likes > 0 && <span className="absolute -top-2 -right-1 bg-red-600 text-[8px] font-black px-1.5 py-0.5 rounded-full">{stats.likes}</span>}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
