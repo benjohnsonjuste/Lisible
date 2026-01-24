@@ -47,7 +47,7 @@ export default function Conditions() {
             </h2>
             <p className="mb-4 font-medium">Certaines fonctionnalités nécessitent un compte gratuit :</p>
             <ul className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {["Publier un texte", "S’abonner", "Aimer un texte"].map((item, i) => (
+              {["Publier un texte", "S’abonner", "Aimer un texte", "Commenter un texte"].map((item, i) => (
                 <li key={i} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-xs font-black text-slate-500 shadow-sm">
                   <ShieldCheck size={14} className="text-teal-500" /> {item}
                 </li>
@@ -69,8 +69,8 @@ export default function Conditions() {
               <span className="text-teal-500">05.</span> Contact & Support
             </h2>
             <div className="flex flex-col md:flex-row gap-4">
-              <a href="mailto:support@labellelitteraire.ht" className="flex items-center gap-3 p-4 bg-teal-50 text-teal-700 rounded-2xl font-bold text-sm flex-1 hover:bg-teal-100 transition-colors">
-                <Mail size={20} /> support@labellelitteraire.ht
+              <a href="mailto:cmo.lablitteraire7@gmail.com" className="flex items-center gap-3 p-4 bg-teal-50 text-teal-700 rounded-2xl font-bold text-sm flex-1 hover:bg-teal-100 transition-colors">
+                <Mail size={20} /> Support Team
               </a>
               <a href="https://www.facebook.com/labellelitteraire" target="_blank" className="flex items-center gap-3 p-4 bg-blue-50 text-blue-700 rounded-2xl font-bold text-sm flex-1 hover:bg-blue-100 transition-colors">
                 <Facebook size={20} /> La Belle Littéraire
