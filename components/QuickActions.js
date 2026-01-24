@@ -32,7 +32,7 @@ export default function QuickActions() {
       color: "text-amber-600",
       bgColor: "bg-amber-50",
       shadow: "shadow-amber-100",
-      href: "/statistics",
+      href: "/analytics",
     },
   ];
 
