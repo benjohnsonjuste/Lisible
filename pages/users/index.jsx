@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Mail, Users as UsersIcon, BookOpen, ChevronRight, UserPlus, UserMinus } from "lucide-react";
+import { Users as UsersIcon, UserPlus, UserMinus, Star, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -19,80 +19,113 @@ export default function UsersPage() {
     try {
       const res = await fetch("https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users");
       const files = await res.json();
-      const dataPromises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()));
+      const dataPromises = files
+        .filter(f => f.name.endsWith('.json'))
+        .map(f => fetch(f.download_url + `?t=${Date.now()}`).then(r => r.json()));
+      
       const allUsers = await Promise.all(dataPromises);
-      setAuthors(allUsers.sort((a, b) => (b.followers?.length || 0) - (a.followers?.length || 0)));
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+      // Tri par nombre d'abonnés (subscribers)
+      setAuthors(allUsers.sort((a, b) => (b.subscribers?.length || 0) - (a.subscribers?.length || 0)));
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
+    }
   }
 
   const handleSubscription = async (targetAuthor, isSubscribed) => {
     if (!currentUser) return toast.error("Connectez-vous pour vous abonner");
-    const type = isSubscribed ? "unfollow" : "follow";
+    if (targetAuthor.email === currentUser.email) return;
+
+    const type = isSubscribed ? "unsubscribe" : "subscribe";
+    const loadingToast = toast.loading(isSubscribed ? "Désabonnement..." : "Abonnement...");
 
     try {
-      await fetch('/api/social', {
+      const res = await fetch('/api/handle-subscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, targetEmail: targetAuthor.email, followerEmail: currentUser.email })
+        body: JSON.stringify({ 
+          type, 
+          targetEmail: targetAuthor.email, 
+          subscriberEmail: currentUser.email,
+          subscriberName: currentUser.name 
+        })
       });
+
+      if (!res.ok) throw new Error();
       
-      // Notification si c'est un nouvel abonné
-      if (type === "follow") {
-        await fetch('/api/push-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'like', 
-            message: `${currentUser.name} s'est abonné à vous !`,
-            targetEmail: targetAuthor.email,
-            link: '/users'
-          })
-        });
-      }
-      
-      toast.success(isSubscribed ? "Désabonné" : "Abonnement réussi !");
-      loadUsers(); // Recharger pour voir le compteur
-    } catch (e) { toast.error("Erreur"); }
+      toast.success(isSubscribed ? "Vous ne suivez plus cet auteur" : `Vous suivez désormais ${targetAuthor.name} !`, { id: loadingToast });
+      loadUsers(); // Rafraîchir la liste
+    } catch (e) { 
+      toast.error("Erreur de connexion", { id: loadingToast }); 
+    }
   };
 
+  if (loading) return <div className="flex justify-center p-20 animate-pulse text-gray-400 font-bold">Chargement des auteurs...</div>;
+
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-10 min-h-screen">
-      <header className="mb-12">
-        <h1 className="text-4xl font-black text-gray-900 tracking-tight">Communauté</h1>
-        <p className="text-gray-500">Suivez vos auteurs préférés et aidez-les à débloquer la monétisation.</p>
+    <div className="space-y-10">
+      <header className="space-y-2">
+        <h1 className="text-4xl font-black text-gray-900 tracking-tight italic">Communauté</h1>
+        <p className="text-gray-500 font-medium">Soutenez vos auteurs préférés pour les aider à atteindre les 250 abonnés.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {authors.map((a, index) => {
-          const isSubscribed = a.followers?.includes(currentUser?.email);
+          const subscribersCount = a.subscribers?.length || 0;
+          const isSubscribed = a.subscribers?.includes(currentUser?.email);
           const isMe = a.email === currentUser?.email;
+          const isPartner = subscribersCount >= 250;
 
           return (
-            <div key={index} className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all">
+            <div key={index} className="card-lisible group hover:scale-[1.02] transition-transform">
               <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black">
-                    {a.name?.charAt(0)}
+                <div className="flex items-center gap-5">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-slate-100 rounded-[1.5rem] overflow-hidden border-2 border-white shadow-sm flex items-center justify-center text-2xl font-black text-teal-600">
+                      {a.profilePic ? (
+                        <img src={a.profilePic} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        a.name?.charAt(0)
+                      )}
+                    </div>
+                    {isPartner && (
+                      <div className="absolute -top-2 -right-2 bg-amber-400 text-white p-1 rounded-full shadow-sm border-2 border-white">
+                        <Star size={14} fill="currentColor" />
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-gray-900">{a.name}</h2>
-                    <p className="text-blue-600 font-bold text-sm">{a.followers?.length || 0} abonnés</p>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-black text-xl text-gray-900 leading-none">{a.penName || a.name}</h2>
+                      {isPartner && <ShieldCheck size={18} className="text-teal-500" />}
+                    </div>
+                    <p className="text-teal-600 font-black text-xs uppercase tracking-widest mt-1">
+                      {subscribersCount} {subscribersCount > 1 ? "Abonnés" : "Abonné"}
+                    </p>
                   </div>
                 </div>
 
                 {!isMe && (
                   <button
                     onClick={() => handleSubscription(a, isSubscribed)}
-                    className={`p-3 rounded-2xl transition-all ${isSubscribed ? 'bg-gray-100 text-gray-400' : 'bg-blue-600 text-white shadow-lg shadow-blue-200'}`}
+                    className={`p-4 rounded-2xl transition-all active:scale-90 ${
+                      isSubscribed 
+                      ? 'bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500' 
+                      : 'btn-lisible shadow-lg shadow-teal-100'
+                    }`}
                   >
-                    {isSubscribed ? <UserMinus size={20} /> : <UserPlus size={20} />}
+                    {isSubscribed ? <UserMinus size={22} /> : <UserPlus size={22} />}
                   </button>
                 )}
               </div>
 
-              <div className="flex gap-3">
-                <Link href={`/bibliotheque?author=${encodeURIComponent(a.name)}`} className="flex-grow text-center py-3 bg-gray-50 rounded-2xl text-xs font-black text-gray-500 hover:bg-gray-100 transition-colors">
-                  VOIR SES TEXTES
+              <div className="flex gap-3 mt-4">
+                <Link 
+                  href={`/bibliotheque?author=${encodeURIComponent(a.name)}`} 
+                  className="w-full py-4 bg-slate-50 rounded-2xl text-[10px] font-black text-slate-400 hover:bg-slate-100 hover:text-teal-600 transition-all text-center tracking-widest uppercase"
+                >
+                  Lire ses publications
                 </Link>
               </div>
             </div>
