@@ -15,7 +15,13 @@ export default async function handler(req, res) {
       repo: "Lisible",
       path: `data/users/${fileName}`,
       message: `Nouvel utilisateur : ${name}`,
-      content: Buffer.from(JSON.stringify({ name, email, joinedAt }, null, 2)).toString("base64"),
+      content: Buffer.from(JSON.stringify({ 
+        name, 
+        email, 
+        joinedAt,
+        subscribers: [], // Initialisation des abonnés
+        totalViews: 0    // Initialisation du compteur de vues
+      }, null, 2)).toString("base64"),
     });
     return res.status(200).json({ success: true });
   } catch (error) {
