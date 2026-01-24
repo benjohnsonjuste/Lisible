@@ -53,7 +53,7 @@ export default function AuthForm() {
       toast.success(isLogin ? `Heureux de vous revoir, ${userData.name} !` : "Compte créé et enregistré !");
       
       // Redirection vers la publication
-      router.push("/publish");
+      router.push("/dashboard");
     } catch (err) {
       console.error("Auth error:", err);
       toast.error(err.message || "Une erreur est survenue");
