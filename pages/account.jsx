@@ -1,211 +1,243 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { User, CreditCard, Camera, Save, Edit3, ArrowLeft, Settings } from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
+import Link from "next/link";
 
 export default function AccountPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Infos de profil
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [penName, setPenName] = useState("");
-  const [birthday, setBirthday] = useState("");
-  const [profilePic, setProfilePic] = useState("/avatar.png");
-
-  // Paiement
-  const [paymentMethod, setPaymentMethod] = useState("PayPal");
-  const [paypalEmail, setPaypalEmail] = useState("");
-  const [wuMoneyGram, setWuMoneyGram] = useState({
+  const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    penName: "",
+    birthday: "",
+    profilePic: ""
+  });
+
+  // Paiement
+  const [payment, setPayment] = useState({
+    method: "PayPal",
+    paypalEmail: "",
+    wuFirstName: "",
+    wuLastName: "",
     country: "",
     areaCode: "",
     phone: "",
   });
   const [editingPayment, setEditingPayment] = useState(false);
 
-  // Charger l’utilisateur depuis GitHub/localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem("lisibleUser");
+    const storedUser = localStorage.getItem("lisible_user");
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
-      setFirstName(parsed.firstName || "");
-      setLastName(parsed.lastName || "");
-      setPenName(parsed.penName || "");
-      setBirthday(parsed.birthday || "");
-      setProfilePic(parsed.profilePic || "/avatar.png");
-      setPaymentMethod(parsed.paymentMethod || "PayPal");
-      setPaypalEmail(parsed.paypalEmail || "");
-      setWuMoneyGram(parsed.wuMoneyGram || {});
-      setEditingPayment(!!parsed.paymentMethod);
+      setFormData({
+        firstName: parsed.firstName || "",
+        lastName: parsed.lastName || "",
+        penName: parsed.penName || parsed.name || "",
+        birthday: parsed.birthday || "",
+        profilePic: parsed.profilePic || ""
+      });
+      setPayment({
+        method: parsed.paymentMethod || "PayPal",
+        paypalEmail: parsed.paypalEmail || "",
+        wuFirstName: parsed.wuMoneyGram?.firstName || "",
+        wuLastName: parsed.wuMoneyGram?.lastName || "",
+        country: parsed.wuMoneyGram?.country || "",
+        areaCode: parsed.wuMoneyGram?.areaCode || "",
+        phone: parsed.wuMoneyGram?.phone || "",
+      });
+      setEditingPayment(!parsed.paymentMethod);
     }
     setLoading(false);
   }, []);
 
-  // Sauvegarde du profil général
   const handleSaveProfile = async () => {
-    if (!firstName || !lastName) {
-      toast.error("Nom et Prénom requis");
-      return;
+    if (!formData.firstName || !formData.lastName) return toast.error("Nom et Prénom requis");
+    
+    try {
+      const res = await fetch("/api/save-user-github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, ...formData }),
+      });
+      if (!res.ok) throw new Error();
+      
+      const updatedUser = { ...user, ...formData };
+      localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      toast.success("Profil mis à jour !");
+    } catch (err) {
+      toast.error("Erreur lors de la sauvegarde");
     }
+  };
+
+  const handleSavePayment = async () => {
+    if (payment.method === "PayPal" && !payment.paypalEmail) return toast.error("Email PayPal requis");
+    
     const payload = {
-      uid: user.uid,
-      firstName,
-      lastName,
-      penName,
-      birthday,
-      profilePic,
+      email: user.email,
+      paymentMethod: payment.method,
+      paypalEmail: payment.method === "PayPal" ? payment.paypalEmail : "",
+      wuMoneyGram: payment.method !== "PayPal" ? {
+        firstName: payment.wuFirstName,
+        lastName: payment.wuLastName,
+        country: payment.country,
+        areaCode: payment.areaCode,
+        phone: payment.phone,
+      } : {}
     };
+
     try {
       const res = await fetch("/api/save-user-github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Échec sauvegarde");
-      localStorage.setItem("lisibleUser", JSON.stringify({ ...user, ...payload }));
-      setUser(prev => ({ ...prev, ...payload }));
-      toast.success("✅ Profil sauvegardé !");
+      if (!res.ok) throw new Error();
+      
+      const updatedUser = { ...user, ...payload };
+      localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setEditingPayment(false);
+      toast.success("Infos de paiement enregistrées !");
     } catch (err) {
-      console.error(err);
-      toast.error("❌ Impossible de sauvegarder le profil");
+      toast.error("Erreur de sauvegarde");
     }
   };
 
-  // Sauvegarde des infos de paiement
-  const handleSavePayment = async () => {
-    if (!user) {
-      toast.error("Utilisateur non connecté");
-      return;
-    }
-    if (paymentMethod === "PayPal" && !paypalEmail) {
-      toast.error("Adresse PayPal requise");
-      return;
-    }
-    if ((paymentMethod === "Western Union" || paymentMethod === "MoneyGram") &&
-        (!wuMoneyGram.firstName || !wuMoneyGram.lastName || !wuMoneyGram.country || !wuMoneyGram.areaCode || !wuMoneyGram.phone)) {
-      toast.error("Tous les champs du mode de paiement doivent être remplis");
-      return;
-    }
-    const payload = {
-      uid: user.uid,
-      paymentMethod,
-      paypalEmail: paymentMethod === "PayPal" ? paypalEmail : "",
-      wuMoneyGram: (paymentMethod === "Western Union" || paymentMethod === "MoneyGram") ? wuMoneyGram : {},
-    };
-    try {
-      const res = await fetch("/api/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Échec sauvegarde");
-      localStorage.setItem("lisibleUser", JSON.stringify({ ...user, ...payload }));
-      setUser(prev => ({ ...prev, ...payload }));
-      setEditingPayment(true);
-      toast.success("✅ Informations de paiement sauvegardées !");
-    } catch (err) {
-      console.error(err);
-      toast.error("❌ Impossible de sauvegarder les informations de paiement");
-    }
-  };
-
-  if (loading) return <p className="text-center mt-10">Chargement...</p>;
+  if (loading) return <div className="flex justify-center p-20 animate-spin"><Settings /></div>;
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
-      <h1 className="text-3xl font-bold text-center">⚙️ Mon compte</h1>
+    <div className="max-w-4xl mx-auto px-6 py-10 space-y-10">
+      <header className="flex items-center gap-4">
+        <Link href="/dashboard" className="p-3 bg-gray-50 rounded-2xl text-gray-400 hover:text-blue-600 transition-all">
+          <ArrowLeft size={24} />
+        </Link>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Paramètres du compte</h1>
+      </header>
 
-      {/* Section Profil */}
-      <div className="bg-white p-6 rounded-xl shadow space-y-4">
-        <h2 className="text-xl font-semibold">Profil</h2>
-        <div className="flex items-center gap-4 mb-4">
-          <img src={profilePic || "/avatar.png"} className="w-20 h-20 rounded-full object-cover border" />
-          <input type="file" accept="image/*" onChange={e => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => setProfilePic(ev.target.result);
-            reader.readAsDataURL(file);
-          }} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium">Nom *</label>
-            <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} className="w-full border rounded p-2"/>
+      {/* Statistiques Globales */}
+      {user && <MetricsOverview user={user} />}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Colonne Profil */}
+        <section className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
+            <h2 className="text-xl font-black flex items-center gap-3">
+              <User className="text-blue-600" /> Profil de l'auteur
+            </h2>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-gray-50 rounded-[2rem]">
+              <div className="relative group">
+                <div className="w-24 h-24 rounded-3xl bg-indigo-100 overflow-hidden border-4 border-white shadow-lg">
+                  <img src={formData.profilePic || "/avatar.png"} className="w-full h-full object-cover" alt="Profil" />
+                </div>
+                <label className="absolute -bottom-2 -right-2 p-2 bg-blue-600 text-white rounded-xl cursor-pointer shadow-lg hover:bg-blue-700 transition-all">
+                  <Camera size={16} />
+                  <input type="file" className="hidden" accept="image/*" onChange={e => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = ev => setFormData({...formData, profilePic: ev.target.result});
+                      reader.readAsDataURL(file);
+                    }
+                  }} />
+                </label>
+              </div>
+              <div className="text-center sm:text-left">
+                <p className="font-black text-gray-900">{user?.name}</p>
+                <p className="text-sm text-gray-400 font-medium">{user?.email}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Prénom</label>
+                <input type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Nom</label>
+                <input type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Nom de plume (Public)</label>
+                <input type="text" value={formData.penName} onChange={e => setFormData({...formData, penName: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Date de naissance</label>
+                <input type="date" value={formData.birthday} onChange={e => setFormData({...formData, birthday: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 font-bold" />
+              </div>
+            </div>
+
+            <button onClick={handleSaveProfile} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all shadow-xl shadow-gray-100">
+              <Save size={18} /> ENREGISTRER LE PROFIL
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium">Prénom *</label>
-            <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full border rounded p-2"/>
+        </section>
+
+        {/* Colonne Paiement */}
+        <section className="space-y-6">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
+            <h2 className="text-xl font-black flex items-center gap-3">
+              <CreditCard className="text-emerald-500" /> Revenus
+            </h2>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Méthode de retrait</label>
+                <select 
+                  disabled={!editingPayment}
+                  value={payment.method} 
+                  onChange={e => setPayment({...payment, method: e.target.value})}
+                  className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500 appearance-none"
+                >
+                  <option>PayPal</option>
+                  <option>Western Union</option>
+                  <option>MoneyGram</option>
+                </select>
+              </div>
+
+              {payment.method === "PayPal" ? (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase ml-2 tracking-widest">Email PayPal</label>
+                  <input 
+                    type="email" 
+                    disabled={!editingPayment}
+                    value={payment.paypalEmail} 
+                    onChange={e => setPayment({...payment, paypalEmail: e.target.value})}
+                    className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-bold"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <input type="text" disabled={!editingPayment} placeholder="Prénom" value={payment.wuFirstName} onChange={e => setPayment({...payment, wuFirstName: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-bold" />
+                  <input type="text" disabled={!editingPayment} placeholder="Nom" value={payment.wuLastName} onChange={e => setPayment({...payment, wuLastName: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-bold" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" disabled={!editingPayment} placeholder="Pays" value={payment.country} onChange={e => setPayment({...payment, country: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-3 text-sm font-bold" />
+                    <input type="text" disabled={!editingPayment} placeholder="Code" value={payment.areaCode} onChange={e => setPayment({...payment, areaCode: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-3 text-sm font-bold" />
+                  </div>
+                  <input type="text" disabled={!editingPayment} placeholder="Téléphone" value={payment.phone} onChange={e => setPayment({...payment, phone: e.target.value})} className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-bold" />
+                </div>
+              )}
+            </div>
+
+            {editingPayment ? (
+              <button onClick={handleSavePayment} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-50">
+                CONFIRMER LES INFOS
+              </button>
+            ) : (
+              <button onClick={() => setEditingPayment(true)} className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-gray-200 transition-all">
+                <Edit3 size={18} /> MODIFIER LE PAIEMENT
+              </button>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium">Nom de plume</label>
-            <input type="text" value={penName} onChange={e => setPenName(e.target.value)} className="w-full border rounded p-2"/>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Date d'anniversaire</label>
-            <input type="date" value={birthday} onChange={e => setBirthday(e.target.value)} className="w-full border rounded p-2"/>
-          </div>
-        </div>
-        <button onClick={handleSaveProfile} className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-4">Sauvegarder Profil</button>
+        </section>
       </div>
-
-      {/* Section Paiement */}
-      <div className="bg-white p-6 rounded-xl shadow space-y-4">
-        <h2 className="text-xl font-semibold">Paiement</h2>
-        <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full border rounded p-2" disabled={editingPayment}>
-          <option>PayPal</option>
-          <option>Western Union</option>
-          <option>MoneyGram</option>
-        </select>
-
-        {paymentMethod === "PayPal" && (
-          <div className="mt-4">
-            <label className="block text-sm font-medium">Adresse PayPal *</label>
-            <input type="email" value={paypalEmail} onChange={e => setPaypalEmail(e.target.value)} className="w-full border rounded p-2" disabled={editingPayment}/>
-          </div>
-        )}
-
-        {(paymentMethod === "Western Union" || paymentMethod === "MoneyGram") && (
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium">Nom *</label>
-              <input type="text" value={wuMoneyGram.firstName} onChange={e => setWuMoneyGram({...wuMoneyGram, firstName: e.target.value})} className="w-full border rounded p-2" disabled={editingPayment}/>
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Prénom *</label>
-              <input type="text" value={wuMoneyGram.lastName} onChange={e => setWuMoneyGram({...wuMoneyGram, lastName: e.target.value})} className="w-full border rounded p-2" disabled={editingPayment}/>
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Pays *</label>
-              <input type="text" value={wuMoneyGram.country} onChange={e => setWuMoneyGram({...wuMoneyGram, country: e.target.value})} className="w-full border rounded p-2" disabled={editingPayment}/>
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Area code *</label>
-              <input type="text" value={wuMoneyGram.areaCode} onChange={e => setWuMoneyGram({...wuMoneyGram, areaCode: e.target.value})} className="w-full border rounded p-2" disabled={editingPayment}/>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium">Téléphone *</label>
-              <input type="text" value={wuMoneyGram.phone} onChange={e => setWuMoneyGram({...wuMoneyGram, phone: e.target.value})} className="w-full border rounded p-2" disabled={editingPayment}/>
-            </div>
-          </div>
-        )}
-
-        {editingPayment ? (
-          <button onClick={() => setEditingPayment(false)} className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 mt-4">Modifier</button>
-        ) : (
-          <button onClick={handleSavePayment} className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mt-4">Enregistrer</button>
-        )}
-      </div>
-
-      {/* Section Metrics */}
-      {user && <MetricsOverview userId={user.uid} />}
     </div>
   );
 }
