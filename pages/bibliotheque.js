@@ -1,31 +1,38 @@
+"use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router"; // Import nécessaire pour capter l'auteur dans l'URL
 import Link from "next/link";
-import { User, Heart, MessageCircle, Calendar, BookOpen } from "lucide-react";
+import { User, Heart, MessageCircle, Calendar, BookOpen, X } from "lucide-react";
 
 export default function Bibliotheque() {
-  const [texts, setTexts] = useState([]);
+  const router = useRouter();
+  const { author } = router.query; // Récupère ?author=Nom depuis l'URL
+
+  const [allTexts, setAllTexts] = useState([]);
+  const [filteredTexts, setFilteredTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 1. Chargement initial de tous les textes
   useEffect(() => {
     async function loadTexts() {
       try {
-        // Récupération de la liste des fichiers sur GitHub
         const res = await fetch("https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications");
         const files = await res.json();
         
         if (Array.isArray(files)) {
           const dataPromises = files
-            .filter(file => file.name.endsWith('.json')) // Sécurité : on ne prend que les JSON
+            .filter(file => file.name.endsWith('.json'))
             .map(async (file) => {
               const content = await fetch(file.download_url).then(r => r.json());
               const id = file.name.replace(".json", "");
               return { ...content, id }; 
             });
           
-          const allTexts = await Promise.all(dataPromises);
+          const loadedTexts = await Promise.all(dataPromises);
+          const sorted = loadedTexts.sort((a, b) => new Date(b.date) - new Date(a.date));
           
-          // Tri par date décroissante
-          setTexts(allTexts.sort((a, b) => new Date(b.date) - new Date(a.date)));
+          setAllTexts(sorted);
+          setFilteredTexts(sorted); // Par défaut, on affiche tout
         }
       } catch (e) {
         console.error("Erreur de chargement", e);
@@ -35,6 +42,18 @@ export default function Bibliotheque() {
     }
     loadTexts();
   }, []);
+
+  // 2. Logique de filtrage réactive dès que l'URL change ou que les textes sont chargés
+  useEffect(() => {
+    if (author) {
+      const filtered = allTexts.filter(
+        (t) => t.authorName?.toLowerCase() === author.toLowerCase()
+      );
+      setFilteredTexts(filtered);
+    } else {
+      setFilteredTexts(allTexts);
+    }
+  }, [author, allTexts]);
 
   if (loading) return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
@@ -52,21 +71,40 @@ export default function Bibliotheque() {
           </div>
         </div>
         <h1 className="text-4xl font-black text-gray-900 mb-3 tracking-tight">Lisible</h1>
-        <p className="text-gray-500 max-w-md mx-auto">
-          Explorez les récits, réflexions et partages de notre communauté.
-        </p>
+        
+        {/* Barre de filtre actif */}
+        {author ? (
+          <div className="flex flex-col items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+            <p className="text-gray-500 italic">
+              Publications de <span className="text-blue-600 font-black not-italic">{author}</span>
+            </p>
+            <button 
+              onClick={() => router.push("/bibliotheque", undefined, { shallow: true })}
+              className="flex items-center gap-2 px-4 py-1.5 bg-red-50 text-red-600 rounded-full text-xs font-bold hover:bg-red-100 transition-colors"
+            >
+              <X size={14} />
+              EFFACER LE FILTRE
+            </button>
+          </div>
+        ) : (
+          <p className="text-gray-500 max-w-md mx-auto">
+            Explorez les récits, réflexions et partages de notre communauté.
+          </p>
+        )}
       </header>
 
-      {texts.length === 0 ? (
+      {filteredTexts.length === 0 ? (
         <div className="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-gray-200 shadow-sm">
-          <p className="text-gray-400 text-lg">La bibliothèque est vide pour le moment.</p>
+          <p className="text-gray-400 text-lg">
+            {author ? `Aucun texte trouvé pour "${author}".` : "La bibliothèque est vide."}
+          </p>
           <Link href="/publish" className="text-blue-600 font-bold mt-4 inline-block hover:underline">
-            Soyez le premier à publier →
+            Publier un texte →
           </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-10">
-          {texts.map((item) => (
+          {filteredTexts.map((item) => (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
               <article className="bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
                 
