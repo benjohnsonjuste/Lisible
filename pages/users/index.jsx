@@ -1,88 +1,103 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Mail, Users as UsersIcon, BookOpen, ChevronRight } from "lucide-react";
+import { Mail, Users as UsersIcon, BookOpen, ChevronRight, UserPlus, UserMinus } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function UsersPage() {
   const [authors, setAuthors] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadUsers() {
-      try {
-        const res = await fetch("https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users");
-        const files = await res.json();
-        
-        if (Array.isArray(files)) {
-          const dataPromises = files
-            .filter(file => file.name.endsWith('.json'))
-            .map(file => fetch(file.download_url).then(r => r.json()));
-          
-          const allUsers = await Promise.all(dataPromises);
-          setAuthors(allUsers.sort((a, b) => a.name.localeCompare(b.name)));
-        }
-      } catch (e) {
-        console.error("Erreur", e);
-      } finally {
-        setLoading(false);
-      }
-    }
+    const logged = localStorage.getItem("lisible_user");
+    if (logged) setCurrentUser(JSON.parse(logged));
     loadUsers();
   }, []);
 
-  if (loading) return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-    </div>
-  );
+  async function loadUsers() {
+    try {
+      const res = await fetch("https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users");
+      const files = await res.json();
+      const dataPromises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()));
+      const allUsers = await Promise.all(dataPromises);
+      setAuthors(allUsers.sort((a, b) => (b.followers?.length || 0) - (a.followers?.length || 0)));
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  }
+
+  const handleSubscription = async (targetAuthor, isSubscribed) => {
+    if (!currentUser) return toast.error("Connectez-vous pour vous abonner");
+    const type = isSubscribed ? "unfollow" : "follow";
+
+    try {
+      await fetch('/api/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, targetEmail: targetAuthor.email, followerEmail: currentUser.email })
+      });
+      
+      // Notification si c'est un nouvel abonné
+      if (type === "follow") {
+        await fetch('/api/push-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'like', 
+            message: `${currentUser.name} s'est abonné à vous !`,
+            targetEmail: targetAuthor.email,
+            link: '/users'
+          })
+        });
+      }
+      
+      toast.success(isSubscribed ? "Désabonné" : "Abonnement réussi !");
+      loadUsers(); // Recharger pour voir le compteur
+    } catch (e) { toast.error("Erreur"); }
+  };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-10">
+    <div className="max-w-5xl mx-auto p-6 md:p-10 min-h-screen">
       <header className="mb-12">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-100">
-            <UsersIcon size={28} />
-          </div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight">Communauté</h1>
-        </div>
-        <p className="text-gray-500 ml-16">Découvrez les auteurs qui font vivre Lisible.</p>
+        <h1 className="text-4xl font-black text-gray-900 tracking-tight">Communauté</h1>
+        <p className="text-gray-500">Suivez vos auteurs préférés et aidez-les à débloquer la monétisation.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {authors.map((a, index) => (
-          <div key={index} className="group bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-inner">
-                  {a.name?.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h2 className="font-bold text-gray-900 text-lg leading-tight">{a.name}</h2>
-                  <div className="flex items-center gap-1 text-gray-400 text-sm mt-1">
-                    <Mail size={14} />
-                    {a.email}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {authors.map((a, index) => {
+          const isSubscribed = a.followers?.includes(currentUser?.email);
+          const isMe = a.email === currentUser?.email;
+
+          return (
+            <div key={index} className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all">
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black">
+                    {a.name?.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-xl text-gray-900">{a.name}</h2>
+                    <p className="text-blue-600 font-bold text-sm">{a.followers?.length || 0} abonnés</p>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-50 flex items-center justify-between">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                Membre depuis {a.joinedAt ? new Date(a.joinedAt).toLocaleDateString() : "toujours"}
+                {!isMe && (
+                  <button
+                    onClick={() => handleSubscription(a, isSubscribed)}
+                    className={`p-3 rounded-2xl transition-all ${isSubscribed ? 'bg-gray-100 text-gray-400' : 'bg-blue-600 text-white shadow-lg shadow-blue-200'}`}
+                  >
+                    {isSubscribed ? <UserMinus size={20} /> : <UserPlus size={20} />}
+                  </button>
+                )}
               </div>
-              
-              {/* BOUTON DE FILTRE */}
-              <Link 
-                href={`/bibliotheque?author=${encodeURIComponent(a.name)}`}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-black hover:bg-blue-600 hover:text-white transition-all group"
-              >
-                <BookOpen size={14} />
-                VOIR SES TEXTES
-                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
+
+              <div className="flex gap-3">
+                <Link href={`/bibliotheque?author=${encodeURIComponent(a.name)}`} className="flex-grow text-center py-3 bg-gray-50 rounded-2xl text-xs font-black text-gray-500 hover:bg-gray-100 transition-colors">
+                  VOIR SES TEXTES
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
