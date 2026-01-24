@@ -1,13 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/router"; 
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation"; 
 import { toast } from "sonner";
-import { Heart, Share2, User, MessageSquare, Send, ArrowLeft, Lock, Eye } from "lucide-react";
+import { Heart, Share2, User, MessageSquare, Send, ArrowLeft, Eye, Clock, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-export default function TextPage() {
+export default function TextPage({ params }) {
   const router = useRouter();
-  const { id } = router.query;
+  const id = params?.id;
 
   const [text, setText] = useState(null);
   const [comment, setComment] = useState("");
@@ -15,11 +15,14 @@ export default function TextPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [readProgress, setReadProgress] = useState(0);
+
+  const startTimeRef = useRef(null);
+  const viewCountedRef = useRef(false);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
     if (loggedUser) setUser(JSON.parse(loggedUser));
-
     if (!id) return;
 
     const fetchText = async () => {
@@ -29,20 +32,12 @@ export default function TextPage() {
         const data = await res.json();
         setText(data);
         
-        // Vérifier Like
+        // Démarrage du chrono de lecture
+        startTimeRef.current = Date.now();
+        
+        // Vérifier Like local
         const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
         if (likedTexts.includes(id)) setIsLiked(true);
-
-        // LOGIQUE DE VUE UNIQUE (Monétisation)
-        const viewKey = `v_${id}`;
-        if (!localStorage.getItem(viewKey)) {
-          await fetch('/api/increment-view', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ authorEmail: data.authorEmail })
-          });
-          localStorage.setItem(viewKey, "true");
-        }
       } catch (err) {
         toast.error("Impossible de charger le texte.");
       }
@@ -50,6 +45,57 @@ export default function TextPage() {
 
     fetchText();
   }, [id]);
+
+  // LOGIQUE : VUE UNIQUE + TEMPS DE LECTURE RÉEL
+  useEffect(() => {
+    if (!text || viewCountedRef.current) return;
+
+    // Calcul du temps requis (70% de la vitesse moyenne de lecture)
+    const wordCount = text.content.split(/\s+/).length;
+    const estimatedSeconds = (wordCount / 200) * 60;
+    const requiredSeconds = Math.min(Math.max(estimatedSeconds * 0.7, 5), 45); // Entre 5s et 45s max
+
+    const timer = setInterval(() => {
+      if (!startTimeRef.current) return;
+      
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const progress = Math.min((elapsed / requiredSeconds) * 100, 100);
+      setReadProgress(progress);
+
+      if (elapsed >= requiredSeconds && !viewCountedRef.current) {
+        viewCountedRef.current = true;
+        handleIncrementView();
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [text, id]);
+
+  const handleIncrementView = async () => {
+    // CLÉ DE VUE UNIQUE : Empêche l'appareil de compter plusieurs fois le même texte
+    const viewKey = `lisible_viewed_${id}`;
+    if (localStorage.getItem(viewKey)) {
+        console.log("Vue déjà comptabilisée pour cet appareil.");
+        return;
+    }
+
+    try {
+      const res = await fetch('/api/update-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, type: 'view', authorEmail: text.authorEmail })
+      });
+      
+      if (res.ok) {
+        // Enregistrement de la lecture sur l'appareil
+        localStorage.setItem(viewKey, "true");
+        setText(prev => ({ ...prev, views: (prev.views || 0) + 1 }));
+      }
+    } catch (e) {
+      console.error("Erreur incrementation vue");
+    }
+  };
 
   const handleLike = async () => {
     if (isLiked || !text) return;
@@ -69,18 +115,6 @@ export default function TextPage() {
         likedTexts.push(id);
         localStorage.setItem("lisible_likes", JSON.stringify(likedTexts));
         setText(prev => ({ ...prev, likesCount: (prev.likesCount || 0) + 1 }));
-
-        // Notification à l'auteur
-        await fetch('/api/push-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'like',
-            message: `${user?.name || "Quelqu'un"} a aimé votre texte "${text.title}"`,
-            targetEmail: text.authorEmail,
-            link: `/texts/${id}`
-          })
-        });
       }
     } catch (err) {
       setIsLiked(false);
@@ -92,8 +126,6 @@ export default function TextPage() {
     if (!comment.trim()) return toast.error("Commentaire vide");
 
     setIsSubmitting(true);
-    const loadingToast = toast.loading("Envoi du commentaire...");
-
     const newComment = {
       id: Date.now(),
       authorName: user.name,
@@ -111,115 +143,133 @@ export default function TextPage() {
       if (res.ok) {
         setText(prev => ({ ...prev, comments: [...(prev.comments || []), newComment] }));
         setComment("");
-        toast.success("Commentaire publié !", { id: loadingToast });
-
-        // Notification à l'auteur
-        await fetch('/api/push-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'comment',
-            message: `${user.name} a commenté votre texte "${text.title}"`,
-            targetEmail: text.authorEmail,
-            link: `/texts/${id}`
-          })
-        });
+        toast.success("Commentaire ajouté !");
       }
     } catch (err) {
-      toast.error("Erreur d'envoi", { id: loadingToast });
+      toast.error("Erreur d'envoi");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!text) return <div className="flex justify-center items-center min-h-screen"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div></div>;
+  if (!text) return (
+    <div className="flex flex-col justify-center items-center py-20 text-teal-600">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-current mb-4"></div>
+      <span className="text-[10px] font-black uppercase tracking-widest animate-pulse">Ouverture de l'œuvre...</span>
+    </div>
+  );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 bg-white min-h-screen">
-      <Link href="/bibliotheque" className="flex items-center gap-2 text-gray-400 hover:text-blue-600 mb-8 font-bold text-sm">
-        <ArrowLeft size={18} /> <span>Retour</span>
-      </Link>
-
-      <header className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">{text.title}</h1>
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-blue-700 font-bold bg-blue-50 px-4 py-1.5 rounded-2xl text-sm">
-                <User size={16} /> <span>{text.authorName}</span>
-            </div>
-            {/* Badge de vue pour l'esthétique */}
-            <div className="flex items-center gap-1 text-gray-400 text-xs font-bold">
-                <Eye size={14} /> <span>Lecture en cours</span>
-            </div>
-        </div>
-      </header>
-
-      {text.imageBase64 && (
-        <img src={text.imageBase64} alt="" className="w-full h-auto rounded-[2.5rem] mb-10 shadow-2xl shadow-gray-100 border border-gray-50" />
-      )}
-
-      <article className="prose prose-blue text-gray-800 leading-relaxed mb-12 whitespace-pre-wrap font-serif text-lg">
-        {text.content}
-      </article>
-
-      {/* Interactions */}
-      <div className="flex items-center justify-between py-6 border-y border-gray-100 mb-12">
-        <div className="flex gap-6">
-          <button 
-            onClick={handleLike} 
-            className={`flex items-center gap-2 transition-all ${isLiked ? 'text-red-500 scale-110' : 'text-gray-400 hover:text-red-400'}`}
-          >
-            <Heart size={28} fill={isLiked ? "currentColor" : "none"} className={isAnimating ? "animate-bounce" : ""} />
-            <span className="font-black text-xl">{text.likesCount || 0}</span>
-          </button>
-          <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Lien copié !"); }} className="text-gray-400 hover:text-blue-500 transition-colors">
-            <Share2 size={26} />
-          </button>
-        </div>
-        <div className="text-gray-400 text-[10px] font-black uppercase tracking-widest">
-          Publié le {new Date(text.date).toLocaleDateString()}
-        </div>
+    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* Tracker de lecture (Sticky) */}
+      <div className="fixed top-0 left-0 w-full h-1.5 z-50 bg-slate-100">
+        <div 
+          className="h-full bg-teal-500 transition-all duration-500 ease-out"
+          style={{ width: `${readProgress}%` }}
+        />
       </div>
 
-      {/* Commentaires */}
-      <section className="bg-gray-50 rounded-[3rem] p-6 md:p-10 shadow-inner">
-        <h3 className="text-xl font-black mb-8 flex items-center gap-3 text-gray-900">
-          <MessageSquare size={22} className="text-blue-600" />
+      <Link href="/bibliotheque" className="inline-flex items-center gap-2 text-slate-400 hover:text-teal-600 font-black text-[10px] uppercase tracking-widest transition-colors group">
+        <div className="p-2 bg-white rounded-xl shadow-sm group-hover:bg-teal-50"><ArrowLeft size={16} /></div> 
+        Bibliothèque
+      </Link>
+
+      <article className="card-lisible bg-white p-0 overflow-hidden border-none ring-1 ring-slate-100 shadow-2xl shadow-slate-200/50">
+        <header className="p-8 md:p-12 space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 border border-teal-100 shadow-inner">
+                <User size={24} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plume de</p>
+                <p className="text-sm font-black text-slate-900 italic">{text.authorName}</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-center bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+              <Eye size={16} className="text-teal-500" />
+              <span className="text-sm font-black text-slate-700">{text.views || 0}</span>
+            </div>
+          </div>
+
+          <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic leading-tight">
+            {text.title}
+          </h1>
+        </header>
+
+        {text.imageBase64 && (
+          <div className="px-8 md:px-12 pb-8">
+            <img src={text.imageBase64} alt="" className="w-full h-auto rounded-[2rem] shadow-lg border border-slate-50" />
+          </div>
+        )}
+
+        <div className="p-8 md:p-12 prose prose-slate max-w-none">
+          <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-serif text-xl md:text-2xl first-letter:text-6xl first-letter:font-black first-letter:text-teal-600 first-letter:mr-3 first-letter:float-left">
+            {text.content}
+          </div>
+        </div>
+
+        <footer className="p-8 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+          <div className="flex gap-4">
+            <button 
+              onClick={handleLike} 
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-xs uppercase tracking-widest ${isLiked ? 'bg-red-50 text-red-500' : 'bg-white text-slate-400 hover:text-red-400 border border-slate-100'}`}
+            >
+              <Heart size={18} fill={isLiked ? "currentColor" : "none"} className={isAnimating ? "animate-bounce" : ""} />
+              {text.likesCount || 0}
+            </button>
+            <button 
+              onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Lien copié !"); }} 
+              className="p-3 bg-white text-slate-400 rounded-2xl hover:text-teal-600 transition-colors shadow-sm border border-slate-100"
+            >
+              <Share2 size={20} />
+            </button>
+          </div>
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+            {new Date(text.date).toLocaleDateString()}
+          </span>
+        </footer>
+      </article>
+
+      {/* Section Commentaires */}
+      <section className="space-y-6 pb-20">
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-4">
           Commentaires ({(text.comments || []).length})
         </h3>
 
-        <div className="mb-10">
-          {user ? (
-            <div className="relative">
-              <textarea
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                placeholder="Votre avis compte..."
-                className="w-full px-6 py-5 rounded-[2rem] border-none outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800 shadow-sm min-h-[140px]"
-              />
+        {user ? (
+          <div className="card-lisible p-6 space-y-4 shadow-sm border-none ring-1 ring-slate-100">
+            <textarea
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Exprimez votre ressenti..."
+              className="w-full bg-transparent border-none outline-none text-slate-800 font-medium min-h-[80px] resize-none"
+            />
+            <div className="flex justify-end">
               <button 
                 onClick={handleComment}
                 disabled={isSubmitting || !comment.trim()}
-                className="absolute bottom-4 right-4 p-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all shadow-lg disabled:bg-gray-300"
+                className="btn-lisible py-2.5 px-6 text-[10px] gap-2"
               >
-                <Send size={20} />
+                <Send size={14} /> PUBLIER
               </button>
             </div>
-          ) : (
-            <div className="bg-white border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] text-center">
-              <p className="text-gray-500 font-bold mb-4">Connectez-vous pour rejoindre la conversation.</p>
-              <Link href="/login" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-black text-sm inline-block">Connexion</Link>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="card-lisible p-8 text-center bg-slate-50/50 border-dashed border-2 border-slate-200">
+            <Link href="/login" className="text-teal-600 font-black text-xs hover:underline uppercase tracking-widest">Connectez-vous pour commenter</Link>
+          </div>
+        )}
 
         <div className="space-y-4">
           {(text.comments || []).slice().reverse().map((c, index) => (
-            <div key={index} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 transition-transform hover:scale-[1.01]">
+            <div key={index} className="card-lisible p-5 bg-white border-none ring-1 ring-slate-50 shadow-sm transition-all hover:ring-teal-100">
               <div className="flex justify-between items-center mb-3">
-                <span className="font-black text-blue-600 text-xs uppercase tracking-wider">{c.authorName}</span>
-                <span className="text-[10px] text-gray-300 font-bold">{new Date(c.createdAt).toLocaleDateString()}</span>
+                <span className="font-black text-teal-600 text-[10px] uppercase tracking-wider">{c.authorName}</span>
+                <span className="text-[9px] text-slate-300 font-bold uppercase">{new Date(c.createdAt).toLocaleDateString()}</span>
               </div>
-              <p className="text-gray-700 text-sm leading-relaxed">{c.message}</p>
+              <p className="text-slate-600 text-sm leading-relaxed pl-2 border-l-2 border-slate-100 ml-1">{c.message}</p>
             </div>
           ))}
         </div>
