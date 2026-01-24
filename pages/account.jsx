@@ -1,15 +1,20 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { User, CreditCard, Camera, Save, Edit3, ArrowLeft, Settings, ShieldCheck } from "lucide-react";
+import { 
+  User, CreditCard, Camera, Save, Edit3, ArrowLeft, 
+  Settings, ShieldCheck, Sparkles, Loader2, ChevronRight 
+} from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
 import Link from "next/link";
 
 export default function AccountPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(false);
 
-  // Infos de profil
+  // État local pour le formulaire
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -18,7 +23,6 @@ export default function AccountPage() {
     profilePic: ""
   });
 
-  // Paiement
   const [payment, setPayment] = useState({
     method: "PayPal",
     paypalEmail: "",
@@ -28,13 +32,14 @@ export default function AccountPage() {
     areaCode: "",
     phone: "",
   });
-  const [editingPayment, setEditingPayment] = useState(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
+      
+      // Remplissage profil
       setFormData({
         firstName: parsed.firstName || "",
         lastName: parsed.lastName || "",
@@ -42,6 +47,8 @@ export default function AccountPage() {
         birthday: parsed.birthday || "",
         profilePic: parsed.profilePic || ""
       });
+
+      // Remplissage paiement
       setPayment({
         method: parsed.paymentMethod || "PayPal",
         paypalEmail: parsed.paypalEmail || "",
@@ -51,156 +58,150 @@ export default function AccountPage() {
         areaCode: parsed.wuMoneyGram?.areaCode || "",
         phone: parsed.wuMoneyGram?.phone || "",
       });
-      setEditingPayment(!parsed.paymentMethod);
+      
+      if (!parsed.paymentMethod) setEditingPayment(true);
     }
     setLoading(false);
   }, []);
 
-  const handleSaveProfile = async () => {
-    if (!formData.firstName || !formData.lastName) return toast.error("Nom et Prénom requis");
-    const loadingToast = toast.loading("Mise à jour du profil...");
-    
-    try {
-      const res = await fetch("/api/save-user-github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, ...formData }),
-      });
-      if (!res.ok) throw new Error();
-      
-      const updatedUser = { ...user, ...formData };
-      localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      toast.success("Profil mis à jour !", { id: loadingToast });
-    } catch (err) {
-      toast.error("Erreur lors de la sauvegarde", { id: loadingToast });
-    }
+  // Gestion de l'image (Base64)
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return toast.error("Image trop lourde (max 2Mo)");
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setFormData(prev => ({ ...prev, profilePic: ev.target.result }));
+      setIsUploading(false);
+      toast.info("Aperçu mis à jour. Pensez à enregistrer.");
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleSavePayment = async () => {
-    if (payment.method === "PayPal" && !payment.paypalEmail) return toast.error("Email PayPal requis");
-    const loadingToast = toast.loading("Enregistrement du mode de paiement...");
+  // Sauvegarde centralisée (Profil + Paiement pour le Staff)
+  const saveAllToStaffRegistry = async (customPayload = {}) => {
+    const loadingToast = toast.loading("Synchronisation avec le registre Lisible...");
     
-    const payload = {
+    // On fusionne tout pour que le fichier staff soit complet
+    const finalPayload = {
       email: user.email,
-      paymentMethod: payment.method,
-      paypalEmail: payment.method === "PayPal" ? payment.paypalEmail : "",
-      wuMoneyGram: payment.method !== "PayPal" ? {
-        firstName: payment.wuFirstName,
-        lastName: payment.wuLastName,
-        country: payment.country,
-        areaCode: payment.areaCode,
-        phone: payment.phone,
-      } : {}
+      ...formData,
+      paymentInfo: {
+        ...payment,
+        lastUpdate: new Date().toISOString()
+      },
+      ...customPayload,
+      lastSync: new Date().toISOString()
     };
 
     try {
       const res = await fetch("/api/save-user-github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
+
       if (!res.ok) throw new Error();
-      
-      const updatedUser = { ...user, ...payload };
+
+      // Mise à jour locale
+      const updatedUser = { ...user, ...finalPayload };
       localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
       setUser(updatedUser);
-      setEditingPayment(false);
-      toast.success("Mode de paiement enregistré !", { id: loadingToast });
+      
+      toast.success("Informations sécurisées et transmises au staff.", { id: loadingToast });
+      return true;
     } catch (err) {
-      toast.error("Erreur de sauvegarde", { id: loadingToast });
+      toast.error("Erreur de synchronisation serveur.", { id: loadingToast });
+      return false;
     }
   };
 
-  if (loading) return <div className="flex justify-center p-20 animate-spin text-teal-600"><Settings size={40} /></div>;
+  if (loading) return (
+    <div className="flex flex-col justify-center items-center py-40 text-teal-600">
+      <Loader2 className="animate-spin h-10 w-10 mb-4" />
+      <p className="text-[10px] font-black uppercase tracking-widest">Accès au coffre-fort...</p>
+    </div>
+  );
 
   return (
-    <div className="space-y-10">
-      <header className="flex items-center justify-between">
-        <div className="space-y-1">
-            <h1 className="text-4xl font-black text-gray-900 tracking-tight italic">Paramètres</h1>
-            <p className="text-gray-500 font-medium text-sm">Gérez vos informations et vos revenus</p>
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-700">
+      
+      {/* HEADER */}
+      <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic">Paramètres</h1>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Identité & Revenus</p>
         </div>
-        <Link href="/dashboard" className="p-4 bg-white rounded-2xl text-gray-400 hover:text-teal-600 transition-all shadow-sm border border-gray-100">
+        <Link href="/dashboard" className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-all">
           <ArrowLeft size={24} />
         </Link>
       </header>
 
-      {/* Statistiques de monétisation */}
       {user && <MetricsOverview user={user} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Colonne Profil */}
+        
+        {/* COLONNE PROFIL */}
         <section className="lg:col-span-2 space-y-6">
-          <div className="card-lisible space-y-8">
-            <h2 className="text-xl font-black flex items-center gap-3 text-gray-800">
-              <div className="p-2 bg-teal-50 text-teal-600 rounded-lg"><User size={20} /></div>
-              Profil de l'auteur
+          <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl shadow-slate-200/50 border border-slate-50 space-y-10">
+            <h2 className="text-xl font-black flex items-center gap-3 text-slate-900 italic tracking-tight">
+              <div className="p-2.5 bg-teal-50 text-teal-600 rounded-xl"><User size={22} /></div>
+              Profil de l'Auteur
             </h2>
             
-            <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-              <div className="relative group">
-                <div className="w-24 h-24 rounded-[1.5rem] bg-teal-100 overflow-hidden border-4 border-white shadow-md">
-                  <img src={formData.profilePic || "/avatar.png"} className="w-full h-full object-cover" alt="Profil" />
+            <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 relative overflow-hidden group">
+              <div className="relative z-10">
+                <div className="w-32 h-32 rounded-[2.2rem] bg-white overflow-hidden border-4 border-white shadow-2xl relative transition-transform group-hover:scale-105 duration-500">
+                  {isUploading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/80"><Loader2 className="animate-spin text-teal-600" /></div>
+                  ) : (
+                    <img src={formData.profilePic || "/avatar.png"} className="w-full h-full object-cover" alt="Avatar" />
+                  )}
                 </div>
-                <label className="absolute -bottom-2 -right-2 p-2 bg-teal-600 text-white rounded-xl cursor-pointer shadow-lg hover:scale-110 transition-all">
-                  <Camera size={16} />
-                  <input type="file" className="hidden" accept="image/*" onChange={e => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = ev => setFormData({...formData, profilePic: ev.target.result});
-                      reader.readAsDataURL(file);
-                    }
-                  }} />
+                <label className="absolute -bottom-2 -right-2 p-3 bg-teal-600 text-white rounded-2xl cursor-pointer shadow-xl hover:bg-slate-900 transition-all z-20">
+                  <Camera size={20} />
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                 </label>
               </div>
-              <div className="text-center sm:text-left">
-                <p className="font-black text-xl text-gray-900">{user?.name}</p>
-                <p className="text-sm text-teal-600 font-bold opacity-80 uppercase tracking-widest">{user?.email}</p>
+              <div className="text-center sm:text-left relative z-10">
+                <p className="text-2xl font-black text-slate-900 tracking-tight italic">{formData.penName || user?.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                    <Sparkles size={12} className="text-teal-500" fill="currentColor" />
+                    <p className="text-[10px] text-teal-600 font-black uppercase tracking-[0.2em]">{user?.email}</p>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Prénom</label>
-                <input type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="input-lisible" placeholder="Prénom" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Nom</label>
-                <input type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="input-lisible" placeholder="Nom de famille" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Nom de plume</label>
-                <input type="text" value={formData.penName} onChange={e => setFormData({...formData, penName: e.target.value})} className="input-lisible" placeholder="Pseudonyme public" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Date de naissance</label>
-                <input type="date" value={formData.birthday} onChange={e => setFormData({...formData, birthday: e.target.value})} className="input-lisible" />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <InputBlock label="Prénom" value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />
+              <InputBlock label="Nom" value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />
+              <InputBlock label="Nom de plume" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} placeholder="Pseudonyme public" />
+              <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
             </div>
 
-            <button onClick={handleSaveProfile} className="btn-lisible w-full shadow-lg shadow-teal-50 gap-2">
-              <Save size={20} /> ENREGISTRER MON PROFIL
+            <button onClick={() => saveAllToStaffRegistry()} className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-teal-600 transition-all shadow-xl shadow-slate-200 flex items-center justify-center gap-3">
+              <Save size={18} /> ENREGISTRER LE PROFIL
             </button>
           </div>
         </section>
 
-        {/* Colonne Paiement */}
+        {/* COLONNE PAIEMENT (PRIVÉ STAFF) */}
         <section className="space-y-6">
-          <div className="card-lisible space-y-6 bg-slate-900 text-white border-none shadow-xl">
-            <h2 className="text-xl font-black flex items-center gap-3 text-teal-400">
-              <CreditCard size={22} /> Paiements
+          <div className="bg-slate-900 rounded-[3rem] p-8 md:p-10 text-white shadow-2xl shadow-slate-300 relative overflow-hidden">
+            <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8 relative z-10">
+              <CreditCard size={24} /> Versements
             </h2>
 
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Méthode préférée</label>
+            <div className="space-y-6 relative z-10">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-500 uppercase ml-4 tracking-[0.2em]">Méthode</label>
                 <select 
                   disabled={!editingPayment}
                   value={payment.method} 
                   onChange={e => setPayment({...payment, method: e.target.value})}
-                  className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-teal-500 outline-none text-white appearance-none"
+                  className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-white appearance-none outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="PayPal">PayPal</option>
                   <option value="Western Union">Western Union</option>
@@ -209,49 +210,71 @@ export default function AccountPage() {
               </div>
 
               {payment.method === "PayPal" ? (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Compte PayPal</label>
+                <div className="space-y-3 animate-in fade-in">
+                  <label className="text-[10px] font-black text-slate-500 uppercase ml-4 tracking-[0.2em]">Compte PayPal</label>
                   <input 
-                    type="email" 
-                    disabled={!editingPayment}
-                    value={payment.paypalEmail} 
+                    type="email" disabled={!editingPayment} value={payment.paypalEmail}
                     onChange={e => setPayment({...payment, paypalEmail: e.target.value})}
-                    className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold text-teal-400 placeholder:text-slate-600"
-                    placeholder="exemple@mail.com"
+                    className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-teal-400 outline-none"
+                    placeholder="email@paypal.com"
                   />
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <input type="text" disabled={!editingPayment} placeholder="Prénom du bénéficiaire" value={payment.wuFirstName} onChange={e => setPayment({...payment, wuFirstName: e.target.value})} className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold text-white" />
-                  <input type="text" disabled={!editingPayment} placeholder="Nom du bénéficiaire" value={payment.wuLastName} onChange={e => setPayment({...payment, wuLastName: e.target.value})} className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold text-white" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="text" disabled={!editingPayment} placeholder="Pays" value={payment.country} onChange={e => setPayment({...payment, country: e.target.value})} className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold text-white" />
-                    <input type="text" disabled={!editingPayment} placeholder="Code Zone" value={payment.areaCode} onChange={e => setPayment({...payment, areaCode: e.target.value})} className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold text-white" />
+                <div className="space-y-4 animate-in fade-in">
+                  <input type="text" disabled={!editingPayment} placeholder="Prénom bénéficiaire" value={payment.wuFirstName} onChange={e => setPayment({...payment, wuFirstName: e.target.value})} className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-white" />
+                  <input type="text" disabled={!editingPayment} placeholder="Nom bénéficiaire" value={payment.wuLastName} onChange={e => setPayment({...payment, wuLastName: e.target.value})} className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-white" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="text" disabled={!editingPayment} placeholder="Pays" value={payment.country} onChange={e => setPayment({...payment, country: e.target.value})} className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-white" />
+                    <input type="text" disabled={!editingPayment} placeholder="Code" value={payment.areaCode} onChange={e => setPayment({...payment, areaCode: e.target.value})} className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-white" />
                   </div>
-                  <input type="text" disabled={!editingPayment} placeholder="Numéro de téléphone" value={payment.phone} onChange={e => setPayment({...payment, phone: e.target.value})} className="w-full bg-slate-800 border-none rounded-2xl p-4 text-sm font-bold text-white" />
+                  <input type="text" disabled={!editingPayment} placeholder="Téléphone" value={payment.phone} onChange={e => setPayment({...payment, phone: e.target.value})} className="w-full bg-slate-800 border-none rounded-[1.2rem] p-5 text-sm font-bold text-white" />
                 </div>
               )}
             </div>
 
-            {editingPayment ? (
-              <button onClick={handleSavePayment} className="w-full py-4 bg-teal-500 text-white rounded-2xl font-black hover:bg-teal-400 transition-all shadow-lg shadow-teal-900/20">
-                CONFIRMER LES COORDONNÉES
-              </button>
-            ) : (
-              <button onClick={() => setEditingPayment(true)} className="w-full py-4 bg-slate-800 text-teal-400 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-slate-700 transition-all border border-slate-700">
-                <Edit3 size={18} /> MODIFIER LE PAIEMENT
-              </button>
-            )}
+            <div className="mt-10 relative z-10">
+                {editingPayment ? (
+                  <button 
+                    onClick={async () => {
+                      const success = await saveAllToStaffRegistry();
+                      if (success) setEditingPayment(false);
+                    }} 
+                    className="w-full py-5 bg-teal-500 text-white rounded-[1.5rem] font-black text-[10px] tracking-[0.2em] uppercase hover:bg-teal-400 transition-all shadow-xl shadow-teal-900/40"
+                  >
+                      CONFIRMER LES COORDONNÉES
+                  </button>
+                ) : (
+                  <button onClick={() => setEditingPayment(true)} className="w-full py-5 bg-slate-800 text-teal-400 rounded-[1.5rem] font-black text-[10px] tracking-[0.2em] uppercase flex items-center justify-center gap-2 border border-slate-700">
+                      <Edit3 size={16} /> MODIFIER LE PAIEMENT
+                  </button>
+                )}
+            </div>
 
-            <div className="p-4 bg-teal-400/10 rounded-2xl border border-teal-400/20 flex gap-3">
-                <ShieldCheck size={30} className="text-teal-400 shrink-0" />
-                <p className="text-[10px] text-slate-300 font-medium leading-relaxed">
-                    Vos données de paiement sont stockées de manière sécurisée pour les versements mensuels.
+            <div className="mt-8 p-5 bg-white/5 rounded-[1.5rem] border border-white/10 flex gap-4 items-start relative z-10">
+                <ShieldCheck size={28} className="text-teal-400 shrink-0" />
+                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                    Données chiffrées destinées uniquement au service de comptabilité Lisible.
                 </p>
             </div>
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+// Composant utilitaire pour les inputs
+function InputBlock({ label, value, onChange, type = "text", placeholder = "" }) {
+  return (
+    <div className="space-y-3">
+      <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-[0.2em]">{label}</label>
+      <input 
+        type={type} 
+        value={value} 
+        onChange={e => onChange(e.target.value)} 
+        placeholder={placeholder}
+        className="w-full bg-slate-50 border-2 border-transparent focus:border-teal-100 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all placeholder:text-slate-300" 
+      />
     </div>
   );
 }
