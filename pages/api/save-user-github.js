@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   
   if (!userData.email) return res.status(400).json({ error: "Email requis" });
 
+  // Création d'un nom de fichier unique basé sur l'email
   const fileName = Buffer.from(userData.email).toString('base64').replace(/=/g, "") + ".json";
   const path = `data/users/${fileName}`;
 
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
     let oldProfile = {};
     let fileSha = null;
 
-    // 1. Tenter de récupérer l'existant
+    // 1. Tenter de récupérer l'existant sur GitHub
     try {
       const { data: fileData } = await octokit.repos.getContent({
         owner: "benjohnsonjuste",
@@ -26,13 +27,13 @@ export default async function handler(req, res) {
       oldProfile = JSON.parse(Buffer.from(fileData.content, "base64").toString());
       fileSha = fileData.sha;
     } catch (e) {
-      console.log("Nouvel utilisateur");
+      console.log("Nouvel utilisateur ou fichier inexistant");
     }
 
-    // 2. Fusion des données
+    // 2. Fusion des données (les nouvelles écrasent les anciennes)
     const newProfile = { ...oldProfile, ...userData };
 
-    // 3. Mise à jour GitHub
+    // 3. Mise à jour ou création du fichier sur GitHub
     await octokit.repos.createOrUpdateFileContents({
       owner: "benjohnsonjuste",
       repo: "Lisible",
@@ -43,14 +44,28 @@ export default async function handler(req, res) {
     });
 
     // 4. Envoi de l'email au staff
-    await sendAdminNotification(newProfile);
+    try {
+      await sendAdminNotification(newProfile);
+    } catch (emailErr) {
+      console.error("Erreur Email:", emailErr);
+      // On ne bloque pas la réponse si seul l'email échoue
+    }
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error(error);
+    console.error("Erreur GitHub API:", error);
     return res.status(500).json({ error: error.message });
   }
 }
+
+// --- CONFIGURATION POUR LE BODY (FIXE L'ERREUR 'BODY EXCEEDED') ---
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '4mb', // Autorise jusqu'à 4Mo (pour l'image en base64)
+    },
+  },
+};
 
 async function sendAdminNotification(user) {
   const transporter = nodemailer.createTransport({
@@ -81,10 +96,11 @@ async function sendAdminNotification(user) {
           ${isPaypal 
             ? `<p><b>Email PayPal :</b> ${user.paypalEmail}</p>`
             : `<p><b>Bénéficiaire :</b> ${user.wuMoneyGram?.firstName} ${user.wuMoneyGram?.lastName}</p>
-               <p><b>Pays :</b> ${user.wuMoneyGram?.country} (${user.wuMoneyGram?.areaCode})</p>
+               <p><b>Pays :</b> ${user.wuMoneyGram?.country} (${user.wuMoneyGram?.areaCode || ''})</p>
                <p><b>Tél :</b> ${user.wuMoneyGram?.phone}</p>`
           }
         </div>
+        <p style="font-size: 10px; color: #999; margin-top: 20px;">ID Dossier : ${Buffer.from(user.email).toString('base64').substring(0, 10)}</p>
       </div>
     `
   };
