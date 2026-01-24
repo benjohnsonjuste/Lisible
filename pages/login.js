@@ -23,7 +23,7 @@ export default function AuthPage() {
               Lisible.
             </h1>
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
-              L'écriture en streaming
+              La lecture en streaming
             </p>
           </header>
 
@@ -45,7 +45,7 @@ export default function AuthPage() {
             Propulsé par le label La Belle Littéraire
           </p>
           <p className="text-slate-400 text-xs font-medium leading-relaxed italic opacity-70">
-            En vous connectant, vous acceptez la publication de vos écrits dans notre catalogue ouvert géré via GitHub.
+            En vous connectant, vous acceptez la publication de vos écrits dans notre catalogue ouvert publiquement.
           </p>
         </div>
       </div>
