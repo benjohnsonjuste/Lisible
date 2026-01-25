@@ -11,7 +11,6 @@ import {
 } from "@livepeer/react";
 import { toast } from "sonner";
 
-// 1. Initialisation stable du client Livepeer
 const client = createReactClient({
   provider: studioProvider({ apiKey: "f15e0657-3f95-46f3-8b77-59f0f909162c" }), 
 });
@@ -25,61 +24,80 @@ function ClubInterface({ roomId, isHost }) {
   const [loading, setLoading] = useState(false);
   const mediaStreamRef = useRef(null);
 
-  // Synchronisation Chat & Likes via Pusher
+  // 1. Déclenchement automatique pour les spectateurs
+  useEffect(() => {
+    if (!isHost && roomId) {
+      console.log("Mode spectateur détecté, connexion automatique...");
+      connectToLive();
+    }
+  }, [roomId, isHost]);
+
+  // Sync Chat & Likes
   useEffect(() => {
     if (!roomId) return;
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
     const channel = pusher.subscribe(`chat-${roomId}`);
-    
     channel.bind('new-message', (data) => setMessages(prev => [...prev, data].slice(-10)));
     channel.bind('new-like', () => setStats(s => ({ ...s, likes: s.likes + 1 })));
-    
-    return () => {
-      pusher.unsubscribe(`chat-${roomId}`);
-    };
+    return () => pusher.unsubscribe(`chat-${roomId}`);
   }, [roomId]);
 
-  const startLive = async () => {
+  // Fonction partagée pour récupérer les données du flux
+  const connectToLive = async () => {
     setLoading(true);
     try {
-      // A. Création du flux vidéo
       const res = await fetch("/api/live/create-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ roomName: `Club-${roomId}` }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error("Erreur serveur vidéo");
+      if (!res.ok) throw new Error("Flux introuvable");
 
-      // B. Envoi de la notification (Version complète pour mise à jour JSON)
+      setStreamData(data);
+      setJoined(true);
+    } catch (e) {
+      console.error(e);
+      if (!isHost) toast.error("Le direct n'est pas encore accessible.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startLive = async () => {
+    setLoading(true);
+    try {
+      // A. Création du flux
+      const res = await fetch("/api/live/create-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomName: `Club-${roomId}` }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error();
+
+      // B. Notification (Uniquement si hôte)
       if (isHost) {
         const user = JSON.parse(localStorage.getItem("lisible_user") || "{}");
-        
-        const notifPayload = {
-          id: Date.now(), // Indispensable pour l'écriture dans le fichier
-          type: 'live',
-          message: `${user.penName || user.name || "Un auteur"} est en direct dans le Club !`,
-          link: `/lisible-club?room=${roomId}`,
-          date: new Date().toISOString(), // Format requis pour le tri
-          targetEmail: null, // Public : permet l'affichage pour tous
-          fromUser: user.penName || "Label"
-        };
-
-        const notifRes = await fetch('/api/create-notif', {
+        await fetch('/api/create-notif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(notifPayload)
+          body: JSON.stringify({
+            id: Date.now(),
+            type: 'live',
+            message: `${user.penName || user.name || "Un auteur"} est en direct dans le Club !`,
+            link: `/lisible-club?room=${roomId}`,
+            date: new Date().toISOString(),
+            targetEmail: null
+          })
         });
-
-        if (!notifRes.ok) console.error("Échec de l'envoi de la notification");
       }
 
       setStreamData(data);
       setJoined(true);
-      toast.success(isHost ? "Antenne ouverte et abonnés alertés !" : "Bienvenue au Club !");
+      toast.success(isHost ? "Antenne ouverte !" : "Bienvenue au Club !");
     } catch (e) {
-      console.error("Erreur startLive:", e);
-      toast.error("Impossible de lancer le direct.");
+      toast.error("Erreur de connexion.");
     } finally {
       setLoading(false);
     }
@@ -88,7 +106,6 @@ function ClubInterface({ roomId, isHost }) {
   const handleSendChat = async () => {
     if (!inputMsg.trim()) return;
     const user = JSON.parse(localStorage.getItem("lisible_user") || "{}");
-    
     await fetch('/api/live/pusher-trigger', {
       method: 'POST',
       body: JSON.stringify({ 
@@ -104,54 +121,46 @@ function ClubInterface({ roomId, isHost }) {
     <div className="w-full h-full bg-slate-950">
       {!joined ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6 text-center">
-          <div className="w-24 h-24 bg-teal-500/10 rounded-full flex items-center justify-center mb-6">
-            <Radio size={48} className="text-teal-400 animate-pulse" />
-          </div>
-          <h2 className="text-2xl font-black italic mb-2 tracking-tighter uppercase">Lisible Club</h2>
-          <p className="text-slate-400 text-[10px] mb-8 uppercase tracking-[0.3em] font-bold">Salon : {roomId}</p>
+          <Radio size={48} className="text-teal-400 animate-pulse mb-6" />
+          <h2 className="text-2xl font-black italic mb-2 uppercase">Lisible Club</h2>
+          <p className="text-slate-400 text-[10px] mb-8 uppercase tracking-[0.3em]">Salon : {roomId}</p>
           
           <button 
             onClick={startLive} 
             disabled={loading}
-            className="bg-teal-600 px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-teal-500 transition-all flex items-center gap-3 disabled:opacity-50 shadow-xl shadow-teal-900/20"
+            className="bg-teal-600 px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-teal-500 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={16} /> : (isHost ? "Ouvrir l'antenne" : "Rejoindre le salon")}
+            {loading ? <Loader2 className="animate-spin" size={16} /> : (isHost ? "Ouvrir l'antenne" : "Entrer dans le salon")}
           </button>
         </div>
       ) : (
         <div className="relative h-full w-full">
-          {/* MOTEUR VIDÉO LIVEPEER */}
           {isHost ? (
-            <Broadcast 
-              streamKey={streamData?.streamKey} 
-              onMediaStream={(s) => (mediaStreamRef.current = s)} 
-            />
+            <Broadcast streamKey={streamData?.streamKey} onMediaStream={(s) => (mediaStreamRef.current = s)} />
           ) : (
             <Player playbackId={streamData?.playbackId} autoPlay muted={false} />
           )}
           
-          {/* BOUTON QUITTER */}
           <button 
             onClick={() => {
               if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
               setJoined(false);
             }} 
-            className="absolute top-6 right-6 z-50 p-3 bg-white/10 backdrop-blur-md hover:bg-red-600 text-white rounded-2xl transition-all border border-white/10"
+            className="absolute top-6 right-6 z-50 p-3 bg-white/10 backdrop-blur-md hover:bg-red-600 text-white rounded-2xl"
           >
             <LogOut size={20} />
           </button>
 
-          {/* CHAT OVERLAY */}
+          {/* CHAT */}
           <div className="absolute bottom-28 left-6 right-6 z-40 space-y-2 pointer-events-none max-h-48 overflow-hidden flex flex-col justify-end">
             {messages.map((m, i) => (
-              <div key={i} className="bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/5 self-start animate-in slide-in-from-left-4 duration-500">
-                <p className="text-teal-400 font-black text-[9px] uppercase tracking-tighter">{m.user}</p>
-                <p className="text-white text-xs font-medium leading-tight">{m.text}</p>
+              <div key={i} className="bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/5 self-start animate-in slide-in-from-left-4">
+                <p className="text-teal-400 font-black text-[9px] uppercase">{m.user}</p>
+                <p className="text-white text-xs">{m.text}</p>
               </div>
             ))}
           </div>
 
-          {/* INPUT BAR */}
           <div className="absolute bottom-8 left-6 right-6 flex gap-2 z-50">
             <div className="flex-grow flex bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl px-5 items-center">
               <input 
@@ -165,18 +174,6 @@ function ClubInterface({ roomId, isHost }) {
                 <Send size={20}/>
               </button>
             </div>
-            
-            <button 
-              onClick={async () => {
-                await fetch('/api/live/pusher-trigger', {
-                  method: 'POST',
-                  body: JSON.stringify({ channel: `chat-${roomId}`, event: 'new-like', data: {} })
-                });
-              }}
-              className="p-4 bg-teal-600/20 backdrop-blur-2xl rounded-2xl text-white border border-teal-500/30 active:scale-90 transition-all shadow-xl"
-            >
-              <Heart size={20} className={stats.likes > 0 ? "fill-red-500 text-red-500" : ""} />
-            </button>
           </div>
         </div>
       )}
