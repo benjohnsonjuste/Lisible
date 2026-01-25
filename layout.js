@@ -3,12 +3,13 @@ import { Toaster } from "sonner";
 import Navbar from "@/components/Navbar";
 import NotificationInitializer from "@/components/NotificationInitializer";
 import InstallPrompt from "@/components/InstallPrompt";
+import Script from "next/script"; // Import nécessaire pour le Service Worker
 
 export const metadata = {
   title: "Lisible - Votre plume, votre communauté",
   description: "Plateforme littéraire, PWA et streaming live pour auteurs passionnés.",
-  manifest: "/manifest.json", // Essentiel pour le bouton d'installation
-  themeColor: "#14b8a6", // Couleur Teal-500 pour le navigateur
+  manifest: "/manifest.json", 
+  themeColor: "#14b8a6", 
 };
 
 export default function RootLayout({ children }) {
@@ -16,7 +17,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body className="bg-gray-50 antialiased text-gray-900 font-sans selection:bg-teal-100 selection:text-teal-900">
         
-        {/* 1. INITIALISATIONS CLIENT (Logique éphémère et PWA) */}
+        {/* 1. INITIALISATIONS CLIENT */}
         <NotificationInitializer />
         <InstallPrompt />
 
@@ -26,14 +27,13 @@ export default function RootLayout({ children }) {
         </header>
 
         {/* 3. CONTENU PRINCIPAL */}
-        {/* pt-24 permet d'éviter que le contenu passe sous la navbar (80px + marge) */}
         <main className="pt-24 pb-12 min-h-screen">
           <div className="max-w-6xl mx-auto px-4 md:px-8">
             {children}
           </div>
         </main>
 
-        {/* 4. SYSTÈME DE TOASTS (Notifications visuelles in-app) */}
+        {/* 4. SYSTÈME DE TOASTS */}
         <Toaster 
           richColors 
           position="top-center" 
@@ -41,6 +41,21 @@ export default function RootLayout({ children }) {
             style: { borderRadius: '1.25rem', padding: '1rem' },
           }}
         />
+
+        {/* 5. ENREGISTREMENT DU SERVICE WORKER (Indispensable pour le bouton d'installation) */}
+        <Script id="pwa-sw-registration" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  console.log('Service Worker enregistré avec succès:', reg.scope);
+                }).catch(function(err) {
+                  console.log('Échec de l’enregistrement du Service Worker:', err);
+                });
+              });
+            }
+          `}
+        </Script>
 
       </body>
     </html>
