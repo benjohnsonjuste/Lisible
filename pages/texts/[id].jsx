@@ -183,4 +183,13 @@ export default function TextPage({ params }) {
             <div key={index} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-black text-teal-600 text-[10px] uppercase">{c.authorName}</span>
-                <span className="text-[9px] text-slate-30
+                <span className="text-[9px] text-slate-300 font-bold uppercase">{new Date(c.createdAt).toLocaleDateString()}</span>
+              </div>
+              <p className="text-slate-600 text-sm italic">"{c.message}"</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
