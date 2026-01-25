@@ -1,5 +1,12 @@
 [
   {
+    "id": 1769351770501,
+    "type": "live",
+    "message": "Un auteur est en direct dans le Club !",
+    "link": "/lisible-club?room=studio",
+    "date": "2026-01-25T14:36:10.501Z"
+  },
+  {
     "id": 1769350388002,
     "type": "live",
     "message": "jb7management a lancé un direct dans le Club !",
