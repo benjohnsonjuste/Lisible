@@ -3,7 +3,7 @@ import { Toaster } from "sonner";
 import Navbar from "@/components/Navbar";
 import NotificationInitializer from "@/components/NotificationInitializer";
 import InstallPrompt from "@/components/InstallPrompt";
-import Script from "next/script"; // Import nécessaire pour le Service Worker
+import Script from "next/script";
 
 export const metadata = {
   title: "Lisible - Votre plume, votre communauté",
@@ -17,7 +17,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body className="bg-gray-50 antialiased text-gray-900 font-sans selection:bg-teal-100 selection:text-teal-900">
         
-        {/* 1. INITIALISATIONS CLIENT */}
+        {/* 1. INITIALISATIONS CLIENT (PWA & Notifications) */}
         <NotificationInitializer />
         <InstallPrompt />
 
@@ -42,15 +42,21 @@ export default function RootLayout({ children }) {
           }}
         />
 
-        {/* 5. ENREGISTREMENT DU SERVICE WORKER (Indispensable pour le bouton d'installation) */}
+        {/* 5. PUBLICITÉ GLOBALE (Stratégie lazyOnload pour ne pas bloquer le rendu) */}
+        <Script 
+          src="https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js"
+          strategy="lazyOnload"
+        />
+
+        {/* 6. ENREGISTREMENT DU SERVICE WORKER (PWA) */}
         <Script id="pwa-sw-registration" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Service Worker enregistré avec succès:', reg.scope);
+                  console.log('SW enregistré:', reg.scope);
                 }).catch(function(err) {
-                  console.log('Échec de l’enregistrement du Service Worker:', err);
+                  console.error('Erreur SW:', err);
                 });
               });
             }
