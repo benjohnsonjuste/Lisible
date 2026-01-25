@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
-  const { roomName } = await req.json();
-
   try {
+    const { roomName } = await req.json();
+
     const response = await fetch("https://livepeer.studio/api/stream", {
       method: "POST",
       headers: {
@@ -21,7 +21,6 @@ export async function POST(req) {
 
     const data = await response.json();
     
-    // On renvoie la StreamKey (pour l'hôte) et le PlaybackId (pour le spectateur)
     return NextResponse.json({
       streamKey: data.streamKey,
       playbackId: data.playbackId,
