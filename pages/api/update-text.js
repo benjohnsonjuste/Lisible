@@ -7,50 +7,62 @@ export default async function handler(req, res) {
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
-  const path = `data/publications/${id}.json`;
-
+  
   try {
-    // 1. Récupérer le fichier actuel
-    const { data: fileData } = await octokit.repos.getContent({ owner, repo, path });
+    // --- PARTIE 1 : MISE À JOUR DU TEXTE ---
+    const pathText = `data/publications/${id}.json`;
+    const { data: fileData } = await octokit.repos.getContent({ owner, repo, path: pathText });
     const content = JSON.parse(Buffer.from(fileData.content, "base64").toString());
 
-    // 2. Appliquer la modification selon le type
-    let commitMessage = `📈 Analytics (${type}) : ${id}`;
+    let notifMessage = "";
+    let targetEmail = content.authorEmail; // Par défaut, l'auteur reçoit la notif
 
-    if (type === 'view') {
-      content.views = (content.views || 0) + 1;
-    } 
-    else if (type === 'like') {
+    if (type === 'like') {
       content.likesCount = (content.likesCount || 0) + 1;
+      notifMessage = `Quelqu'un a aimé votre texte "${content.title}"`;
     } 
     else if (type === 'comment') {
       content.comments = [...(content.comments || []), payload];
-    } 
-    // --- NOUVELLE LOGIQUE DE MODIFICATION ---
+      notifMessage = `${payload.authorName} a commenté votre texte "${content.title}"`;
+    }
     else if (type === 'update_content') {
       content.title = payload.title;
       content.content = payload.content;
-      content.lastUpdated = new Date().toISOString(); // Optionnel : pour savoir quand il a été édité
-      commitMessage = `✍️ Édition auteur : ${payload.title} (${id})`;
     }
 
-    // 3. Sauvegarder sur GitHub
+    // Sauvegarde du texte mis à jour
     await octokit.repos.createOrUpdateFileContents({
-      owner, 
-      repo, 
-      path,
-      message: commitMessage,
+      owner, repo, path: pathText,
+      message: `Update ${type}: ${id}`,
       content: Buffer.from(JSON.stringify(content, null, 2)).toString("base64"),
       sha: fileData.sha
     });
 
-    res.status(200).json({ 
-      success: true, 
-      newValue: type === 'view' ? content.views : null 
-    });
+    // --- PARTIE 2 : GÉNÉRATION DE LA NOTIFICATION ---
+    if (notifMessage !== "") {
+      const pathNotif = `data/notifications.json`;
+      const { data: notifFileData } = await octokit.repos.getContent({ owner, repo, path: pathNotif });
+      const notifications = JSON.parse(Buffer.from(notifFileData.content, "base64").toString());
 
+      const newNotif = {
+        id: Date.now(),
+        type: type,
+        message: notifMessage,
+        targetEmail: targetEmail, // L'auteur du texte
+        link: `/bibliotheque/${id}`,
+        date: new Date().toISOString()
+      };
+
+      await octokit.repos.createOrUpdateFileContents({
+        owner, repo, path: pathNotif,
+        message: `🔔 New Notif: ${type}`,
+        content: Buffer.from(JSON.stringify([newNotif, ...notifications].slice(0, 50), null, 2)).toString("base64"),
+        sha: notifFileData.sha
+      });
+    }
+
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Erreur API Update:", error);
     res.status(500).json({ error: error.message });
   }
 }
