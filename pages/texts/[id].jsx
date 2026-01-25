@@ -3,10 +3,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { Heart, Share2, User, Send, ArrowLeft, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
-import AdScript from "@/components/AdScript";
+import Script from "next/script"; // Import indispensable pour les pubs
 
 export default function TextPage({ params }) {
-  // Gestion sécurisée des params
   const [id, setId] = useState(null);
   const [text, setText] = useState(null);
   const [comment, setComment] = useState("");
@@ -20,16 +19,26 @@ export default function TextPage({ params }) {
   const startTimeRef = useRef(null);
   const viewCountedRef = useRef(false);
 
-  // 1. Déballage de l'ID (Correction du crash)
+  // 1. Déballage sécurisé de l'ID
   useEffect(() => {
-    if (params instanceof Promise) {
-      params.then(p => setId(p.id));
-    } else {
-      setId(params?.id);
-    }
+    if (!params) return;
+    
+    const resolveParams = async () => {
+      try {
+        const resolved = await params;
+        if (resolved && resolved.id) {
+          setId(resolved.id);
+        } else {
+          setError(true);
+        }
+      } catch (e) {
+        setError(true);
+      }
+    };
+    resolveParams();
   }, [params]);
 
-  // 2. Chargement du texte et de l'utilisateur
+  // 2. Chargement du texte
   useEffect(() => {
     if (!id) return;
 
@@ -40,37 +49,30 @@ export default function TextPage({ params }) {
       try {
         const url = `https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/publications/${id}.json?t=${Date.now()}`;
         const res = await fetch(url);
-        
-        if (!res.ok) throw new Error("Texte introuvable");
-        
+        if (!res.ok) throw new Error("Inexistant");
         const data = await res.json();
         setText(data);
-        
         startTimeRef.current = Date.now();
-        
         const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
         if (likedTexts.includes(id)) setIsLiked(true);
       } catch (err) {
-        console.error(err);
         setError(true);
       }
     };
     fetchText();
   }, [id]);
 
-  // 3. Logique de Progression et Vue Unique
+  // 3. Logique de Progression
   useEffect(() => {
     if (!text || viewCountedRef.current || !id) return;
 
     const wordCount = text.content ? text.content.split(/\s+/).length : 100;
-    const estimatedSeconds = (wordCount / 200) * 60;
-    const requiredSeconds = Math.min(Math.max(estimatedSeconds * 0.4, 8), 30); 
+    const requiredSeconds = Math.min(Math.max((wordCount / 200) * 60 * 0.4, 8), 30); 
 
     const timer = setInterval(() => {
       if (!startTimeRef.current) return;
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      const progress = Math.min((elapsed / requiredSeconds) * 100, 100);
-      setReadProgress(progress);
+      setReadProgress(Math.min((elapsed / requiredSeconds) * 100, 100));
 
       if (elapsed >= requiredSeconds && !viewCountedRef.current) {
         viewCountedRef.current = true;
@@ -85,25 +87,15 @@ export default function TextPage({ params }) {
   const handleIncrementView = async () => {
     const viewKey = `lisible_v1_viewed_${id}`;
     if (localStorage.getItem(viewKey)) return;
-
     try {
-      const res = await fetch('/api/update-text', {
+      await fetch('/api/update-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id, 
-          type: 'view', 
-          authorEmail: text.authorEmail 
-        })
+        body: JSON.stringify({ id, type: 'view', authorEmail: text.authorEmail })
       });
-
-      if (res.ok) {
-        localStorage.setItem(viewKey, "true");
-        setText(prev => ({ ...prev, views: (prev?.views || 0) + 1 }));
-      }
-    } catch (e) {
-      console.error("Analytics Error");
-    }
+      localStorage.setItem(viewKey, "true");
+      setText(prev => prev ? { ...prev, views: (prev.views || 0) + 1 } : null);
+    } catch (e) { console.error("Analytics Error"); }
   };
 
   const handleLike = async () => {
@@ -120,17 +112,16 @@ export default function TextPage({ params }) {
         const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
         likedTexts.push(id);
         localStorage.setItem("lisible_likes", JSON.stringify(likedTexts));
-        setText(prev => ({ ...prev, likesCount: (prev?.likesCount || 0) + 1 }));
+        setText(prev => prev ? { ...prev, likesCount: (prev.likesCount || 0) + 1 } : null);
       }
     } catch (err) { setIsLiked(false); }
   };
 
   const handleComment = async () => {
-    if (!user) return toast.error("Connectez-vous pour commenter");
-    if (!comment.trim()) return toast.error("Commentaire vide");
+    if (!user || !comment.trim()) return;
     setIsSubmitting(true);
     const newComment = { 
-      id: Date.now(), authorName: user.name || "Auteur", message: comment.trim(), createdAt: new Date().toISOString() 
+      id: Date.now(), authorName: user.penName || user.name, message: comment.trim(), createdAt: new Date().toISOString() 
     };
     try {
       const res = await fetch('/api/update-text', {
@@ -139,29 +130,32 @@ export default function TextPage({ params }) {
         body: JSON.stringify({ id, type: 'comment', payload: newComment })
       });
       if (res.ok) {
-        setText(prev => ({ ...prev, comments: [...(prev?.comments || []), newComment] }));
+        setText(prev => prev ? { ...prev, comments: [...(prev.comments || []), newComment] } : null);
         setComment("");
         toast.success("Commentaire ajouté !");
       }
     } catch (err) { toast.error("Erreur d'envoi"); } finally { setIsSubmitting(false); }
   };
 
-  if (error) return <div className="py-20 text-center"><p className="text-slate-400 font-black italic uppercase">Texte introuvable ou erreur de lien</p></div>;
-  if (!text) return <div className="flex flex-col items-center py-40 text-teal-600"><Loader2 className="animate-spin mb-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Ouverture du manuscrit...</span></div>;
+  if (error) return <div className="py-40 text-center text-slate-400 font-black uppercase italic tracking-widest">Texte introuvable</div>;
+  if (!text) return <div className="flex flex-col items-center py-40 text-teal-600"><Loader2 className="animate-spin mb-4" /> <span className="text-[10px] font-black uppercase tracking-widest">Chargement...</span></div>;
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-20 space-y-8 animate-in fade-in duration-700">
       
+      {/* SCRIPT PUBLICITAIRE EXTERNE */}
+      <Script 
+        src="https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js" 
+        strategy="lazyOnload" 
+      />
+
       <div className="fixed top-0 left-0 w-full h-1 z-50 bg-slate-100">
-        <div 
-          className="h-full bg-teal-500 transition-all duration-300" 
-          style={{ width: `${readProgress}%` }} 
-        />
+        <div className="h-full bg-teal-500 transition-all duration-300" style={{ width: `${readProgress}%` }} />
       </div>
 
       <header className="pt-8">
         <Link href="/bibliotheque" className="inline-flex items-center gap-2 text-slate-400 hover:text-teal-600 font-black text-[10px] uppercase tracking-widest transition-all">
-          <ArrowLeft size={16} /> Bibliothèque
+          <ArrowLeft size={16} /> Retour
         </Link>
       </header>
 
@@ -169,8 +163,8 @@ export default function TextPage({ params }) {
         <div className="p-8 md:p-12 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-teal-400"><User size={20}/></div>
-              <p className="text-sm font-black text-slate-900 italic">{text.authorName || "Anonyme"}</p>
+              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-teal-400 font-black uppercase">{text.authorName?.charAt(0)}</div>
+              <p className="text-sm font-black text-slate-900 italic">{text.authorName}</p>
             </div>
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl text-slate-600 border border-slate-100">
               <Eye size={14} className="text-teal-500" />
@@ -179,9 +173,7 @@ export default function TextPage({ params }) {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic leading-tight">{text.title}</h1>
-
           {text.imageBase64 && <img src={text.imageBase64} className="w-full h-auto rounded-3xl shadow-sm" alt="" />}
-
           <div className="text-slate-800 leading-relaxed font-serif text-xl md:text-2xl whitespace-pre-wrap pt-4 pb-12">
             {text.content}
           </div>
@@ -195,22 +187,18 @@ export default function TextPage({ params }) {
             </button>
             <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Lien copié !"); }} className="p-3 bg-white text-slate-400 rounded-2xl border border-slate-100"><Share2 size={20}/></button>
           </div>
-          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
-            {text.date ? new Date(text.date).toLocaleDateString() : 'Date inconnue'}
-          </span>
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{text.date ? new Date(text.date).toLocaleDateString() : ""}</span>
         </footer>
       </article>
 
-      <AdScript />
-
+      {/* Commentaires */}
       <section className="space-y-6">
         <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-4">Discussion ({(text.comments || []).length})</h3>
-        
         {user ? (
           <div className="bg-white p-6 rounded-[2rem] border border-slate-100 space-y-4">
-            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Partagez votre avis..." className="w-full bg-slate-50 rounded-2xl p-4 border-none outline-none text-slate-800 font-medium min-h-[100px] resize-none focus:ring-2 focus:ring-teal-500/20" />
+            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Votre avis..." className="w-full bg-slate-50 rounded-2xl p-4 border-none outline-none text-slate-800 font-medium min-h-[100px] resize-none" />
             <div className="flex justify-end">
-              <button onClick={handleComment} disabled={isSubmitting || !comment.trim()} className="bg-slate-900 text-white py-3 px-8 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-teal-600">
+              <button onClick={handleComment} disabled={isSubmitting || !comment.trim()} className="bg-slate-900 text-white py-3 px-8 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-teal-600">
                 {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} PUBLIER
               </button>
             </div>
