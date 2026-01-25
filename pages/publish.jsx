@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ImageIcon, Send, ArrowLeft, Info, FileText, Sparkles } from "lucide-react";
+import { ImageIcon, Send, ArrowLeft, FileText, Sparkles } from "lucide-center";
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -68,11 +68,13 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
+      // 1. Publication du texte
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          authorName: user.name,
+          authorName: user.penName || user.name,
+          authorEmail: user.email,
           title: title.trim(),
           content: content.trim(),
           imageBase64,
@@ -80,7 +82,25 @@ export default function PublishPage() {
         })
       });
 
+      const data = await res.json();
       if (!res.ok) throw new Error("Erreur serveur");
+
+      // 2. ENVOI DE LA NOTIFICATION GLOBALE (Nouveau Texte)
+      try {
+        await fetch('/api/create-notif', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'new_text',
+            message: `${user.penName || user.name} a publié une nouvelle œuvre : "${title.trim()}"`,
+            targetEmail: null, // Public pour tout le monde
+            link: `/bibliotheque/${data.id}` // On utilise l'ID retourné par ton API
+          })
+        });
+      } catch (nErr) {
+        console.error("Erreur notification silencieuse", nErr);
+      }
+
       toast.success("Publication réussie !", { id: loadingToast });
       router.push("/bibliotheque");
     } catch (err) {
@@ -93,7 +113,7 @@ export default function PublishPage() {
   if (isChecking) return null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8 pb-10">
       {/* Retour et En-tête */}
       <div className="flex items-center justify-between">
         <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 transition-all shadow-sm border border-slate-100">
@@ -105,7 +125,7 @@ export default function PublishPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="card-lisible space-y-8 border-none ring-1 ring-slate-100 shadow-xl shadow-slate-200/50">
+      <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[3rem] space-y-8 border-none ring-1 ring-slate-100 shadow-xl shadow-slate-200/50">
         <header className="space-y-2">
           <div className="flex items-center gap-3 text-slate-900 mb-1">
             <div className="p-2 bg-slate-900 rounded-lg text-white">
@@ -130,7 +150,7 @@ export default function PublishPage() {
                 placeholder="Donnez un nom à votre texte..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="input-lisible text-lg italic"
+                className="w-full bg-slate-50 border-none rounded-2xl p-5 text-lg italic outline-none focus:ring-2 ring-teal-500/20 transition-all"
                 required
               />
           </div>
@@ -142,7 +162,7 @@ export default function PublishPage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={12}
-              className="input-lisible font-serif text-lg leading-relaxed min-h-[300px] py-6"
+              className="w-full bg-slate-50 border-none rounded-[2rem] p-8 font-serif text-lg leading-relaxed min-h-[300px] outline-none focus:ring-2 ring-teal-500/20 transition-all resize-none"
               required
             />
             <div className={`absolute bottom-6 right-6 text-[10px] font-black px-3 py-1.5 rounded-xl shadow-sm border ${countWords(content) > MAX_WORDS ? 'bg-red-50 border-red-100 text-red-500' : 'bg-white border-slate-100 text-slate-400'}`}>
@@ -177,7 +197,7 @@ export default function PublishPage() {
         <button
           type="submit"
           disabled={loading}
-          className="btn-lisible w-full py-6 text-lg shadow-xl shadow-teal-100/50 flex gap-3"
+          className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:bg-teal-600 transition-all flex justify-center items-center gap-3 disabled:opacity-50"
         >
           {loading ? (
             <span className="animate-pulse">PUBLICATION EN COURS...</span>
