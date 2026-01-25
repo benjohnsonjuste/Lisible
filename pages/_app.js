@@ -8,7 +8,6 @@ import InstallPrompt from "@/components/InstallPrompt";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import Head from "next/head";
-import Script from "next/script"; // 1. Import du composant Script
 
 function MyApp({ Component, pageProps }) {
   return (
@@ -26,12 +25,6 @@ function MyApp({ Component, pageProps }) {
         {/* Couleur de thème pour la barre du navigateur et notifications */}
         <meta name="theme-color" content="#0d6efd" />
       </Head>
-
-      {/* 2. Intégration du script publicitaire EffectiveGate */}
-      <Script 
-        src="https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js"
-        strategy="afterInteractive" 
-      />
 
       {/* Barre de navigation */}
       <Navbar />
