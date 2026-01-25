@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { 
-  Heart, Share2, Send, ArrowLeft, Eye, 
+  Heart, Share2, ArrowLeft, Eye, 
   Loader2, Edit3, Check, X 
 } from "lucide-react";
 import Link from "next/link";
@@ -10,11 +10,10 @@ import { useParams } from "next/navigation";
 
 export default function TextPage() {
   const params = useParams();
-  const id = params?.id;
+  const id = params?.id; // L'ID change quand on clique sur une notification
 
   const [text, setText] = useState(null);
   const [user, setUser] = useState(null);
-  const [isLiked, setIsLiked] = useState(false);
   const [readProgress, setReadProgress] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -22,52 +21,63 @@ export default function TextPage() {
   const [editContent, setEditContent] = useState("");
   const [editTitle, setEditTitle] = useState("");
 
-  // 1. CHARGEMENT DU TEXTE
+  // 1. CHARGEMENT ET RÉINITIALISATION (Correctif pour les notifications)
   useEffect(() => {
     const fetchTexte = async () => {
       if (!id) return;
+      
+      // IMPORTANT : On repasse en loading à chaque changement d'ID
+      // Cela évite de rester bloqué sur l'ancien texte
+      setLoading(true); 
+      setText(null); 
+
       try {
         const storedUser = localStorage.getItem("lisible_user");
         if (storedUser) setUser(JSON.parse(storedUser));
 
+        // Ajout de ?t= pour forcer GitHub à donner la version la plus fraîche du JSON
         const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/textes.json?t=${Date.now()}`);
         const data = await res.json();
+        
+        // Comparaison robuste (String vs Number)
         const found = data.find(t => String(t.id) === String(id));
         
         if (found) {
           setText(found);
           setEditContent(found.content);
           setEditTitle(found.title);
+          // On remonte en haut de la page pour le nouveau texte
+          window.scrollTo(0, 0); 
+        } else {
+          toast.error("Manuscrit introuvable.");
         }
       } catch (e) {
         console.error("Erreur de chargement", e);
+        toast.error("Erreur de connexion");
       } finally {
         setLoading(false);
       }
     };
+
     fetchTexte();
-  }, [id]);
+  }, [id]); // Dépendance sur 'id' : crucial pour les notifications !
 
   // 2. INJECTION DU SCRIPT PUBLICITAIRE (Méthode Blogger)
   useEffect(() => {
     if (!loading && text && !isEditing) {
-      // Création du script
       const script = document.createElement("script");
       script.src = "https://pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
       script.async = true;
       script.setAttribute("data-cfasync", "false");
-      
-      // Injection dans le body
       document.body.appendChild(script);
 
       return () => {
-        // Nettoyage lors du changement de page
         if (document.body.contains(script)) {
           document.body.removeChild(script);
         }
       };
     }
-  }, [loading, text, isEditing]);
+  }, [loading, text, isEditing, id]); // Ajout de 'id' pour rafraîchir la pub aussi
 
   // 3. BARRE DE PROGRESSION
   useEffect(() => {
@@ -79,12 +89,18 @@ export default function TextPage() {
     };
     window.addEventListener("scroll", updateProgress);
     return () => window.removeEventListener("scroll", updateProgress);
-  }, []);
+  }, [id]); // Réinitialise le scroll tracker sur nouveau texte
 
-  if (loading || !text) return (
-    <div className="flex flex-col items-center py-40 text-teal-600">
-      <Loader2 className="animate-spin mb-4" />
-      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Récupération du manuscrit...</span>
+  if (loading) return (
+    <div className="flex flex-col items-center py-40 text-teal-600 bg-slate-50 min-h-screen">
+      <Loader2 className="animate-spin mb-4" size={32} />
+      <span className="text-[10px] font-black uppercase tracking-[0.3em]">Ouverture du manuscrit...</span>
+    </div>
+  );
+
+  if (!text) return (
+    <div className="py-40 text-center font-bold text-slate-400">
+      Texte introuvable ou supprimé.
     </div>
   );
 
@@ -92,6 +108,7 @@ export default function TextPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 pb-20 space-y-8 animate-in fade-in duration-700">
+      {/* Barre de lecture */}
       <div className="fixed top-0 left-0 w-full h-1 z-[60] bg-slate-100">
         <div className="h-full bg-teal-500 transition-all duration-300" style={{ width: `${readProgress}%` }} />
       </div>
@@ -116,11 +133,11 @@ export default function TextPage() {
           {/* Header de l'auteur */}
           <div className="flex items-center justify-between border-b border-slate-50 pb-8">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-teal-400 font-black text-xl shadow-inner">
+              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-teal-400 font-black text-xl">
                 {text.authorName?.charAt(0)}
               </div>
               <div>
-                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Auteur</p>
+                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Manuscrit</p>
                 <p className="text-base font-black text-slate-900 italic leading-none">{text.authorName}</p>
               </div>
             </div>
@@ -130,12 +147,7 @@ export default function TextPage() {
             </div>
           </div>
 
-          {isEditing ? (
-            <div className="space-y-6">
-               {/* Ici insère ton interface d'édition */}
-               <p className="text-center text-slate-400 text-xs italic">Mode édition actif...</p>
-            </div>
-          ) : (
+          {!isEditing ? (
             <>
               <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter italic leading-tight">
                 {text.title}
@@ -149,26 +161,28 @@ export default function TextPage() {
                 {text.content}
               </div>
 
-              {/* ZONE PUBLICITAIRE (TON CODE BLOGGER) */}
+              {/* ZONE PUBLICITAIRE (CODE BLOGGER) */}
               <div className="mt-20 pt-10 border-t border-slate-100 flex flex-col items-center">
-                <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mb-6">Sponsorisé par le label</p>
-                
-                {/* TON DIV ID UNIQUE */}
+                <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.4em] mb-6 text-center">Sponsorisé par le label</p>
                 <div id="container-874a186feecd3e968c16a58bb085fd56" className="w-full min-h-[250px] flex items-center justify-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
                    <span className="text-[9px] text-slate-200 uppercase font-black tracking-widest animate-pulse">Chargement partenaire...</span>
                 </div>
               </div>
             </>
+          ) : (
+            <div className="space-y-6">
+               <p className="text-center text-slate-400 text-xs italic">Mode édition...</p>
+            </div>
           )}
         </div>
 
         {!isEditing && (
           <footer className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
             <button className="flex items-center gap-2 text-slate-400 hover:text-rose-500 transition-colors">
-               <Heart size={20} /> <span className="text-xs font-bold">Aimer</span>
+               <Heart size={20} /> <span className="text-xs font-bold font-serif uppercase tracking-widest">Aimer</span>
             </button>
             <button className="flex items-center gap-2 text-slate-400 hover:text-teal-500 transition-colors">
-               <Share2 size={20} /> <span className="text-xs font-bold">Partager</span>
+               <Share2 size={20} /> <span className="text-xs font-bold font-serif uppercase tracking-widest">Partager</span>
             </button>
           </footer>
         )}
