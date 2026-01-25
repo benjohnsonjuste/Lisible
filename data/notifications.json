@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": 1769348166593,
+    "type": "like",
+    "message": "Quelqu'un a aimé votre texte \"test\"",
+    "link": "/bibliotheque/1769347048672-test",
+    "date": "2026-01-25T13:36:06.593Z"
+  }
+]
