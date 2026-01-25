@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Pusher from "pusher";
 
-// Ces informations se trouvent sur ton tableau de bord Pusher
+// Initialisation de Pusher avec les variables d'environnement de Vercel
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID,
   key: process.env.PUSHER_KEY,
@@ -14,12 +14,20 @@ export async function POST(req) {
   try {
     const { channel, event, data } = await req.json();
 
-    // On diffuse le message ou le like à tout le monde via Pusher
+    // Validation simple : s'assurer que les données ne sont pas vides
+    if (!channel || !event || !data) {
+      return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
+    }
+
+    // On diffuse le message, le like ou l'animation à tout le monde
     await pusher.trigger(channel, event, data);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, timestamp: Date.now() });
   } catch (error) {
     console.error("Erreur Pusher Trigger:", error);
-    return NextResponse.json({ error: "Erreur de diffusion" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur de diffusion en direct" }, 
+      { status: 500 }
+    );
   }
 }
