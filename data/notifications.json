@@ -1,5 +1,13 @@
 [
   {
+    "id": 1769350379058,
+    "type": "live",
+    "message": "jb7management a lancé un direct dans le Club !",
+    "targetEmail": null,
+    "link": "/club/club-studio",
+    "date": "2026-01-25T14:12:59.058Z"
+  },
+  {
     "id": 1769348166593,
     "type": "like",
     "message": "Quelqu'un a aimé votre texte \"test\"",
