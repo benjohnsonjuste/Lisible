@@ -17,7 +17,8 @@ import {
   FileText,
   X,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Radio // Ajouté pour le Club
 } from "lucide-react";
 
 export default function Navbar() {
@@ -25,6 +26,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLiveActive, setIsLiveActive] = useState(false); // État du Live
 
   useEffect(() => {
     const checkUser = () => {
@@ -32,10 +34,27 @@ export default function Navbar() {
       setUser(loggedUser ? JSON.parse(loggedUser) : null);
     };
 
+    // Vérification du statut Live
+    const checkLiveStatus = async () => {
+      try {
+        const res = await fetch("https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/live_status.json?t=" + Date.now());
+        const data = await res.json();
+        setIsLiveActive(data.isLive);
+      } catch (e) {
+        setIsLiveActive(false);
+      }
+    };
+
     checkUser();
-    // Écoute les changements du localStorage (utile quand on change le profil dans /account)
+    checkLiveStatus();
+    
     window.addEventListener('storage', checkUser);
-    return () => window.removeEventListener('storage', checkUser);
+    const liveTimer = setInterval(checkLiveStatus, 60000); // Vérifie chaque minute
+
+    return () => {
+      window.removeEventListener('storage', checkUser);
+      clearInterval(liveTimer);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -45,7 +64,15 @@ export default function Navbar() {
     router.push("/login");
   };
 
+  // Liste des menus mis à jour
   const menuItems = [
+    { href: "/bibliotheque", label: "Bibliothèque", icon: <Library size={20} /> },
+    { 
+      href: "/club", 
+      label: isLiveActive ? "Lisible Club • LIVE" : "Lisible Club", 
+      icon: <Radio size={20} className={isLiveActive ? "text-red-500 animate-pulse" : ""} /> 
+    },
+    { href: "/dashboard", label: "Studio Auteur", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/communaute", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
     { href: "/contact", label: "Contact", icon: <MessageCircle size={20} /> },
@@ -76,7 +103,7 @@ export default function Navbar() {
             <nav className="hidden md:flex items-center gap-1 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
-              {/* Le Dashboard n'est visible que si connecté */}
+              <NavLink href="/club" icon={<Radio size={20} className={isLiveActive ? "text-red-500 animate-pulse" : ""} />} active={pathname === "/club"} title="Club" />
               {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Studio Auteur" />}
             </nav>
 
@@ -117,7 +144,6 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* User Profile - Affiche maintenant le Nom de Plume et la Photo réelle */}
           {user && (
             <Link 
               href="/account" 
@@ -125,7 +151,7 @@ export default function Navbar() {
               className="mb-10 p-5 bg-slate-50 hover:bg-teal-50 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 hover:border-teal-100 transition-all group"
             >
               <div className="flex items-center gap-4 overflow-hidden">
-                <div className="shrink-0 w-12 h-12 bg-slate-200 rounded-2xl overflow-hidden border-2 border-white shadow-lg transition-transform group-hover:scale-105 group-hover:rotate-3">
+                <div className="shrink-0 w-12 h-12 bg-slate-200 rounded-2xl overflow-hidden border-2 border-white shadow-lg">
                   {user.profilePic ? (
                     <img src={user.profilePic} className="w-full h-full object-cover" alt="Profil" />
                   ) : (
@@ -135,37 +161,46 @@ export default function Navbar() {
                   )}
                 </div>
                 <div className="overflow-hidden text-left">
-                  {/* Priorité au Nom de plume s'il existe */}
-                  <p className="text-sm font-black text-slate-900 truncate group-hover:text-teal-700 transition-colors">
+                  <p className="text-sm font-black text-slate-900 truncate">
                     {user.penName || user.name}
                   </p>
                   <div className="flex items-center gap-1 text-teal-600/70">
                     <Sparkles size={10} fill="currentColor" />
-                    <p className="text-[9px] uppercase font-black tracking-widest">Gérer mon profil</p>
+                    <p className="text-[9px] uppercase font-black tracking-widest text-teal-600">Gérer mon profil</p>
                   </div>
                 </div>
               </div>
-              <ChevronRight size={18} className="text-slate-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all" />
+              <ChevronRight size={18} className="text-slate-300" />
             </Link>
           )}
 
-          <nav className="space-y-2">
-            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] ml-4 mb-4">Explorer</p>
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsMenuOpen(false)}
-                className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-bold text-sm group ${
-                  pathname === item.href ? "bg-slate-900 text-white shadow-lg shadow-slate-200" : "text-slate-500 hover:bg-slate-50 hover:text-teal-600"
-                }`}
-              >
-                <span className={`${pathname === item.href ? "text-teal-400" : "text-slate-400 group-hover:text-teal-600"} transition-colors`}>
-                  {item.icon}
-                </span>
-                {item.label}
-              </Link>
-            ))}
+          <nav className="space-y-1 overflow-y-auto pr-2 custom-scrollbar">
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] ml-4 mb-4">Explorer Lisible</p>
+            {menuItems.map((item) => {
+              // Si l'item nécessite d'être connecté et que l'utilisateur ne l'est pas, on ne l'affiche pas
+              if (item.authRequired && !user) return null;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm group ${
+                    pathname === item.href 
+                    ? "bg-slate-900 text-white shadow-lg shadow-slate-200" 
+                    : "text-slate-500 hover:bg-teal-50 hover:text-teal-600"
+                  }`}
+                >
+                  <span className={`${pathname === item.href ? "text-teal-400" : "text-slate-400 group-hover:text-teal-600"}`}>
+                    {item.icon}
+                  </span>
+                  <span className="flex-grow">{item.label}</span>
+                  {item.href === "/club" && isLiveActive && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="mt-auto pt-8 border-t border-slate-50 text-center">
