@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ImageIcon, Send, ArrowLeft, FileText, Sparkles } from "lucide-center";
+// CORRECTION : On utilise lucide-react (lucide-center n'existe pas)
+import { ImageIcon, Send, ArrowLeft, FileText, Sparkles } from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -68,7 +69,7 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // 1. Publication du texte
+      // 1. Publication du texte sur l'API principale
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,28 +84,28 @@ export default function PublishPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error("Erreur serveur");
+      if (!res.ok) throw new Error("Erreur lors de la publication sur le serveur.");
 
-      // 2. ENVOI DE LA NOTIFICATION GLOBALE (Nouveau Texte)
+      // 2. Notification Globale (Public)
       try {
         await fetch('/api/create-notif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: 'new_text',
-            message: `${user.penName || user.name} a publié une nouvelle œuvre : "${title.trim()}"`,
-            targetEmail: null, // Public pour tout le monde
-            link: `/bibliotheque/${data.id}` // On utilise l'ID retourné par ton API
+            message: `${user.penName || user.name} vient de publier : "${title.trim()}"`,
+            targetEmail: null, 
+            link: `/bibliotheque/${data.id}`
           })
         });
       } catch (nErr) {
-        console.error("Erreur notification silencieuse", nErr);
+        console.error("Erreur notification non bloquante", nErr);
       }
 
-      toast.success("Publication réussie !", { id: loadingToast });
+      toast.success("Votre œuvre est en ligne !", { id: loadingToast });
       router.push("/bibliotheque");
     } catch (err) {
-      toast.error("Erreur lors de la publication", { id: loadingToast });
+      toast.error(err.message || "Erreur lors de la publication", { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -113,71 +114,73 @@ export default function PublishPage() {
   if (isChecking) return null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-10">
-      {/* Retour et En-tête */}
-      <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 transition-all shadow-sm border border-slate-100">
+    <div className="max-w-3xl mx-auto space-y-8 pb-10 px-4">
+      {/* Header avec Navigation */}
+      <div className="flex items-center justify-between mt-6">
+        <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 transition-all shadow-sm border border-slate-100 active:scale-95">
           <ArrowLeft size={20} />
         </Link>
         <div className="text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Auteur en ligne</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plume connectée</p>
           <p className="text-sm font-bold text-teal-600 italic">{user?.penName || user?.name}</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 rounded-[3rem] space-y-8 border-none ring-1 ring-slate-100 shadow-xl shadow-slate-200/50">
+      <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3rem] space-y-8 border border-slate-50 shadow-2xl shadow-slate-200/50">
         <header className="space-y-2">
           <div className="flex items-center gap-3 text-slate-900 mb-1">
-            <div className="p-2 bg-slate-900 rounded-lg text-white">
-              <FileText size={20} />
+            <div className="p-2.5 bg-slate-900 rounded-xl text-white">
+              <FileText size={24} />
             </div>
             <h1 className="text-3xl font-black tracking-tight italic">Nouvelle Publication</h1>
           </div>
-          <p className="text-slate-400 text-sm font-medium pl-11">Partagez votre récit avec la communauté.</p>
+          <p className="text-slate-400 text-sm font-medium pl-1">Donnez vie à vos mots dans la bibliothèque.</p>
         </header>
 
-        {/* Rappel des limites stylisé */}
+        {/* Badge de rappel des limites */}
         <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] font-black text-slate-400 uppercase tracking-wider">
           <Sparkles size={16} className="text-amber-400 shrink-0" />
-          <p>Maximum : <span className="text-slate-700">{MAX_WORDS} mots</span> • Image : <span className="text-slate-700">{MAX_IMAGE_SIZE_MB} MB</span></p>
+          <p>Format : <span className="text-slate-700">{MAX_WORDS} mots max</span> • Couverture : <span className="text-slate-700">{MAX_IMAGE_SIZE_MB} Mo</span></p>
         </div>
 
+        {/* Inputs */}
         <div className="space-y-6">
           <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Titre de l'œuvre</label>
+             <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Titre de l'ouvrage</label>
              <input
                 type="text"
-                placeholder="Donnez un nom à votre texte..."
+                placeholder="Quel est le titre ?"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-slate-50 border-none rounded-2xl p-5 text-lg italic outline-none focus:ring-2 ring-teal-500/20 transition-all"
+                className="w-full bg-slate-50 border-none rounded-2xl p-5 text-lg italic outline-none focus:ring-2 ring-teal-500/20 transition-all font-bold placeholder:font-normal"
                 required
               />
           </div>
 
           <div className="space-y-2 relative">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Contenu du texte</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Récit</label>
             <textarea
-              placeholder="Il était une fois..."
+              placeholder="Écrivez ici votre histoire..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={12}
-              className="w-full bg-slate-50 border-none rounded-[2rem] p-8 font-serif text-lg leading-relaxed min-h-[300px] outline-none focus:ring-2 ring-teal-500/20 transition-all resize-none"
+              className="w-full bg-slate-50 border-none rounded-[2rem] p-8 font-serif text-lg leading-relaxed min-h-[350px] outline-none focus:ring-2 ring-teal-500/20 transition-all resize-none"
               required
             />
-            <div className={`absolute bottom-6 right-6 text-[10px] font-black px-3 py-1.5 rounded-xl shadow-sm border ${countWords(content) > MAX_WORDS ? 'bg-red-50 border-red-100 text-red-500' : 'bg-white border-slate-100 text-slate-400'}`}>
+            {/* Compteur de mots dynamique */}
+            <div className={`absolute bottom-6 right-6 text-[10px] font-black px-4 py-2 rounded-xl shadow-sm border transition-colors ${countWords(content) > MAX_WORDS ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-slate-100 text-slate-400'}`}>
               {countWords(content)} / {MAX_WORDS} MOTS
             </div>
           </div>
         </div>
 
-        {/* Upload d'image stylisé */}
-        <div className="p-8 bg-teal-50/50 rounded-[2rem] border-2 border-dashed border-teal-100 space-y-4 text-center group hover:bg-teal-50 transition-colors">
+        {/* Zone Upload d'Image */}
+        <div className="p-8 bg-teal-50/30 rounded-[2.5rem] border-2 border-dashed border-teal-100/50 space-y-4 text-center transition-all hover:bg-teal-50/50">
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 bg-white rounded-2xl text-teal-600 shadow-sm group-hover:scale-110 transition-transform">
-              <ImageIcon size={28} />
+            <div className="p-4 bg-white rounded-2xl text-teal-600 shadow-sm transition-transform hover:rotate-3">
+              <ImageIcon size={32} />
             </div>
-            <span className="text-xs font-black text-teal-800 uppercase tracking-widest mt-2">Image de couverture</span>
+            <span className="text-[11px] font-black text-teal-800 uppercase tracking-widest mt-2">Illustration de couverture</span>
           </div>
           
           <input
@@ -185,33 +188,37 @@ export default function PublishPage() {
             type="file"
             accept="image/*"
             onChange={handleImageChange}
-            className="block w-full text-xs text-slate-500
-              file:mr-4 file:py-2 file:px-6
+            className="block w-full text-xs text-slate-400
+              file:mr-4 file:py-2.5 file:px-6
               file:rounded-full file:border-0
               file:text-[10px] file:font-black file:uppercase file:tracking-widest
               file:bg-teal-600 file:text-white
-              hover:file:bg-teal-700 file:cursor-pointer"
+              hover:file:bg-teal-700 file:cursor-pointer transition-all"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:bg-teal-600 transition-all flex justify-center items-center gap-3 disabled:opacity-50"
+          className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] shadow-2xl shadow-slate-300 hover:bg-teal-600 active:scale-[0.98] transition-all flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <span className="animate-pulse">PUBLICATION EN COURS...</span>
+            <span className="flex items-center gap-2 italic">
+              <Sparkles className="animate-spin" size={16} /> TRANSMISSION EN COURS...
+            </span>
           ) : (
             <>
-              <Send size={20} /> PUBLIER SUR LA BIBLIOTHÈQUE
+              <Send size={18} /> PUBLIER DANS LA BIBLIOTHÈQUE
             </>
           )}
         </button>
       </form>
 
-      <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
-        Lisible • Protection des droits d'auteur garantie
-      </p>
+      <footer className="text-center">
+        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">
+          Lisible par La Belle Littéraire
+        </p>
+      </footer>
     </div>
   );
 }
