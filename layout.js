@@ -42,13 +42,7 @@ export default function RootLayout({ children }) {
           }}
         />
 
-        {/* 5. PUBLICITÉ GLOBALE (Stratégie lazyOnload pour ne pas bloquer le rendu) */}
-        <Script 
-          src="https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js"
-          strategy="lazyOnload"
-        />
-
-        {/* 6. ENREGISTREMENT DU SERVICE WORKER (PWA) */}
+        {/* 5. ENREGISTREMENT DU SERVICE WORKER (PWA) */}
         <Script id="pwa-sw-registration" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
