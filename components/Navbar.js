@@ -68,7 +68,7 @@ export default function Navbar() {
   const menuItems = [
     { href: "/bibliotheque", label: "Bibliothèque", icon: <Library size={20} /> },
     { 
-      href: "/club", 
+      href: "/lisible-club", 
       label: isLiveActive ? "Lisible Club • LIVE" : "Lisible Club", 
       icon: <Radio size={20} className={isLiveActive ? "text-red-500 animate-pulse" : ""} /> 
     },
