@@ -1,6 +1,10 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { Mic, Video, VideoOff, MicOff, Heart, Send, Users, X, Loader2, StopCircle } from "lucide-react";
+// Import complet des icônes (Radio ajouté ici)
+import { 
+  Mic, Video, VideoOff, MicOff, Heart, Send, 
+  Users, X, Loader2, StopCircle, Radio 
+} from "lucide-react"; 
 import { toast } from "sonner";
 
 export default function LisibleClub({ roomId, mode = "video", isHost = false }) {
@@ -11,9 +15,18 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
   const [user, setUser] = useState(null);
   const [isEnding, setIsEnding] = useState(false);
 
+  // Initialisation sécurisée de l'utilisateur
   useEffect(() => {
-    const loggedUser = JSON.parse(localStorage.getItem("lisible_user"));
-    setUser(loggedUser);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("lisible_user");
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored));
+        } catch (e) {
+          console.error("Erreur parsing user", e);
+        }
+      }
+    }
   }, []);
 
   // Lancer le Live
@@ -23,7 +36,7 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
       if (isHost) {
         toast.info("Initialisation du direct...");
 
-        // 1. Mettre à jour l'état Global sur GitHub pour allumer le "Point Rouge"
+        // 1. Mise à jour du statut global sur GitHub
         await fetch('/api/live/update-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -35,7 +48,7 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
           })
         });
 
-        // 2. Envoyer la notification Push OneSignal
+        // 2. Notification Push via OneSignal
         await fetch('/api/notifications/broadcast-live', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -46,7 +59,7 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
           })
         });
 
-        toast.success("Vous êtes en direct ! Toute la communauté a été alertée.");
+        toast.success("Vous êtes en direct ! La communauté a été alertée.");
       }
     } catch (error) {
       toast.error("Erreur lors du lancement du live.");
@@ -81,7 +94,7 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
       user: user?.penName || user?.name || "Anonyme", 
       text: inputMsg 
     };
-    setMessages(prev => [...prev, msg].slice(-20));
+    setMessages(prev => [...prev, msg].slice(-20)); // Garde les 20 derniers messages
     setInputMsg("");
   };
 
@@ -89,6 +102,7 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
     <div className="max-w-4xl mx-auto h-[85vh] relative bg-slate-950 rounded-[3rem] overflow-hidden shadow-2xl border border-white/5">
       
       {!joined ? (
+        /* ÉCRAN D'ATTENTE AVANT DE REJOINDRE */
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900 text-white p-6 text-center">
           <div className="w-20 h-20 bg-teal-500/20 rounded-3xl flex items-center justify-center mb-6 border border-teal-500/30">
             <Radio size={40} className="text-teal-400 animate-pulse" />
@@ -99,19 +113,20 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
           </p>
           <button 
             onClick={startLive} 
-            className="bg-teal-600 text-white px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-teal-500 transition-all shadow-xl shadow-teal-900/20"
+            className="bg-teal-600 text-white px-12 py-4 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-teal-500 transition-all shadow-xl shadow-teal-900/20 active:scale-95"
           >
             {isHost ? "Lancer mon Live" : "Rejoindre maintenant"}
           </button>
         </div>
       ) : (
+        /* INTERFACE DU LIVE */
         <>
-          {/* Flux Vidéo/Audio */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          {/* Flux Vidéo/Audio (Simulation visuelle) */}
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
             {mode === "video" ? (
               <div className="w-full h-full bg-slate-800 flex items-center justify-center relative">
                  <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
-                 <p className="text-white/20 italic font-black uppercase tracking-widest text-xs">Flux vidéo en direct...</p>
+                 <p className="text-white/20 italic font-black uppercase tracking-widest text-[10px]">Flux vidéo actif</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-6">
@@ -126,7 +141,7 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
           {/* Header Stats & Controls */}
           <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-10">
             <div className="flex gap-2">
-              <div className="bg-red-600 px-4 py-1.5 rounded-full text-[10px] font-black text-white flex items-center gap-2 shadow-lg shadow-red-900/20">
+              <div className="bg-red-600 px-4 py-1.5 rounded-full text-[10px] font-black text-white flex items-center gap-2 shadow-lg">
                 <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping"/> DIRECT
               </div>
               <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full text-white text-[10px] font-black flex items-center gap-2 border border-white/10">
@@ -145,7 +160,12 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
                   {isEnding ? <Loader2 size={20} className="animate-spin" /> : <StopCircle size={20}/>}
                 </button>
               )}
-              <button onClick={() => window.location.href='/bibliotheque'} className="p-2.5 bg-white/10 backdrop-blur-md rounded-full text-white border border-white/10 hover:bg-white/20 transition-all"><X size={20}/></button>
+              <button 
+                onClick={() => window.location.href='/bibliotheque'} 
+                className="p-2.5 bg-white/10 backdrop-blur-md rounded-full text-white border border-white/10 hover:bg-white/20 transition-all"
+              >
+                <X size={20}/>
+              </button>
             </div>
           </div>
 
@@ -159,15 +179,18 @@ export default function LisibleClub({ roomId, mode = "video", isHost = false }) 
             ))}
           </div>
 
-          {/* Barre d'action */}
+          {/* Barre d'action inférieure */}
           <div className="absolute bottom-8 left-6 right-6 flex items-center gap-3 z-10">
             <form onSubmit={sendMessage} className="flex-grow flex items-center bg-white/10 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] px-5 py-4 focus-within:bg-white/20 transition-all">
               <input 
-                value={inputMsg} onChange={e => setInputMsg(e.target.value)}
+                value={inputMsg} 
+                onChange={e => setInputMsg(e.target.value)}
                 placeholder="Dire quelque chose..." 
                 className="bg-transparent border-none outline-none text-white text-sm w-full placeholder:text-white/40"
               />
-              <button type="submit" className="text-teal-400 hover:scale-110 transition-transform"><Send size={20}/></button>
+              <button type="submit" className="text-teal-400 hover:scale-110 transition-transform">
+                <Send size={20}/>
+              </button>
             </form>
             
             <button 
