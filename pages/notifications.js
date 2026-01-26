@@ -6,17 +6,17 @@ import {
   Clock, ArrowLeft, Sparkles, UserPlus, Radio, CheckCircle2 
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner"; // Assurez-vous d'avoir importé toast
 
 export default function NotificationsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [readIds, setReadIds] = useState([]); // Stockage local des notifications lues
+  const [readIds, setReadIds] = useState([]); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
-    // Charger les IDs lus depuis le stockage local
     const savedReadIds = JSON.parse(localStorage.getItem("read_notifications") || "[]");
     setReadIds(savedReadIds);
     
@@ -36,19 +36,13 @@ export default function NotificationsPage() {
         setNotifications([]);
         return;
       }
-
       const allNotifs = await res.json();
       const myNotifs = allNotifs.filter(n => 
         n.targetEmail === null || 
         (n.targetEmail && n.targetEmail.toLowerCase() === userEmail.toLowerCase())
       );
-
       const sortedNotifs = myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
       setNotifications(sortedNotifs);
-      
-      if (sortedNotifs.length > 0) {
-        localStorage.setItem("last_notif_id", sortedNotifs[0].id.toString());
-      }
     } catch (error) {
       console.error("Erreur notifications:", error);
     } finally {
@@ -56,13 +50,27 @@ export default function NotificationsPage() {
     }
   };
 
-  // Fonction pour marquer comme lu au clic
   const markAsRead = (id) => {
     if (!readIds.includes(id)) {
       const updatedReadIds = [...readIds, id];
       setReadIds(updatedReadIds);
       localStorage.setItem("read_notifications", JSON.stringify(updatedReadIds));
     }
+  };
+
+  // --- FONCTION DE FORMATAGE DE LIEN ---
+  const formatLink = (notif) => {
+    if (!notif.link) return "#";
+    
+    // Si c'est un nouveau texte, on s'assure que ça pointe vers /texts/[id]
+    if (notif.type === "new_text") {
+        // Extrait l'ID si le lien est complet (ex: /texte/123 -> 123)
+        const textId = notif.link.split('/').pop();
+        return `/texts/${textId}`;
+    }
+
+    // Pour les autres types, on applique le remplacement standard
+    return notif.link.replace('/texte/', '/texts/');
   };
 
   const getIcon = (type, isRead) => {
@@ -102,7 +110,6 @@ export default function NotificationsPage() {
             toast.success("Toutes les notifications sont lues");
           }}
           className="p-3 text-slate-300 hover:text-teal-500 transition-colors"
-          title="Tout marquer comme lu"
         >
           <CheckCircle2 size={20} />
         </button>
@@ -111,8 +118,7 @@ export default function NotificationsPage() {
       <div className="space-y-3">
         {notifications.map((n) => {
           const isRead = readIds.includes(n.id);
-          // Correction du lien pour s'assurer qu'il pointe vers /texts/
-          const finalLink = n.link ? n.link.replace('/texte/', '/texts/') : "#";
+          const finalLink = formatLink(n);
 
           return (
             <Link 
@@ -143,12 +149,6 @@ export default function NotificationsPage() {
                     <span>{new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
-
-                {n.type === 'live' && !isRead && (
-                  <div className="px-3 py-1 bg-red-600 rounded-full text-[8px] font-black text-white animate-pulse uppercase tracking-tighter">
-                    Direct
-                  </div>
-                )}
               </div>
             </Link>
           );
