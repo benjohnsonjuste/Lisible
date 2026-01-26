@@ -1,34 +1,42 @@
 import { Octokit } from "@octokit/rest";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const owner = "benjohnsonjuste";
+const repo = "Lisible";
+const path = "data/textes.json";
 
-  const { authorEmail } = req.body;
-  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-  const fileName = Buffer.from(authorEmail).toString('base64').replace(/=/g, "") + ".json";
-  const path = `data/users/${fileName}`;
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ message: "Méthode non autorisée" });
+
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ message: "ID manquant" });
 
   try {
-    const { data } = await octokit.repos.getContent({
-      owner: "benjohnsonjuste",
-      repo: "Lisible",
-      path
+    // 1. Récupérer le contenu actuel
+    const { data: fileData } = await octokit.repos.getContent({ owner, repo, path });
+    const content = JSON.parse(Buffer.from(fileData.content, "base64").toString());
+
+    // 2. Mise à jour de la vue
+    const updatedContent = content.map((t) => {
+      if (String(t.id).trim() === String(id).trim()) {
+        return { ...t, views: (Number(t.views) || 0) + 1 };
+      }
+      return t;
     });
 
-    const profile = JSON.parse(Buffer.from(data.content, "base64").toString());
-    const newViews = (profile.totalViews || 0) + 1;
-
+    // 3. Commit sur GitHub
     await octokit.repos.createOrUpdateFileContents({
-      owner: "benjohnsonjuste",
-      repo: "Lisible",
+      owner,
+      repo,
       path,
-      message: "Incrémentation vue (monétisation)",
-      content: Buffer.from(JSON.stringify({ ...profile, totalViews: newViews }, null, 2)).toString("base64"),
-      sha: data.sha
+      message: `📈 Vue +1 sur le texte ${id}`,
+      content: Buffer.from(JSON.stringify(updatedContent, null, 2)).toString("base64"),
+      sha: fileData.sha,
     });
 
-    res.status(200).json({ success: true });
+    return res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Erreur API Views:", error);
+    return res.status(500).json({ error: "Erreur lors de l'incrémentation" });
   }
 }
