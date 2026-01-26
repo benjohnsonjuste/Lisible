@@ -1,5 +1,13 @@
 [
   {
+    "id": 1769423654532,
+    "type": "new_text",
+    "message": "adm.lablitteraire7 vient de publier : \"Hi\"",
+    "targetEmail": null,
+    "link": "/bibliotheque/undefined",
+    "date": "2026-01-26T10:34:14.532Z"
+  },
+  {
     "id": 1769356367091,
     "type": "live",
     "message": "jb7management est en direct dans le Club !",
