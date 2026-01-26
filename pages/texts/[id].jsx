@@ -10,7 +10,7 @@ import { useParams } from "next/navigation";
 
 export default function TextPage() {
   const params = useParams();
-  // On décode l'ID pour s'assurer que les %20 et autres deviennent des espaces ou caractères clairs
+  // On décode l'ID pour gérer les espaces ou caractères spéciaux (%20, etc.)
   const id = params?.id ? decodeURIComponent(params.id) : null;
 
   const [text, setText] = useState(null);
@@ -27,21 +27,19 @@ export default function TextPage() {
       if (!id) return;
       
       setLoading(true);
-      setText(null); 
+      setText(null); // On vide l'état précédent
 
       try {
         const storedUser = localStorage.getItem("lisible_user");
         const userData = storedUser ? JSON.parse(storedUser) : null;
         setUser(userData);
 
-        // 1. Récupération des textes
+        // 1. Récupération des textes avec anti-cache (?t=)
         const resText = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/textes.json?t=${Date.now()}`);
         const dataText = await resText.json();
         
-        // RECHERCHE ROBUSTE : On compare en minuscules et sans espaces superflus
-        const found = dataText.find(t => 
-          String(t.id).trim().toLowerCase() === String(id).trim().toLowerCase()
-        );
+        // Comparaison robuste : on transforme tout en String et on enlève les espaces
+        const found = dataText.find(t => String(t.id).trim() === String(id).trim());
         
         if (found) {
           setText(found);
@@ -51,27 +49,23 @@ export default function TextPage() {
           const resComments = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/commentaires.json?t=${Date.now()}`);
           if (resComments.ok) {
             const allComments = await resComments.json();
-            const filtered = allComments.filter(c => 
-              String(c.textId).trim().toLowerCase() === String(id).trim().toLowerCase()
-            );
+            const filtered = allComments.filter(c => String(c.textId).trim() === String(id).trim());
             setComments(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
           }
         } else {
-          // Si on ne trouve pas, on affiche l'ID cherché dans la console pour déboguer
-          console.error("ID non trouvé dans le JSON:", id);
+          console.error("ID cherché :", id, "Disponible :", dataText.map(t => t.id));
         }
       } catch (e) {
-        console.error("Erreur critique:", e);
-        toast.error("Problème de connexion au manuscrit.");
+        console.error("Erreur chargement:", e);
+        toast.error("Erreur de connexion.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchPageData();
-  }, [id]);
+  }, [id]); // Se relance au changement d'ID
 
-  // Logique d'envoi de commentaire
   const handlePostComment = async () => {
     if (!newComment.trim() || !user) return;
     setIsSubmitting(true);
@@ -97,12 +91,13 @@ export default function TextPage() {
         toast.success("Message publié.");
       }
     } catch (e) {
-      toast.error("Erreur de publication.");
+      toast.error("Échec de la publication.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Progression de lecture
   useEffect(() => {
     const updateProgress = () => {
       const scrollH = document.documentElement.scrollHeight - window.innerHeight;
@@ -119,14 +114,16 @@ export default function TextPage() {
     </div>
   );
 
-  // Écran d'erreur si le texte n'est vraiment pas trouvé
+  // Écran d'erreur plus utile
   if (!text) return (
-    <div className="flex flex-col items-center justify-center py-40 space-y-6">
-      <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-300">
+    <div className="flex flex-col items-center justify-center py-40 bg-slate-50 min-h-screen px-6">
+      <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-slate-200 mb-6 shadow-inner">
         <ArrowLeft size={40} />
       </div>
-      <p className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Manuscrit introuvable</p>
-      <Link href="/bibliotheque" className="text-teal-600 font-bold border-b border-teal-600 pb-1">Retourner à la bibliothèque</Link>
+      <p className="font-black text-slate-400 uppercase tracking-widest text-[10px] mb-6">Manuscrit introuvable ({id})</p>
+      <Link href="/bibliotheque" className="bg-slate-900 text-white px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">
+        Retour à la bibliothèque
+      </Link>
     </div>
   );
 
@@ -173,7 +170,7 @@ export default function TextPage() {
             <img src={text.imageBase64} className="w-full h-auto rounded-[2rem] shadow-sm my-4" alt="Couverture" />
           )}
 
-          <div className="text-slate-800 leading-[1.8] font-serif text-xl md:text-2xl whitespace-pre-wrap">
+          <div className="text-slate-800 leading-[1.8] font-serif text-xl md:text-2xl whitespace-pre-wrap pt-4">
             {text.content}
           </div>
         </div>
@@ -198,7 +195,7 @@ export default function TextPage() {
         {user ? (
           <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50 space-y-4">
             <div className="flex items-center gap-3 mb-2">
-               <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-white text-[10px] font-black uppercase">
+               <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-white text-[10px] font-black uppercase shadow-sm">
                  {user.name?.charAt(0)}
                </div>
                <span className="text-xs font-black text-slate-900 uppercase tracking-widest">{user.name}</span>
@@ -206,7 +203,7 @@ export default function TextPage() {
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Qu'avez-vous pensé de ce manuscrit ?"
+              placeholder="Écrivez ce que vous avez ressenti..."
               className="w-full bg-slate-50 rounded-2xl p-5 text-sm min-h-[120px] outline-none border-none focus:ring-2 focus:ring-teal-500/20 transition-all"
             />
             <div className="flex justify-end">
@@ -231,12 +228,12 @@ export default function TextPage() {
 
         <div className="space-y-6">
           {comments.map((c, i) => (
-            <div key={i} className="bg-white p-7 rounded-[2rem] border border-slate-100 flex gap-5 animate-in slide-in-from-bottom-3 duration-500">
+            <div key={i} className="bg-white p-7 rounded-[2rem] border border-slate-100 flex gap-5 animate-in slide-in-from-bottom-3 duration-500 shadow-sm">
               <div className="w-12 h-12 shrink-0 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg uppercase">
                 {c.userName?.charAt(0)}
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
+              <div className="space-y-2 flex-grow">
+                <div className="flex items-center justify-between">
                   <span className="text-sm font-black text-slate-900">{c.userName}</span>
                   <span className="text-[9px] font-black text-slate-200 uppercase tracking-[0.2em]">
                     {new Date(c.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
@@ -246,6 +243,9 @@ export default function TextPage() {
               </div>
             </div>
           ))}
+          {comments.length === 0 && (
+             <p className="text-center py-10 text-slate-300 text-xs font-black uppercase tracking-widest italic">Aucun commentaire pour le moment.</p>
+          )}
         </div>
       </section>
     </div>
