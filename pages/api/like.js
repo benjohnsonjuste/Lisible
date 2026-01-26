@@ -1,32 +1,42 @@
-// /app/api/like/route.js
-import { NextResponse } from "next/server";
-import { getFile, createOrUpdateFile } from "@/lib/githubClient";
+import { Octokit } from "@octokit/rest";
 
-export async function POST(req) {
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const owner = "benjohnsonjuste";
+const repo = "Lisible";
+const path = "data/textes.json";
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ message: "Méthode non autorisée" });
+
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ message: "ID manquant" });
+
   try {
-    const { postPath, username } = await req.json(); // postPath example: posts/2025-12-01-slug.md
-    if (!postPath || !username) return NextResponse.json({ error: "postPath and username required" }, { status: 400 });
+    // 1. Récupérer le contenu actuel
+    const { data: fileData } = await octokit.repos.getContent({ owner, repo, path });
+    const content = JSON.parse(Buffer.from(fileData.content, "base64").toString());
 
-    // derive id from postPath: e.g. replace slashes and .md
-    const id = postPath.replace(/\//g, "__").replace(/\./g, "_");
-    const likesPath = `data/likes/${id}.json`;
+    // 2. Mise à jour du like
+    const updatedContent = content.map((t) => {
+      if (String(t.id).trim() === String(id).trim()) {
+        return { ...t, likes: (Number(t.likes) || 0) + 1 };
+      }
+      return t;
+    });
 
-    const existing = await getFile(likesPath);
-    let likes = [];
-    let sha = undefined;
-    if (existing) {
-      sha = existing.sha;
-      likes = JSON.parse(Buffer.from(existing.content, "base64").toString("utf8")) || [];
-    }
+    // 3. Commit sur GitHub
+    await octokit.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path,
+      message: `❤️ Like +1 sur le texte ${id}`,
+      content: Buffer.from(JSON.stringify(updatedContent, null, 2)).toString("base64"),
+      sha: fileData.sha,
+    });
 
-    if (!likes.includes(username)) likes.push(username);
-
-    const contentB64 = Buffer.from(JSON.stringify(likes, null, 2), "utf8").toString("base64");
-    await createOrUpdateFile(likesPath, contentB64, `Like ${postPath} by ${username}`, sha);
-
-    return NextResponse.json({ ok: true, likes: likes.length });
-  } catch (err) {
-    console.error("like error", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Erreur API Likes:", error);
+    return res.status(500).json({ error: "Erreur lors du like" });
   }
 }
