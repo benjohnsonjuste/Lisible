@@ -6,7 +6,7 @@ import {
   Clock, ArrowLeft, Sparkles, UserPlus, Radio, CheckCircle2 
 } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner"; // Assurez-vous d'avoir importé toast
+import { toast } from "sonner";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -58,19 +58,16 @@ export default function NotificationsPage() {
     }
   };
 
-  // --- FONCTION DE FORMATAGE DE LIEN ---
+  // --- FONCTION DE FORMATAGE DE LIEN CORRIGÉE ---
   const formatLink = (notif) => {
     if (!notif.link) return "#";
     
-    // Si c'est un nouveau texte, on s'assure que ça pointe vers /texts/[id]
-    if (notif.type === "new_text") {
-        // Extrait l'ID si le lien est complet (ex: /texte/123 -> 123)
-        const textId = notif.link.split('/').pop();
-        return `/texts/${textId}`;
-    }
-
-    // Pour les autres types, on applique le remplacement standard
-    return notif.link.replace('/texte/', '/texts/');
+    // On remplace d'abord l'ancien préfixe /texte/ par /texts/
+    let cleanPath = notif.link.replace('/texte/', '/texts/');
+    
+    // Si le lien ne contient pas déjà le format ID-TITRE (vérifié par la présence d'un tiret après l'ID)
+    // On laisse le composant TextPage gérer la redirection ou la recherche par ID pur.
+    return cleanPath;
   };
 
   const getIcon = (type, isRead) => {
@@ -86,9 +83,9 @@ export default function NotificationsPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col justify-center items-center py-40 text-teal-600">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-4 border-current mb-4"></div>
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronisation...</p>
+    <div className="flex flex-col justify-center items-center py-40 text-teal-600 font-black uppercase text-[10px] tracking-widest">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current mb-4"></div>
+      Chargement...
     </div>
   );
 
@@ -107,7 +104,7 @@ export default function NotificationsPage() {
             const allIds = notifications.map(n => n.id);
             setReadIds(allIds);
             localStorage.setItem("read_notifications", JSON.stringify(allIds));
-            toast.success("Toutes les notifications sont lues");
+            toast.success("Tout est marqué comme lu");
           }}
           className="p-3 text-slate-300 hover:text-teal-500 transition-colors"
         >
@@ -116,43 +113,49 @@ export default function NotificationsPage() {
       </header>
 
       <div className="space-y-3">
-        {notifications.map((n) => {
-          const isRead = readIds.includes(n.id);
-          const finalLink = formatLink(n);
+        {notifications.length === 0 ? (
+          <div className="py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest">
+            Aucune activité pour le moment
+          </div>
+        ) : (
+          notifications.map((n) => {
+            const isRead = readIds.includes(n.id);
+            const finalLink = formatLink(n);
 
-          return (
-            <Link 
-              href={finalLink} 
-              key={n.id} 
-              onClick={() => markAsRead(n.id)}
-              className={`block group transition-all ${isRead ? 'opacity-60' : 'opacity-100'}`}
-            >
-              <div className={`p-6 rounded-[2rem] border-none ring-1 transition-all duration-300 flex items-center gap-6 
-                ${n.type === 'live' && !isRead 
-                  ? 'bg-slate-900 ring-slate-800 shadow-xl shadow-red-900/10' 
-                  : isRead ? 'bg-slate-50 ring-transparent' : 'bg-white ring-slate-100 shadow-sm hover:ring-teal-200'
-                }`}>
-                
-                <div className={`shrink-0 p-4 rounded-2xl transition-colors 
-                  ${n.type === 'live' && !isRead ? 'bg-red-500/20' : 'bg-white border border-slate-100 group-hover:bg-teal-50'}`}>
-                  {getIcon(n.type, isRead)}
-                </div>
-
-                <div className="flex-grow space-y-1">
-                  <p className={`text-sm leading-relaxed font-bold transition-colors 
-                    ${n.type === 'live' && !isRead ? 'text-white' : isRead ? 'text-slate-400' : 'text-slate-700 group-hover:text-slate-900'}`}>
-                    {n.message}
-                  </p>
+            return (
+              <Link 
+                href={finalLink} 
+                key={n.id} 
+                onClick={() => markAsRead(n.id)}
+                className={`block group transition-all ${isRead ? 'opacity-60' : 'opacity-100'}`}
+              >
+                <div className={`p-6 rounded-[2rem] border-none ring-1 transition-all duration-300 flex items-center gap-6 
+                  ${n.type === 'live' && !isRead 
+                    ? 'bg-slate-900 ring-slate-800 shadow-xl' 
+                    : isRead ? 'bg-slate-50 ring-transparent' : 'bg-white ring-slate-100 shadow-sm hover:ring-teal-200'
+                  }`}>
                   
-                  <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-300">
-                    <Clock size={10} />
-                    <span>{new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  <div className={`shrink-0 p-4 rounded-2xl transition-colors 
+                    ${n.type === 'live' && !isRead ? 'bg-red-500/20' : 'bg-white border border-slate-100 group-hover:bg-teal-50'}`}>
+                    {getIcon(n.type, isRead)}
+                  </div>
+
+                  <div className="flex-grow space-y-1">
+                    <p className={`text-sm leading-relaxed font-bold transition-colors 
+                      ${n.type === 'live' && !isRead ? 'text-white' : isRead ? 'text-slate-400' : 'text-slate-700 group-hover:text-slate-900'}`}>
+                      {n.message}
+                    </p>
+                    
+                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-300">
+                      <Clock size={10} />
+                      <span>{new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })
+        )}
       </div>
     </div>
   );
