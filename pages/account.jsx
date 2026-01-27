@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { User, CreditCard, Camera, Save, Edit3, ArrowLeft, ShieldCheck, Sparkles, Loader2 } from "lucide-react";
+import { User, CreditCard, Camera, Save, Edit3, ArrowLeft, ShieldCheck, Sparkles, Loader2, BookOpen, Eye, Heart } from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
 import Link from "next/link";
 
@@ -10,6 +10,7 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [editingPayment, setEditingPayment] = useState(false);
+  const [myTexts, setMyTexts] = useState([]);
 
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
@@ -42,42 +43,61 @@ export default function AccountPage() {
         phone: parsed.wuMoneyGram?.phone || "",
       });
       if (!parsed.paymentMethod) setEditingPayment(true);
+      
+      // Lancement de la récupération des textes
+      fetchAuthorTexts(parsed.email);
     }
     setLoading(false);
   }, []);
 
-  // SYSTÈME DE COMPRESSION D'IMAGE INTÉGRÉ
+  const fetchAuthorTexts = async (email) => {
+    if (!email) return;
+    try {
+      // 1. Lister les fichiers dans le dossier publications (via l'API GitHub)
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
+      if (!res.ok) return;
+      const files = await res.json();
+      
+      // 2. Filtrer uniquement les fichiers .json et charger leur contenu
+      const textPromises = files
+        .filter(f => f.name.endsWith('.json'))
+        .map(file => fetch(file.download_url).then(r => r.json()));
+      
+      const allTexts = await Promise.all(textPromises);
+      
+      // 3. Filtrer par email de l'auteur (insensible à la casse)
+      const filtered = allTexts.filter(t => 
+        t.authorEmail && t.authorEmail.toLowerCase() === email.toLowerCase()
+      );
+      
+      setMyTexts(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    } catch (e) {
+      console.error("Erreur chargement textes perso:", e);
+    }
+  };
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Limite de sécurité avant compression (5Mo pour accepter les photos de téléphones récents)
     if (file.size > 5 * 1024 * 1024) return toast.error("Fichier trop lourd (max 5Mo)");
 
     setIsUploading(true);
     const reader = new FileReader();
-
     reader.onload = (ev) => {
       const img = new Image();
       img.src = ev.target.result;
-
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 400; // Largeur optimale pour une photo de profil
+        const MAX_WIDTH = 400;
         const scaleSize = MAX_WIDTH / img.width;
-        
         canvas.width = MAX_WIDTH;
         canvas.height = img.height * scaleSize;
-
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        // Exportation en JPEG compressé (0.7 = 70% de qualité, parfait pour le web)
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-        
         setFormData(prev => ({ ...prev, profilePic: compressedBase64 }));
         setIsUploading(false);
-        toast.success("Photo traitée avec succès");
+        toast.success("Photo prête");
       };
     };
     reader.readAsDataURL(file);
@@ -85,8 +105,7 @@ export default function AccountPage() {
 
   const saveAllToStaffRegistry = async () => {
     if (!formData.firstName || !formData.lastName) return toast.error("Prénom et Nom requis");
-    
-    const loadingToast = toast.loading("Enregistrement sécurisé...");
+    const loadingToast = toast.loading("Mise à jour du registre...");
     
     const payload = {
       email: user.email,
@@ -114,19 +133,12 @@ export default function AccountPage() {
         body: JSON.stringify(payload),
       });
 
-      // Gestion des erreurs de taille de body (Vercel renvoie du texte et non du JSON si ça dépasse)
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Le serveur a refusé les données (image probablement trop lourde)");
-      }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur serveur");
+      if (!res.ok) throw new Error("Erreur lors de la sauvegarde sur GitHub");
 
       localStorage.setItem("lisible_user", JSON.stringify({ ...user, ...payload }));
       setUser({ ...user, ...payload });
       setEditingPayment(false);
-      toast.success("Profil et paiement enregistrés !", { id: loadingToast });
+      toast.success("Profil mis à jour avec succès !", { id: loadingToast });
     } catch (err) {
       toast.error(err.message, { id: loadingToast });
     }
@@ -135,13 +147,13 @@ export default function AccountPage() {
   if (loading) return <div className="flex justify-center py-40 text-teal-600"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
-      <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100">
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-700">
+      <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div>
           <h1 className="text-4xl font-black text-slate-900 italic tracking-tighter">Mon Compte</h1>
-          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Auteur Lisible</p>
+          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Bureau de l'écrivain</p>
         </div>
-        <Link href="/dashboard" className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
+        <Link href="/bibliotheque" className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
           <ArrowLeft size={24} />
         </Link>
       </header>
@@ -149,15 +161,15 @@ export default function AccountPage() {
       {user && <MetricsOverview user={user} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* SECTION PROFIL */}
-        <section className="lg:col-span-2 space-y-6">
+        <section className="lg:col-span-2 space-y-8">
+          {/* SECTION PROFIL */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
-            <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800">
-              <User className="text-teal-600" /> Profil Public
+            <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800 uppercase text-[12px] tracking-widest">
+              <User className="text-teal-600" /> Identité Littéraire
             </h2>
             
-            <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] relative overflow-hidden group border border-slate-100">
-              <div className="relative z-10">
+            <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+              <div className="relative">
                 <div className="w-32 h-32 rounded-[2.2rem] bg-white overflow-hidden border-4 border-white shadow-2xl relative">
                   {isUploading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-white/80">
@@ -172,12 +184,9 @@ export default function AccountPage() {
                   <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                 </label>
               </div>
-              <div className="text-center sm:text-left z-10">
+              <div className="text-center sm:text-left">
                 <p className="text-2xl font-black text-slate-900 italic tracking-tight">{formData.penName || user?.name}</p>
-                <div className="flex items-center gap-2 mt-1 justify-center sm:justify-start">
-                  <Sparkles size={12} className="text-teal-500" />
-                  <p className="text-[10px] text-teal-600 font-black uppercase tracking-widest">{user?.email}</p>
-                </div>
+                <p className="text-[10px] text-teal-600 font-black uppercase tracking-widest">{user?.email}</p>
               </div>
             </div>
 
@@ -188,70 +197,73 @@ export default function AccountPage() {
               <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
             </div>
 
-            <button 
-              onClick={saveAllToStaffRegistry} 
-              className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-teal-600 transition-all flex items-center justify-center gap-3 active:scale-95 shadow-lg shadow-slate-200"
-            >
-              <Save size={18} /> ENREGISTRER LE PROFIL
+            <button onClick={saveAllToStaffRegistry} className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-teal-600 transition-all shadow-lg active:scale-95">
+              Sauvegarder les modifications
             </button>
+          </div>
+
+          {/* MES PUBLICATIONS (Connectées à l'API GitHub) */}
+          <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50">
+            <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800 uppercase text-[12px] tracking-widest mb-8">
+              <BookOpen className="text-teal-600" /> Mes Manuscrits ({myTexts.length})
+            </h2>
+            
+            <div className="space-y-4">
+              {myTexts.length > 0 ? myTexts.map((txt) => (
+                <Link href={`/texts/${txt.id}`} key={txt.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-slate-100 group">
+                  <div className="flex flex-col">
+                    <span className="font-black text-slate-900 group-hover:text-teal-600 transition-colors">{txt.title}</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(txt.date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex gap-6 text-slate-400">
+                    <div className="flex items-center gap-1.5"><Eye size={14}/> <span className="text-xs font-black text-slate-600">{txt.views || 0}</span></div>
+                    <div className="flex items-center gap-1.5"><Heart size={14}/> <span className="text-xs font-black text-slate-600">{txt.likes?.length || 0}</span></div>
+                  </div>
+                </Link>
+              )) : (
+                <div className="text-center py-10 text-slate-300 font-black uppercase text-[10px] tracking-widest border-2 border-dashed border-slate-100 rounded-3xl">
+                  Le parchemin est encore vierge...
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
         {/* SECTION PAIEMENT */}
-        <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden border border-slate-800">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl"></div>
-          
-          <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8 relative z-10">
+        <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl h-fit sticky top-10 border border-slate-800">
+          <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
             <CreditCard size={24} /> Versements
           </h2>
           
-          <div className="space-y-6 relative z-10">
-            <select 
-              disabled={!editingPayment} 
-              value={payment.method} 
-              onChange={e => setPayment({...payment, method: e.target.value})} 
-              className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold text-white outline-none ring-teal-500/50 focus:ring-2 transition-all"
-            >
+          <div className="space-y-6">
+            <select disabled={!editingPayment} value={payment.method} onChange={e => setPayment({...payment, method: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold text-white outline-none ring-teal-500/30 focus:ring-2">
               <option value="PayPal">PayPal</option>
               <option value="Western Union">Western Union</option>
               <option value="MoneyGram">MoneyGram</option>
             </select>
 
             {payment.method === "PayPal" ? (
-              <input 
-                type="email" 
-                disabled={!editingPayment} 
-                value={payment.paypalEmail} 
-                onChange={e => setPayment({...payment, paypalEmail: e.target.value})} 
-                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold text-teal-400 outline-none placeholder:text-slate-600" 
-                placeholder="Email PayPal" 
-              />
+              <input type="email" disabled={!editingPayment} value={payment.paypalEmail} onChange={e => setPayment({...payment, paypalEmail: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold text-teal-400 outline-none" placeholder="Email PayPal" />
             ) : (
-              <div className="space-y-4">
-                <input type="text" disabled={!editingPayment} placeholder="Prénom du bénéficiaire" value={payment.wuFirstName} onChange={e => setPayment({...payment, wuFirstName: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold placeholder:text-slate-600" />
-                <input type="text" disabled={!editingPayment} placeholder="Nom du bénéficiaire" value={payment.wuLastName} onChange={e => setPayment({...payment, wuLastName: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold placeholder:text-slate-600" />
-                <input type="text" disabled={!editingPayment} placeholder="Pays de résidence" value={payment.country} onChange={e => setPayment({...payment, country: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold placeholder:text-slate-600" />
-                <input type="text" disabled={!editingPayment} placeholder="Numéro de téléphone" value={payment.phone} onChange={e => setPayment({...payment, phone: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold placeholder:text-slate-600" />
+              <div className="space-y-4 animate-in slide-in-from-top-2">
+                <input type="text" disabled={!editingPayment} placeholder="Prénom du bénéficiaire" value={payment.wuFirstName} onChange={e => setPayment({...payment, wuFirstName: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold" />
+                <input type="text" disabled={!editingPayment} placeholder="Nom du bénéficiaire" value={payment.wuLastName} onChange={e => setPayment({...payment, wuLastName: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold" />
+                <input type="text" disabled={!editingPayment} placeholder="Pays" value={payment.country} onChange={e => setPayment({...payment, country: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold" />
+                <input type="text" disabled={!editingPayment} placeholder="Téléphone" value={payment.phone} onChange={e => setPayment({...payment, phone: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 text-sm font-bold" />
               </div>
             )}
-          </div>
-
-          <div className="mt-10 relative z-10">
-            {editingPayment ? (
-              <button 
-                onClick={saveAllToStaffRegistry} 
-                className="w-full py-5 bg-teal-500 text-slate-950 rounded-[1.5rem] font-black text-[10px] tracking-widest uppercase shadow-xl shadow-teal-500/20 active:scale-95 transition-all"
-              >
-                CONFIRMER LES INFOS
-              </button>
-            ) : (
-              <button 
-                onClick={() => setEditingPayment(true)} 
-                className="w-full py-5 bg-slate-800 text-teal-400 rounded-[1.5rem] font-black text-[10px] uppercase border border-slate-700 flex items-center justify-center gap-2 hover:bg-slate-700 transition-colors"
-              >
-                <Edit3 size={16} /> MODIFIER LE PAIEMENT
-              </button>
-            )}
+            
+            <div className="pt-4">
+              {editingPayment ? (
+                <button onClick={saveAllToStaffRegistry} className="w-full py-5 bg-teal-500 text-slate-950 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-teal-500/20 active:scale-95 transition-all">
+                  Confirmer les coordonnées
+                </button>
+              ) : (
+                <button onClick={() => setEditingPayment(true)} className="w-full py-5 bg-slate-800 text-teal-400 rounded-[1.5rem] font-black text-[10px] uppercase border border-slate-700 flex items-center justify-center gap-2 hover:bg-slate-700 transition-colors">
+                  <Edit3 size={16} /> Modifier les infos
+                </button>
+              )}
+            </div>
           </div>
         </section>
       </div>
@@ -267,7 +279,7 @@ function InputBlock({ label, value, onChange, type = "text" }) {
         type={type} 
         value={value} 
         onChange={e => onChange(e.target.value)} 
-        className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-100 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all text-slate-700" 
+        className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-100 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all text-slate-700 shadow-inner" 
       />
     </div>
   );
