@@ -18,21 +18,29 @@ export default function TextPage() {
   const fetchData = useCallback(async () => {
     if (!textId) return;
     try {
-      // Récupération via l'API GitHub (avec anti-cache)
+      // 1. Récupération des données du texte
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
       if (!res.ok) throw new Error("Manuscrit introuvable");
       
       const fileData = await res.json();
-      // Décodage Base64 sécurisé pour les accents
       const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
       setText(content);
 
-      // Incrémentation automatique de la vue
-      fetch("/api/texts", { 
-        method: "PATCH", 
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ id: textId, action: "view" }) 
-      });
+      // 2. Gestion de la VUE UNIQUE par appareil
+      // On crée une clé spécifique pour ce texte dans le stockage local de l'appareil
+      const viewKey = `viewed_${textId}`;
+      const hasViewed = localStorage.getItem(viewKey);
+
+      if (!hasViewed) {
+        // Si l'appareil n'a pas encore de marqueur, on incrémente la vue
+        await fetch("/api/texts", { 
+          method: "PATCH", 
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ id: textId, action: "view" }) 
+        });
+        // On marque cet appareil comme "ayant vu le texte" définitivement
+        localStorage.setItem(viewKey, "true");
+      }
     } catch (e) {
       console.error(e);
       toast.error("Erreur lors de l'ouverture du texte");
@@ -173,7 +181,7 @@ export default function TextPage() {
               </div>
             </div>
           ) : (
-            <p className="text-center py-4 text-slate-400 italic">Connectez-vous pour commenter.</p>
+            <p className="text-center py-4 text-slate-400 italic font-black uppercase text-[10px] tracking-widest">Connectez-vous pour commenter</p>
           )}
         </div>
 
