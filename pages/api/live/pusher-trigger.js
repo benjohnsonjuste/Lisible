@@ -1,7 +1,5 @@
-import { NextResponse } from "next/server";
 import Pusher from "pusher";
 
-// Initialisation de Pusher avec les variables d'environnement de Vercel
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID,
   key: process.env.PUSHER_KEY,
@@ -10,24 +8,25 @@ const pusher = new Pusher({
   useTLS: true,
 });
 
-export async function POST(req) {
-  try {
-    const { channel, event, data } = await req.json();
+export default async function handler(req, res) {
+  // On autorise uniquement le POST
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Méthode non autorisée" });
+  }
 
-    // Validation simple : s'assurer que les données ne sont pas vides
+  try {
+    const { channel, event, data } = req.body;
+
     if (!channel || !event || !data) {
-      return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
+      return res.status(400).json({ error: "Données manquantes" });
     }
 
-    // On diffuse le message, le like ou l'animation à tout le monde
+    // Déclenchement de l'événement Pusher
     await pusher.trigger(channel, event, data);
 
-    return NextResponse.json({ success: true, timestamp: Date.now() });
+    return res.status(200).json({ success: true, timestamp: Date.now() });
   } catch (error) {
     console.error("Erreur Pusher Trigger:", error);
-    return NextResponse.json(
-      { error: "Erreur de diffusion en direct" }, 
-      { status: 500 }
-    );
+    return res.status(500).json({ error: "Erreur de diffusion en direct" });
   }
 }
