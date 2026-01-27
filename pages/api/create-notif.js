@@ -1,50 +1,77 @@
-import { Octokit } from "@octokit/rest";
+import { Buffer } from "buffer";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Méthode non autorisée" });
+  }
 
-  // Extraction des données du corps de la requête
-  const { type, message, targetEmail, link, date, id } = req.body;
+  const { type, message, targetEmail, link } = req.body;
 
-  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  // Configuration GitHub
+  const token = process.env.GITHUB_TOKEN;
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
   const path = "data/notifications.json";
 
   try {
-    // 1. Récupération du fichier actuel sur GitHub
-    const { data: fileData } = await octokit.repos.getContent({ owner, repo, path });
-    const content = Buffer.from(fileData.content, "base64").toString();
-    const notifications = JSON.parse(content);
+    // 1. Récupérer le fichier actuel
+    const getRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      }
+    );
 
-    // 2. Création de la nouvelle notification avec des valeurs par défaut sécurisées
+    let currentNotifs = [];
+    let sha = null;
+
+    if (getRes.ok) {
+      const fileData = await getRes.json();
+      sha = fileData.sha;
+      // Décodage du contenu existant
+      const content = Buffer.from(fileData.content, "base64").toString("utf-8");
+      currentNotifs = JSON.parse(content);
+    }
+
+    // 2. Créer la nouvelle notification
     const newNotif = {
-      id: id || Date.now(), // Utilise l'ID envoyé ou en génère un
+      id: Date.now().toString(),
       type: type || "info",
-      message: message || "Nouvelle mise à jour",
-      targetEmail: targetEmail !== undefined ? targetEmail : null, // Important pour le filtrage Public
+      message: message,
+      targetEmail: targetEmail || null, // null = public
       link: link || "#",
-      date: date || new Date().toISOString() // Utilise la date envoyée ou celle du serveur
+      date: new Date().toISOString()
     };
 
-    // 3. Mise à jour du fichier (on garde les 50 dernières notifications)
-    const updatedNotifications = [newNotif, ...notifications].slice(0, 50);
-    const updatedContent = Buffer.from(
-      JSON.stringify(updatedNotifications, null, 2)
-    ).toString("base64");
+    // 3. Ajouter au début de la liste et limiter à 50 notifications pour la performance
+    const updatedNotifs = [newNotif, ...currentNotifs].slice(0, 50);
 
-    await octokit.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path,
-      message: `📢 Notification: ${type} - ${new Date().toLocaleDateString()}`,
-      content: updatedContent,
-      sha: fileData.sha
-    });
+    // 4. Renvoyer le fichier mis à jour vers GitHub
+    const putRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `🔔 Notification : ${message.substring(0, 30)}...`,
+          content: Buffer.from(JSON.stringify(updatedNotifs, null, 2)).toString("base64"),
+          sha: sha, // Obligatoire pour mettre à jour un fichier existant
+        }),
+      }
+    );
 
-    return res.status(200).json({ success: true, notification: newNotif });
+    if (!putRes.ok) {
+      const error = await putRes.json();
+      throw new Error(error.message);
+    }
+
+    return res.status(200).json({ success: true, notif: newNotif });
   } catch (error) {
-    console.error("Erreur API Notification:", error.message);
-    return res.status(500).json({ error: "Échec de la mise à jour des notifications" });
+    console.error("Erreur API Notification:", error);
+    return res.status(500).json({ error: "Impossible de créer la notification" });
   }
 }
