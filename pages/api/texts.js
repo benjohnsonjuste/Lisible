@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const repo = "Lisible";
   const branch = "main";
 
-  // --- PUBLICATION (POST) ---
+  // --- CRÉATION D'UN TEXTE (Appelé par la page Publish) ---
   if (req.method === "POST") {
     const { title, content, authorName, authorEmail, imageBase64, date } = req.body;
     const timestamp = Date.now();
@@ -14,18 +14,7 @@ export default async function handler(req, res) {
     const fileName = `${timestamp}-${slug}`;
     const path = `data/publications/${fileName}.json`;
 
-    const textData = {
-      id: fileName,
-      title,
-      content,
-      authorName,
-      authorEmail,
-      date,
-      imageBase64,
-      views: 0,
-      likes: [],
-      comments: []
-    };
+    const textData = { id: fileName, title, content, authorName, authorEmail, date, imageBase64, views: 0, likes: [], comments: [] };
 
     try {
       await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
@@ -41,14 +30,15 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(500).json({ error: e.message }); }
   }
 
-  // --- INTERACTIONS : VUES, LIKES, COMMENTAIRES (PATCH) ---
+  // --- MODIFICATION (Vues, Likes, Commentaires) ---
   if (req.method === "PATCH") {
     const { id, action, payload } = req.body;
     const path = `data/publications/${id}.json`;
 
     try {
       const getFile = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
       });
       const fileInfo = await getFile.json();
       let data = JSON.parse(Buffer.from(fileInfo.content, "base64").toString());
@@ -60,11 +50,7 @@ export default async function handler(req, res) {
           : [...data.likes, payload.email];
       }
       if (action === "comment") {
-        data.comments.push({
-          userName: payload.userName,
-          text: payload.text,
-          date: new Date().toISOString()
-        });
+        data.comments.push({ userName: payload.userName, text: payload.text, date: new Date().toISOString() });
       }
 
       await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
