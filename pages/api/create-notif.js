@@ -13,8 +13,6 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Non autorisé" });
 
   const { type, message, targetEmail, link } = req.body;
-  
-  // Variables d'environnement à vérifier sur votre dashboard Vercel
   const token = process.env.GITHUB_TOKEN;
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
@@ -30,11 +28,10 @@ export default async function handler(req, res) {
   };
 
   try {
-    // ÉTAPE 1 : PUSHER (Temps réel immédiat)
-    // On utilise "global-notifications" et "new-alert"
+    // 1. PUSHER (Temps réel)
     await pusher.trigger("global-notifications", "new-alert", newNotif);
 
-    // ÉTAPE 2 : GITHUB (Persistance pour l'historique)
+    // 2. GITHUB (Historique)
     const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
@@ -52,7 +49,7 @@ export default async function handler(req, res) {
 
     const updatedNotifs = [newNotif, ...currentNotifs].slice(0, 50);
 
-    const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -62,12 +59,8 @@ export default async function handler(req, res) {
       }),
     });
 
-    if (!putRes.ok) throw new Error("Erreur lors de l'écriture sur GitHub");
-
-    return res.status(200).json({ success: true, pushed: true, saved: true });
-
+    return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("ERREUR NOTIF:", error.message);
     return res.status(500).json({ error: error.message });
   }
 }
