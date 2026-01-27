@@ -7,8 +7,6 @@ import Link from "next/link";
 
 export default function PublishPage() {
   const router = useRouter();
-  const fileInputRef = useRef(null);
-
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -16,7 +14,6 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  const MAX_IMAGE_SIZE_MB = 2;
   const MAX_WORDS = 2000;
 
   useEffect(() => {
@@ -40,14 +37,6 @@ export default function PublishPage() {
 
   const countWords = (str) => str.trim().split(/\s+/).filter(Boolean).length;
 
-  const clearDraft = () => {
-    localStorage.removeItem("draft_title");
-    localStorage.removeItem("draft_content");
-    setTitle("");
-    setContent("");
-    toast.success("Brouillon effacé");
-  };
-
   const toBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -67,7 +56,7 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // 1. Publication du texte sur l'API principale
+      // 1. Publication du texte
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,38 +70,28 @@ export default function PublishPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erreur serveur lors de la publication");
-      const publishedText = await res.json();
+      if (!res.ok) throw new Error("Erreur serveur");
 
-      // 2. ENVOI DE LA NOTIFICATION GLOBALE
-      // Correction : On utilise le type 'new_text' pour l'icône BookOpen dans NotificationsPage
-      try {
-        await fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "new_text", 
-            message: `📖 Nouveau manuscrit : "${title.trim()}" par ${user.penName || user.name}`,
-            targetEmail: "all",
-            link: `/bibliotheque` // Vous pouvez adapter vers `/texts/${publishedText.id}` si la route existe
-          })
-        });
-      } catch (notifErr) {
-        console.error("Erreur notification (non bloquante):", notifErr);
-      }
+      // 2. ENVOI DE LA NOTIFICATION GLOBALE (ADAPTATION)
+      await fetch("/api/create-notif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "new_text", 
+          message: `📖 Nouveau manuscrit : "${title.trim()}" par ${user.penName || user.name}`,
+          targetEmail: "all",
+          link: `/bibliotheque` 
+        })
+      });
 
-      // Nettoyage des données locales
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
       toast.success("Œuvre diffusée avec succès !", { id: loadingToast });
-      
-      // Redirection vers la bibliothèque pour voir le résultat
       router.push("/bibliotheque");
       
     } catch (err) {
-      console.error(err);
-      toast.error("Échec de la publication. Réessayez.", { id: loadingToast });
+      toast.error("Échec de la publication.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -126,17 +105,12 @@ export default function PublishPage() {
         <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 shadow-sm border border-slate-100 transition-all">
           <ArrowLeft size={20} />
         </Link>
-        <button onClick={clearDraft} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl">
-          <Trash2 size={14} /> Effacer le brouillon
+        <button onClick={() => { setTitle(""); setContent(""); }} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl">
+          <Trash2 size={14} /> Effacer
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] space-y-8 border border-slate-50 shadow-2xl relative overflow-hidden">
-        {/* Décoration subtile */}
-        <div className="absolute top-0 right-0 p-10 opacity-5 pointer-events-none">
-            <Sparkles size={120} className="text-teal-600" />
-        </div>
-
         <header className="space-y-2 relative">
           <div className="flex items-center gap-4 text-slate-900">
             <div className="p-3 bg-teal-600 rounded-2xl text-white shadow-lg shadow-teal-600/20">
@@ -144,24 +118,17 @@ export default function PublishPage() {
             </div>
             <h1 className="text-3xl font-black italic tracking-tighter">Écrire l'Inspirant</h1>
           </div>
-          <p className="text-slate-400 text-sm font-medium ml-1">Le monde attend votre plume.</p>
         </header>
 
         <div className="space-y-6">
-          <div className="space-y-2">
-             <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Titre du manuscrit</label>
              <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-slate-50 border-none rounded-2xl p-6 text-xl italic outline-none focus:ring-2 ring-teal-500/20 font-bold transition-all"
-                placeholder="Donnez un nom à votre récit..."
+                placeholder="Titre du manuscrit..."
                 required
               />
-          </div>
-
-          <div className="space-y-2 relative">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Le texte</label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -169,37 +136,18 @@ export default function PublishPage() {
               placeholder="Il était une fois..."
               required
             />
-            <div className={`absolute bottom-6 right-6 text-[9px] font-black px-4 py-2 rounded-xl border transition-all ${countWords(content) > MAX_WORDS ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-white border-slate-100 text-slate-400'}`}>
-              {countWords(content)} / {MAX_WORDS} MOTS
-            </div>
-          </div>
         </div>
 
-        {/* Upload Image */}
-        <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center group hover:border-teal-400/50 transition-colors">
+        <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center cursor-pointer">
           <label className="cursor-pointer block">
-            <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files[0])}
-                className="hidden"
-            />
-            <div className="flex flex-col items-center gap-2">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-slate-400 group-hover:text-teal-600 shadow-sm transition-all">
-                    <ImageIcon size={20} />
-                </div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                    {imageFile ? imageFile.name : "Ajouter une couverture (Optionnel)"}
-                </p>
-            </div>
+            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} className="hidden" />
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                {imageFile ? imageFile.name : "Ajouter une couverture (Optionnel)"}
+            </p>
           </label>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 active:scale-95 transition-all flex justify-center items-center gap-3 disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3">
           {loading ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> DIFFUSER DANS LA BIBLIOTHÈQUE</>}
         </button>
       </form>
