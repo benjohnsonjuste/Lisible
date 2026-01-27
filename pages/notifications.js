@@ -31,7 +31,7 @@ export default function NotificationsPage() {
 
   const fetchNotifications = async (userEmail) => {
     try {
-      // Anti-cache pour avoir les dernières notifs
+      // Anti-cache GitHub
       const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/notifications.json?t=${Date.now()}`);
       if (!res.ok) {
         setNotifications([]);
@@ -39,9 +39,11 @@ export default function NotificationsPage() {
       }
       const allNotifs = await res.json();
       
-      // Filtrage : Notifs publiques (targetEmail null) ou destinées à l'utilisateur
+      // FILTRAGE CORRIGÉ :
+      // 1. Notifs "global" (targetEmail === "all")
+      // 2. Notifs ciblées (targetEmail === email de l'utilisateur)
       const myNotifs = allNotifs.filter(n => 
-        n.targetEmail === null || 
+        n.targetEmail === "all" || 
         (n.targetEmail && n.targetEmail.toLowerCase() === userEmail.toLowerCase())
       );
       
@@ -62,12 +64,6 @@ export default function NotificationsPage() {
     }
   };
 
-  const formatLink = (notif) => {
-    if (!notif.link) return "#";
-    // Migration des anciens liens vers le nouveau système [id]
-    return notif.link.replace('/texte/', '/texts/').replace('/bibliotheque/', '/texts/');
-  };
-
   const getIcon = (type, isRead) => {
     const colorClass = isRead ? "text-slate-300" : "";
     switch (type) {
@@ -75,7 +71,9 @@ export default function NotificationsPage() {
       case 'like': return <Heart size={20} className={`${colorClass || "text-rose-500 fill-rose-500"}`} />;
       case 'comment': return <MessageSquare size={20} className={`${colorClass || "text-teal-500 fill-teal-500"}`} />;
       case 'subscribe': return <UserPlus size={20} className={`${colorClass || "text-amber-500"}`} />;
-      case 'new_text': return <BookOpen size={20} className={`${colorClass || "text-slate-900"}`} />;
+      // Nouveau type pour les textes publiés
+      case 'global': 
+      case 'new_text': return <BookOpen size={20} className={`${colorClass || "text-indigo-500"}`} />;
       default: return <Sparkles size={20} className={`${colorClass || "text-teal-400"}`} />;
     }
   };
@@ -105,7 +103,6 @@ export default function NotificationsPage() {
             toast.success("Tout est marqué comme lu");
           }}
           className="p-3 text-slate-300 hover:text-teal-500 transition-colors"
-          title="Marquer tout comme lu"
         >
           <CheckCircle2 size={24} />
         </button>
@@ -115,36 +112,28 @@ export default function NotificationsPage() {
         {notifications.length === 0 ? (
           <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem]">
             <Bell size={40} className="mx-auto text-slate-100 mb-4" />
-            <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest">
-              Aucun nouveau message dans les archives
-            </p>
+            <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest">Aucun message</p>
           </div>
         ) : (
           notifications.map((n) => {
             const isRead = readIds.includes(n.id);
-            const finalLink = formatLink(n);
 
             return (
               <Link 
-                href={finalLink} 
+                href={n.link || "#"} 
                 key={n.id} 
                 onClick={() => markAsRead(n.id)}
-                className={`block group transition-all duration-300 ${isRead ? 'opacity-50 grayscale-[0.5]' : 'opacity-100'}`}
+                className={`block group transition-all duration-300 ${isRead ? 'opacity-50' : 'opacity-100'}`}
               >
                 <div className={`p-6 rounded-[2.5rem] transition-all duration-500 flex items-center gap-6 border
-                  ${n.type === 'live' && !isRead 
-                    ? 'bg-slate-900 border-slate-800 shadow-2xl scale-[1.02]' 
-                    : isRead ? 'bg-slate-50 border-transparent' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50 hover:border-teal-200'
-                  }`}>
+                  ${isRead ? 'bg-slate-50 border-transparent' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50 hover:border-teal-200'}`}>
                   
-                  <div className={`shrink-0 p-4 rounded-2xl transition-all
-                    ${n.type === 'live' && !isRead ? 'bg-red-500 text-white' : 'bg-white border border-slate-100 shadow-inner group-hover:scale-110'}`}>
+                  <div className={`shrink-0 p-4 rounded-2xl transition-all ${isRead ? 'bg-slate-100' : 'bg-white border border-slate-50 shadow-sm group-hover:scale-110'}`}>
                     {getIcon(n.type, isRead)}
                   </div>
 
                   <div className="flex-grow space-y-1">
-                    <p className={`text-sm leading-relaxed font-bold transition-colors 
-                      ${n.type === 'live' && !isRead ? 'text-white' : isRead ? 'text-slate-400' : 'text-slate-700 group-hover:text-teal-600'}`}>
+                    <p className={`text-sm leading-relaxed font-bold transition-colors ${isRead ? 'text-slate-400' : 'text-slate-700 group-hover:text-teal-600'}`}>
                       {n.message}
                     </p>
                     
@@ -153,16 +142,15 @@ export default function NotificationsPage() {
                       <span>{new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
+
+                  {/* Indicateur de nouveau message */}
+                  {!isRead && <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(20,184,166,0.5)]" />}
                 </div>
               </Link>
             );
           })
         )}
       </div>
-      
-      <footer className="text-center pt-10">
-        <p className="text-[9px] font-black text-slate-200 uppercase tracking-[0.5em]">Lisible • Système de Messagerie</p>
-      </footer>
     </div>
   );
 }
