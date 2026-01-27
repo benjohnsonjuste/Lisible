@@ -1,27 +1,70 @@
 // components/Footer.js
 import Link from "next/link";
-import Image from "next/image";
+import { MapPin, Copyright, Heart } from "lucide-react";
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-gray-100 py-6 border-t border-gray-200 mt-10">
-      <div className="container mx-auto text-center px-4">
-        {/* Texte principal */}
-        <p className="text-sm text-gray-700">
-          © 2025 - <span className="font-bold">Lisible</span>
-        </p>
-        <p className="text-sm text-gray-600 mt-1">
-          Plateforme de lecture en streaming
-        </p>
+    <footer className="relative bg-white pt-20 pb-10 border-t border-slate-50 overflow-hidden">
+      {/* Element de design en arrière-plan (Optionnel pour le côté High-Tech) */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-teal-500/20 to-transparent" />
 
-        <p className="text-sm text-gray-600 mt-1">
-          Une production de <span className="font-semibold">La Belle Littéraire</span>
-        </p>
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col items-center text-center space-y-6">
+          
+          {/* Logo / Branding */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black italic tracking-tighter text-slate-900">
+              Lisible<span className="text-teal-600">.</span>
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+              Streaming Littéraire
+            </p>
+          </div>
 
-        <p className="text-sm text-gray-600 mt-1">
-          22 rue A. Lazarre, Delmas, Haïti
-        </p>
+          {/* Séparateur minimaliste */}
+          <div className="h-10 w-[1px] bg-slate-100" />
 
+          {/* Informations de production */}
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500 font-medium">
+              Une production de{" "}
+              <span className="text-slate-900 font-bold hover:text-teal-600 transition-colors cursor-default">
+                La Belle Littéraire
+              </span>
+            </p>
+            
+            <div className="flex items-center justify-center gap-2 text-slate-400">
+              <MapPin size={14} className="text-teal-500" />
+              <address className="not-italic text-xs font-semibold tracking-wide">
+                22 RUE A. LAZARRE, DELMAS, HAÏTI
+              </address>
+            </div>
+          </div>
+
+          {/* Copyright & Crédits */}
+          <div className="pt-10 w-full border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+              <Copyright size={12} />
+              {currentYear} Lisible — Tous droits réservés
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Link href="/terms" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+                Conditions
+              </Link>
+              <div className="w-1 h-1 bg-slate-200 rounded-full" />
+              <Link href="/privacy" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+                Confidentialité
+              </Link>
+            </div>
+
+            <p className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Fait avec <Heart size={12} className="text-pink-500 fill-pink-500" /> pour les mots
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   );
