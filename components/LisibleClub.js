@@ -97,20 +97,7 @@ function ClubInterface({ roomId, isHost }) {
     const user = getUser();
 
     try {
-      // Notification globale
-      if (isHost) {
-        fetch('/api/create-notif', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'live',
-            message: `🔴 ${user.penName || user.name || "Un auteur"} est en LIVE ! Rejoins le Club.`,
-            link: `/lisible-club?room=${roomId}`,
-            targetEmail: "all" 
-          })
-        });
-      }
-
+      // 1. Établir le flux sur Livepeer en premier
       const res = await fetch("/api/live/create-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,12 +105,32 @@ function ClubInterface({ roomId, isHost }) {
       });
       const data = await res.json();
       
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("Échec de création du flux");
 
       setStreamData(data);
+
+      // 2. Notification globale (on attend la confirmation du serveur)
+      if (isHost) {
+        try {
+          await fetch('/api/create-notif', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'live',
+              message: `🔴 ${user.penName || user.name || "Un auteur"} est en LIVE ! Rejoins le Club.`,
+              link: `/lisible-club?room=${roomId}`,
+              targetEmail: "all" 
+            })
+          });
+        } catch (notifErr) {
+          console.error("La notification n'a pas pu être envoyée:", notifErr);
+        }
+      }
+
       setJoined(true);
       toast.success("Antenne ouverte !");
     } catch (e) {
+      console.error(e);
       toast.error("Erreur d'initialisation du direct.");
     } finally {
       setLoading(false);
@@ -134,7 +141,7 @@ function ClubInterface({ roomId, isHost }) {
     if (!inputMsg.trim()) return;
     const user = getUser();
     try {
-      await fetch('/api/live/pusher-trigger', {
+      const res = await fetch('/api/live/pusher-trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -143,7 +150,7 @@ function ClubInterface({ roomId, isHost }) {
           data: { user: user.penName || user.name || "Anonyme", text: inputMsg } 
         })
       });
-      setInputMsg("");
+      if (res.ok) setInputMsg("");
     } catch (e) {
       toast.error("Échec de l'envoi");
     }
