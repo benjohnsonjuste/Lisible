@@ -1,7 +1,6 @@
 import { Buffer } from "buffer";
 import Pusher from "pusher";
 
-// Initialisation de Pusher pour l'envoi instantané
 const pusher = new Pusher({
   appId: "1931362",
   key: "1da55287e2911ceb01dd",
@@ -23,21 +22,16 @@ export default async function handler(req, res) {
     id: Date.now().toString(),
     type: type || "info",
     message: message,
-    targetEmail: targetEmail || null,
+    targetEmail: targetEmail || "all",
     link: link || "#",
     date: new Date().toISOString()
   };
 
   try {
-    // --- ÉTAPE 1 : ENVOI INSTANTANÉ (C'est ça qui répare le retard) ---
-    // On envoie la notification sur un canal global "notifications"
+    // 1. Envoi Pusher (Instantané)
     await pusher.trigger("global-notifications", "new-alert", newNotif);
 
-    // --- ÉTAPE 2 : SAUVEGARDE GITHUB (En arrière-plan pour l'historique) ---
-    // On répond au client immédiatement pour ne pas le faire attendre GitHub
-    res.status(200).json({ success: true, sent: true });
-
-    // Le code continue de s'exécuter pour GitHub
+    // 2. Lecture GitHub
     const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
@@ -55,7 +49,8 @@ export default async function handler(req, res) {
 
     const updatedNotifs = [newNotif, ...currentNotifs].slice(0, 50);
 
-    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    // 3. Écriture GitHub (On attend la fin avant de répondre)
+    const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -65,8 +60,12 @@ export default async function handler(req, res) {
       }),
     });
 
+    if (!putRes.ok) throw new Error("Erreur GitHub");
+
+    return res.status(200).json({ success: true });
+
   } catch (error) {
     console.error("Erreur Notification:", error);
-    if (!res.writableEnded) res.status(500).json({ error: "Erreur" });
+    return res.status(500).json({ error: "Erreur serveur" });
   }
 }
