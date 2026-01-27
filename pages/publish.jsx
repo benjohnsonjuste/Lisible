@@ -2,8 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-// CORRECTION : On utilise lucide-react (lucide-center n'existe pas)
-import { ImageIcon, Send, ArrowLeft, FileText, Sparkles } from "lucide-react"; 
+import { ImageIcon, Send, ArrowLeft, FileText, Sparkles, Loader2 } from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -20,10 +19,11 @@ export default function PublishPage() {
   const MAX_IMAGE_SIZE_MB = 2;
   const MAX_WORDS = 2000;
 
+  // Vérification de la session utilisateur
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
     if (!loggedUser) {
-      toast.error("Veuillez vous connecter.");
+      toast.error("Veuillez vous connecter pour publier.");
       router.push("/login"); 
     } else {
       setUser(JSON.parse(loggedUser));
@@ -37,7 +37,7 @@ export default function PublishPage() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
-        toast.error(`Image trop lourde (Max ${MAX_IMAGE_SIZE_MB} MB)`);
+        toast.error(`Image trop lourde (Max ${MAX_IMAGE_SIZE_MB} Mo)`);
         e.target.value = null;
         setImageFile(null);
         return;
@@ -63,13 +63,13 @@ export default function PublishPage() {
     }
 
     setLoading(true);
-    const loadingToast = toast.loading("Mise en ligne de votre œuvre...");
+    const loadingToast = toast.loading("Impression de votre manuscrit...");
 
     try {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // 1. Publication du texte sur l'API principale
+      // 1. Envoi vers ton API GitHub (/api/texts.js)
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,28 +84,27 @@ export default function PublishPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error("Erreur lors de la publication sur le serveur.");
+      if (!res.ok) throw new Error(data.error || "Erreur lors de la publication.");
 
-      // 2. Notification Globale (Public)
+      // 2. Notification Globale optionnelle
       try {
         await fetch('/api/create-notif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: 'new_text',
-            message: `${user.penName || user.name} vient de publier : "${title.trim()}"`,
-            targetEmail: null, 
+            message: `${user.penName || user.name} a publié une nouvelle œuvre : "${title.trim()}"`,
             link: `/bibliotheque/${data.id}`
           })
         });
       } catch (nErr) {
-        console.error("Erreur notification non bloquante", nErr);
+        console.warn("Notification non envoyée, mais texte publié.");
       }
 
-      toast.success("Votre œuvre est en ligne !", { id: loadingToast });
+      toast.success("Votre œuvre est archivée dans la bibliothèque !", { id: loadingToast });
       router.push("/bibliotheque");
     } catch (err) {
-      toast.error(err.message || "Erreur lors de la publication", { id: loadingToast });
+      toast.error(err.message || "Erreur de transmission", { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -114,7 +113,7 @@ export default function PublishPage() {
   if (isChecking) return null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-10 px-4">
+    <div className="max-w-3xl mx-auto space-y-8 pb-10 px-4 animate-in fade-in duration-500">
       {/* Header avec Navigation */}
       <div className="flex items-center justify-between mt-6">
         <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 transition-all shadow-sm border border-slate-100 active:scale-95">
@@ -134,13 +133,13 @@ export default function PublishPage() {
             </div>
             <h1 className="text-3xl font-black tracking-tight italic">Nouvelle Publication</h1>
           </div>
-          <p className="text-slate-400 text-sm font-medium pl-1">Donnez vie à vos mots dans la bibliothèque.</p>
+          <p className="text-slate-400 text-sm font-medium pl-1">Partagez votre récit avec la communauté.</p>
         </header>
 
         {/* Badge de rappel des limites */}
         <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] font-black text-slate-400 uppercase tracking-wider">
           <Sparkles size={16} className="text-amber-400 shrink-0" />
-          <p>Format : <span className="text-slate-700">{MAX_WORDS} mots max</span> • Couverture : <span className="text-slate-700">{MAX_IMAGE_SIZE_MB} Mo</span></p>
+          <p>Format : <span className="text-slate-700">{MAX_WORDS} mots max</span> • Image : <span className="text-slate-700">{MAX_IMAGE_SIZE_MB} Mo</span></p>
         </div>
 
         {/* Inputs */}
@@ -149,7 +148,7 @@ export default function PublishPage() {
              <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Titre de l'ouvrage</label>
              <input
                 type="text"
-                placeholder="Quel est le titre ?"
+                placeholder="Donnez un nom à votre histoire..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-slate-50 border-none rounded-2xl p-5 text-lg italic outline-none focus:ring-2 ring-teal-500/20 transition-all font-bold placeholder:font-normal"
@@ -158,9 +157,9 @@ export default function PublishPage() {
           </div>
 
           <div className="space-y-2 relative">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Récit</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase ml-3 tracking-widest">Le Récit</label>
             <textarea
-              placeholder="Écrivez ici votre histoire..."
+              placeholder="Il était une fois..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={12}
@@ -178,7 +177,7 @@ export default function PublishPage() {
         <div className="p-8 bg-teal-50/30 rounded-[2.5rem] border-2 border-dashed border-teal-100/50 space-y-4 text-center transition-all hover:bg-teal-50/50">
           <div className="flex flex-col items-center gap-2">
             <div className="p-4 bg-white rounded-2xl text-teal-600 shadow-sm transition-transform hover:rotate-3">
-              <ImageIcon size={32} />
+              {imageFile ? <div className="text-[10px] font-black text-teal-600">PRÊT</div> : <ImageIcon size={32} />}
             </div>
             <span className="text-[11px] font-black text-teal-800 uppercase tracking-widest mt-2">Illustration de couverture</span>
           </div>
@@ -195,6 +194,7 @@ export default function PublishPage() {
               file:bg-teal-600 file:text-white
               hover:file:bg-teal-700 file:cursor-pointer transition-all"
           />
+          {imageFile && <p className="text-[10px] font-bold text-teal-600 uppercase tracking-tighter italic">{imageFile.name}</p>}
         </div>
 
         <button
@@ -204,7 +204,7 @@ export default function PublishPage() {
         >
           {loading ? (
             <span className="flex items-center gap-2 italic">
-              <Sparkles className="animate-spin" size={16} /> TRANSMISSION EN COURS...
+              <Loader2 className="animate-spin" size={16} /> TRANSMISSION EN COURS...
             </span>
           ) : (
             <>
@@ -214,7 +214,7 @@ export default function PublishPage() {
         </button>
       </form>
 
-      <footer className="text-center">
+      <footer className="text-center pb-6">
         <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">
           Lisible par La Belle Littéraire
         </p>
