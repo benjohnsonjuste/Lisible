@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Heart, Send, Radio, LogOut, Loader2 } from "lucide-react";
+import { Send, Radio, LogOut, Loader2 } from "lucide-react";
 import Pusher from "pusher-js";
 import { 
   LivepeerConfig, 
@@ -16,7 +16,7 @@ const livepeerClient = createReactClient({
   provider: studioProvider({ apiKey: "f15e0657-3f95-46f3-8b77-59f0f909162c" }), 
 });
 
-// 2. COMPOSANT PRINCIPAL (WRAPPER) - Indispensable pour les hooks Livepeer
+// 2. COMPOSANT PRINCIPAL (WRAPPER)
 export default function LisibleClub(props) {
   return (
     <LivepeerConfig client={livepeerClient}>
@@ -54,7 +54,13 @@ function ClubInterface({ roomId, isHost }) {
   // Synchronisation Chat Pusher
   useEffect(() => {
     if (!roomId) return;
-    const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
+    
+    // Configuration Pusher
+    const pusher = new Pusher('1da55287e2911ceb01dd', { 
+      cluster: 'us2',
+      forceTLS: true 
+    });
+    
     const channel = pusher.subscribe(`chat-${roomId}`);
     
     channel.bind('new-message', (data) => {
@@ -82,7 +88,8 @@ function ClubInterface({ roomId, isHost }) {
       setStreamData(data);
       setJoined(true);
     } catch (e) {
-      if (!isHost && retryCount < 3) {
+      // Stratégie de retry pour les spectateurs si le host n'est pas encore prêt
+      if (!isHost && retryCount < 5) {
         setTimeout(() => connectToLive(retryCount + 1), 5000);
       } else if (!isHost) {
         toast.error("Le live n'est pas encore actif.");
@@ -97,7 +104,7 @@ function ClubInterface({ roomId, isHost }) {
     const user = getUser();
 
     try {
-      // 1. Établir le flux sur Livepeer en premier
+      // 1. Initialisation du flux Livepeer
       const res = await fetch("/api/live/create-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,26 +112,21 @@ function ClubInterface({ roomId, isHost }) {
       });
       const data = await res.json();
       
-      if (!res.ok) throw new Error("Échec de création du flux");
-
+      if (!res.ok) throw new Error("Échec Livepeer");
       setStreamData(data);
 
-      // 2. Notification globale (on attend la confirmation du serveur)
+      // 2. Notification via votre API synchronisée GitHub/Pusher
       if (isHost) {
-        try {
-          await fetch('/api/create-notif', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'live',
-              message: `🔴 ${user.penName || user.name || "Un auteur"} est en LIVE ! Rejoins le Club.`,
-              link: `/lisible-club?room=${roomId}`,
-              targetEmail: "all" 
-            })
-          });
-        } catch (notifErr) {
-          console.error("La notification n'a pas pu être envoyée:", notifErr);
-        }
+        await fetch('/api/create-notif', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'live',
+            message: `🔴 ${user.penName || user.name || "Un auteur"} a ouvert l'antenne !`,
+            link: `/lisible-club?room=${roomId}`,
+            targetEmail: "all" 
+          })
+        });
       }
 
       setJoined(true);
@@ -147,7 +149,10 @@ function ClubInterface({ roomId, isHost }) {
         body: JSON.stringify({ 
           channel: `chat-${roomId}`, 
           event: 'new-message', 
-          data: { user: user.penName || user.name || "Anonyme", text: inputMsg } 
+          data: { 
+            user: user.penName || user.name || "Anonyme", 
+            text: inputMsg 
+          } 
         })
       });
       if (res.ok) setInputMsg("");
@@ -165,7 +170,7 @@ function ClubInterface({ roomId, isHost }) {
              <div className="absolute inset-0 bg-teal-400/20 blur-xl rounded-full"></div>
           </div>
           <h2 className="text-2xl font-black italic mb-2 tracking-tighter uppercase">Lisible Club</h2>
-          <p className="text-slate-500 text-[10px] mb-8 uppercase tracking-[0.4em]">Studio de diffusion {roomId}</p>
+          <p className="text-slate-500 text-[10px] mb-8 uppercase tracking-[0.4em]">Studio {roomId}</p>
           
           <button 
             onClick={isHost ? startLive : connectToLive} 
