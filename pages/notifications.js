@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Bell, Heart, MessageSquare, BookOpen, 
-  Clock, ArrowLeft, Sparkles, UserPlus, Radio, CheckCircle2 
+  Clock, ArrowLeft, Sparkles, UserPlus, Radio, CheckCircle2, Loader2 
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -31,16 +31,20 @@ export default function NotificationsPage() {
 
   const fetchNotifications = async (userEmail) => {
     try {
+      // Anti-cache pour avoir les dernières notifs
       const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/notifications.json?t=${Date.now()}`);
       if (!res.ok) {
         setNotifications([]);
         return;
       }
       const allNotifs = await res.json();
+      
+      // Filtrage : Notifs publiques (targetEmail null) ou destinées à l'utilisateur
       const myNotifs = allNotifs.filter(n => 
         n.targetEmail === null || 
         (n.targetEmail && n.targetEmail.toLowerCase() === userEmail.toLowerCase())
       );
+      
       const sortedNotifs = myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
       setNotifications(sortedNotifs);
     } catch (error) {
@@ -58,22 +62,16 @@ export default function NotificationsPage() {
     }
   };
 
-  // --- FONCTION DE FORMATAGE DE LIEN CORRIGÉE ---
   const formatLink = (notif) => {
     if (!notif.link) return "#";
-    
-    // On remplace d'abord l'ancien préfixe /texte/ par /texts/
-    let cleanPath = notif.link.replace('/texte/', '/texts/');
-    
-    // Si le lien ne contient pas déjà le format ID-TITRE (vérifié par la présence d'un tiret après l'ID)
-    // On laisse le composant TextPage gérer la redirection ou la recherche par ID pur.
-    return cleanPath;
+    // Migration des anciens liens vers le nouveau système [id]
+    return notif.link.replace('/texte/', '/texts/').replace('/bibliotheque/', '/texts/');
   };
 
   const getIcon = (type, isRead) => {
     const colorClass = isRead ? "text-slate-300" : "";
     switch (type) {
-      case 'live': return <Radio size={20} className={`${colorClass || "text-red-500"} animate-pulse`} />;
+      case 'live': return <Radio size={20} className={`${colorClass || "text-rose-500"} animate-pulse`} />;
       case 'like': return <Heart size={20} className={`${colorClass || "text-rose-500 fill-rose-500"}`} />;
       case 'comment': return <MessageSquare size={20} className={`${colorClass || "text-teal-500 fill-teal-500"}`} />;
       case 'subscribe': return <UserPlus size={20} className={`${colorClass || "text-amber-500"}`} />;
@@ -83,21 +81,21 @@ export default function NotificationsPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col justify-center items-center py-40 text-teal-600 font-black uppercase text-[10px] tracking-widest">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current mb-4"></div>
-      Chargement...
+    <div className="flex flex-col justify-center items-center py-40 text-teal-600 font-black uppercase text-[10px] tracking-[0.3em]">
+      <Loader2 className="animate-spin mb-4" size={32} />
+      Analyse du courrier...
     </div>
   );
 
   return (
-    <div className="max-w-2xl mx-auto space-y-10 pb-20 px-4 animate-in fade-in duration-700">
+    <div className="max-w-2xl mx-auto space-y-10 pb-20 px-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex items-center justify-between pt-8">
         <button onClick={() => router.back()} className="p-4 bg-white text-slate-400 hover:text-teal-600 rounded-2xl border border-slate-100 shadow-sm transition-all active:scale-90">
           <ArrowLeft size={20} />
         </button>
         <div className="text-center">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter italic">Activités</h1>
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Boîte aux lettres</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter italic leading-none">Activités</h1>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] mt-1">Le Parchemin des Nouvelles</p>
         </div>
         <button 
           onClick={() => {
@@ -107,15 +105,19 @@ export default function NotificationsPage() {
             toast.success("Tout est marqué comme lu");
           }}
           className="p-3 text-slate-300 hover:text-teal-500 transition-colors"
+          title="Marquer tout comme lu"
         >
-          <CheckCircle2 size={20} />
+          <CheckCircle2 size={24} />
         </button>
       </header>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {notifications.length === 0 ? (
-          <div className="py-20 text-center text-slate-300 font-black uppercase text-[10px] tracking-widest">
-            Aucune activité pour le moment
+          <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[3rem]">
+            <Bell size={40} className="mx-auto text-slate-100 mb-4" />
+            <p className="text-slate-300 font-black uppercase text-[10px] tracking-widest">
+              Aucun nouveau message dans les archives
+            </p>
           </div>
         ) : (
           notifications.map((n) => {
@@ -127,27 +129,27 @@ export default function NotificationsPage() {
                 href={finalLink} 
                 key={n.id} 
                 onClick={() => markAsRead(n.id)}
-                className={`block group transition-all ${isRead ? 'opacity-60' : 'opacity-100'}`}
+                className={`block group transition-all duration-300 ${isRead ? 'opacity-50 grayscale-[0.5]' : 'opacity-100'}`}
               >
-                <div className={`p-6 rounded-[2rem] border-none ring-1 transition-all duration-300 flex items-center gap-6 
+                <div className={`p-6 rounded-[2.5rem] transition-all duration-500 flex items-center gap-6 border
                   ${n.type === 'live' && !isRead 
-                    ? 'bg-slate-900 ring-slate-800 shadow-xl' 
-                    : isRead ? 'bg-slate-50 ring-transparent' : 'bg-white ring-slate-100 shadow-sm hover:ring-teal-200'
+                    ? 'bg-slate-900 border-slate-800 shadow-2xl scale-[1.02]' 
+                    : isRead ? 'bg-slate-50 border-transparent' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50 hover:border-teal-200'
                   }`}>
                   
-                  <div className={`shrink-0 p-4 rounded-2xl transition-colors 
-                    ${n.type === 'live' && !isRead ? 'bg-red-500/20' : 'bg-white border border-slate-100 group-hover:bg-teal-50'}`}>
+                  <div className={`shrink-0 p-4 rounded-2xl transition-all
+                    ${n.type === 'live' && !isRead ? 'bg-red-500 text-white' : 'bg-white border border-slate-100 shadow-inner group-hover:scale-110'}`}>
                     {getIcon(n.type, isRead)}
                   </div>
 
                   <div className="flex-grow space-y-1">
                     <p className={`text-sm leading-relaxed font-bold transition-colors 
-                      ${n.type === 'live' && !isRead ? 'text-white' : isRead ? 'text-slate-400' : 'text-slate-700 group-hover:text-slate-900'}`}>
+                      ${n.type === 'live' && !isRead ? 'text-white' : isRead ? 'text-slate-400' : 'text-slate-700 group-hover:text-teal-600'}`}>
                       {n.message}
                     </p>
                     
-                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-300">
-                      <Clock size={10} />
+                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                      <Clock size={10} className="text-teal-500" />
                       <span>{new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
@@ -157,6 +159,10 @@ export default function NotificationsPage() {
           })
         )}
       </div>
+      
+      <footer className="text-center pt-10">
+        <p className="text-[9px] font-black text-slate-200 uppercase tracking-[0.5em]">Lisible • Système de Messagerie</p>
+      </footer>
     </div>
   );
 }
