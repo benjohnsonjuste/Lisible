@@ -10,5 +10,11 @@
   "likes": [
     "adm.lablitteraire7@gmail.com"
   ],
-  "comments": []
+  "comments": [
+    {
+      "userName": "adm.lablitteraire7",
+      "text": "Bonjour !",
+      "date": "2026-01-27T00:55:02.166Z"
+    }
+  ]
 }
