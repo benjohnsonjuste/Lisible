@@ -18,7 +18,7 @@ export default function TextPage() {
   const fetchData = useCallback(async () => {
     if (!textId) return;
     try {
-      // 1. Récupération des données du texte
+      // 1. Récupération des données du texte (Anti-cache GitHub)
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
       if (!res.ok) throw new Error("Manuscrit introuvable");
       
@@ -27,18 +27,15 @@ export default function TextPage() {
       setText(content);
 
       // 2. Gestion de la VUE UNIQUE par appareil
-      // On crée une clé spécifique pour ce texte dans le stockage local de l'appareil
       const viewKey = `viewed_${textId}`;
       const hasViewed = localStorage.getItem(viewKey);
 
       if (!hasViewed) {
-        // Si l'appareil n'a pas encore de marqueur, on incrémente la vue
         await fetch("/api/texts", { 
           method: "PATCH", 
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ id: textId, action: "view" }) 
         });
-        // On marque cet appareil comme "ayant vu le texte" définitivement
         localStorage.setItem(viewKey, "true");
       }
     } catch (e) {
@@ -55,6 +52,7 @@ export default function TextPage() {
     if (textId) fetchData(); 
   }, [textId, fetchData]);
 
+  // --- GESTION LIKES + NOTIF ---
   const handleLike = async () => {
     if (!user) return toast.error("Connectez-vous pour aimer ce texte");
     
@@ -70,11 +68,27 @@ export default function TextPage() {
 
     if (res.ok) {
       const updated = await res.json();
+      const isLiking = updated.likes.includes(user.email);
       setText(updated);
-      toast.success(updated.likes.includes(user.email) ? "Coup de cœur envoyé !" : "Cœur retiré.");
+
+      // Notifier l'auteur si ce n'est pas lui-même
+      if (isLiking && user.email !== text.authorEmail) {
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "like",
+            message: `${user.penName || user.name} a aimé votre texte "${text.title}"`,
+            targetEmail: text.authorEmail,
+            link: `/texts/${textId}`
+          })
+        });
+      }
+      toast.success(isLiking ? "Coup de cœur envoyé !" : "Cœur retiré.");
     }
   };
 
+  // --- GESTION COMMENTAIRES + NOTIF ---
   const handlePostComment = async () => {
     if (!newComment.trim() || !user) return;
     setIsSubmitting(true);
@@ -93,6 +107,21 @@ export default function TextPage() {
       if (res.ok) {
         const updated = await res.json();
         setText(updated);
+        
+        // Notifier l'auteur si ce n'est pas lui-même
+        if (user.email !== text.authorEmail) {
+          await fetch("/api/create-notif", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "comment",
+              message: `${user.penName || user.name} a commenté votre œuvre "${text.title}"`,
+              targetEmail: text.authorEmail,
+              link: `/texts/${textId}`
+            })
+          });
+        }
+
         setNewComment("");
         toast.success("Commentaire publié");
       }
@@ -124,8 +153,11 @@ export default function TextPage() {
             {text.title}
           </h1>
           <button 
-            onClick={() => window.open(`https://wa.me/?text=Lis cette œuvre sur Lisible : "${text.title}" %0A%0A ${window.location.href}`)} 
-            className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-green-500 transition-all active:scale-90"
+            onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("Lien copié !");
+            }} 
+            className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-500 transition-all active:scale-90"
           >
             <Share2 size={24}/>
           </button>
@@ -173,7 +205,7 @@ export default function TextPage() {
                 <button 
                   onClick={handlePostComment} 
                   disabled={isSubmitting || !newComment.trim()} 
-                  className="bg-slate-900 text-white px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 hover:bg-teal-600 disabled:opacity-50"
+                  className="bg-slate-900 text-white px-10 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 hover:bg-teal-600 disabled:opacity-50 transition-all"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : <Send size={16}/>} 
                   Publier
@@ -181,14 +213,17 @@ export default function TextPage() {
               </div>
             </div>
           ) : (
-            <p className="text-center py-4 text-slate-400 italic font-black uppercase text-[10px] tracking-widest">Connectez-vous pour commenter</p>
+            <div className="text-center py-6">
+                 <p className="text-slate-400 italic font-black uppercase text-[10px] tracking-widest mb-4">Connectez-vous pour rejoindre la discussion</p>
+                 <Link href="/login" className="text-teal-600 font-black text-[10px] uppercase border-b-2 border-teal-600 pb-1">S'identifier</Link>
+            </div>
           )}
         </div>
 
         <div className="space-y-6">
           {text.comments?.length > 0 ? (
             [...text.comments].reverse().map((c, i) => (
-              <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-50 shadow-sm">
+              <div key={i} className="bg-white p-8 rounded-[2.5rem] border border-slate-50 shadow-sm animate-in slide-in-from-top-4 duration-500">
                 <div className="flex justify-between items-center mb-4">
                   <span className="font-black text-[11px] uppercase tracking-tighter text-teal-600">{c.userName}</span>
                   <span className="text-[9px] text-slate-300 font-bold uppercase">
@@ -199,7 +234,7 @@ export default function TextPage() {
               </div>
             ))
           ) : (
-            <p className="text-center py-10 text-slate-300 uppercase text-[10px] font-black tracking-widest">Aucun message pour le moment</p>
+            <p className="text-center py-10 text-slate-300 uppercase text-[10px] font-black tracking-widest">Le silence est d'or. Soyez le premier à parler.</p>
           )}
         </div>
       </section>
