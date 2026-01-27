@@ -61,13 +61,13 @@ export default function PublishPage() {
     if (countWords(content) > MAX_WORDS) return toast.error("Trop de mots !");
 
     setLoading(true);
-    const loadingToast = toast.loading("Publication en cours...");
+    const loadingToast = toast.loading("Impression du manuscrit...");
 
     try {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // 1. Publication du texte
+      // 1. Publication du texte sur l'API principale
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -81,30 +81,38 @@ export default function PublishPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erreur serveur");
+      if (!res.ok) throw new Error("Erreur serveur lors de la publication");
       const publishedText = await res.json();
 
       // 2. ENVOI DE LA NOTIFICATION GLOBALE
-      // On informe tous les utilisateurs qu'une nouvelle œuvre est disponible
-      await fetch("/api/create-notif", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "global",
-          message: `Nouveauté : "${title.trim()}" par ${user.penName || user.name}`,
-          targetEmail: "all", // "all" pour envoyer à tout le monde
-          link: `/texts/${publishedText.id}`
-        })
-      });
+      // Correction : On utilise le type 'new_text' pour l'icône BookOpen dans NotificationsPage
+      try {
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "new_text", 
+            message: `📖 Nouveau manuscrit : "${title.trim()}" par ${user.penName || user.name}`,
+            targetEmail: "all",
+            link: `/bibliotheque` // Vous pouvez adapter vers `/texts/${publishedText.id}` si la route existe
+          })
+        });
+      } catch (notifErr) {
+        console.error("Erreur notification (non bloquante):", notifErr);
+      }
 
-      // Nettoyage
+      // Nettoyage des données locales
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
-      toast.success("Œuvre publiée et communauté notifiée !", { id: loadingToast });
+      toast.success("Œuvre diffusée avec succès !", { id: loadingToast });
+      
+      // Redirection vers la bibliothèque pour voir le résultat
       router.push("/bibliotheque");
+      
     } catch (err) {
-      toast.error("Erreur de publication", { id: loadingToast });
+      console.error(err);
+      toast.error("Échec de la publication. Réessayez.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
