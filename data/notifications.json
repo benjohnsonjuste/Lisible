@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "notif-1769642129430-hck3oieeb",
+    "type": "live",
+    "message": "🔴 Ben Johnson Juste est en direct sur le Club !",
+    "targetEmail": "all",
+    "link": "/lisible-club?room=Ben Johnson Juste",
+    "date": "2026-01-28T23:15:29.430Z"
+  }
+]
