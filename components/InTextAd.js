@@ -11,7 +11,7 @@ export function InTextAd() {
       // Nettoyage au cas où le script existerait déjà
       adContainerRef.current.innerHTML = "";
       const script = document.createElement("script");
-      script.src = "https://pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
+      script.src = "https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js";
       script.async = true;
       adContainerRef.current.appendChild(script);
     }
