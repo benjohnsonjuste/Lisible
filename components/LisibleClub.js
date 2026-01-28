@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Send, Radio, LogOut, Loader2, Heart, Share2, Video, Mic } from "lucide-react";
 import Pusher from "pusher-js";
 import { 
@@ -11,6 +11,7 @@ import {
 } from "@livepeer/react";
 import { toast } from "sonner";
 
+// Configuration du client Livepeer
 const livepeerClient = createReactClient({
   provider: studioProvider({ apiKey: "f15e0657-3f95-46f3-8b77-59f0f909162c" }), 
 });
@@ -38,7 +39,8 @@ function ClubInterface({ roomId, isHost }) {
     } catch (e) { return {}; }
   };
 
-  const syncStream = async () => {
+  // Synchronisation du flux avec l'API
+  const syncStream = useCallback(async () => {
     try {
       const res = await fetch("/api/live/create-stream", {
         method: "POST",
@@ -46,40 +48,42 @@ function ClubInterface({ roomId, isHost }) {
         body: JSON.stringify({ roomName: `Club-${roomId}` }),
       });
       const data = await res.json();
-      if (data.playbackId) {
+      
+      if (data && data.playbackId) {
         setStreamData(data);
-        // Les spectateurs rejoignent auto si le flux est actif
-        if (!isHost && data.isActive) setJoined(true); 
+        // Si spectateur et que le live est déjà actif, on peut suggérer l'entrée
+        if (!isHost && data.isActive && !joined) {
+           console.log("Le live est actif, prêt pour l'audience.");
+        }
       }
       return data;
     } catch (e) {
-      console.error("Erreur sync flux");
+      console.error("Erreur sync flux:", e);
       return null;
     }
-  };
+  }, [roomId, isHost, joined]);
 
   useEffect(() => {
     if (roomId) {
       syncStream();
-      if (!isHost) {
-        const interval = setInterval(syncStream, 10000);
-        return () => clearInterval(interval);
-      }
+      // On rafraîchit les infos du flux toutes les 15s pour vérifier le statut "isActive"
+      const interval = setInterval(syncStream, 15000);
+      return () => clearInterval(interval);
     }
-  }, [roomId, isHost]);
+  }, [roomId, syncStream]);
 
+  // Gestion de Pusher (Chat et Cœurs)
   useEffect(() => {
     if (!roomId) return;
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2', forceTLS: true });
     const channel = pusher.subscribe(`chat-${roomId}`);
     
     channel.bind('new-message', (data) => {
-      console.log("Nouveau message reçu:", data); // Debug
       const id = Date.now() + Math.random();
       setTempMessages(prev => [...prev, { ...data, id }]);
       setTimeout(() => {
         setTempMessages(prev => prev.filter(m => m.id !== id));
-      }, 8000); // Un peu plus long pour laisser le temps de lire
+      }, 8000);
     });
 
     channel.bind('new-heart', () => triggerLocalHeart());
@@ -127,16 +131,16 @@ function ClubInterface({ roomId, isHost }) {
       });
       setInputMsg("");
     } catch (e) {
-      toast.error("Erreur d'envoi du message");
+      toast.error("Erreur d'envoi");
     }
   };
 
   const startLive = async () => {
     setLoading(true);
     const data = await syncStream();
-    const user = getUser();
-
+    
     if (isHost && data) {
+      const user = getUser();
       try {
         await fetch('/api/create-notif', {
           method: 'POST',
@@ -148,7 +152,7 @@ function ClubInterface({ roomId, isHost }) {
             targetEmail: "all" 
           })
         });
-      } catch (err) { console.error(err); }
+      } catch (err) { console.error("Notif error:", err); }
     }
     setJoined(true);
     setLoading(false);
@@ -169,6 +173,7 @@ function ClubInterface({ roomId, isHost }) {
       {!joined ? (
         <div className="flex flex-col items-center justify-center h-full text-white p-6 bg-gradient-to-b from-slate-900 to-black">
           <Radio size={80} className="text-teal-400 animate-pulse mb-8" />
+          <h2 className="text-xl font-bold mb-6 text-center">Prêt pour le direct ?</h2>
           <button 
             onClick={startLive} 
             disabled={loading} 
@@ -180,21 +185,28 @@ function ClubInterface({ roomId, isHost }) {
       ) : (
         <div className="relative h-full w-full bg-black">
           
-          {/* PLAYER VIDÉO / BROADCAST - Correction: Activation vidéo et audio */}
-          <div className="absolute inset-0 z-0">
+          {/* PLAYER / BROADCAST */}
+          <div className="absolute inset-0 z-0 bg-slate-900">
             {isHost ? (
-              <Broadcast 
-                streamKey={streamData?.streamKey} 
-                video={true} 
-                audio={true} 
-                objectFit="cover"
-              />
+              streamData?.streamKey ? (
+                <Broadcast 
+                  streamKey={streamData.streamKey} 
+                  video={true} 
+                  audio={true} 
+                  objectFit="cover"
+                  aspectRatio="16to9"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-400">Configuration du flux...</div>
+              )
             ) : (
               <Player 
                 playbackId={streamData?.playbackId} 
-                autoPlay 
-                muted={false}
+                autoPlay
+                muted={false} // Autorisé car déclenché par le clic sur "Entrer"
                 objectFit="cover"
+                priority
+                showPipButton
               />
             )}
           </div>
@@ -204,14 +216,15 @@ function ClubInterface({ roomId, isHost }) {
              <div className="bg-rose-600 text-white px-4 py-1.5 rounded-full flex items-center gap-2 shadow-xl font-black text-[10px] uppercase tracking-widest pulse-live">
                 <span className="w-2 h-2 bg-white rounded-full"></span> Direct
              </div>
-             <div className="flex gap-2">
-                <button onClick={() => window.location.reload()} className="p-4 bg-black/40 backdrop-blur-md text-white rounded-2xl border border-white/10 hover:bg-rose-500 transition-all">
-                  <LogOut size={18} />
-                </button>
-             </div>
+             <button 
+                onClick={() => window.location.reload()} 
+                className="p-4 bg-black/40 backdrop-blur-md text-white rounded-2xl border border-white/10 hover:bg-rose-500 transition-all"
+             >
+                <LogOut size={18} />
+             </button>
           </div>
 
-          {/* MESSAGES ÉPHÉMÈRES - Augmentation du z-index pour visibilité */}
+          {/* MESSAGES ÉPHÉMÈRES */}
           <div className="absolute bottom-32 left-6 z-[120] space-y-3 pointer-events-none max-w-[280px]">
             {tempMessages.map((m) => (
               <div key={m.id} className="bg-black/60 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-2xl animate-message-fade pointer-events-auto">
@@ -221,7 +234,7 @@ function ClubInterface({ roomId, isHost }) {
             ))}
           </div>
 
-          {/* BARRE D'INTERACTION - Haute priorité z-index */}
+          {/* BARRE D'INTERACTION */}
           <div className="absolute bottom-8 left-6 right-6 flex gap-3 z-[130]">
             <div className="flex-grow flex bg-black/60 backdrop-blur-3xl border border-white/10 rounded-[2rem] px-6 items-center shadow-2xl">
               <input 
