@@ -2,14 +2,19 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QuickActions from "@/components/QuickActions";
-import { Sparkles, BookOpen, BarChart, Settings, Loader2, Users } from "lucide-react";
+import { Sparkles, BookOpen, BarChart, Settings, Loader2, Users, Star } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ views: 0, texts: 0, followers: 0 });
+  const [stats, setStats] = useState({ 
+    views: 0, 
+    texts: 0, 
+    followers: 0, 
+    isMonetized: false 
+  });
 
   useEffect(() => {
     async function initDashboard() {
@@ -20,18 +25,19 @@ export default function AuthorDashboard() {
         setUser(parsedUser);
 
         try {
-          // APPEL ANALYTICS : Récupère les données réelles (assurez-vous que l'API renvoie totalFollowers)
-          const res = await fetch(`/api/get-user-stats?email=${parsedUser.email}`);
+          // Appel à l'API unique qui centralise tout
+          const res = await fetch(`/api/get-user-stats?email=${encodeURIComponent(parsedUser.email)}&t=${Date.now()}`);
           if (res.ok) {
             const data = await res.json();
             setStats({
               views: data.totalViews || 0,
               texts: data.totalTexts || 0,
-              followers: data.totalFollowers || 0
+              followers: data.subscribers || 0, // Utilise 'subscribers' renvoyé par l'API
+              isMonetized: data.isMonetized || false
             });
           }
         } catch (error) {
-          console.error("Erreur Analytics:", error);
+          console.error("Erreur Analytics Dashboard:", error);
         }
       }
       setLoading(false);
@@ -77,7 +83,7 @@ export default function AuthorDashboard() {
             Bonjour, {displayName}
           </h1>
           <p className="text-slate-400 font-medium max-w-sm">
-            Vos statistiques sont à jour selon les dernières interactions.
+            Vos statistiques sont synchronisées avec vos publications.
           </p>
         </div>
 
@@ -110,35 +116,46 @@ export default function AuthorDashboard() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* PROGRESSION MONÉTISATION BASÉE SUR LES ABONNÉS */}
+        {/* PROGRESSION MONÉTISATION */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-            <Users size={16} className="text-teal-500" />
-            Monétisation
-          </h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <Users size={16} className="text-teal-500" />
+              Monétisation
+            </h3>
+            {stats.isMonetized && (
+              <span className="flex items-center gap-1 text-[9px] font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full border border-teal-100 uppercase tracking-widest animate-pulse">
+                <Star size={10} fill="currentColor" /> Actif
+              </span>
+            )}
+          </div>
+          
           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
             <div className="flex justify-between items-end mb-3">
                <p className="text-slate-900 text-sm font-bold">
-                {stats.followers >= 250 ? "✅ Éligible aux revenus" : "🚀 Objectif 250 abonnés"}
+                {stats.isMonetized ? "✅ Félicitations, profil monétisé" : "🚀 Objectif 250 abonnés"}
               </p>
-              <span className="text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">
-                {Math.min(stats.followers, 250)} / 250
+              <span className="text-[11px] font-black text-slate-900">
+                {stats.followers} <span className="text-slate-400 font-bold">/ 250</span>
               </span>
             </div>
+            
             <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden shadow-inner">
                 <div 
-                  className="bg-teal-500 h-full transition-all duration-1000 ease-out" 
+                  className={`h-full transition-all duration-1000 ease-out ${stats.isMonetized ? 'bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]' : 'bg-blue-600'}`} 
                   style={{ width: `${Math.min((stats.followers / 250) * 100, 100)}%` }}
                 ></div>
             </div>
-            {stats.followers < 250 && (
+
+            {!stats.isMonetized && (
               <p className="text-[10px] text-slate-400 mt-4 font-medium italic">
-                Encore {250 - stats.followers} lecteurs fidèles pour débloquer votre portefeuille.
+                Encore {Math.max(0, 250 - stats.followers)} abonnés pour commencer à générer des revenus.
               </p>
             )}
           </div>
         </div>
 
+        {/* CONSEIL */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
             <Sparkles size={16} className="text-amber-500" />
@@ -146,7 +163,7 @@ export default function AuthorDashboard() {
           </h3>
           <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100/50 flex flex-col justify-center h-[116px]">
             <p className="text-slate-700 text-sm leading-relaxed font-serif italic">
-              "Un abonné est un lecteur qui attend votre prochain mot. Écrivez pour lui."
+              "Un abonné est un lecteur qui a choisi de vous suivre. Offrez-lui la qualité qu'il mérite."
             </p>
           </div>
         </div>
@@ -154,7 +171,7 @@ export default function AuthorDashboard() {
 
       <footer className="text-center pt-10">
          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">
-            Lisible Analytics © 2026 • Données en temps réel
+            Lisible Analytics © 2026 • Données certifiées
          </p>
       </footer>
     </div>
@@ -163,7 +180,7 @@ export default function AuthorDashboard() {
 
 function StatMini({ label, value, icon, color }) {
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-4 py-3 rounded-2xl min-w-[100px] text-center">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-4 py-3 rounded-2xl min-w-[100px] text-center transition-transform hover:scale-105">
       <div className={`flex justify-center ${color} mb-1`}>{icon}</div>
       <p className="text-xl font-black">{value}</p>
       <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
