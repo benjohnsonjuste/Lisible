@@ -133,7 +133,7 @@ export default function AuthorDashboard() {
           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
             <div className="flex justify-between items-end mb-3">
                <p className="text-slate-900 text-sm font-bold">
-                {stats.isMonetized ? "✅ Félicitations, profil monétisé" : "🚀 Objectif 250 abonnés"}
+                {stats.isMonetized ? "Félicitations, profil monétisé" : "Objectif 250 abonnés"}
               </p>
               <span className="text-[11px] font-black text-slate-900">
                 {stats.followers} <span className="text-slate-400 font-bold">/ 250</span>
