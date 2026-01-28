@@ -8,9 +8,25 @@ export default async function handler(req, res) {
 
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const cleanEmail = email.trim().toLowerCase();
+  // Génération du nom de fichier utilisateur (base64 de l'email)
+  const userFileName = Buffer.from(cleanEmail).toString('base64').replace(/=/g, "") + ".json";
 
   try {
-    // 1. Récupérer la liste de tous les manuscrits (data/publications)
+    // 1. Récupérer les infos du profil (pour les abonnés)
+    let subscribersCount = 0;
+    try {
+      const { data: userData } = await octokit.repos.getContent({
+        owner: "benjohnsonjuste",
+        repo: "Lisible",
+        path: `data/users/${userFileName}`
+      });
+      const userProfile = JSON.parse(Buffer.from(userData.content, "base64").toString());
+      subscribersCount = userProfile.subscribers?.length || 0;
+    } catch (e) {
+      console.log("Profil non trouvé, abonnés par défaut à 0");
+    }
+
+    // 2. Récupérer la liste de tous les manuscrits
     const { data: files } = await octokit.repos.getContent({
       owner: "benjohnsonjuste",
       repo: "Lisible",
@@ -19,7 +35,7 @@ export default async function handler(req, res) {
 
     const jsonFiles = files.filter(f => f.name.endsWith('.json'));
 
-    // 2. Récupérer le contenu de chaque manuscrit en parallèle
+    // 3. Récupérer le contenu de chaque manuscrit
     const textPromises = jsonFiles.map(async (file) => {
       try {
         const { data: contentData } = await octokit.repos.getContent({
@@ -28,20 +44,18 @@ export default async function handler(req, res) {
           path: file.path
         });
         return JSON.parse(Buffer.from(contentData.content, "base64").toString());
-      } catch (e) {
-        return null; // Évite de bloquer tout le processus si un fichier est corrompu
-      }
+      } catch (e) { return null; }
     });
 
     const allTexts = (await Promise.all(textPromises)).filter(t => t !== null);
 
-    // 3. Filtrer les textes appartenant à cet auteur
+    // 4. Filtrer les textes de l'auteur
     const userTexts = allTexts.filter(t => 
       t.authorEmail && t.authorEmail.trim().toLowerCase() === cleanEmail
     );
 
-    // 4. Calculer les métriques globales
-    const rawStats = userTexts.reduce((acc, curr) => {
+    // 5. Calculer les statistiques
+    const stats = userTexts.reduce((acc, curr) => {
       return {
         totalViews: acc.totalViews + (Number(curr.views) || 0),
         totalLikes: acc.totalLikes + (curr.likes?.length || 0),
@@ -49,26 +63,29 @@ export default async function handler(req, res) {
       };
     }, { totalViews: 0, totalLikes: 0, totalTexts: 0 });
 
-    // 5. Calcul des revenus (0.20 USD pour 1000 vues)
-    // Formule : (Vues / 1000) * 0.20
-    const estimatedEarnings = (rawStats.totalViews / 1000) * 0.20;
+    // 6. Calcul des revenus (Seuil de monétisation : 250 abonnés)
+    const isMonetized = subscribersCount >= 250;
+    const earnings = isMonetized ? (stats.totalViews / 1000) * 0.20 : 0;
 
-    // 6. Renvoyer les données complètes
     res.status(200).json({
-      ...rawStats,
-      estimatedEarnings: estimatedEarnings.toFixed(2), // Formaté à 2 décimales (ex: "1.40")
-      currency: "USD",
-      rate: "0.20/1000 views"
+      subscribers: subscribersCount,
+      totalViews: stats.totalViews,
+      totalLikes: stats.totalLikes,
+      totalTexts: stats.totalTexts,
+      estimatedEarnings: earnings.toFixed(2),
+      isMonetized,
+      currency: "USD"
     });
 
   } catch (error) {
     console.error("Erreur API Stats:", error);
     res.status(200).json({ 
+      subscribers: 0,
       totalViews: 0, 
       totalLikes: 0, 
       totalTexts: 0,
       estimatedEarnings: "0.00",
-      message: "Initialisation ou auteur introuvable" 
+      isMonetized: false
     });
   }
 }
