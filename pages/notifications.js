@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Bell, Heart, MessageSquare, BookOpen, 
@@ -16,47 +16,15 @@ export default function NotificationsPage() {
   const [readIds, setReadIds] = useState([]); 
   const [loading, setLoading] = useState(true);
 
+  // Charger les IDs lus depuis le localStorage
   useEffect(() => {
-    const loggedUser = localStorage.getItem("lisible_user");
     const savedReadIds = JSON.parse(localStorage.getItem("read_notifications") || "[]");
     setReadIds(savedReadIds);
-    
-    let userData = null;
-    if (loggedUser) {
-      userData = JSON.parse(loggedUser);
-      setUser(userData);
-      fetchNotifications(userData.email);
-    } else {
-      setLoading(false);
-    }
-
-    // --- CONFIGURATION PUSHER ---
-    // Remplacez par votre Key Pusher
-    const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
-    const channel = pusher.subscribe('global-notifications');
-    
-    channel.bind('new-alert', (newNotif) => {
-      // On vérifie si la notif nous est destinée
-      const isForMe = newNotif.targetEmail === "all" || 
-                     (userData && newNotif.targetEmail?.toLowerCase() === userData.email.toLowerCase());
-      
-      if (isForMe) {
-        setNotifications(prev => [newNotif, ...prev]);
-        toast("Nouvelle activité", {
-          description: newNotif.message,
-          icon: <Sparkles className="text-teal-500" size={16} />
-        });
-      }
-    });
-
-    return () => {
-      pusher.unsubscribe('global-notifications');
-    };
   }, []);
 
-  const fetchNotifications = async (userEmail) => {
+  // Fonction pour récupérer les notifications (GitHub + Cache busting)
+  const fetchNotifications = useCallback(async (userEmail) => {
     try {
-      // Ajout d'un timestamp pour éviter le cache navigateur
       const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/notifications.json?t=${Date.now()}`);
       if (!res.ok) return;
       const allNotifs = await res.json();
@@ -72,7 +40,56 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // 1. Init User
+    const loggedUser = localStorage.getItem("lisible_user");
+    let userData = null;
+    if (loggedUser) {
+      userData = JSON.parse(loggedUser);
+      setUser(userData);
+      fetchNotifications(userData.email);
+    } else {
+      setLoading(false);
+    }
+
+    // 2. CONFIGURATION PUSHER
+    const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
+    const channel = pusher.subscribe('global-notifications');
+    
+    channel.bind('new-alert', (newNotif) => {
+      // On récupère l'user actuel au moment de l'événement pour éviter les variables vides
+      const freshUser = JSON.parse(localStorage.getItem("lisible_user") || "{}");
+      
+      const isForMe = newNotif.targetEmail === "all" || 
+                     (freshUser.email && newNotif.targetEmail?.toLowerCase() === freshUser.email.toLowerCase());
+      
+      if (isForMe) {
+        // On ajoute un ID si manquant pour que le "marqué comme lu" fonctionne
+        const finalNotif = { 
+            ...newNotif, 
+            id: newNotif.id || `live-${Date.now()}`,
+            date: newNotif.date || new Date().toISOString() 
+        };
+
+        setNotifications(prev => {
+          if (prev.find(n => n.id === finalNotif.id)) return prev;
+          return [finalNotif, ...prev];
+        });
+
+        toast("Nouvelle activité", {
+          description: finalNotif.message,
+          icon: <Sparkles className="text-teal-500" size={16} />
+        });
+      }
+    });
+
+    return () => {
+      pusher.unsubscribe('global-notifications');
+      channel.unbind_all();
+    };
+  }, [fetchNotifications]);
 
   const markAsRead = (id) => {
     if (!readIds.includes(id)) {
@@ -92,37 +109,72 @@ export default function NotificationsPage() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-teal-600" /></div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40 gap-4">
+        <Loader2 className="animate-spin text-teal-600" size={40} />
+        <p className="text-slate-400 font-medium">Chargement de vos activités...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4">
+    <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen">
       <header className="flex items-center justify-between mb-8">
-        <button onClick={() => router.back()} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+        <button 
+          onClick={() => router.back()} 
+          className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50 transition-colors"
+        >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-2xl font-black italic">Activités</h1>
+        <h1 className="text-2xl font-black italic tracking-tight">Activités</h1>
         <div className="w-10" />
       </header>
 
       <div className="space-y-4">
         {notifications.length === 0 ? (
-          <p className="text-center text-slate-400 py-20 font-medium">Aucune notification pour le moment.</p>
+          <div className="text-center py-20">
+            <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+               <Bell size={32} className="text-slate-200" />
+            </div>
+            <p className="text-slate-400 font-medium">Aucune activité pour le moment.</p>
+          </div>
         ) : (
           notifications.map((n) => {
             const isRead = readIds.includes(n.id);
+            // On s'assure que n.link existe, sinon on pointe vers le club par défaut
+            const linkHref = n.link || "/lisible-club";
+
             return (
               <Link 
-                href={n.link} 
+                href={linkHref} 
                 key={n.id} 
                 onClick={() => markAsRead(n.id)}
-                className={`flex items-center gap-4 p-5 rounded-[2rem] border transition-all ${isRead ? 'bg-slate-50 border-transparent opacity-60' : 'bg-white border-slate-100 shadow-lg shadow-slate-200/40'}`}
+                className={`flex items-center gap-4 p-5 rounded-[2.5rem] border transition-all active:scale-[0.98] ${
+                  isRead 
+                  ? 'bg-slate-50/50 border-transparent opacity-60' 
+                  : 'bg-white border-slate-100 shadow-xl shadow-slate-200/40'
+                }`}
               >
-                <div className="p-3 bg-slate-50 rounded-xl">{getIcon(n.type, isRead)}</div>
-                <div className="flex-grow">
-                  <p className={`text-sm ${isRead ? 'text-slate-500' : 'text-slate-900 font-bold'}`}>{n.message}</p>
-                  <p className="text-[10px] text-slate-400 uppercase mt-1">{new Date(n.date).toLocaleDateString()}</p>
+                <div className={`p-4 rounded-2xl ${isRead ? 'bg-slate-100' : 'bg-slate-50'}`}>
+                    {getIcon(n.type, isRead)}
                 </div>
-                {!isRead && <div className="w-2 h-2 bg-teal-500 rounded-full" />}
+                
+                <div className="flex-grow">
+                  <p className={`text-sm leading-snug ${isRead ? 'text-slate-500 font-medium' : 'text-slate-900 font-bold'}`}>
+                    {n.message}
+                  </p>
+                  <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-2 flex items-center gap-2">
+                    <Clock size={10} />
+                    {n.date ? new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : "Maintenant"}
+                  </p>
+                </div>
+
+                {!isRead && (
+                  <div className="flex flex-col items-center gap-1">
+                     <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-lg shadow-teal-500/50" />
+                  </div>
+                )}
               </Link>
             );
           })
