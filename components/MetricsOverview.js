@@ -6,70 +6,36 @@ export default function MetricsOverview({ user }) {
   const [metrics, setMetrics] = useState({
     subscribers: 0,
     totalViews: 0,
-    textsPublished: 0,
-    totalEarnings: "0.00",
+    totalTexts: 0,
+    totalLikes: 0,
+    estimatedEarnings: "0.00",
+    isMonetized: false
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.email) return;
 
-    async function fetchAuthorData() {
+    async function fetchStats() {
       try {
-        // 1. Récupérer les données de profil (Abonnés) via Raw Content pour la rapidité
-        const fileName = btoa(user.email).replace(/=/g, "") + ".json";
-        const resProfile = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/users/${fileName}?t=${Date.now()}`);
-        const profileData = resProfile.ok ? await resProfile.json() : {};
-
-        // 2. Récupérer les statistiques réelles depuis l'API de publications
-        const resTexts = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`, {
-          headers: { 'Cache-Control': 'no-cache' }
-        });
-        const files = await resTexts.json();
-        
-        let realTotalViews = 0;
-        let publishedCount = 0;
-        
-        if (Array.isArray(files)) {
-          const dataPromises = files
-            .filter(f => f.name.endsWith('.json'))
-            .map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
-          
-          const allTexts = await Promise.all(dataPromises);
-          
-          // Filtrage rigoureux par email
-          const authorTexts = allTexts.filter(t => 
-            t.authorEmail && t.authorEmail.trim().toLowerCase() === user.email.trim().toLowerCase()
-          );
-
-          publishedCount = authorTexts.length;
-          realTotalViews = authorTexts.reduce((acc, curr) => acc + (Number(curr.views) || 0), 0);
+        // On appelle l'API centralisée que nous venons de créer
+        const res = await fetch(`/api/get-user-stats?email=${encodeURIComponent(user.email)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMetrics(data);
         }
-
-        const subs = profileData.subscribers?.length || 0;
-        
-        // Logique de Monétisation : Seuil à 250 abonnés
-        const isUnlocked = subs >= 250;
-        const earnings = isUnlocked ? (realTotalViews / 1000) * 0.20 : 0;
-
-        setMetrics({
-          subscribers: subs,
-          totalViews: realTotalViews,
-          textsPublished: publishedCount,
-          totalEarnings: earnings.toFixed(2),
-        });
       } catch (err) {
-        console.error("Erreur metrics:", err);
+        console.error("Erreur lors de la récupération des statistiques:", err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchAuthorData();
+    fetchStats();
   }, [user]);
 
   if (loading) return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
       {[1, 2, 3, 4].map(i => (
         <div key={i} className="h-40 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex items-center justify-center">
           <Loader2 className="animate-spin text-slate-200" size={24} />
@@ -79,7 +45,6 @@ export default function MetricsOverview({ user }) {
   );
 
   const MONETIZATION_THRESHOLD = 250;
-  const isMonetized = metrics.subscribers >= MONETIZATION_THRESHOLD;
   const progressPercent = Math.min((metrics.subscribers / MONETIZATION_THRESHOLD) * 100, 100);
 
   return (
@@ -101,39 +66,39 @@ export default function MetricsOverview({ user }) {
         />
         <MetricCard
           title="Manuscrits"
-          value={metrics.textsPublished}
+          value={metrics.totalTexts}
           icon={<BookOpen size={20} />}
           color="text-purple-600"
           bgColor="bg-purple-50"
         />
         <MetricCard
           title="Gains Estimés"
-          value={`$${metrics.totalEarnings}`}
+          value={`$${metrics.estimatedEarnings}`}
           icon={<DollarSign size={20} />}
           color="text-amber-600"
           bgColor="bg-amber-50"
-          highlight={isMonetized}
+          highlight={metrics.isMonetized}
         />
       </div>
 
-      {/* Barre de Progression / Statut Monétisation */}
+      {/* État de la Monétisation */}
       <div className={`p-8 rounded-[3rem] border transition-all duration-500 ${
-        isMonetized 
+        metrics.isMonetized 
         ? 'bg-slate-900 border-teal-500/30 text-white shadow-2xl shadow-teal-500/10' 
         : 'bg-white border-slate-100 shadow-sm'
       }`}>
-        {isMonetized ? (
+        {metrics.isMonetized ? (
           <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="p-4 bg-teal-500 rounded-2xl shadow-[0_0_20px_rgba(20,184,166,0.4)] animate-pulse">
+            <div className="p-4 bg-teal-500 rounded-2xl shadow-[0_0_20px_rgba(20,184,166,0.4)] animate-bounce">
               <Star size={24} className="text-white" fill="currentColor" />
             </div>
             <div className="text-center md:text-left">
-              <p className="font-black text-xl italic tracking-tight">Programme Partenaire Lisible</p>
-              <p className="text-sm text-teal-200 font-medium">Votre plume génère des revenus (Taux : 0.20$ / 1k vues).</p>
+              <p className="font-black text-xl italic tracking-tight text-white">Partenaire Lisible Actif</p>
+              <p className="text-sm text-teal-200 font-medium">Votre plume est rémunérée (Taux : 0.20$ / 1k lectures).</p>
             </div>
             <div className="ml-auto">
-               <div className="px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-full text-teal-400 text-[10px] font-black uppercase tracking-widest">
-                 Monétisation Activée
+               <div className="px-6 py-2 bg-teal-500/20 border border-teal-500/40 rounded-full text-teal-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                 Compte Monétisé
                </div>
             </div>
           </div>
@@ -146,14 +111,14 @@ export default function MetricsOverview({ user }) {
                 </div>
                 <div>
                   <p className="font-black text-slate-900 uppercase text-[12px] tracking-widest italic">Objectif Monétisation</p>
-                  <p className="text-sm text-slate-500 font-medium">Atteignez 250 abonnés pour débloquer vos gains.</p>
+                  <p className="text-sm text-slate-500 font-medium">Débloquez vos revenus dès 250 abonnés.</p>
                 </div>
               </div>
               <div className="text-right flex flex-col items-end">
                 <span className="text-2xl font-black text-slate-900 leading-none">
                   {metrics.subscribers} <span className="text-slate-300 text-sm">/ {MONETIZATION_THRESHOLD}</span>
                 </span>
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">Abonnés requis</span>
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">Abonnés</span>
               </div>
             </div>
             
