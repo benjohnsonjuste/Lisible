@@ -23,7 +23,12 @@ export default function NotificationsPage() {
       const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/notifications.json?t=${Date.now()}`);
       if (!res.ok) return;
       const allNotifs = await res.json();
-      const myNotifs = allNotifs.filter(n => n.targetEmail === "all" || n.targetEmail?.toLowerCase() === userEmail.toLowerCase());
+      
+      // Filtrage : "all" pour les nouveaux textes, ou email spécifique pour Likes/Commentaires/Follows
+      const myNotifs = allNotifs.filter(n => 
+        n.targetEmail === "all" || 
+        n.targetEmail?.toLowerCase() === userEmail.toLowerCase()
+      );
       setNotifications(myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date)));
     } catch (error) { console.error(error); } finally { setLoading(false); }
   }, []);
@@ -41,9 +46,8 @@ export default function NotificationsPage() {
     channel.bind('new-alert', (newNotif) => {
       const freshUser = JSON.parse(localStorage.getItem("lisible_user") || "{}");
       if (newNotif.targetEmail === "all" || newNotif.targetEmail?.toLowerCase() === freshUser.email?.toLowerCase()) {
-        const finalNotif = { ...newNotif, id: newNotif.id || `live-${Date.now()}`, date: newNotif.date || new Date().toISOString() };
-        setNotifications(prev => [finalNotif, ...prev.filter(n => n.id !== finalNotif.id)]);
-        toast("Activité récente", { description: finalNotif.message, icon: <Sparkles className="text-teal-500" size={16} /> });
+        setNotifications(prev => [newNotif, ...prev]);
+        toast("Nouvelle activité", { description: newNotif.message });
       }
     });
     return () => pusher.unsubscribe('global-notifications');
@@ -63,12 +67,18 @@ export default function NotificationsPage() {
       case 'subscription': return <UserPlus size={20} className={`${cls || "text-teal-500"}`} />;
       case 'like': return <Heart size={20} className={`${cls || "text-rose-500 fill-rose-500"}`} />;
       case 'comment': return <MessageSquare size={20} className={`${cls || "text-blue-500"}`} />;
+      case 'new_text': return <BookOpen size={20} className={`${cls || "text-teal-600"}`} />;
       case 'live': return <Radio size={20} className={`${cls || "text-rose-500 animate-pulse"}`} />;
       default: return <Bell size={20} className={`${cls || "text-slate-400"}`} />;
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center py-40 gap-4"><Loader2 className="animate-spin text-teal-600" size={40} /><p className="text-slate-400">Chargement...</p></div>;
+  if (loading) return (
+    <div className="flex flex-col items-center py-40 gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-slate-400">Synchronisation...</p>
+    </div>
+  );
 
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen">
