@@ -1,5 +1,13 @@
 [
   {
+    "id": "notif-1769655521430-bwshxvfpf",
+    "type": "new_text",
+    "message": "📖 Nouveau manuscrit : \"Récital de minuit\" par Lisible Support Team",
+    "targetEmail": "all",
+    "link": "/bibliotheque",
+    "date": "2026-01-29T02:58:41.430Z"
+  },
+  {
     "id": "notif-1769642129430-hck3oieeb",
     "type": "live",
     "message": "🔴 Ben Johnson Juste est en direct sur le Club !",
