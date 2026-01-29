@@ -1,5 +1,13 @@
 [
   {
+    "id": "notif-1769660799130-5gyscyx84",
+    "type": "new_text",
+    "message": "📖 Nouveau manuscrit : \"Battle Poétique International\" par Lisible Support Team",
+    "targetEmail": "all",
+    "link": "/bibliotheque",
+    "date": "2026-01-29T04:26:39.130Z"
+  },
+  {
     "id": "notif-1769658934566-q5sn3q235",
     "type": "new_text",
     "message": "📖 Nouveau manuscrit : \"Battle Poétique International\" par cmo.lablitteraire7",
