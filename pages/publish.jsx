@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Send, ArrowLeft, Loader2, Trash2 } from "lucide-react"; 
+import { FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, Sparkles } from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -56,7 +56,6 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // 1. Publication du texte
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,6 +65,7 @@ export default function PublishPage() {
           title: title.trim(),
           content: content.trim(),
           imageBase64,
+          isConcours: false, // Publication standard
           date: new Date().toISOString()
         })
       });
@@ -73,9 +73,8 @@ export default function PublishPage() {
       if (!res.ok) throw new Error("Erreur serveur");
       
       const data = await res.json();
-      const generatedId = data.id; // L'ID renvoyé par votre API
+      const generatedId = data.id;
 
-      // 2. ENVOI DE LA NOTIFICATION AVEC LE LIEN EXACT
       await fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,7 +82,7 @@ export default function PublishPage() {
           type: "new_text", 
           message: `📖 Nouveau manuscrit : "${title.trim()}" par ${user.penName || user.name}`,
           targetEmail: "all",
-          link: `/texts/${generatedId}` // Redirection vers le texte précis
+          link: `/texts/${generatedId}`
         })
       });
 
@@ -104,23 +103,47 @@ export default function PublishPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-10 px-4 animate-in fade-in duration-500">
+      
+      {/* HEADER ACTIONS */}
       <div className="flex items-center justify-between mt-6">
         <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 shadow-sm border border-slate-100 transition-all">
           <ArrowLeft size={20} />
         </Link>
         <button onClick={() => { setTitle(""); setContent(""); }} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl">
-          <Trash2 size={14} /> Effacer
+          <Trash2 size={14} /> Effacer le brouillon
         </button>
       </div>
+
+      {/* --- BOUTON CONCOURS (PROMOTIONNEL) --- */}
+      <Link href="/concours-publish" className="block group">
+        <div className="bg-gradient-to-r from-teal-600 to-teal-800 p-1 rounded-[2.5rem] shadow-xl shadow-teal-900/20 group-hover:scale-[1.02] transition-transform duration-500">
+          <div className="bg-white/10 backdrop-blur-md rounded-[2.4rem] p-6 flex items-center justify-between border border-white/20">
+            <div className="flex items-center gap-5 text-white">
+              <div className="p-4 bg-white rounded-[1.5rem] text-teal-700 shadow-inner">
+                <Trophy size={28} className="animate-bounce" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-teal-100 opacity-80 mb-1">Événement Spécial</p>
+                <h3 className="text-xl font-black italic tracking-tighter">Battle Poétique International</h3>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 text-white/60 group-hover:text-white transition-colors">
+               <span className="text-[9px] font-black uppercase tracking-widest">Participer</span>
+               <Sparkles size={16} />
+            </div>
+          </div>
+        </div>
+      </Link>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] space-y-8 border border-slate-50 shadow-2xl relative overflow-hidden">
         <header className="space-y-2 relative">
           <div className="flex items-center gap-4 text-slate-900">
-            <div className="p-3 bg-teal-600 rounded-2xl text-white shadow-lg shadow-teal-600/20">
+            <div className="p-3 bg-slate-100 rounded-2xl text-slate-900">
                 <FileText size={24} />
             </div>
-            <h1 className="text-3xl font-black italic tracking-tighter">Écrire l'Inspirant</h1>
+            <h1 className="text-3xl font-black italic tracking-tighter">Publication Standard</h1>
           </div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-16">Diffuser votre plume dans la bibliothèque</p>
         </header>
 
         <div className="space-y-6">
@@ -129,29 +152,29 @@ export default function PublishPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-slate-50 border-none rounded-2xl p-6 text-xl italic outline-none focus:ring-2 ring-teal-500/20 font-bold transition-all"
-                placeholder="Titre du manuscrit..."
+                placeholder="Titre de votre œuvre..."
                 required
               />
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:ring-2 ring-teal-500/20 resize-none transition-all"
-              placeholder="Il était une fois..."
+              placeholder="Écrivez ici..."
               required
             />
         </div>
 
-        <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center cursor-pointer">
+        <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center cursor-pointer hover:border-teal-400 transition-colors">
           <label className="cursor-pointer block">
             <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} className="hidden" />
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                {imageFile ? imageFile.name : "Ajouter une couverture (Optionnel)"}
+                {imageFile ? imageFile.name : "Ajouter une image de couverture"}
             </p>
           </label>
         </div>
 
         <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3">
-          {loading ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> DIFFUSER DANS LA BIBLIOTHÈQUE</>}
+          {loading ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> PUBLIER DANS LA BIBLIOTHÈQUE</>}
         </button>
       </form>
     </div>
