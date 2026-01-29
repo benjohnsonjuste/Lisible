@@ -1,5 +1,13 @@
 [
   {
+    "id": "notif-1769716601531-tvr3p56oh",
+    "type": "concours",
+    "message": "🏆 Nouveau poème en lice : \"Test\" par LABE1234",
+    "targetEmail": "all",
+    "link": "/texts/1769716600523-test",
+    "date": "2026-01-29T19:56:41.531Z"
+  },
+  {
     "id": "notif-1769715304192-s4axftmmf",
     "type": "new_text",
     "message": "📖 Nouveau manuscrit : \"Blag\" par Lisible Support Team",
