@@ -21,11 +21,11 @@ export default function TextPage() {
       if (!res.ok) throw new Error("Manuscrit introuvable");
       
       const fileData = await res.json();
-      // Décodage Base64 compatible caractères spéciaux
+      // Décodage Base64 robuste pour les accents et caractères spéciaux
       const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
       setText(content);
 
-      // Gestion des vues (LocalStorage pour éviter les doublons de session)
+      // Gestion des vues unique par session
       const viewKey = `v_u_${id}`;
       if (!localStorage.getItem(viewKey)) {
         await fetch("/api/texts", { 
@@ -37,6 +37,7 @@ export default function TextPage() {
         setText(prev => (prev ? { ...prev, views: (prev.views || 0) + 1 } : null));
       }
     } catch (e) {
+      console.error(e);
       toast.error("Erreur de chargement du texte");
     } finally {
       setLoading(false);
@@ -54,30 +55,34 @@ export default function TextPage() {
   const handleLike = async () => {
     if (!user) return toast.error("Connectez-vous pour aimer cette œuvre");
     
-    const res = await fetch("/api/texts", {
-      method: "PATCH",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ id: textId, action: "like", payload: { email: user.email } })
-    });
+    try {
+      const res = await fetch("/api/texts", {
+        method: "PATCH",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ id: textId, action: "like", payload: { email: user.email } })
+      });
 
-    if (res.ok) {
-      const updated = await res.json();
-      const isLikingNow = updated.likes.includes(user.email);
-      setText(updated);
-      
-      // NOTIFICATION DE LIKE (Si ce n'est pas mon propre texte)
-      if (isLikingNow && user.email !== text.authorEmail) {
-        await fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "like",
-            message: `${user.penName || user.name} a aimé votre œuvre "${text.title}"`,
-            targetEmail: text.authorEmail,
-            link: `/texts/${textId}`
-          })
-        });
+      if (res.ok) {
+        const updated = await res.json();
+        const isLikingNow = updated.likes.includes(user.email);
+        setText(updated);
+        
+        // NOTIFICATION DE LIKE : Envoyée à l'auteur avec lien direct
+        if (isLikingNow && user.email !== text.authorEmail) {
+          await fetch("/api/create-notif", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "like",
+              message: `❤️ ${user.penName || user.name} a aimé votre œuvre "${text.title}"`,
+              targetEmail: text.authorEmail,
+              link: `/texts/${textId}` // Lien vers l'ID exact
+            })
+          });
+        }
       }
+    } catch (e) {
+      toast.error("Action impossible pour le moment");
     }
   };
 
@@ -103,16 +108,16 @@ export default function TextPage() {
         const updated = await res.json();
         setText(updated);
         
-        // NOTIFICATION DE COMMENTAIRE
+        // NOTIFICATION DE COMMENTAIRE : Envoyée à l'auteur avec lien direct
         if (user.email !== text.authorEmail) {
           await fetch("/api/create-notif", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               type: "comment",
-              message: `${user.penName || user.name} a commenté votre œuvre "${text.title}"`,
+              message: `💬 ${user.penName || user.name} a commenté votre œuvre "${text.title}"`,
               targetEmail: text.authorEmail,
-              link: `/texts/${textId}`
+              link: `/texts/${textId}` // Lien vers l'ID exact
             })
           });
         }
@@ -197,9 +202,18 @@ export default function TextPage() {
         <div className="bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-xl">
           {user ? (
             <div className="space-y-6">
-              <textarea value={newComment} onChange={(e)=>setNewComment(e.target.value)} className="w-full bg-slate-50 rounded-[2rem] p-8 min-h-[160px] outline-none border border-slate-100 focus:bg-white transition-all text-slate-700" placeholder="Laissez une trace de votre lecture..." />
+              <textarea 
+                value={newComment} 
+                onChange={(e)=>setNewComment(e.target.value)} 
+                className="w-full bg-slate-50 rounded-[2rem] p-8 min-h-[160px] outline-none border border-slate-100 focus:bg-white transition-all text-slate-700" 
+                placeholder="Laissez une trace de votre lecture..." 
+              />
               <div className="flex justify-end">
-                <button onClick={handlePostComment} disabled={isSubmitting || !newComment.trim()} className="bg-slate-900 text-white px-12 py-6 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex items-center gap-3">
+                <button 
+                  onClick={handlePostComment} 
+                  disabled={isSubmitting || !newComment.trim()} 
+                  className="bg-slate-900 text-white px-12 py-6 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex items-center gap-3"
+                >
                   {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <Send size={16}/>} Publier
                 </button>
               </div>
