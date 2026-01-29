@@ -8,22 +8,6 @@
     "date": "2026-01-29T04:27:52.958Z"
   },
   {
-    "id": "notif-1769660799130-5gyscyx84",
-    "type": "new_text",
-    "message": "📖 Nouveau manuscrit : \"Battle Poétique International\" par Lisible Support Team",
-    "targetEmail": "all",
-    "link": "/bibliotheque",
-    "date": "2026-01-29T04:26:39.130Z"
-  },
-  {
-    "id": "notif-1769658934566-q5sn3q235",
-    "type": "new_text",
-    "message": "📖 Nouveau manuscrit : \"Battle Poétique International\" par cmo.lablitteraire7",
-    "targetEmail": "all",
-    "link": "/bibliotheque",
-    "date": "2026-01-29T03:55:34.566Z"
-  },
-  {
     "id": "notif-1769658321030-3sz6lj2td",
     "type": "comment",
     "message": "Lisible Support Team a commenté votre œuvre",
@@ -46,13 +30,5 @@
     "targetEmail": "all",
     "link": "/bibliotheque",
     "date": "2026-01-29T02:58:41.430Z"
-  },
-  {
-    "id": "notif-1769642129430-hck3oieeb",
-    "type": "live",
-    "message": "🔴 Ben Johnson Juste est en direct sur le Club !",
-    "targetEmail": "all",
-    "link": "/lisible-club?room=Ben Johnson Juste",
-    "date": "2026-01-28T23:15:29.430Z"
   }
 ]
