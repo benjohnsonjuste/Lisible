@@ -17,22 +17,22 @@ export default function AuthorCataloguePage() {
 
   const fetchAuthorData = useCallback(async (targetEmail) => {
     try {
-      // On décode l'email pour s'assurer qu'il correspond au nom du fichier sur GitHub
-      const cleanEmail = decodeURIComponent(targetEmail).toLowerCase();
-      const timestamp = Date.now(); // Force GitHub à ne pas servir une version cachée
+      // Nettoyage de l'email pour correspondre exactement au nom du fichier GitHub
+      const cleanEmail = decodeURIComponent(targetEmail).toLowerCase().trim();
+      const timestamp = Date.now(); 
 
-      // 1. RÉCUPÉRATION DU PROFIL MIS À JOUR
-      // On cherche le fichier "email.json" que l'API de sauvegarde vient de mettre à jour
+      // 1. RÉCUPÉRATION DU PROFIL DEPUIS /data/users/[email].json
       const userRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${cleanEmail}.json?t=${timestamp}`);
       
       if (userRes.ok) {
         const userData = await userRes.json();
-        // Décodage UTF-8 (important pour les accents dans les noms de plume)
-        const decodedUser = JSON.parse(decodeURIComponent(escape(atob(userData.content))));
+        // Décodage UTF-8 robuste (Base64 -> String -> JSON)
+        const content = atob(userData.content);
+        const decodedUser = JSON.parse(decodeURIComponent(escape(content)));
         setAuthor(decodedUser);
       }
 
-      // 2. RÉCUPÉRATION DES PUBLICATIONS
+      // 2. RÉCUPÉRATION ET FILTRAGE DES PUBLICATIONS
       const textsRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${timestamp}`);
       if (!textsRes.ok) throw new Error("Erreur base de données");
       
@@ -42,16 +42,16 @@ export default function AuthorCataloguePage() {
       const textPromises = jsonFiles.map(file => fetch(`${file.download_url}?t=${timestamp}`).then(r => r.json()));
       const allTexts = await Promise.all(textPromises);
       
-      // Filtrage par l'email propriétaire contenu dans le manuscrit
+      // Filtrage strict par email
       const filteredTexts = allTexts.filter(t => 
-        t.authorEmail?.toLowerCase() === cleanEmail
+        t.authorEmail?.toLowerCase().trim() === cleanEmail
       );
       
       setTexts(filteredTexts.sort((a, b) => new Date(b.date) - new Date(a.date)));
 
     } catch (e) {
-      console.error("Catalogue Error:", e);
-      toast.error("Impossible de synchroniser le catalogue");
+      console.error("Catalogue Sync Error:", e);
+      toast.error("Données du profil partiellement introuvables");
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export default function AuthorCataloguePage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-16 animate-in fade-in duration-700">
       
-      {/* HEADER : DONNÉES SYNCHRONISÉES */}
+      {/* HEADER : PROFIL RÉCUPÉRÉ DU FICHIER JSON */}
       <header className="relative flex flex-col md:flex-row items-center gap-10 bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
         <button 
           onClick={() => router.back()} 
@@ -84,14 +84,13 @@ export default function AuthorCataloguePage() {
 
         <div className="relative shrink-0 mt-8 md:mt-0">
           <div className="w-32 h-32 md:w-44 md:h-44 rounded-[3rem] bg-slate-50 border-8 border-white shadow-2xl overflow-hidden flex items-center justify-center text-5xl font-black text-teal-600 italic">
-            {/* On utilise la photo du fichier JSON mis à jour */}
             {author?.profilePic ? (
               <img src={author.profilePic} className="w-full h-full object-cover" alt="" />
             ) : (
               <span className="uppercase">{author?.penName?.charAt(0) || <User size={40} />}</span>
             )}
           </div>
-          {texts.length >= 10 && (
+          {texts.length >= 7 && (
             <div className="absolute -bottom-2 -right-2 bg-amber-400 text-white p-3 rounded-2xl shadow-xl border-4 border-white animate-pulse">
               <Sparkles size={20} fill="currentColor" />
             </div>
@@ -100,12 +99,11 @@ export default function AuthorCataloguePage() {
 
         <div className="text-center md:text-left space-y-4">
           <div className="space-y-1">
-            {/* On utilise le nom de plume du fichier JSON mis à jour */}
             <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter italic">
-              {author?.penName || author?.name || "Plume Anonyme"}
+              {author?.penName || author?.name || "Plume de Lisible"}
             </h1>
             <div className="flex items-center justify-center md:justify-start gap-2 text-teal-600 font-black text-[10px] uppercase tracking-[0.4em]">
-              <ShieldCheck size={14} /> Membre Officiel Lisible
+              <ShieldCheck size={14} /> Membre Officiel
             </div>
           </div>
           
@@ -117,11 +115,11 @@ export default function AuthorCataloguePage() {
               </span>
             </div>
             
-            {/* On utilise le nombre d'abonnés du fichier JSON mis à jour */}
+            {/* COMPTEUR D'ABONNÉS SÉCURISÉ */}
             <div className="bg-teal-50 px-5 py-3 rounded-2xl flex items-center gap-2 border border-teal-100">
               <TrendingUp size={16} className="text-teal-500" />
               <span className="text-[11px] font-black uppercase tracking-widest text-teal-700">
-                {author?.subscribers?.length || 0} Abonnés
+                {Array.isArray(author?.subscribers) ? author.subscribers.length : 0} Abonnés
               </span>
             </div>
           </div>
@@ -168,14 +166,14 @@ export default function AuthorCataloguePage() {
             </Link>
           )) : (
             <div className="text-center py-24 bg-slate-50/50 rounded-[3rem] border-2 border-dashed border-slate-200">
-              <p className="text-slate-300 font-black uppercase text-[10px] tracking-[0.3em]">Aucun manuscrit archivé pour le moment.</p>
+              <p className="text-slate-300 font-black uppercase text-[10px] tracking-[0.3em]">Aucun manuscrit archivé.</p>
             </div>
           )}
         </div>
       </div>
 
       <footer className="text-center py-10 opacity-30 italic">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.6em]">Lisible • Authentifié via GitHub Registry</p>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.6em]">Lisible • Registre Synchronisé</p>
       </footer>
     </div>
   );
