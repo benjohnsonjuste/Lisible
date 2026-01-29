@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Eye, Heart, MessageCircle, Loader2 } from "lucide-react";
+import { Eye, Heart, MessageCircle, Loader2, Share2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Bibliotheque() {
   const [texts, setTexts] = useState([]);
@@ -10,7 +11,6 @@ export default function Bibliotheque() {
   useEffect(() => {
     async function load() {
       try {
-        // Ajout du timestamp pour éviter le cache de la liste des fichiers
         const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
         const files = await res.json();
         
@@ -18,12 +18,10 @@ export default function Bibliotheque() {
           const promises = files
             .filter(f => f.name.endsWith('.json'))
             .map(f => 
-              // Ajout du timestamp sur chaque download_url pour les compteurs live
               fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json())
             );
           
           const data = await Promise.all(promises);
-          // Tri par date décroissante
           setTexts(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
         }
       } catch (e) { 
@@ -34,6 +32,29 @@ export default function Bibliotheque() {
     }
     load();
   }, []);
+
+  // --- FONCTION DE PARTAGE PARTOUT ---
+  const handleShare = async (e, item) => {
+    e.preventDefault(); // Empêche le Link de s'activer
+    e.stopPropagation(); // Empêche l'événement de remonter à la carte
+
+    const shareData = {
+      title: item.title,
+      text: `Lisez "${item.title}" de ${item.authorName} sur Lisible.`,
+      url: `${window.location.origin}/texts/${item.id}`,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success("Lien copié pour partage !");
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") toast.error("Erreur de partage");
+    }
+  };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 gap-4">
@@ -46,7 +67,7 @@ export default function Bibliotheque() {
     <div className="max-w-6xl mx-auto px-6 py-10 grid gap-10 md:grid-cols-2">
       {texts.map((item) => (
         <Link href={`/texts/${item.id}`} key={item.id} className="group">
-          <div className="bg-white rounded-[3rem] overflow-hidden border border-slate-100 shadow-xl hover:shadow-2xl hover:shadow-teal-900/5 transition-all duration-500 h-full flex flex-col">
+          <div className="bg-white rounded-[3rem] overflow-hidden border border-slate-100 shadow-xl hover:shadow-2xl hover:shadow-teal-900/5 transition-all duration-500 h-full flex flex-col relative">
             
             {/* Zone Image / Preview */}
             <div className="h-60 bg-slate-100 relative overflow-hidden">
@@ -61,12 +82,21 @@ export default function Bibliotheque() {
                   Lisible.
                 </div>
               )}
+
               {/* Badge Date */}
               <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm">
                 <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">
                   {new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
+
+              {/* BOUTON PARTAGE FLOTTANT */}
+              <button 
+                onClick={(e) => handleShare(e, item)}
+                className="absolute top-6 right-6 p-3 bg-slate-900/80 hover:bg-teal-600 text-white backdrop-blur-md rounded-2xl transition-all duration-300 active:scale-90 z-20"
+              >
+                <Share2 size={18} />
+              </button>
             </div>
 
             <div className="p-8 flex-grow flex flex-col">
@@ -85,7 +115,7 @@ export default function Bibliotheque() {
                 </div>
 
                 {/* --- COMPTEURS AUTOMATIQUES --- */}
-                <div className="flex gap-5 text-slate-400 font-black text-[11px]">
+                <div className="flex gap-4 text-slate-400 font-black text-[11px]">
                   <span className="flex items-center gap-1.5 hover:text-teal-600 transition-colors">
                     <Eye size={16} className="text-teal-500/70"/> {item.views || 0}
                   </span>
