@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Heart, MessageSquare, BookOpen, Clock, ArrowLeft, Sparkles, UserPlus, Radio, Loader2 } from "lucide-react";
+import { Bell, Heart, MessageSquare, BookOpen, Clock, ArrowLeft, Sparkles, UserPlus, Radio, Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import Pusher from "pusher-js";
@@ -12,46 +12,84 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [readIds, setReadIds] = useState([]); 
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Utilisation d'une ref pour accéder aux notifications actuelles dans les callbacks Pusher
+  const notifsRef = useRef([]);
 
   useEffect(() => {
     const savedReadIds = JSON.parse(localStorage.getItem("read_notifications") || "[]");
     setReadIds(savedReadIds);
   }, []);
 
-  const fetchNotifications = useCallback(async (userEmail) => {
+  const fetchNotifications = useCallback(async (userEmail, silent = false) => {
+    if (!silent) setLoading(true);
+    else setIsSyncing(true);
+
     try {
+      // Le t=${Date.now()} est crucial pour forcer la mise à jour automatique
       const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/notifications.json?t=${Date.now()}`);
       if (!res.ok) return;
       const allNotifs = await res.json();
       
-      // Filtrage : "all" pour les nouveaux textes, ou email spécifique pour Likes/Commentaires/Follows
       const myNotifs = allNotifs.filter(n => 
         n.targetEmail === "all" || 
-        n.targetEmail?.toLowerCase() === userEmail.toLowerCase()
+        n.targetEmail?.toLowerCase() === userEmail?.toLowerCase()
       );
-      setNotifications(myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+
+      const sorted = myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setNotifications(sorted);
+      notifsRef.current = sorted;
+    } catch (error) { 
+      console.error("Sync error:", error); 
+    } finally { 
+      setLoading(false); 
+      setIsSyncing(false);
+    }
   }, []);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
+    let interval;
+
     if (loggedUser) {
       const userData = JSON.parse(loggedUser);
       setUser(userData);
+      
+      // 1. Chargement initial
       fetchNotifications(userData.email);
-    } else { setLoading(false); }
 
-    const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
-    const channel = pusher.subscribe('global-notifications');
-    channel.bind('new-alert', (newNotif) => {
-      const freshUser = JSON.parse(localStorage.getItem("lisible_user") || "{}");
-      if (newNotif.targetEmail === "all" || newNotif.targetEmail?.toLowerCase() === freshUser.email?.toLowerCase()) {
-        setNotifications(prev => [newNotif, ...prev]);
-        toast("Nouvelle activité", { description: newNotif.message });
-      }
-    });
-    return () => pusher.unsubscribe('global-notifications');
-  }, [fetchNotifications]);
+      // 2. Mise à jour automatique (Polling) toutes les 20 secondes
+      interval = setInterval(() => {
+        fetchNotifications(userData.email, true);
+      }, 20000);
+
+      // 3. Temps réel via Pusher
+      const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
+      const channel = pusher.subscribe('global-notifications');
+      
+      channel.bind('new-alert', (newNotif) => {
+        if (newNotif.targetEmail === "all" || newNotif.targetEmail?.toLowerCase() === userData.email?.toLowerCase()) {
+          // Éviter les doublons si le polling a déjà récupéré la notif
+          setNotifications(prev => {
+            if (prev.find(n => n.id === newNotif.id)) return prev;
+            const updated = [newNotif, ...prev];
+            notifsRef.current = updated;
+            return updated;
+          });
+          toast("Nouvelle activité", { description: newNotif.message });
+        }
+      });
+
+      return () => {
+        if (interval) clearInterval(interval);
+        pusher.unsubscribe('global-notifications');
+      };
+    } else {
+      setLoading(false);
+      router.push("/login");
+    }
+  }, [fetchNotifications, router]);
 
   const markAsRead = (id) => {
     if (!readIds.includes(id)) {
@@ -74,39 +112,73 @@ export default function NotificationsPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center py-40 gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-slate-400">Synchronisation...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Récupération des ondes...</p>
     </div>
   );
 
   return (
     <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen">
-      <header className="flex items-center justify-between mb-8">
-        <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50"><ArrowLeft size={20} /></button>
-        <h1 className="text-2xl font-black italic tracking-tight">Activités</h1>
-        <div className="w-10" />
+      <header className="flex items-center justify-between mb-10">
+        <button onClick={() => router.back()} className="p-4 bg-white rounded-[1.2rem] border border-slate-100 shadow-sm hover:bg-slate-50 transition-all">
+          <ArrowLeft size={20} />
+        </button>
+        <div className="text-center">
+            <h1 className="text-2xl font-black italic tracking-tight text-slate-900">Activités</h1>
+            {isSyncing && (
+                <div className="flex items-center justify-center gap-1 mt-1 text-teal-500 animate-pulse">
+                    <RefreshCw size={10} className="animate-spin" />
+                    <span className="text-[8px] font-black uppercase">Mise à jour...</span>
+                </div>
+            )}
+        </div>
+        <div className="w-12 h-12 flex items-center justify-center bg-slate-50 rounded-full border border-slate-100">
+           <Bell size={18} className="text-slate-400" />
+        </div>
       </header>
 
       <div className="space-y-4">
         {notifications.length === 0 ? (
-          <div className="text-center py-20 text-slate-400">Aucune activité pour le moment.</div>
+          <div className="flex flex-col items-center justify-center py-32 text-slate-300 gap-4">
+            <Sparkles size={40} className="opacity-20" />
+            <p className="font-black uppercase text-[10px] tracking-widest">Le silence est d'or ici.</p>
+          </div>
         ) : (
           notifications.map((n) => {
             const isRead = readIds.includes(n.id);
             return (
-              <Link href={n.link || "/dashboard"} key={n.id} onClick={() => markAsRead(n.id)} className={`flex items-center gap-4 p-5 rounded-[2.5rem] border transition-all ${isRead ? 'bg-slate-50/50 border-transparent opacity-60' : 'bg-white border-slate-100 shadow-xl'}`}>
-                <div className={`p-4 rounded-2xl ${isRead ? 'bg-slate-100' : 'bg-slate-50'}`}>{getIcon(n.type, isRead)}</div>
-                <div className="flex-grow">
-                  <p className={`text-sm leading-snug ${isRead ? 'text-slate-500' : 'text-slate-900 font-bold'}`}>{n.message}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-2 flex items-center gap-2"><Clock size={10} /> {new Date(n.date).toLocaleDateString()}</p>
+              <Link 
+                href={n.link || "/dashboard"} 
+                key={n.id} 
+                onClick={() => markAsRead(n.id)} 
+                className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-300 ${isRead ? 'bg-slate-50/50 border-transparent opacity-60' : 'bg-white border-slate-100 shadow-2xl shadow-slate-200/50'}`}
+              >
+                <div className={`p-4 rounded-2xl shrink-0 ${isRead ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 shadow-inner'}`}>
+                  {getIcon(n.type, isRead)}
                 </div>
-                {!isRead && <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-lg" />}
+                <div className="flex-grow pt-1">
+                  <p className={`text-sm leading-relaxed ${isRead ? 'text-slate-500' : 'text-slate-900 font-bold'}`}>
+                    {n.message}
+                  </p>
+                  <div className="flex items-center gap-3 mt-3">
+                    <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest flex items-center gap-1.5">
+                      <Clock size={12} /> {new Date(n.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {!isRead && (
+                  <div className="mt-2 w-3 h-3 bg-teal-500 rounded-full shadow-lg shadow-teal-500/40 ring-4 ring-teal-50" />
+                )}
               </Link>
             );
           })
         )}
       </div>
+      
+      <footer className="mt-20 text-center opacity-30">
+          <p className="text-[8px] font-black uppercase tracking-[0.5em]">Lisible Core v3.0</p>
+      </footer>
     </div>
   );
 }
