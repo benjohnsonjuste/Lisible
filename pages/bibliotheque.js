@@ -45,20 +45,20 @@ export default function Bibliotheque() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40}/>
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture du rayonnage...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Rayonnage en cours...</p>
     </div>
   );
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 grid gap-10 md:grid-cols-2">
       {texts.map((item) => {
-        // Logique des badges
-        const isAnnonce = item.authorName === "Lisible Support Team";
+        // Logique de distinction Concours vs Annonce
         const isConcours = item.isConcours === true;
+        const isAnnonce = item.authorEmail === "adm.lablitteraire7@gmail.com" || item.authorName === "Lisible Support Team";
 
         return (
           <Link href={`/texts/${item.id}`} key={item.id} className="group relative">
-            <div className={`bg-white rounded-[3rem] overflow-hidden border transition-all duration-500 h-full flex flex-col relative ${isAnnonce ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100 shadow-xl'}`}>
+            <div className={`bg-white rounded-[3rem] overflow-hidden border transition-all duration-500 h-full flex flex-col relative ${isConcours ? 'border-teal-100 shadow-teal-900/5' : isAnnonce ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100 shadow-xl'}`}>
               
               <div className="h-60 bg-slate-100 relative overflow-hidden">
                 {item.imageBase64 ? (
@@ -67,25 +67,24 @@ export default function Bibliotheque() {
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-teal-50 flex items-center justify-center font-black italic text-slate-200 text-4xl">Lisible.</div>
                 )}
 
-                {/* BADGES FLOTTANTS */}
+                {/* BADGES */}
                 <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
-                    <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm inline-block">
-                        <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">
-                        {new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-                        </span>
-                    </div>
-
-                    {isConcours && (
-                        <div className="bg-teal-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg animate-bounce">
+                    {/* Badge Concours PRIORITAIRE */}
+                    {isConcours ? (
+                        <div className="bg-teal-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg animate-pulse border border-teal-400">
                             <Trophy size={12} />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Concours</span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.4em]">Concours</span>
                         </div>
-                    )}
-
-                    {isAnnonce && (
+                    ) : isAnnonce ? (
                         <div className="bg-amber-500 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg">
                             <Megaphone size={12} />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Annonce</span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.4em]">Annonce</span>
+                        </div>
+                    ) : (
+                        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm">
+                            <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">
+                            {new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
+                            </span>
                         </div>
                     )}
                 </div>
@@ -96,7 +95,7 @@ export default function Bibliotheque() {
               </div>
 
               <div className="p-8 flex-grow flex flex-col">
-                <h2 className={`text-3xl font-black italic mb-4 tracking-tighter leading-none transition-colors ${isAnnonce ? 'text-amber-900' : 'text-slate-900 group-hover:text-teal-600'}`}>
+                <h2 className={`text-3xl font-black italic mb-4 tracking-tighter leading-none transition-colors ${isConcours ? 'text-teal-700' : isAnnonce ? 'text-amber-900' : 'text-slate-900 group-hover:text-teal-600'}`}>
                   {item.title}
                 </h2>
                 <p className="text-slate-500 line-clamp-3 font-serif italic mb-8 leading-relaxed">
@@ -104,8 +103,10 @@ export default function Bibliotheque() {
                 </p>
                 <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${isAnnonce ? 'bg-amber-500' : 'bg-teal-500'}`} />
-                    <span className={`font-black text-[10px] uppercase tracking-widest ${isAnnonce ? 'text-amber-700' : 'text-teal-600'}`}>@{item.authorName}</span>
+                    <div className={`w-2 h-2 rounded-full animate-pulse ${isConcours ? 'bg-teal-500' : isAnnonce ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                    <span className={`font-black text-[10px] uppercase tracking-widest ${isConcours ? 'text-teal-600' : isAnnonce ? 'text-amber-700' : 'text-slate-500'}`}>
+                      @{item.authorName} {/* Ici authorName est l'ID Concurrent si Concours */}
+                    </span>
                   </div>
                   <div className="flex gap-4 text-slate-400 font-black text-[11px]">
                     <span className="flex items-center gap-1.5"><Eye size={16}/> {item.views || 0}</span>
