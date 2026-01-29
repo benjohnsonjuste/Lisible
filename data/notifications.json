@@ -1,5 +1,13 @@
 [
   {
+    "id": "notif-1769658287658-eiqpuq6b2",
+    "type": "like",
+    "message": "Lisible Support Team a aimé \"La vie\"",
+    "targetEmail": "robergeaudrodley97@glail.com",
+    "link": "/texts/1769599474579-la-vie",
+    "date": "2026-01-29T03:44:47.658Z"
+  },
+  {
     "id": "notif-1769655521430-bwshxvfpf",
     "type": "new_text",
     "message": "📖 Nouveau manuscrit : \"Récital de minuit\" par Lisible Support Team",
