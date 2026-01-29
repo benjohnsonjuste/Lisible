@@ -9,38 +9,44 @@ export default async function handler(req, res) {
   
   if (!userData.email) return res.status(400).json({ error: "Email requis" });
 
-  // --- CORRECTION DU CHEMIN ---
-  // On utilise l'email direct pour correspondre aux appels du catalogue
-  const fileName = `${userData.email.toLowerCase()}.json`;
+  // Utilisation de l'email direct (minuscule) pour le nom du fichier
+  const fileName = `${userData.email.toLowerCase().trim()}.json`;
   const path = `data/users/${fileName}`;
 
   try {
     let oldProfile = {};
     let fileSha = null;
 
+    // 1. Tenter de récupérer le profil existant sur GitHub
     try {
       const { data: fileData } = await octokit.repos.getContent({
         owner: "benjohnsonjuste",
         repo: "Lisible",
         path
       });
-      // Décodage UTF-8 pour supporter les accents dans les noms de plume
-      oldProfile = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+      
+      // Décodage UTF-8 sécurisé
+      const content = Buffer.from(fileData.content, "base64").toString("utf-8");
+      oldProfile = JSON.parse(content);
       fileSha = fileData.sha;
     } catch (e) {
-      console.log("Nouveau profil créé");
+      console.log("Nouveau profil : création du fichier.");
     }
 
-    // Fusion : on garde les abonnés existants s'ils ne sont pas dans req.body
+    // 2. FUSION SÉCURISÉE DES DONNÉES
+    // On priorise userData pour le nom/photo, mais on protège les abonnés de oldProfile
     const newProfile = { 
-      subscribers: [], // Valeur par défaut
-      ...oldProfile, 
-      ...userData,
+      ...oldProfile, // Garde tout ce qui existe déjà (dont subscribers)
+      ...userData,   // Écrase avec les nouvelles saisies de l'utilisateur
+      // Garantie que subscribers reste un tableau et n'est pas écrasé par du vide
+      subscribers: oldProfile.subscribers || userData.subscribers || [],
       lastUpdate: new Date().toISOString() 
     };
 
-    // Sauvegarde avec encodage UTF-8 sécurisé
-    const contentPayload = btoa(unescape(encodeURIComponent(JSON.stringify(newProfile, null, 2))));
+    // 3. ENCODAGE ET SAUVEGARDE SUR GITHUB
+    // Utilisation de Buffer pour un encodage propre des caractères spéciaux
+    const jsonString = JSON.stringify(newProfile, null, 2);
+    const contentPayload = Buffer.from(jsonString, "utf-8").toString("base64");
 
     await octokit.repos.createOrUpdateFileContents({
       owner: "benjohnsonjuste",
@@ -51,25 +57,67 @@ export default async function handler(req, res) {
       sha: fileSha
     });
 
-    // Notification Email
+    // 4. NOTIFICATION AU STAFF
     try {
       await sendAdminNotification(newProfile);
     } catch (emailErr) {
-      console.error("Erreur Email Notification");
+      console.error("Erreur Notification Email:", emailErr);
     }
 
     return res.status(200).json({ success: true, profile: newProfile });
+
   } catch (error) {
     console.error("Erreur GitHub API:", error);
-    return res.status(500).json({ error: "Erreur lors de l'enregistrement sur le serveur" });
+    return res.status(500).json({ error: "Échec de la synchronisation avec le registre." });
   }
 }
 
+// Configuration pour autoriser les photos de profil (Base64)
 export const config = {
-  api: { bodyParser: { sizeLimit: '5mb' } },
+  api: {
+    bodyParser: {
+      sizeLimit: '5mb',
+    },
+  },
 };
 
 async function sendAdminNotification(user) {
-  // ... (Ton code nodemailer reste identique)
-  // Assure-toi juste d'utiliser user.penName dans le texte de l'email
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return;
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  const isPaypal = user.paymentMethod === 'PayPal';
+
+  const mailOptions = {
+    from: '"Lisible Vault" <no-reply@lisible.com>',
+    to: 'cmo.lablitteraire7@gmail.com',
+    subject: `📝 Mise à jour Profil : ${user.penName || user.name}`,
+    html: `
+      <div style="font-family: sans-serif; color: #333; max-width: 600px; padding: 20px; border: 1px solid #eee; border-radius: 15px;">
+        <h2 style="color: #14b8a6;">Profil Auteur Mis à Jour</h2>
+        <p>L'auteur <b>${user.name || 'Inconnu'}</b> a modifié ses informations.</p>
+        <hr style="border: none; border-top: 1px solid #eee;">
+        <p><b>Nom de plume :</b> ${user.penName || 'Non défini'}</p>
+        <p><b>Abonnés actuels :</b> ${user.subscribers?.length || 0}</p>
+        
+        <h3 style="color: #0f172a;">Mode de paiement :</h3>
+        <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 4px solid #14b8a6;">
+          <p><b>Méthode :</b> ${user.paymentMethod}</p>
+          ${isPaypal 
+            ? `<p><b>Email PayPal :</b> ${user.paypalEmail}</p>`
+            : `<p><b>Bénéficiaire :</b> ${user.wuMoneyGram?.firstName} ${user.wuMoneyGram?.lastName}</p>
+               <p><b>Pays :</b> ${user.wuMoneyGram?.country}</p>`
+          }
+        </div>
+      </div>
+    `
+  };
+
+  return transporter.sendMail(mailOptions);
 }
