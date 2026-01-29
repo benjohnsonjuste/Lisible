@@ -1,5 +1,5 @@
-"use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
@@ -9,13 +9,14 @@ import MetricsOverview from "@/components/MetricsOverview";
 import Link from "next/link";
 
 export default function AccountPage() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [editingPayment, setEditingPayment] = useState(false);
   const [myTexts, setMyTexts] = useState([]);
 
-  // États pour les formulaires (Initialisés vides pour éviter les sauts de données)
+  // États pour les formulaires
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
   });
@@ -25,6 +26,7 @@ export default function AccountPage() {
     wuFirstName: "", wuLastName: "", country: "", areaCode: "", phone: "",
   });
 
+  // Utilisation de useEffect pour charger les données côté client (indispensable dans Pages Router)
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -33,7 +35,6 @@ export default function AccountPage() {
           const parsed = JSON.parse(storedUser);
           setUser(parsed);
           
-          // On remplit les champs seulement si la donnée existe, sinon on garde vide
           setFormData({
             firstName: parsed.firstName || "",
             lastName: parsed.lastName || "",
@@ -54,10 +55,12 @@ export default function AccountPage() {
 
           if (!parsed.paymentMethod) setEditingPayment(true);
           
-          // Chargement des textes depuis GitHub
           if (parsed.email) {
             await fetchAuthorTexts(parsed.email, parsed.penName || parsed.name);
           }
+        } else {
+          // Si aucun utilisateur n'est connecté, redirection vers la page d'accueil ou login
+          router.push("/");
         }
       } catch (error) {
         console.error("Erreur de chargement LocalStorage:", error);
@@ -66,8 +69,10 @@ export default function AccountPage() {
       }
     };
 
-    loadData();
-  }, []);
+    if (router.isReady) {
+      loadData();
+    }
+  }, [router.isReady]);
 
   const fetchAuthorTexts = async (email, penName) => {
     if (!email) return;
@@ -75,12 +80,9 @@ export default function AccountPage() {
     const cleanPenName = penName ? penName.trim().toLowerCase() : "";
     
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
       if (!res.ok) return;
       const files = await res.json();
-      
       const jsonFiles = files.filter(f => f.name.endsWith('.json'));
       
       const textPromises = jsonFiles.map(file => 
@@ -89,7 +91,6 @@ export default function AccountPage() {
       
       const allTexts = await Promise.all(textPromises);
       
-      // Filtrage strict par email ou par nom d'auteur
       const filtered = allTexts.filter(t => {
         const tEmail = t.authorEmail ? t.authorEmail.trim().toLowerCase() : "";
         const tAuthor = t.author ? t.author.trim().toLowerCase() : "";
@@ -131,7 +132,7 @@ export default function AccountPage() {
 
   const saveAllToStaffRegistry = async () => {
     if (!formData.firstName || !formData.lastName) return toast.error("Prénom et Nom requis");
-    const loadingToast = toast.loading("Enregistrement en cours...");
+    const loadingToast = toast.loading("Mise à jour du registre...");
     
     const updatedUserData = {
       ...user,
@@ -158,26 +159,27 @@ export default function AccountPage() {
         body: JSON.stringify(updatedUserData),
       });
 
-      if (!res.ok) throw new Error("Erreur lors de la sauvegarde cloud");
+      if (!res.ok) throw new Error("Erreur de sauvegarde GitHub");
 
       localStorage.setItem("lisible_user", JSON.stringify(updatedUserData));
       setUser(updatedUserData);
       setEditingPayment(false);
-      toast.success("Profil mis à jour avec succès !", { id: loadingToast });
+      toast.success("Profil mis à jour !", { id: loadingToast });
     } catch (err) {
-      toast.error("Erreur : " + err.message, { id: loadingToast });
+      toast.error("Échec : " + err.message, { id: loadingToast });
     }
   };
 
   if (loading) return (
     <div className="flex flex-col justify-center items-center h-screen bg-white">
       <Loader2 className="animate-spin text-teal-600 mb-2" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronisation du bureau...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Accès au registre...</p>
     </div>
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-700">
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
+      {/* HEADER */}
       <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
            <div className="p-4 bg-teal-50 rounded-2xl text-teal-600">
@@ -188,9 +190,9 @@ export default function AccountPage() {
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Registre Officiel Lisible</p>
           </div>
         </div>
-        <Link href="/dashboard" className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
+        <button onClick={() => router.back()} className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
           <ArrowLeft size={24} />
-        </Link>
+        </button>
       </header>
 
       {user && <MetricsOverview user={user} />}
@@ -198,9 +200,9 @@ export default function AccountPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 space-y-8">
           
-          {/* SECTION : IDENTITÉ */}
+          {/* IDENTITÉ */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
-            <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800 uppercase text-[12px] tracking-widest">
+            <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
               <Edit3 className="text-teal-600" size={18} /> Profil Public & Civil
             </h2>
             
@@ -234,17 +236,17 @@ export default function AccountPage() {
             </div>
 
             <button onClick={saveAllToStaffRegistry} className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] hover:bg-teal-600 transition-all shadow-xl active:scale-[0.98]">
-              Mettre à jour le profil
+              Enregistrer les modifications
             </button>
           </div>
 
-          {/* SECTION : MES MANUSCRITS (TITRES CLIQUABLES) */}
+          {/* MES MANUSCRITS */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800 uppercase text-[12px] tracking-widest">
+              <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
                 <BookOpen className="text-teal-600" /> Mes Manuscrits ({myTexts.length})
               </h2>
-              <Link href="/publish" className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
+              <Link href="/publier" className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
                 <Plus size={16} /> Nouveau Manuscrit
               </Link>
             </div>
@@ -267,14 +269,14 @@ export default function AccountPage() {
                 </Link>
               )) : (
                 <div className="text-center py-16 text-slate-300 font-black uppercase text-[9px] tracking-[0.3em] border-2 border-dashed border-slate-100 rounded-[2rem]">
-                  Aucun manuscrit trouvé dans les archives
+                  Aucun manuscrit trouvé
                 </div>
               )}
             </div>
           </div>
         </section>
 
-        {/* SECTION : VERSEMENTS */}
+        {/* VERSEMENTS */}
         <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl h-fit sticky top-10 border border-white/5">
           <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
             <CreditCard size={24} /> Versements
@@ -296,7 +298,7 @@ export default function AccountPage() {
                 <input type="email" disabled={!editingPayment} value={payment.paypalEmail} onChange={e => setPayment({...payment, paypalEmail: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-5 text-sm font-bold text-teal-400 outline-none" placeholder="votre@email.com" />
               </div>
             ) : (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="space-y-4">
                 <InputBlockDark label="Prénom" value={payment.wuFirstName} onChange={v => setPayment({...payment, wuFirstName: v})} disabled={!editingPayment} />
                 <InputBlockDark label="Nom" value={payment.wuLastName} onChange={v => setPayment({...payment, wuLastName: v})} disabled={!editingPayment} />
                 <div className="grid grid-cols-2 gap-4">
@@ -327,7 +329,7 @@ export default function AccountPage() {
   );
 }
 
-// COMPOSANTS RÉUTILISABLES
+// COMPOSANTS RÉUTILISABLES INTERNES
 function InputBlock({ label, value, onChange, type = "text" }) {
   return (
     <div className="space-y-2">
