@@ -1,9 +1,11 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, BookOpen, Eye, Heart, Plus 
+  ShieldCheck, Loader2, BookOpen, Eye, Heart, Plus,
+  Lock, Trash2, AlertTriangle, RefreshCcw 
 } from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
 import Link from "next/link";
@@ -21,12 +23,15 @@ export default function AccountPage() {
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
   });
 
+  // États pour la Sécurité
+  const [passwords, setPasswords] = useState({ current: "", new: "" });
+  const [isChangingPass, setIsChangingPass] = useState(false);
+
   const [payment, setPayment] = useState({
     method: "PayPal", paypalEmail: "",
     wuFirstName: "", wuLastName: "", country: "", areaCode: "", phone: "",
   });
 
-  // Utilisation de useEffect pour charger les données côté client (indispensable dans Pages Router)
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -34,7 +39,6 @@ export default function AccountPage() {
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           setUser(parsed);
-          
           setFormData({
             firstName: parsed.firstName || "",
             lastName: parsed.lastName || "",
@@ -42,7 +46,6 @@ export default function AccountPage() {
             birthday: parsed.birthday || "",
             profilePic: parsed.profilePic || ""
           });
-
           setPayment({
             method: parsed.paymentMethod || "PayPal",
             paypalEmail: parsed.paypalEmail || "",
@@ -52,122 +55,98 @@ export default function AccountPage() {
             areaCode: parsed.wuMoneyGram?.areaCode || "",
             phone: parsed.wuMoneyGram?.phone || "",
           });
-
-          if (!parsed.paymentMethod) setEditingPayment(true);
-          
-          if (parsed.email) {
-            await fetchAuthorTexts(parsed.email, parsed.penName || parsed.name);
-          }
+          if (parsed.email) await fetchAuthorTexts(parsed.email, parsed.penName || parsed.name);
         } else {
-          // Si aucun utilisateur n'est connecté, redirection vers la page d'accueil ou login
           router.push("/");
         }
-      } catch (error) {
-        console.error("Erreur de chargement LocalStorage:", error);
-      } finally {
-        setLoading(false);
-      }
+      } catch (error) { console.error(error); } finally { setLoading(false); }
     };
-
-    if (router.isReady) {
-      loadData();
-    }
+    if (router.isReady) loadData();
   }, [router.isReady]);
 
+  // --- CHANGEMENT DE MOT DE PASSE ---
+  const handlePasswordChange = async () => {
+    if (!passwords.current || !passwords.new) return toast.error("Remplissez les deux champs");
+    setIsChangingPass(true);
+    try {
+      const res = await fetch("/api/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, currentPassword: passwords.current, newPassword: passwords.new }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Mot de passe mis à jour !");
+        setPasswords({ current: "", new: "" });
+      } else {
+        throw new Error(data.error || "Échec de la mise à jour");
+      }
+    } catch (e) { toast.error(e.message); } finally { setIsChangingPass(false); }
+  };
+
+  // --- SUPPRESSION DE COMPTE ---
+  const handleDeleteAccount = async () => {
+    const confirm = window.confirm("ATTENTION : Cette action est irréversible. Vos publications et votre compte seront effacés. Continuer ?");
+    if (!confirm) return;
+
+    const loadingToast = toast.loading("Suppression définitive...");
+    try {
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      if (res.ok) {
+        localStorage.clear();
+        toast.success("Compte supprimé", { id: loadingToast });
+        router.push("/");
+      } else { throw new Error(); }
+    } catch (e) { toast.error("Erreur lors de la suppression", { id: loadingToast }); }
+  };
+
   const fetchAuthorTexts = async (email, penName) => {
-    if (!email) return;
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPenName = penName ? penName.trim().toLowerCase() : "";
-    
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
       if (!res.ok) return;
       const files = await res.json();
-      const jsonFiles = files.filter(f => f.name.endsWith('.json'));
-      
-      const textPromises = jsonFiles.map(file => 
-        fetch(`${file.download_url}?t=${Date.now()}`).then(r => r.json())
-      );
-      
+      const textPromises = files.filter(f => f.name.endsWith('.json')).map(file => fetch(file.download_url).then(r => r.json()));
       const allTexts = await Promise.all(textPromises);
-      
-      const filtered = allTexts.filter(t => {
-        const tEmail = t.authorEmail ? t.authorEmail.trim().toLowerCase() : "";
-        const tAuthor = t.author ? t.author.trim().toLowerCase() : "";
-        return tEmail === cleanEmail || (cleanPenName && tAuthor === cleanPenName);
-      });
-      
+      const filtered = allTexts.filter(t => t.authorEmail?.toLowerCase() === email.toLowerCase());
       setMyTexts(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    } catch (e) {
-      console.error("Erreur chargement manuscrits:", e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return toast.error("Fichier trop lourd (max 5Mo)");
-
     setIsUploading(true);
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const img = new Image();
-      img.src = ev.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 400;
-        const scaleSize = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-        setFormData(prev => ({ ...prev, profilePic: compressedBase64 }));
-        setIsUploading(false);
-        toast.success("Photo prête à l'enregistrement");
-      };
+      setFormData(prev => ({ ...prev, profilePic: ev.target.result }));
+      setIsUploading(false);
+      toast.success("Photo prête");
     };
     reader.readAsDataURL(file);
   };
 
   const saveAllToStaffRegistry = async () => {
-    if (!formData.firstName || !formData.lastName) return toast.error("Prénom et Nom requis");
-    const loadingToast = toast.loading("Mise à jour du registre...");
-    
+    const loadingToast = toast.loading("Mise à jour...");
     const updatedUserData = {
-      ...user,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      penName: formData.penName,
-      birthday: formData.birthday,
-      profilePic: formData.profilePic,
-      paymentMethod: payment.method,
-      paypalEmail: payment.paypalEmail,
-      wuMoneyGram: {
-        firstName: payment.wuFirstName,
-        lastName: payment.wuLastName,
-        country: payment.country,
-        areaCode: payment.areaCode,
-        phone: payment.phone,
-      }
+      ...user, ...formData, paymentMethod: payment.method, paypalEmail: payment.paypalEmail,
+      wuMoneyGram: { ...payment }
     };
-
     try {
       const res = await fetch("/api/save-user-github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedUserData),
       });
-
-      if (!res.ok) throw new Error("Erreur de sauvegarde GitHub");
-
-      localStorage.setItem("lisible_user", JSON.stringify(updatedUserData));
-      setUser(updatedUserData);
-      setEditingPayment(false);
-      toast.success("Profil mis à jour !", { id: loadingToast });
-    } catch (err) {
-      toast.error("Échec : " + err.message, { id: loadingToast });
-    }
+      if (res.ok) {
+        localStorage.setItem("lisible_user", JSON.stringify(updatedUserData));
+        setUser(updatedUserData);
+        toast.success("Profil mis à jour !", { id: loadingToast });
+        setEditingPayment(false);
+      }
+    } catch (err) { toast.error("Échec", { id: loadingToast }); }
   };
 
   if (loading) return (
@@ -178,7 +157,7 @@ export default function AccountPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10">
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-500">
       {/* HEADER */}
       <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
@@ -240,6 +219,25 @@ export default function AccountPage() {
             </button>
           </div>
 
+          {/* SÉCURITÉ */}
+          <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-8">
+            <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
+              <Lock className="text-teal-600" size={18} /> Sécurité de l'accès
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-[2rem]">
+              <InputBlock label="Mot de passe actuel" type="password" value={passwords.current} onChange={v => setPasswords({...passwords, current: v})} />
+              <InputBlock label="Nouveau mot de passe" type="password" value={passwords.new} onChange={v => setPasswords({...passwords, new: v})} />
+            </div>
+            <button 
+              onClick={handlePasswordChange}
+              disabled={isChangingPass}
+              className="w-full py-4 border-2 border-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex justify-center items-center gap-2"
+            >
+              {isChangingPass ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />} 
+              Mettre à jour le mot de passe
+            </button>
+          </div>
+
           {/* MES MANUSCRITS */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
@@ -255,12 +253,8 @@ export default function AccountPage() {
               {myTexts.length > 0 ? myTexts.map((txt) => (
                 <Link href={`/texts/${txt.id}`} key={txt.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] hover:bg-white hover:shadow-lg transition-all border border-transparent hover:border-slate-100 group">
                   <div className="flex flex-col">
-                    <span className="text-lg font-black text-slate-900 group-hover:text-teal-600 transition-colors">
-                      {txt.title}
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                      Publié le {new Date(txt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </span>
+                    <span className="text-lg font-black text-slate-900 group-hover:text-teal-600 transition-colors">{txt.title}</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Publié le {new Date(txt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   </div>
                   <div className="flex gap-4 sm:gap-6 text-slate-400">
                     <div className="flex items-center gap-1.5"><Eye size={14}/> <span className="text-xs font-black text-slate-700">{txt.views || 0}</span></div>
@@ -268,11 +262,26 @@ export default function AccountPage() {
                   </div>
                 </Link>
               )) : (
-                <div className="text-center py-16 text-slate-300 font-black uppercase text-[9px] tracking-[0.3em] border-2 border-dashed border-slate-100 rounded-[2rem]">
-                  Aucun manuscrit trouvé
-                </div>
+                <div className="text-center py-16 text-slate-300 font-black uppercase text-[9px] tracking-[0.3em] border-2 border-dashed border-slate-100 rounded-[2rem]">Aucun manuscrit trouvé</div>
               )}
             </div>
+          </div>
+
+          {/* ZONE DANGEREUSE */}
+          <div className="bg-rose-50/30 rounded-[3rem] p-10 border-2 border-dashed border-rose-100 space-y-6">
+            <div className="flex items-center gap-4 text-rose-600">
+               <AlertTriangle size={32} />
+               <div>
+                 <h3 className="font-black italic text-xl uppercase tracking-tighter leading-none">Zone de Danger</h3>
+                 <p className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-70">Action Irréversible</p>
+               </div>
+            </div>
+            <button 
+              onClick={handleDeleteAccount}
+              className="flex items-center gap-2 px-8 py-4 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg"
+            >
+              <Trash2 size={16} /> Supprimer mon compte
+            </button>
           </div>
         </section>
 
@@ -310,18 +319,13 @@ export default function AccountPage() {
             
             <div className="pt-6">
               {editingPayment ? (
-                <button onClick={saveAllToStaffRegistry} className="w-full py-5 bg-teal-500 text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-teal-500/20 active:scale-95 transition-all">
-                  Confirmer les données
-                </button>
+                <button onClick={saveAllToStaffRegistry} className="w-full py-5 bg-teal-500 text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Confirmer</button>
               ) : (
                 <button onClick={() => setEditingPayment(true)} className="w-full py-5 bg-slate-800 text-teal-400 rounded-xl font-black text-[10px] uppercase border border-slate-700 flex items-center justify-center gap-2 hover:bg-slate-700 transition-all">
-                  <Edit3 size={16} /> Modifier les coordonnées
+                  <Edit3 size={16} /> Modifier
                 </button>
               )}
             </div>
-            <p className="text-[8px] text-slate-500 font-bold leading-relaxed text-center mt-4 uppercase tracking-tighter">
-              Les transferts sont effectués entre le 1er et le 5 de chaque mois.
-            </p>
           </div>
         </section>
       </div>
@@ -329,17 +333,12 @@ export default function AccountPage() {
   );
 }
 
-// COMPOSANTS RÉUTILISABLES INTERNES
+// COMPOSANTS RÉUTILISABLES
 function InputBlock({ label, value, onChange, type = "text" }) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">{label}</label>
-      <input 
-        type={type} 
-        value={value} 
-        onChange={e => onChange(e.target.value)} 
-        className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all text-slate-700 shadow-sm" 
-      />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all text-slate-700 shadow-sm" />
     </div>
   );
 }
@@ -348,12 +347,7 @@ function InputBlockDark({ label, value, onChange, disabled }) {
   return (
     <div className="space-y-2">
       <label className="text-[9px] font-black text-slate-500 uppercase ml-2 tracking-widest">{label}</label>
-      <input 
-        disabled={disabled}
-        value={value} 
-        onChange={e => onChange(e.target.value)} 
-        className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-bold text-white outline-none focus:border-teal-500 transition-all disabled:opacity-50" 
-      />
+      <input disabled={disabled} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-bold text-white outline-none focus:border-teal-500 transition-all disabled:opacity-50" />
     </div>
   );
 }
