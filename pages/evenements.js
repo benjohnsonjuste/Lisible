@@ -40,7 +40,7 @@ export default function EvenementsPage() {
                   Battle Poétique <br />International
                 </h2>
                 <p className="text-slate-500 leading-relaxed font-medium">
-                  L'arène est ouverte. Publiez vos plus beaux vers et tentez de conquérir le cœur de la bibliothèque Lisible.
+                  L'arène est ouverte. Publiez vos plus beaux vers et tentez de conquérir le cœur du monde littéraire.
                 </p>
               </div>
 
@@ -68,7 +68,7 @@ export default function EvenementsPage() {
                   Terminé
                 </div>
                 <h2 className="text-4xl font-black italic tracking-tighter text-slate-400">
-                  Foire Littéraire <br />Anuelle
+                  Foire Littéraire <br />Annuelle
                 </h2>
                 <p className="text-slate-400 leading-relaxed font-medium">
                   La foire a fermé ses portes. Merci à tous les exposants et visiteurs pour cette édition mémorable.
@@ -77,7 +77,7 @@ export default function EvenementsPage() {
             </div>
 
             <div className="mt-8 pt-8 border-t border-slate-200">
-               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Prochaine édition : Janvier 2027</p>
+               <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Prochaine édition : Décembre 2026</p>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function EvenementsPage() {
 
       <footer className="text-center pt-10">
         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">
-          Lisible • Battle Poétique International 2026
+          Lisible • Événements 2026
         </p>
       </footer>
     </div>
