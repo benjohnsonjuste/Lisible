@@ -55,7 +55,7 @@ export default function Footer() {
                 Conditions
               </Link>
               <div className="w-1 h-1 bg-slate-200 rounded-full" />
-              <Link href="/privacy" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+              <Link href="/confidentialite" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
                 Confidentialité
               </Link>
             </div>
