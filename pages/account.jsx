@@ -15,6 +15,7 @@ export default function AccountPage() {
   const [editingPayment, setEditingPayment] = useState(false);
   const [myTexts, setMyTexts] = useState([]);
 
+  // États pour les formulaires (Initialisés vides pour éviter les sauts de données)
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
   });
@@ -26,37 +27,43 @@ export default function AccountPage() {
 
   useEffect(() => {
     const loadData = async () => {
-      const storedUser = localStorage.getItem("lisible_user");
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-        
-        setFormData({
-          firstName: parsed.firstName || "",
-          lastName: parsed.lastName || "",
-          penName: parsed.penName || parsed.name || "",
-          birthday: parsed.birthday || "",
-          profilePic: parsed.profilePic || ""
-        });
+      try {
+        const storedUser = localStorage.getItem("lisible_user");
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          setUser(parsed);
+          
+          // On remplit les champs seulement si la donnée existe, sinon on garde vide
+          setFormData({
+            firstName: parsed.firstName || "",
+            lastName: parsed.lastName || "",
+            penName: parsed.penName || parsed.name || "",
+            birthday: parsed.birthday || "",
+            profilePic: parsed.profilePic || ""
+          });
 
-        setPayment({
-          method: parsed.paymentMethod || "PayPal",
-          paypalEmail: parsed.paypalEmail || "",
-          wuFirstName: parsed.wuMoneyGram?.firstName || "",
-          wuLastName: parsed.wuMoneyGram?.lastName || "",
-          country: parsed.wuMoneyGram?.country || "",
-          areaCode: parsed.wuMoneyGram?.areaCode || "",
-          phone: parsed.wuMoneyGram?.phone || "",
-        });
+          setPayment({
+            method: parsed.paymentMethod || "PayPal",
+            paypalEmail: parsed.paypalEmail || "",
+            wuFirstName: parsed.wuMoneyGram?.firstName || "",
+            wuLastName: parsed.wuMoneyGram?.lastName || "",
+            country: parsed.wuMoneyGram?.country || "",
+            areaCode: parsed.wuMoneyGram?.areaCode || "",
+            phone: parsed.wuMoneyGram?.phone || "",
+          });
 
-        if (!parsed.paymentMethod) setEditingPayment(true);
-        
-        // Recherche des textes de l'auteur
-        if (parsed.email) {
-          fetchAuthorTexts(parsed.email, parsed.penName || parsed.name);
+          if (!parsed.paymentMethod) setEditingPayment(true);
+          
+          // Chargement des textes depuis GitHub
+          if (parsed.email) {
+            await fetchAuthorTexts(parsed.email, parsed.penName || parsed.name);
+          }
         }
+      } catch (error) {
+        console.error("Erreur de chargement LocalStorage:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     loadData();
@@ -65,9 +72,9 @@ export default function AccountPage() {
   const fetchAuthorTexts = async (email, penName) => {
     if (!email) return;
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPenName = penName ? penName.trim().toLowerCase() : "";
     
     try {
-      // Bypass cache GitHub
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`, {
         headers: { 'Cache-Control': 'no-cache' }
       });
@@ -82,11 +89,11 @@ export default function AccountPage() {
       
       const allTexts = await Promise.all(textPromises);
       
-      // Filtrage par email (prioritaire) ou par Nom de plume (secours)
+      // Filtrage strict par email ou par nom d'auteur
       const filtered = allTexts.filter(t => {
-        const authorEmailMatch = t.authorEmail && t.authorEmail.trim().toLowerCase() === cleanEmail;
-        const authorNameMatch = t.author && penName && t.author.trim().toLowerCase() === penName.trim().toLowerCase();
-        return authorEmailMatch || authorNameMatch;
+        const tEmail = t.authorEmail ? t.authorEmail.trim().toLowerCase() : "";
+        const tAuthor = t.author ? t.author.trim().toLowerCase() : "";
+        return tEmail === cleanEmail || (cleanPenName && tAuthor === cleanPenName);
       });
       
       setMyTexts(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
@@ -124,7 +131,7 @@ export default function AccountPage() {
 
   const saveAllToStaffRegistry = async () => {
     if (!formData.firstName || !formData.lastName) return toast.error("Prénom et Nom requis");
-    const loadingToast = toast.loading("Mise à jour du registre...");
+    const loadingToast = toast.loading("Enregistrement en cours...");
     
     const updatedUserData = {
       ...user,
@@ -151,7 +158,7 @@ export default function AccountPage() {
         body: JSON.stringify(updatedUserData),
       });
 
-      if (!res.ok) throw new Error("Échec de la synchronisation cloud");
+      if (!res.ok) throw new Error("Erreur lors de la sauvegarde cloud");
 
       localStorage.setItem("lisible_user", JSON.stringify(updatedUserData));
       setUser(updatedUserData);
@@ -191,7 +198,7 @@ export default function AccountPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 space-y-8">
           
-          {/* IDENTITÉ */}
+          {/* SECTION : IDENTITÉ */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
             <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800 uppercase text-[12px] tracking-widest">
               <Edit3 className="text-teal-600" size={18} /> Profil Public & Civil
@@ -231,7 +238,7 @@ export default function AccountPage() {
             </button>
           </div>
 
-          {/* MANUSCRITS */}
+          {/* SECTION : MES MANUSCRITS (TITRES CLIQUABLES) */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <h2 className="text-xl font-black flex items-center gap-3 italic text-slate-800 uppercase text-[12px] tracking-widest">
@@ -246,8 +253,10 @@ export default function AccountPage() {
               {myTexts.length > 0 ? myTexts.map((txt) => (
                 <Link href={`/texts/${txt.id}`} key={txt.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] hover:bg-white hover:shadow-lg transition-all border border-transparent hover:border-slate-100 group">
                   <div className="flex flex-col">
-                    <span className="font-black text-slate-900 group-hover:text-teal-600 transition-colors">{txt.title}</span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                    <span className="text-lg font-black text-slate-900 group-hover:text-teal-600 transition-colors">
+                      {txt.title}
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                       Publié le {new Date(txt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </span>
                   </div>
@@ -265,7 +274,7 @@ export default function AccountPage() {
           </div>
         </section>
 
-        {/* VERSEMENTS */}
+        {/* SECTION : VERSEMENTS */}
         <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl h-fit sticky top-10 border border-white/5">
           <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
             <CreditCard size={24} /> Versements
@@ -318,6 +327,7 @@ export default function AccountPage() {
   );
 }
 
+// COMPOSANTS RÉUTILISABLES
 function InputBlock({ label, value, onChange, type = "text" }) {
   return (
     <div className="space-y-2">
