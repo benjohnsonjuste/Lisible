@@ -12,13 +12,13 @@ export default async function handler(req, res) {
 
   // --- 1. CRÉATION D'UN TEXTE ---
   if (req.method === "POST") {
-    const { title, content, authorName, authorEmail, imageBase64, date } = req.body;
+    // AJOUT DE isConcours DANS LA DÉSTRUCTURATION
+    const { title, content, authorName, authorEmail, imageBase64, date, isConcours } = req.body;
     
     const timestamp = Date.now();
-    // Création d'un slug propre pour le nom du fichier
     const slug = title
       .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Enlève les accents
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
     
@@ -30,9 +30,11 @@ export default async function handler(req, res) {
       title, 
       content, 
       authorName, 
-      authorEmail, // Important pour les futures notifications
+      authorEmail, 
       date: date || new Date().toISOString(), 
       imageBase64: imageBase64 || null, 
+      // AJOUT DU CHAMP DANS L'OBJET FINAL
+      isConcours: isConcours || false, 
       views: 0, 
       likes: [], 
       comments: [] 
@@ -46,7 +48,7 @@ export default async function handler(req, res) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          message: `📚 Nouveau texte : ${title}`,
+          message: `📚 Nouveau texte : ${title}${isConcours ? ' (Concours)' : ''}`,
           content: Buffer.from(JSON.stringify(textData, null, 2)).toString("base64"),
           branch
         }),
@@ -69,7 +71,6 @@ export default async function handler(req, res) {
     const path = `data/publications/${id}.json`;
 
     try {
-      // Récupérer le fichier actuel avec le SHA (obligatoire pour PUT update)
       const getFile = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
@@ -78,10 +79,8 @@ export default async function handler(req, res) {
       if (!getFile.ok) return res.status(404).json({ error: "Texte introuvable" });
 
       const fileInfo = await getFile.json();
-      // Décodage UTF-8 sécurisé
       let data = JSON.parse(Buffer.from(fileInfo.content, "base64").toString("utf-8"));
 
-      // Logique des actions
       if (action === "view") {
         data.views = (data.views || 0) + 1;
       }
@@ -102,7 +101,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // Renvoyer le fichier modifié vers GitHub
       const updateResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         method: "PUT",
         headers: { 
@@ -112,7 +110,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           message: `✨ interaction : ${action} sur ${data.title}`,
           content: Buffer.from(JSON.stringify(data, null, 2)).toString("base64"),
-          sha: fileInfo.sha, // Très important pour la mise à jour
+          sha: fileInfo.sha,
           branch
         }),
       });
