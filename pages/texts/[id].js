@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
-import { Heart, ArrowLeft, Eye, Loader2, MessageSquare, Send, Sparkles, Share2, BookOpen, Trophy } from "lucide-react";
+import { Heart, ArrowLeft, Eye, Loader2, MessageSquare, Send, Sparkles, Share2, BookOpen, Trophy, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { InTextAd } from "@/components/InTextAd";
 
@@ -12,69 +12,78 @@ export default function TextPage() {
 
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState(null);
 
-  // --- FONCTION DE PARTAGE UNIVERSEL (TOUT INTERNET) ---
+  // --- FONCTION DE PARTAGE UNIVERSEL ---
   const handleGlobalShare = async () => {
     const shareData = {
       title: text?.title || "Lisible",
-      text: `Découvrez "${text?.title}" par ${text?.authorName} sur Lisible.`,
+      text: `Lisez "${text?.title}" de ${text?.authorName} sur Lisible.`,
       url: window.location.href,
     };
-
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
+      if (navigator.share) await navigator.share(shareData);
+      else {
         await navigator.clipboard.writeText(window.location.href);
-        toast.success("Lien copié ! Partagez-le sur vos réseaux.");
+        toast.success("Lien copié !");
       }
     } catch (err) {
       if (err.name !== "AbortError") toast.error("Erreur de partage");
     }
   };
 
-  const fetchData = useCallback(async (id) => {
+  // --- RÉCUPÉRATION DES DONNÉES (AUTO-UPDATE) ---
+  const fetchData = useCallback(async (id, silent = false) => {
+    if (!silent) setLoading(true);
+    else setIsRefreshing(true);
+
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${id}.json?t=${Date.now()}`);
-      if (!res.ok) throw new Error("Manuscrit introuvable");
+      if (!res.ok) throw new Error("Introuvable");
       
       const fileData = await res.json();
-      // Décodage Base64 robuste (UTF-8)
       const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
       setText(content);
 
-      // Gestion des vues
-      const viewKey = `v_u_${id}`;
-      if (!localStorage.getItem(viewKey)) {
-        await fetch("/api/texts", { 
-          method: "PATCH", 
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ id: id, action: "view" }) 
-        });
-        localStorage.setItem(viewKey, "true");
-        setText(prev => (prev ? { ...prev, views: (prev.views || 0) + 1 } : null));
+      // Incrémentation vue (uniquement au premier chargement réel)
+      if (!silent) {
+        const viewKey = `v_u_${id}`;
+        if (!localStorage.getItem(viewKey)) {
+          await fetch("/api/texts", { 
+            method: "PATCH", 
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ id: id, action: "view" }) 
+          });
+          localStorage.setItem(viewKey, "true");
+        }
       }
     } catch (e) {
-      console.error(e);
-      toast.error("Erreur de chargement");
+      if (!silent) toast.error("Erreur de chargement");
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
+  // Cycle de vie : Chargement et Intervalle de mise à jour
   useEffect(() => { 
     if (router.isReady && textId) {
       const logged = localStorage.getItem("lisible_user");
       if (logged) setUser(JSON.parse(logged));
-      fetchData(textId); 
+      
+      fetchData(textId);
+
+      // Mise à jour automatique toutes les 30 secondes pour les likes/commentaires
+      const interval = setInterval(() => fetchData(textId, true), 30000);
+      return () => clearInterval(interval);
     }
   }, [router.isReady, textId, fetchData]);
 
   const handleLike = async () => {
-    if (!user) return toast.error("Connectez-vous pour aimer cette œuvre");
+    if (!user) return toast.error("Connectez-vous pour aimer");
     try {
       const res = await fetch("/api/texts", {
         method: "PATCH",
@@ -105,7 +114,7 @@ export default function TextPage() {
         const updated = await res.json();
         setText(updated);
         setNewComment("");
-        toast.success("Commentaire publié !");
+        toast.success("Publié !");
       }
     } catch (e) { toast.error("Échec"); } finally { setIsSubmitting(false); }
   };
@@ -125,21 +134,22 @@ export default function TextPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 pb-24 space-y-16 animate-in fade-in duration-1000">
       
-      {/* HEADER : RETOUR ET ACCÈS BIBLIOTHÈQUE */}
       <header className="pt-12 flex justify-between items-center">
         <button onClick={() => router.back()} className="group text-slate-400 font-black text-[10px] uppercase flex items-center gap-2 tracking-[0.2em] hover:text-teal-600 transition-all">
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform"/> Retour
         </button>
         
-        <Link href="/bibliotheque" className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-teal-600 transition-all shadow-xl shadow-slate-900/20">
-           <BookOpen size={14}/> Bibliothèque
-        </Link>
+        <div className="flex items-center gap-4">
+          {isRefreshing && <RefreshCcw size={14} className="animate-spin text-teal-600/50" />}
+          <Link href="/bibliotheque" className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-teal-600 transition-all shadow-xl shadow-slate-900/20">
+             <BookOpen size={14}/> Bibliothèque
+          </Link>
+        </div>
       </header>
       
       <article className="bg-white rounded-[4rem] p-10 md:p-20 shadow-2xl border border-slate-50 relative overflow-hidden">
-        {/* BADGE CONCOURS SI APPLICABLE */}
         {isConcours && (
-          <div className="mb-8 inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-pulse border border-teal-400 shadow-lg shadow-teal-500/20">
+          <div className="mb-8 inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-pulse shadow-lg shadow-teal-500/20">
             <Trophy size={16} /> Battle Poétique International
           </div>
         )}
@@ -159,7 +169,6 @@ export default function TextPage() {
           ))}
         </div>
 
-        {/* BARRE D'ACTIONS : VUES, LIKES ET PARTAGE */}
         <div className="pt-10 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100/50">
@@ -175,10 +184,9 @@ export default function TextPage() {
               <span className="font-black text-xs">{text.likes?.length || 0}</span>
             </button>
 
-            {/* BOUTON PARTAGE GLOBAL */}
             <button 
               onClick={handleGlobalShare}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-teal-50 text-teal-700 border border-teal-100 hover:bg-teal-600 hover:text-white transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-teal-50 text-teal-700 border border-teal-100 hover:bg-teal-600 hover:text-white transition-all active:scale-95"
             >
               <Share2 size={18} />
               <span className="font-black text-[10px] uppercase tracking-widest">Partager</span>
@@ -189,14 +197,13 @@ export default function TextPage() {
              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">
                 {isConcours ? "ID Concurrent" : "Auteur"}
              </p>
-             <div className="text-teal-600 font-black italic text-2xl">
+             <div className="text-teal-600 font-black italic text-2xl uppercase tracking-tighter">
                @{text.authorName}
              </div>
           </div>
         </div>
       </article>
 
-      {/* SECTION DES COMMENTAIRES */}
       <section className="space-y-10 max-w-3xl mx-auto">
         <h2 className="text-3xl font-black italic flex items-center gap-4 text-slate-900">
           <MessageSquare className="text-teal-500" size={28} /> Échanges 
@@ -207,8 +214,8 @@ export default function TextPage() {
               <textarea 
                 value={newComment} 
                 onChange={(e)=>setNewComment(e.target.value)} 
-                className="w-full bg-slate-50 rounded-[2rem] p-8 min-h-[160px] outline-none border border-slate-100 focus:bg-white transition-all text-slate-700" 
-                placeholder="Laissez une trace de votre lecture..." 
+                className="w-full bg-slate-50 rounded-[2rem] p-8 min-h-[160px] outline-none border border-slate-100 focus:bg-white transition-all text-slate-700 font-medium" 
+                placeholder="Votre ressenti..." 
               />
               <div className="flex justify-end">
                 <button 
@@ -216,13 +223,13 @@ export default function TextPage() {
                   disabled={isSubmitting || !newComment.trim()} 
                   className="bg-slate-900 text-white px-12 py-6 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex items-center gap-3 shadow-xl"
                 >
-                  {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <Send size={16}/>} Publier
+                  {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <Send size={16}/>} Envoyer
                 </button>
               </div>
             </div>
           ) : (
             <div className="text-center py-6">
-              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Connectez-vous pour commenter</p>
+              <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Connectez-vous pour rejoindre la discussion</p>
             </div>
           )}
         </div>
@@ -241,6 +248,10 @@ export default function TextPage() {
           ))}
         </div>
       </section>
+
+      <footer className="text-center pt-20">
+        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Lisible • Expérience Interactive</p>
+      </footer>
     </div>
   );
 }
