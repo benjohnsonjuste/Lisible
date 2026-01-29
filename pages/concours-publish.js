@@ -140,7 +140,7 @@ export default function ConcoursPublishPage() {
           {isBattlePoetic && (
             <div className="animate-in slide-in-from-top-4 duration-300">
               <label className="text-[10px] font-black uppercase tracking-widest text-teal-600 ml-5 mb-2 block">
-                ID Concurrent Lisible
+                ID Concurrent
               </label>
               <div className="relative">
                 <Hash className={`absolute left-6 top-1/2 -translate-y-1/2 transition-colors ${validateConcurrentId(concurrentId) ? 'text-teal-600' : 'text-slate-300'}`} size={20} />
@@ -166,7 +166,7 @@ export default function ConcoursPublishPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic outline-none focus:border-teal-200 focus:bg-white font-bold transition-all"
-              placeholder="Saisissez un titre percutant..."
+              placeholder="Saisissez le titre"
               required
             />
           </div>
@@ -192,7 +192,7 @@ export default function ConcoursPublishPage() {
             {loading ? <Loader2 className="animate-spin" size={20} /> : (
               <>
                 <Send size={18} />
-                Envoyer au Jury
+                Concourir
               </>
             )}
           </button>
