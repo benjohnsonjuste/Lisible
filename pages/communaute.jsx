@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, 
-  ArrowRight, TrendingUp, Crown, Loader2 
+  ArrowRight, TrendingUp, Crown, Loader2, ShieldCheck 
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -112,6 +112,8 @@ export default function UsersPage() {
           const isSubscribed = a.subscribers?.includes(currentUser?.email);
           const isMe = a.email === currentUser?.email;
           const isNumberOne = index === 0 && subscribersCount > 0;
+          // Détection du compte Staff
+          const isStaff = a.penName === "Lisible Support Team" || a.name === "Lisible Support Team";
           const progress = Math.min((subscribersCount / 250) * 100, 100); // Objectif 250 abonnés
 
           return (
@@ -121,6 +123,14 @@ export default function UsersPage() {
                 <div className="absolute -top-4 left-10 bg-amber-400 text-slate-900 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-bounce">
                   <Crown size={14} fill="currentColor" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Plume du Mois</span>
+                </div>
+              )}
+
+              {/* Badge Staff Officiel */}
+              {isStaff && (
+                <div className="absolute -top-4 left-10 bg-slate-900 text-teal-400 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-bounce">
+                  <ShieldCheck size={14} fill="currentColor" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Staff Officiel</span>
                 </div>
               )}
 
@@ -165,7 +175,7 @@ export default function UsersPage() {
                 </div>
                 <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                   <div 
-                    className={`h-full transition-all duration-1000 ${isNumberOne ? 'bg-amber-400' : 'bg-teal-500'}`} 
+                    className={`h-full transition-all duration-1000 ${isNumberOne ? 'bg-amber-400' : isStaff ? 'bg-slate-900' : 'bg-teal-500'}`} 
                     style={{ width: `${progress}%` }} 
                   />
                 </div>
