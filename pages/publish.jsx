@@ -1,8 +1,8 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ImageIcon, Send, ArrowLeft, FileText, Sparkles, Loader2, Trash2 } from "lucide-react"; 
+import { FileText, Send, ArrowLeft, Loader2, Trash2 } from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -71,8 +71,11 @@ export default function PublishPage() {
       });
 
       if (!res.ok) throw new Error("Erreur serveur");
+      
+      const data = await res.json();
+      const generatedId = data.id; // L'ID renvoyé par votre API
 
-      // 2. ENVOI DE LA NOTIFICATION GLOBALE (ADAPTATION)
+      // 2. ENVOI DE LA NOTIFICATION AVEC LE LIEN EXACT
       await fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,7 +83,7 @@ export default function PublishPage() {
           type: "new_text", 
           message: `📖 Nouveau manuscrit : "${title.trim()}" par ${user.penName || user.name}`,
           targetEmail: "all",
-          link: `/bibliotheque` 
+          link: `/texts/${generatedId}` // Redirection vers le texte précis
         })
       });
 
@@ -88,7 +91,7 @@ export default function PublishPage() {
       localStorage.removeItem("draft_content");
 
       toast.success("Œuvre diffusée avec succès !", { id: loadingToast });
-      router.push("/bibliotheque");
+      router.push(`/texts/${generatedId}`);
       
     } catch (err) {
       toast.error("Échec de la publication.", { id: loadingToast });
