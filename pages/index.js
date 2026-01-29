@@ -37,7 +37,7 @@ export default function Home() {
           <h2 className="text-2xl font-black text-slate-900 italic">Pour les Lecteurs</h2>
           <p className="text-slate-500 font-medium leading-relaxed">
             Accédez sans frais à un catalogue varié et soutenez la littérature de demain. 
-            Évadez-vous à travers des récits qui stimulent l'imaginaire et enrichissent votre vocabulaire.
+            Évadez-vous à travers des textes qui stimulent l'imaginaire et enrichissent votre vocabulaire.
           </p>
           <Link href="/bibliotheque" className="btn-lisible w-full justify-between">
             EXPLORER LA BIBLIOTHÈQUE <ArrowRight size={18} />
@@ -64,7 +64,7 @@ export default function Home() {
       <section className="card-lisible border-none bg-teal-50 p-10 text-center space-y-6">
         <h3 className="text-[10px] font-black text-teal-600 uppercase tracking-[0.4em]">À Propos du Label</h3>
         <p className="text-slate-700 text-lg font-serif italic max-w-2xl mx-auto leading-relaxed">
-          "Fondé par <span className="font-black text-slate-900 not-italic">Ben Johnson Juste</span>, ce label accompagne et valorise les jeunes plumes à travers des publications et des événements culturels majeurs en Haïti."
+          "Fondé par <span className="font-black text-slate-900 not-italic">Ben Johnson Juste</span>, ce label accompagne et valorise les jeunes plumes à travers des publications et des événements culturels majeurs à l'échelle internationale."
         </p>
         <div className="flex justify-center gap-6 pt-4">
           <div className="text-center">
