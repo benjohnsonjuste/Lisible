@@ -1,5 +1,13 @@
 [
   {
+    "id": "notif-1769712902671-om6mth50u",
+    "type": "concours",
+    "message": "🏆 Nouveau candidat au Battle Poétique : \"Bonjour\" par Lisible Support Team",
+    "targetEmail": "all",
+    "link": "/texts/1769712901713-bonjour",
+    "date": "2026-01-29T18:55:02.671Z"
+  },
+  {
     "id": "notif-1769660872958-u3doxt9yx",
     "type": "new_text",
     "message": "📖 Nouveau manuscrit : \"Battle Poétique International\" par Lisible Support Team",
