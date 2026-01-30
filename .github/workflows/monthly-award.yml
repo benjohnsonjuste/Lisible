@@ -1,0 +1,24 @@
+name: Update Monthly Badge
+on:
+  schedule:
+    - cron: '0 0 1 * *' # 1er du mois à minuit
+  workflow_dispatch: # Permet de cliquer sur un bouton pour tester
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Calculate
+        run: node scripts/calculate-winner.js
+      - name: Commit and Push
+        run: |
+          git config --global user.name "Lisible Bot"
+          git config --global user.email "bot@lisible.com"
+          git add data/awards/winner.json
+          git commit -m "🏆 Mise à jour de la Plume du Mois" || exit 0
+          git push
