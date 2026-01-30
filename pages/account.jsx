@@ -244,7 +244,7 @@ export default function AccountPage() {
               <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
                 <BookOpen className="text-teal-600" /> Mes Manuscrits ({myTexts.length})
               </h2>
-              <Link href="/publier" className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
+              <Link href="/publish" className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
                 <Plus size={16} /> Nouveau Manuscrit
               </Link>
             </div>
