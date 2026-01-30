@@ -66,7 +66,6 @@ export default function UsersPage() {
 
       if (!res.ok) throw new Error();
 
-      // ENVOI DE LA NOTIFICATION PUSHER/GITHUB
       if (!isSubscribed) {
         await fetch("/api/create-notif", {
           method: "POST",
@@ -81,7 +80,7 @@ export default function UsersPage() {
       }
       
       toast.success(isSubscribed ? "Abonnement retiré" : "Vous suivez cet auteur !", { id: loadingToast });
-      loadUsers(); // Recharger la liste pour mettre à jour les compteurs
+      loadUsers();
     } catch (e) { 
       toast.error("Erreur lors de l'opération", { id: loadingToast }); 
     }
@@ -112,9 +111,8 @@ export default function UsersPage() {
           const isSubscribed = a.subscribers?.includes(currentUser?.email);
           const isMe = a.email === currentUser?.email;
           const isNumberOne = index === 0 && subscribersCount > 0;
-          // Détection du compte Staff
           const isStaff = a.penName === "Lisible Support Team" || a.name === "Lisible Support Team";
-          const progress = Math.min((subscribersCount / 250) * 100, 100); // Objectif 250 abonnés
+          const progress = Math.min((subscribersCount / 250) * 100, 100);
 
           return (
             <div key={index} className={`relative bg-white rounded-[3.5rem] p-10 border transition-all duration-500 hover:shadow-2xl ${isNumberOne ? 'ring-4 ring-amber-100 border-amber-200' : 'border-slate-100 shadow-xl shadow-slate-100/50'}`}>
@@ -126,7 +124,6 @@ export default function UsersPage() {
                 </div>
               )}
 
-              {/* Badge Staff Officiel */}
               {isStaff && (
                 <div className="absolute -top-4 left-10 bg-slate-900 text-teal-400 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-bounce">
                   <ShieldCheck size={14} fill="currentColor" />
@@ -136,7 +133,7 @@ export default function UsersPage() {
 
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-6">
-                  {/* MODIFICATION ICI : rounded-[2.5rem] -> rounded-full */}
+                  {/* CERCLE PARFAIT APPLIQUÉ ICI */}
                   <div className="w-24 h-24 bg-slate-50 rounded-full overflow-hidden border-4 border-white shadow-lg flex items-center justify-center text-4xl font-black text-teal-600 italic">
                     {a.profilePic ? (
                       <img src={a.profilePic} className="w-full h-full object-cover" alt="" />
@@ -168,7 +165,6 @@ export default function UsersPage() {
                 )}
               </div>
 
-              {/* Barre de progression de notoriété */}
               <div className="mt-10 space-y-2">
                 <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-slate-300">
                   <span>Influence</span>
@@ -176,7 +172,7 @@ export default function UsersPage() {
                 </div>
                 <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                   <div 
-                    className={`h-full transition-all duration-1000 ${isNumberOne ? 'bg-amber-400' : isStaff ? 'bg-slate-900' : 'bg-teal-500'}`} 
+                    className={`h-full transition-all duration-1000 ${isNumberOne ? 'bg-amber-400' : isStaff ? 'bg-slate-900' : 'bg-teal-50'}`} 
                     style={{ width: `${progress}%` }} 
                   />
                 </div>
