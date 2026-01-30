@@ -177,7 +177,7 @@ export default function NotificationsPage() {
       </div>
       
       <footer className="mt-20 text-center opacity-30">
-          <p className="text-[8px] font-black uppercase tracking-[0.5em]">Lisible Core v3.0</p>
+          <p className="text-[8px] font-black uppercase tracking-[0.5em]">Vivez le futur dès aujourd'hui avec Lisible</p>
       </footer>
     </div>
   );
