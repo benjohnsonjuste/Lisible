@@ -136,7 +136,8 @@ export default function UsersPage() {
 
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-lg flex items-center justify-center text-4xl font-black text-teal-600 italic">
+                  {/* MODIFICATION ICI : rounded-[2.5rem] -> rounded-full */}
+                  <div className="w-24 h-24 bg-slate-50 rounded-full overflow-hidden border-4 border-white shadow-lg flex items-center justify-center text-4xl font-black text-teal-600 italic">
                     {a.profilePic ? (
                       <img src={a.profilePic} className="w-full h-full object-cover" alt="" />
                     ) : (
