@@ -12,7 +12,6 @@ export default async function handler(req, res) {
 
   // --- 1. CRÉATION D'UN TEXTE ---
   if (req.method === "POST") {
-    // AJOUT DE isConcours DANS LA DÉSTRUCTURATION
     const { title, content, authorName, authorEmail, imageBase64, date, isConcours } = req.body;
     
     const timestamp = Date.now();
@@ -33,9 +32,9 @@ export default async function handler(req, res) {
       authorEmail, 
       date: date || new Date().toISOString(), 
       imageBase64: imageBase64 || null, 
-      // AJOUT DU CHAMP DANS L'OBJET FINAL
       isConcours: isConcours || false, 
       views: 0, 
+      certifiedReads: 0, // INITIALISATION DU COMPTEUR DE LECTURES CERTIFIÉES
       likes: [], 
       comments: [] 
     };
@@ -65,7 +64,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // --- 2. MODIFICATION (Vues, Likes, Commentaires) ---
+  // --- 2. MODIFICATION (Vues, Likes, Commentaires, LECTURES CERTIFIÉES) ---
   if (req.method === "PATCH") {
     const { id, action, payload } = req.body;
     const path = `data/publications/${id}.json`;
@@ -81,24 +80,34 @@ export default async function handler(req, res) {
       const fileInfo = await getFile.json();
       let data = JSON.parse(Buffer.from(fileInfo.content, "base64").toString("utf-8"));
 
-      if (action === "view") {
-        data.views = (data.views || 0) + 1;
-      }
-      
-      if (action === "like") {
-        if (!data.likes) data.likes = [];
-        data.likes = data.likes.includes(payload.email) 
-          ? data.likes.filter(e => e !== payload.email) 
-          : [...data.likes, payload.email];
-      }
-      
-      if (action === "comment") {
-        if (!data.comments) data.comments = [];
-        data.comments.push({ 
-          userName: payload.userName, 
-          text: payload.text, 
-          date: new Date().toISOString() 
-        });
+      // LOGIQUE DE MISE À JOUR SELON L'ACTION
+      switch (action) {
+        case "view":
+          data.views = (data.views || 0) + 1;
+          break;
+        
+        case "certify": // NOUVELLE ACTION POUR LE SCEAU DE CIRE
+          data.certifiedReads = (data.certifiedReads || 0) + 1;
+          break;
+
+        case "like":
+          if (!data.likes) data.likes = [];
+          data.likes = data.likes.includes(payload.email) 
+            ? data.likes.filter(e => e !== payload.email) 
+            : [...data.likes, payload.email];
+          break;
+        
+        case "comment":
+          if (!data.comments) data.comments = [];
+          data.comments.push({ 
+            userName: payload.userName, 
+            text: payload.text, 
+            date: new Date().toISOString() 
+          });
+          break;
+        
+        default:
+          return res.status(400).json({ error: "Action non reconnue" });
       }
 
       const updateResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
