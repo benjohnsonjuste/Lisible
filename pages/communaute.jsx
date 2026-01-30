@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, 
-  ArrowRight, TrendingUp, Crown, Loader2, ShieldCheck 
+  ArrowRight, TrendingUp, Crown, Loader2, ShieldCheck, BookOpen
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -13,19 +13,17 @@ export default function UsersPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // État pour stocker le gagnant élu par le script automatique
   const [monthlyWinner, setMonthlyWinner] = useState(null);
+  const [superReader, setSuperReader] = useState(null);
 
-  // Initialisation des données
   useEffect(() => {
     const loadData = async () => {
       const logged = localStorage.getItem("lisible_user");
       if (logged) setCurrentUser(JSON.parse(logged));
       
-      // On lance les deux chargements en parallèle
       await Promise.all([
         loadUsers(),
-        loadMonthlyWinner()
+        loadAwards()
       ]);
     };
 
@@ -34,16 +32,18 @@ export default function UsersPage() {
     }
   }, [router.isReady]);
 
-  // Récupère le fichier généré par le GitHub Action
-  async function loadMonthlyWinner() {
+  async function loadAwards() {
+    const timestamp = Date.now();
     try {
-      const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/winner.json?t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setMonthlyWinner(data);
-      }
+      const [resWinner, resReader] = await Promise.all([
+        fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/winner.json?t=${timestamp}`),
+        fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/reader.json?t=${timestamp}`)
+      ]);
+      
+      if (resWinner.ok) setMonthlyWinner(await resWinner.json());
+      if (resReader.ok) setSuperReader(await resReader.json());
     } catch (e) {
-      console.log("Le badge mensuel n'est pas encore généré.");
+      console.log("Awards non disponibles.");
     }
   }
 
@@ -51,27 +51,20 @@ export default function UsersPage() {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users?t=${Date.now()}`);
       if (!res.ok) throw new Error();
-      
       const files = await res.json();
       const dataPromises = files
         .filter(f => f.name.endsWith('.json'))
         .map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
-      
       const allUsers = await Promise.all(dataPromises);
-      
-      // Tri par nombre d'abonnés (décroissant)
       setAuthors(allUsers.sort((a, b) => (b.subscribers?.length || 0) - (a.subscribers?.length || 0)));
     } catch (e) { 
-      toast.error("Erreur de synchronisation des membres");
-    } finally { 
-      setLoading(false); 
-    }
+      toast.error("Erreur de synchronisation");
+    } finally { setLoading(false); }
   }
 
   const handleSubscription = async (targetAuthor, isSubscribed) => {
     if (!currentUser) return toast.error("Action réservée aux membres connectés");
     if (targetAuthor.email === currentUser.email) return;
-
     const loadingToast = toast.loading(isSubscribed ? "Désabonnement..." : "Abonnement...");
     try {
       const res = await fetch('/api/handle-subscription', {
@@ -84,27 +77,10 @@ export default function UsersPage() {
           subscriberName: currentUser.penName || currentUser.name 
         })
       });
-
       if (!res.ok) throw new Error();
-
-      if (!isSubscribed) {
-        await fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "subscription",
-            message: `${currentUser.penName || currentUser.name} vient de s'abonner à vous !`,
-            targetEmail: targetAuthor.email,
-            link: `/auteur/${encodeURIComponent(currentUser.email)}`
-          })
-        });
-      }
-      
       toast.success(isSubscribed ? "Abonnement retiré" : "Vous suivez cet auteur !", { id: loadingToast });
       loadUsers();
-    } catch (e) { 
-      toast.error("Erreur lors de l'opération", { id: loadingToast }); 
-    }
+    } catch (e) { toast.error("Erreur", { id: loadingToast }); }
   };
 
   if (loading) return (
@@ -132,15 +108,16 @@ export default function UsersPage() {
           const isSubscribed = a.subscribers?.includes(currentUser?.email);
           const isMe = a.email === currentUser?.email;
           
-          // LE BADGE : Est vrai si l'email de l'auteur correspond au gagnant du JSON
           const isWinner = monthlyWinner && a.email === monthlyWinner.email;
+          const isSuperReader = superReader && a.email === superReader.email;
           
           const isStaff = a.penName === "Lisible Support Team" || a.name === "Lisible Support Team";
           const progress = Math.min((subscribersCount / 250) * 100, 100);
 
           return (
-            <div key={a.email} className={`relative bg-white rounded-[3.5rem] p-10 border transition-all duration-500 hover:shadow-2xl ${isWinner ? 'ring-4 ring-amber-100 border-amber-200' : 'border-slate-100 shadow-xl shadow-slate-100/50'}`}>
+            <div key={a.email} className={`relative bg-white rounded-[3.5rem] p-10 border transition-all duration-500 hover:shadow-2xl ${(isWinner || isSuperReader) ? 'ring-4 ring-amber-100 border-amber-200' : 'border-slate-100 shadow-xl shadow-slate-100/50'}`}>
               
+              {/* BADGE PLUME DU MOIS */}
               {isWinner && (
                 <div className="absolute -top-4 left-10 bg-amber-400 text-slate-900 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-bounce">
                   <Crown size={14} fill="currentColor" />
@@ -148,7 +125,15 @@ export default function UsersPage() {
                 </div>
               )}
 
-              {isStaff && (
+              {/* BADGE SUPER READER */}
+              {isSuperReader && (
+                <div className={`absolute -top-4 ${isWinner ? 'right-10' : 'left-10'} bg-teal-600 text-white px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-pulse`}>
+                  <BookOpen size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Super Reader</span>
+                </div>
+              )}
+
+              {isStaff && !isWinner && !isSuperReader && (
                 <div className="absolute -top-4 left-10 bg-slate-900 text-teal-400 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10">
                   <ShieldCheck size={14} fill="currentColor" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Staff Officiel</span>
@@ -181,7 +166,6 @@ export default function UsersPage() {
                   <button 
                     onClick={() => handleSubscription(a, isSubscribed)} 
                     className={`p-5 rounded-2xl transition-all active:scale-90 ${isSubscribed ? 'bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500' : 'bg-slate-900 text-white hover:bg-teal-600 shadow-lg'}`}
-                    title={isSubscribed ? "Se désabonner" : "S'abonner"}
                   >
                     {isSubscribed ? <UserMinus size={22} /> : <UserPlus size={22} />}
                   </button>
@@ -195,7 +179,7 @@ export default function UsersPage() {
                 </div>
                 <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                   <div 
-                    className={`h-full transition-all duration-1000 ${isWinner ? 'bg-amber-400' : isStaff ? 'bg-slate-900' : 'bg-teal-50'}`} 
+                    className={`h-full transition-all duration-1000 ${isWinner ? 'bg-amber-400' : isSuperReader ? 'bg-teal-600' : 'bg-teal-50'}`} 
                     style={{ width: `${progress}%` }} 
                   />
                 </div>
