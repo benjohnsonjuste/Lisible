@@ -24,7 +24,7 @@ export default function AuthPage() {
               Lisible.
             </h1>
             <p className="text-teal-600 font-black text-[9px] uppercase tracking-[0.4em] mt-2">
-              Streaming Littéraire & Metaverse
+              Streaming Littéraire
             </p>
           </div>
         </div>
