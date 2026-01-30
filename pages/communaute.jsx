@@ -12,19 +12,40 @@ export default function UsersPage() {
   const [authors, setAuthors] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // État pour stocker le gagnant élu par le script automatique
+  const [monthlyWinner, setMonthlyWinner] = useState(null);
 
   // Initialisation des données
   useEffect(() => {
     const loadData = async () => {
       const logged = localStorage.getItem("lisible_user");
       if (logged) setCurrentUser(JSON.parse(logged));
-      await loadUsers();
+      
+      // On lance les deux chargements en parallèle
+      await Promise.all([
+        loadUsers(),
+        loadMonthlyWinner()
+      ]);
     };
 
     if (router.isReady) {
       loadData();
     }
   }, [router.isReady]);
+
+  // Récupère le fichier généré par le GitHub Action
+  async function loadMonthlyWinner() {
+    try {
+      const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/winner.json?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMonthlyWinner(data);
+      }
+    } catch (e) {
+      console.log("Le badge mensuel n'est pas encore généré.");
+    }
+  }
 
   async function loadUsers() {
     try {
@@ -106,18 +127,21 @@ export default function UsersPage() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {authors.map((a, index) => {
+        {authors.map((a) => {
           const subscribersCount = a.subscribers?.length || 0;
           const isSubscribed = a.subscribers?.includes(currentUser?.email);
           const isMe = a.email === currentUser?.email;
-          const isNumberOne = index === 0 && subscribersCount > 0;
+          
+          // LE BADGE : Est vrai si l'email de l'auteur correspond au gagnant du JSON
+          const isWinner = monthlyWinner && a.email === monthlyWinner.email;
+          
           const isStaff = a.penName === "Lisible Support Team" || a.name === "Lisible Support Team";
           const progress = Math.min((subscribersCount / 250) * 100, 100);
 
           return (
-            <div key={index} className={`relative bg-white rounded-[3.5rem] p-10 border transition-all duration-500 hover:shadow-2xl ${isNumberOne ? 'ring-4 ring-amber-100 border-amber-200' : 'border-slate-100 shadow-xl shadow-slate-100/50'}`}>
+            <div key={a.email} className={`relative bg-white rounded-[3.5rem] p-10 border transition-all duration-500 hover:shadow-2xl ${isWinner ? 'ring-4 ring-amber-100 border-amber-200' : 'border-slate-100 shadow-xl shadow-slate-100/50'}`}>
               
-              {isNumberOne && (
+              {isWinner && (
                 <div className="absolute -top-4 left-10 bg-amber-400 text-slate-900 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-bounce">
                   <Crown size={14} fill="currentColor" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Plume du Mois</span>
@@ -125,7 +149,7 @@ export default function UsersPage() {
               )}
 
               {isStaff && (
-                <div className="absolute -top-4 left-10 bg-slate-900 text-teal-400 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10 animate-bounce">
+                <div className="absolute -top-4 left-10 bg-slate-900 text-teal-400 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-xl z-10">
                   <ShieldCheck size={14} fill="currentColor" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Staff Officiel</span>
                 </div>
@@ -133,7 +157,6 @@ export default function UsersPage() {
 
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-6">
-                  {/* CERCLE PARFAIT APPLIQUÉ ICI */}
                   <div className="w-24 h-24 bg-slate-50 rounded-full overflow-hidden border-4 border-white shadow-lg flex items-center justify-center text-4xl font-black text-teal-600 italic">
                     {a.profilePic ? (
                       <img src={a.profilePic} className="w-full h-full object-cover" alt="" />
@@ -172,7 +195,7 @@ export default function UsersPage() {
                 </div>
                 <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
                   <div 
-                    className={`h-full transition-all duration-1000 ${isNumberOne ? 'bg-amber-400' : isStaff ? 'bg-slate-900' : 'bg-teal-50'}`} 
+                    className={`h-full transition-all duration-1000 ${isWinner ? 'bg-amber-400' : isStaff ? 'bg-slate-900' : 'bg-teal-50'}`} 
                     style={{ width: `${progress}%` }} 
                   />
                 </div>
