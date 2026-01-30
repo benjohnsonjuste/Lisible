@@ -17,37 +17,48 @@ export default function AuthorCataloguePage() {
 
   const fetchAuthorData = useCallback(async (targetEmail) => {
     try {
-      // Nettoyage de l'email pour correspondre exactement au nom du fichier GitHub
       const cleanEmail = decodeURIComponent(targetEmail).toLowerCase().trim();
-      const timestamp = Date.now(); 
+      // On génère un identifiant unique très précis pour forcer GitHub à ignorer son cache
+      const cacheBuster = `nocache=${new Date().getTime()}`; 
 
-      // 1. RÉCUPÉRATION DU PROFIL DEPUIS /data/users/[email].json
-      const userRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${cleanEmail}.json?t=${timestamp}`);
+      // 1. RÉCUPÉRATION DU PROFIL (FORCÉE)
+      const userRes = await fetch(
+        `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${cleanEmail}.json?${cacheBuster}`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        }
+      );
       
       if (userRes.ok) {
         const userData = await userRes.json();
-        // Décodage UTF-8 robuste (Base64 -> String -> JSON)
+        // Décodage propre pour gérer les accents
         const content = atob(userData.content);
         const decodedUser = JSON.parse(decodeURIComponent(escape(content)));
         setAuthor(decodedUser);
+      } else {
+        throw new Error("Profil introuvable");
       }
 
-      // 2. RÉCUPÉRATION ET FILTRAGE DES PUBLICATIONS
-      const textsRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${timestamp}`);
-      if (!textsRes.ok) throw new Error("Erreur base de données");
-      
-      const files = await textsRes.json();
-      const jsonFiles = files.filter(f => f.name.endsWith('.json'));
-      
-      const textPromises = jsonFiles.map(file => fetch(`${file.download_url}?t=${timestamp}`).then(r => r.json()));
-      const allTexts = await Promise.all(textPromises);
-      
-      // Filtrage strict par email
-      const filteredTexts = allTexts.filter(t => 
-        t.authorEmail?.toLowerCase().trim() === cleanEmail
-      );
-      
-      setTexts(filteredTexts.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      // 2. RÉCUPÉRATION DES PUBLICATIONS
+      const textsRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?${cacheBuster}`);
+      if (textsRes.ok) {
+        const files = await textsRes.json();
+        const jsonFiles = files.filter(f => f.name.endsWith('.json'));
+        
+        const textPromises = jsonFiles.map(file => 
+          fetch(`${file.download_url}?${cacheBuster}`).then(r => r.json())
+        );
+        const allTexts = await Promise.all(textPromises);
+        
+        const filteredTexts = allTexts.filter(t => 
+          t.authorEmail?.toLowerCase().trim() === cleanEmail
+        );
+        
+        setTexts(filteredTexts.sort((a, b) => new Date(b.date) - new Date(a.date)));
+      }
 
     } catch (e) {
       console.error("Catalogue Sync Error:", e);
@@ -73,7 +84,7 @@ export default function AuthorCataloguePage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-16 animate-in fade-in duration-700">
       
-      {/* HEADER : PROFIL RÉCUPÉRÉ DU FICHIER JSON */}
+      {/* HEADER */}
       <header className="relative flex flex-col md:flex-row items-center gap-10 bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40">
         <button 
           onClick={() => router.back()} 
@@ -90,11 +101,6 @@ export default function AuthorCataloguePage() {
               <span className="uppercase">{author?.penName?.charAt(0) || <User size={40} />}</span>
             )}
           </div>
-          {texts.length >= 7 && (
-            <div className="absolute -bottom-2 -right-2 bg-amber-400 text-white p-3 rounded-2xl shadow-xl border-4 border-white animate-pulse">
-              <Sparkles size={20} fill="currentColor" />
-            </div>
-          )}
         </div>
 
         <div className="text-center md:text-left space-y-4">
@@ -111,15 +117,15 @@ export default function AuthorCataloguePage() {
             <div className="bg-slate-50 px-5 py-3 rounded-2xl flex items-center gap-2 border border-slate-100">
               <BookOpen size={16} className="text-slate-400" />
               <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-                {texts.length} {texts.length > 1 ? 'Manuscrits' : 'Manuscrit'}
+                {texts.length} Manuscrits
               </span>
             </div>
             
-            {/* COMPTEUR D'ABONNÉS SÉCURISÉ */}
             <div className="bg-teal-50 px-5 py-3 rounded-2xl flex items-center gap-2 border border-teal-100">
               <TrendingUp size={16} className="text-teal-500" />
               <span className="text-[11px] font-black uppercase tracking-widest text-teal-700">
-                {Array.isArray(author?.subscribers) ? author.subscribers.length : 0} Abonnés
+                {/* On vérifie l'existence et la longueur de la liste d'abonnés */}
+                {author?.subscribers ? author.subscribers.length : 0} Abonnés
               </span>
             </div>
           </div>
@@ -135,7 +141,7 @@ export default function AuthorCataloguePage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {texts.length > 0 ? texts.map((txt) => (
+          {texts.map((txt) => (
             <Link 
               href={`/texts/${txt.id}`} 
               key={txt.id} 
@@ -146,7 +152,7 @@ export default function AuthorCataloguePage() {
                   {txt.title}
                 </h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Publié le {new Date(txt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(txt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
 
@@ -164,17 +170,9 @@ export default function AuthorCataloguePage() {
                 </div>
               </div>
             </Link>
-          )) : (
-            <div className="text-center py-24 bg-slate-50/50 rounded-[3rem] border-2 border-dashed border-slate-200">
-              <p className="text-slate-300 font-black uppercase text-[10px] tracking-[0.3em]">Aucun manuscrit archivé.</p>
-            </div>
-          )}
+          ))}
         </div>
       </div>
-
-      <footer className="text-center py-10 opacity-30 italic">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.6em]">Lisible • Registre Synchronisé</p>
-      </footer>
     </div>
   );
 }
