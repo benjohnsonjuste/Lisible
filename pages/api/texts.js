@@ -11,6 +11,21 @@ export default async function handler(req, res) {
   const { id, action, payload } = req.body;
   const path = `data/publications/${id}.json`;
 
+  // URL de base pour les appels API internes
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  const baseUrl = `${protocol}://${req.headers.host}`;
+
+  // --- HELPER: ENVOI DE NOTIFICATION ---
+  const sendNotif = async (targetEmail, message, type, amountLi = 0) => {
+    try {
+      await fetch(`${baseUrl}/api/create-notif`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetEmail, message, type, amountLi, link: "/dashboard" }),
+      });
+    } catch (e) { console.error("Notif Error:", e); }
+  };
+
   // --- HELPER: CRÉDIT DE LI ---
   const creditUserLi = async (email, amount, reason, type = "income") => {
     if (!email || amount <= 0) return;
@@ -38,6 +53,10 @@ export default async function handler(req, res) {
           sha: file.sha, branch
         }),
       });
+
+      // Notification Pusher après crédit réussi
+      await sendNotif(email, `+${amount} Li : ${reason}`, "li_received", amount);
+      
     } catch (e) { console.error("Wallet Error:", e); }
   };
 
@@ -50,15 +69,15 @@ export default async function handler(req, res) {
 
     switch (action) {
       case "certify":
-        // 1. Mise à jour du texte
+        // 1. Mise à jour du compteur sur le texte
         data.certifiedReads = (data.certifiedReads || 0) + 1;
         
-        // 2. Récompense Auteur (5 Li pour la création)
+        // 2. Récompense Auteur (Revenu de création)
         await creditUserLi(data.authorEmail, 5, `Lecture Certifiée : ${data.title}`, "income");
         
-        // 3. Récompense Lecteur (1 Li pour l'attention)
+        // 3. Récompense Lecteur (Prime d'attention)
         if (payload?.readerEmail && payload.readerEmail !== data.authorEmail) {
-          await creditUserLi(payload.readerEmail, 1, `Certification : ${data.title}`, "reward");
+          await creditUserLi(payload.readerEmail, 1, `Attention validée : ${data.title}`, "reward");
         }
         break;
 
@@ -68,13 +87,16 @@ export default async function handler(req, res) {
       
       case "like":
         if (!data.likes) data.likes = [];
-        data.likes = data.likes.includes(payload.email) 
-          ? data.likes.filter(e => e !== payload.email) 
-          : [...data.likes, payload.email];
+        const readerEmail = payload?.email;
+        if (readerEmail) {
+            data.likes = data.likes.includes(readerEmail) 
+              ? data.likes.filter(e => e !== readerEmail) 
+              : [...data.likes, readerEmail];
+        }
         break;
     }
 
-    // Sauvegarde du texte mis à jour
+    // Sauvegarde du texte mis à jour sur GitHub
     await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
