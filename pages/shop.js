@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, Coins, Zap, Trophy, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -7,10 +7,16 @@ import { toast } from "sonner";
 export default function ShopPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(null);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const logged = localStorage.getItem("lisible_user");
+    if (logged) setUser(JSON.parse(logged));
+  }, []);
 
   const packs = [
     {
-      id: "pack_starter",
+      id: "pack_curieux",
       name: "Pack Curieux",
       amount: 4000,
       price: "2.00",
@@ -20,17 +26,17 @@ export default function ShopPage() {
       popular: false
     },
     {
-      id: "pack_fan",
+      id: "pack_mecene",
       name: "Pack Mécène",
       amount: 10000,
-      price: "4.50", // Petite réduction pour inciter à l'achat groupé
+      price: "4.50",
       description: "Le choix favori de la communauté Lisible.",
       icon: <Sparkles className="text-amber-500" />,
       color: "border-amber-200 bg-amber-50/30",
       popular: true
     },
     {
-      id: "pack_legend",
+      id: "pack_fondateur",
       name: "Pack Fondateur",
       amount: 25000,
       price: "10.00",
@@ -42,15 +48,38 @@ export default function ShopPage() {
   ];
 
   const handlePurchase = async (pack) => {
+    if (!user) return toast.error("Connectez-vous pour acheter des Li");
+    
     setLoading(pack.id);
-    // Simulation du processus de paiement
-    setTimeout(() => {
-      toast.success(`Paiement de ${pack.price}$ réussi !`, {
-        description: `${pack.amount} Li ont été ajoutés à votre coffre.`
+    const toastId = toast.loading(`Initialisation du paiement pour le ${pack.name}...`);
+
+    try {
+      const res = await fetch("/api/process-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          packId: pack.id,
+          amount: pack.amount,
+          price: pack.price
+        })
       });
+
+      if (!res.ok) throw new Error("Échec du crédit");
+
+      toast.success(`Succès ! ${pack.amount} Li ajoutés.`, { 
+        id: toastId,
+        description: "Votre solde a été mis à jour."
+      });
+      
+      // Petit délai pour laisser GitHub rafraîchir le fichier
+      setTimeout(() => router.push("/dashboard"), 1500);
+      
+    } catch (e) {
+      toast.error("Erreur lors de la transaction", { id: toastId });
+    } finally {
       setLoading(null);
-      router.push("/dashboard");
-    }, 2000);
+    }
   };
 
   return (
@@ -63,8 +92,9 @@ export default function ShopPage() {
             <h1 className="text-3xl font-black italic tracking-tighter text-slate-900">Banque de Li</h1>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Propulsez la littérature</p>
         </div>
-        <div className="w-12 h-12 flex items-center justify-center bg-amber-100 rounded-full text-amber-600">
-           <Coins size={20} />
+        <div className="bg-amber-100 px-4 py-2 rounded-full flex items-center gap-2 text-amber-600">
+           <Coins size={16} />
+           <span className="text-xs font-black">{user?.wallet?.balance || 0}</span>
         </div>
       </header>
 
@@ -84,17 +114,17 @@ export default function ShopPage() {
               {pack.icon}
             </div>
 
-            <h3 className={`text-xl font-black italic mb-2 ${pack.id === 'pack_legend' ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-xl font-black italic mb-2 ${pack.id === 'pack_fondateur' ? 'text-white' : 'text-slate-900'}`}>
               {pack.name}
             </h3>
-            <p className={`text-xs font-medium mb-8 leading-relaxed ${pack.id === 'pack_legend' ? 'text-slate-400' : 'text-slate-400'}`}>
+            <p className="text-xs font-medium mb-8 leading-relaxed opacity-60">
               {pack.description}
             </p>
 
             <div className="mt-auto pt-8 border-t border-slate-100/10">
               <div className="flex items-baseline gap-1 mb-6">
-                <span className={`text-4xl font-black ${pack.id === 'pack_legend' ? 'text-white' : 'text-slate-900'}`}>
-                  {pack.amount}
+                <span className={`text-4xl font-black ${pack.id === 'pack_fondateur' ? 'text-white' : 'text-slate-900'}`}>
+                  {pack.amount.toLocaleString()}
                 </span>
                 <span className="text-xs font-black uppercase tracking-widest opacity-50">Li</span>
               </div>
@@ -103,9 +133,9 @@ export default function ShopPage() {
                 disabled={loading}
                 onClick={() => handlePurchase(pack)}
                 className={`w-full py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
-                  pack.id === 'pack_legend' 
+                  pack.id === 'pack_fondateur' 
                   ? 'bg-white text-slate-900 hover:bg-teal-400 hover:text-white' 
-                  : 'bg-slate-900 text-white hover:bg-teal-600 shadow-xl shadow-slate-200'
+                  : 'bg-slate-900 text-white hover:bg-teal-600'
                 }`}
               >
                 {loading === pack.id ? <Loader2 className="animate-spin" size={14} /> : `Acheter pour ${pack.price}$`}
@@ -122,8 +152,7 @@ export default function ShopPage() {
           <div>
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-2">Transactions Sécurisées</h4>
             <p className="text-xs text-slate-500 max-w-xl leading-relaxed">
-              Vos Li sont instantanément crédités sur votre compte après validation. 
-              Chaque achat soutient directement l'infrastructure de <strong>Lisible.biz</strong> et permet de maintenir un taux de retrait équitable pour les auteurs.
+              Vos Li sont instantanément crédités sur votre compte. Chaque achat soutient directement l'infrastructure de <strong>Lisible.biz</strong>.
             </p>
           </div>
       </section>
