@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, 
-  ArrowRight, TrendingUp, Crown, Loader2, ShieldCheck, BookOpen,
-  Search, Star, Sparkles, Heart
+  ArrowRight, TrendingUp, Crown, Loader2, ShieldCheck, 
+  Search, Star, Sparkles, Heart, Coins
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -17,9 +17,8 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   
   const [monthlyWinner, setMonthlyWinner] = useState(null);
-  const [superReader, setSuperReader] = useState(null);
 
-  // Initialisation des données
+  // Initialisation des données au chargement
   useEffect(() => {
     const loadData = async () => {
       const logged = localStorage.getItem("lisible_user");
@@ -36,29 +35,23 @@ export default function UsersPage() {
     }
   }, [router.isReady]);
 
-  // Chargement des trophées
+  // Chargement du trophée "Plume du Mois"
   async function loadAwards() {
-    const timestamp = Date.now();
     try {
-      const [resWinner, resReader] = await Promise.all([
-        fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/winner.json?t=${timestamp}`),
-        fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/reader.json?t=${timestamp}`)
-      ]);
-      
-      if (resWinner.ok) setMonthlyWinner(await resWinner.json());
-      if (resReader.ok) setSuperReader(await resReader.json());
+      const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/awards/winner.json?t=${Date.now()}`);
+      if (res.ok) setMonthlyWinner(await res.json());
     } catch (e) {
       console.warn("Awards non configurés.");
     }
   }
 
-  // Chargement de la liste des membres
+  // Synchronisation automatique de la liste des membres depuis GitHub
   async function loadUsers() {
     try {
       const cacheBuster = `t=${Date.now()}`;
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users?${cacheBuster}`);
       
-      if (!res.ok) throw new Error("Erreur GitHub API");
+      if (!res.ok) throw new Error("Erreur Registre");
       
       const files = await res.json();
       const jsonFiles = files.filter(f => f.name.endsWith('.json'));
@@ -69,7 +62,8 @@ export default function UsersPage() {
 
       const allUsers = (await Promise.all(dataPromises)).filter(u => u !== null);
       
-      // Tri par influence (Solde de Li ou Abonnés)
+      // CLASSEMENT AUTOMATIQUE : Tri par solde de Li (Wallet Balance)
+      // L'influence est déterminée par les gains issus des lectures certifiées
       setAuthors(allUsers.sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0)));
     } catch (e) { 
       toast.error("Impossible de synchroniser le cercle");
@@ -78,7 +72,7 @@ export default function UsersPage() {
     }
   }
 
-  // Gestion de l'abonnement
+  // Gestion des abonnements (Follow/Unfollow)
   const handleSubscription = async (targetAuthor, isSubscribed) => {
     if (!currentUser) {
       toast.error("Connectez-vous pour rejoindre ce cercle");
@@ -104,7 +98,7 @@ export default function UsersPage() {
       if (!res.ok) throw new Error();
       
       toast.success(isSubscribed ? "Abonnement retiré" : `Vous suivez désormais ${targetAuthor.penName}`, { id: toastId });
-      loadUsers();
+      loadUsers(); // Rafraîchissement automatique
     } catch (e) { 
       toast.error("Action impossible", { id: toastId }); 
     }
@@ -124,7 +118,7 @@ export default function UsersPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-16 space-y-16 animate-in fade-in duration-700">
       
-      {/* HEADER */}
+      {/* HEADER AVEC RECHERCHE */}
       <header className="flex flex-col md:flex-row justify-between items-end gap-8">
         <div className="space-y-4">
           <div className="inline-flex p-4 bg-slate-900 text-teal-400 rounded-3xl shadow-xl">
@@ -148,17 +142,16 @@ export default function UsersPage() {
         </div>
       </header>
 
-      {/* GRILLE DES MEMBRES */}
+      {/* GRILLE DES MEMBRES CLASSÉS PAR LI */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {filteredAuthors.map((a) => {
           const subscribersCount = a.subscribers?.length || 0;
           const isSubscribed = a.subscribers?.includes(currentUser?.email);
           const liBalance = a.wallet?.balance || 0;
           const isMe = a.email === currentUser?.email;
-          
           const isWinner = monthlyWinner && a.email === monthlyWinner.email;
           
-          // Influence basée sur les Li accumulés (Palier 10k pour 100%)
+          // Calcul visuel de l'influence (Palier de rayonnement à 10k Li)
           const influenceProgress = Math.min((liBalance / 10000) * 100, 100);
 
           return (
@@ -166,7 +159,7 @@ export default function UsersPage() {
               key={a.email} 
               className="relative bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-100/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 group"
             >
-              {/* BADGE PLUME DU MOIS */}
+              {/* BADGE PLUME DU MOIS AUTOMATIQUE */}
               {isWinner && (
                 <div className="absolute -top-4 left-10 bg-amber-400 text-slate-900 px-5 py-2 rounded-2xl flex items-center gap-2 shadow-lg animate-bounce z-10">
                   <Crown size={14} fill="currentColor" />
@@ -178,7 +171,7 @@ export default function UsersPage() {
                 <div className="flex items-center gap-6">
                   <div className="w-24 h-24 md:w-28 md:h-28 bg-slate-900 rounded-[2.5rem] overflow-hidden border-8 border-white shadow-xl flex items-center justify-center text-4xl font-black text-teal-400 italic">
                     {a.profilePic ? (
-                      <img src={a.profilePic} className="w-full h-full object-cover" alt="" />
+                      <img src={a.profilePic} className="w-full h-full object-cover" alt={a.penName} />
                     ) : (
                       (a.penName || "?").charAt(0).toUpperCase()
                     )}
@@ -186,13 +179,13 @@ export default function UsersPage() {
                   <div className="space-y-1">
                     <h2 className="font-black text-2xl text-slate-900 italic tracking-tight">{a.penName || "Plume Anonyme"}</h2>
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 text-teal-600">
+                      <div className="flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">
                         <UsersIcon size={12} />
-                        <span className="text-[10px] font-black uppercase tracking-tighter">{subscribersCount}</span>
+                        <span className="text-[10px] font-black">{subscribersCount}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-amber-500">
-                        <Sparkles size={12} fill="currentColor" />
-                        <span className="text-[10px] font-black uppercase tracking-tighter">{liBalance} Li</span>
+                      <div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
+                        <Coins size={12} />
+                        <span className="text-[10px] font-black">{liBalance} Li</span>
                       </div>
                     </div>
                   </div>
@@ -210,7 +203,7 @@ export default function UsersPage() {
                 )}
               </div>
 
-              {/* BARRE D'INFLUENCE (LI) */}
+              {/* BARRE D'INFLUENCE (BASÉE SUR LES LI) */}
               <div className="mt-10 space-y-2">
                 <div className="flex justify-between items-end">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">Rayonnement du Li</span>
@@ -228,7 +221,7 @@ export default function UsersPage() {
                 href={`/auteur/${encodeURIComponent(a.email)}`} 
                 className="mt-8 flex items-center justify-center gap-3 w-full py-5 bg-slate-50 rounded-2xl text-[9px] font-black text-slate-500 hover:bg-slate-900 hover:text-white transition-all uppercase tracking-[0.3em] group/btn"
               >
-                Visiter la Galerie
+                Explorer la Galerie
                 <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
               </Link>
             </div>
