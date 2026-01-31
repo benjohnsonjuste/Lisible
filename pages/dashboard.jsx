@@ -62,6 +62,10 @@ export default function AuthorDashboard() {
     isMonetized: false, canWithdraw: false
   });
 
+  // Constantes économiques
+  const LI_VALUATION_RATIO = 0.0002; // 1000 Li = 0.20$
+  const WITHDRAWAL_THRESHOLD_LI = 25000; // 5$
+
   useEffect(() => {
     async function initDashboard() {
       const loggedUser = localStorage.getItem("lisible_user");
@@ -79,7 +83,6 @@ export default function AuthorDashboard() {
 
   const refreshStats = async (email) => {
     try {
-      // Synchronisation temps réel avec le stockage GitHub
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${btoa(email.toLowerCase()).replace(/=/g, "")}.json?t=${Date.now()}`);
       
       if (res.ok) {
@@ -95,10 +98,9 @@ export default function AuthorDashboard() {
           followers: data.stats?.subscribers || 0,
           liBalance: liBalance,
           totalCertified: totalCertified,
-          // Règle : 1 Li = 0.01 USD
-          estimatedEarnings: (liBalance * 0.01).toFixed(2),
+          estimatedEarnings: (liBalance * LI_VALUATION_RATIO).toFixed(2),
           isMonetized: (data.stats?.subscribers >= 250),
-          canWithdraw: liBalance >= 25000 // Seuil de 250$ (25,000 Li)
+          canWithdraw: liBalance >= WITHDRAWAL_THRESHOLD_LI
         });
       }
     } catch (error) {
@@ -107,11 +109,12 @@ export default function AuthorDashboard() {
   };
 
   const handleWithdrawal = () => {
-    if (stats.liBalance < 25000) {
-      toast.error(`Seuil de retrait non atteint. Il vous manque ${25000 - stats.liBalance} Li.`);
+    if (!stats.canWithdraw) {
+      const remaining = WITHDRAWAL_THRESHOLD_LI - stats.liBalance;
+      toast.error(`Seuil de retrait (5$) non atteint. Il vous manque ${remaining.toLocaleString()} Li.`);
       return;
     }
-    router.push("/withdraw"); // Redirection vers la page de paiement
+    router.push("/withdraw");
   };
 
   if (loading) return (
@@ -124,7 +127,7 @@ export default function AuthorDashboard() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 pb-20 animate-in fade-in duration-700">
       
-      {/* HEADER BANNER - PORTEFEUILLE */}
+      {/* HEADER BANNER */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl border border-slate-800">
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-teal-400 mb-4">
@@ -138,50 +141,24 @@ export default function AuthorDashboard() {
         </div>
 
         <div className="flex flex-wrap gap-4 relative z-10">
-          <div className="text-center bg-white/5 backdrop-blur-xl px-8 py-5 rounded-[2rem] border border-white/10 shadow-inner">
+          <div className="text-center bg-white/5 backdrop-blur-xl px-8 py-5 rounded-[2rem] border border-white/10">
             <p className="text-4xl font-black text-amber-400 tracking-tighter">{stats.liBalance.toLocaleString()} <span className="text-xs text-white/40">Li</span></p>
             <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500 mt-1">Trésorerie Actuelle</p>
           </div>
           <div className="text-center bg-teal-500/10 backdrop-blur-xl px-8 py-5 rounded-[2rem] border border-teal-500/20">
-            <p className="text-4xl font-black text-teal-400 tracking-tighter">{stats.totalCertified}</p>
+            <p className="text-4xl font-black text-teal-400 tracking-tighter">{stats.totalCertified.toLocaleString()}</p>
             <p className="text-[8px] font-black uppercase tracking-[0.2em] text-teal-500/60 mt-1">Lectures Li</p>
           </div>
         </div>
-        
-        {/* Décoration d'arrière-plan */}
         <div className="absolute -right-20 -top-20 w-80 h-80 bg-teal-500 opacity-10 rounded-full blur-[100px]"></div>
       </header>
 
       {/* MÉTRIQUES D'IMPACT */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DashboardMetric 
-          label="Visibilité" 
-          value={stats.views.toLocaleString()} 
-          icon={<Eye />} 
-          color="text-blue-500" 
-          subValue="Vues"
-        />
-        <DashboardMetric 
-          label="Production" 
-          value={stats.texts} 
-          icon={<BookOpen />} 
-          color="text-indigo-500" 
-          subValue="Textes"
-        />
-        <DashboardMetric 
-          label="Influence" 
-          value={stats.followers} 
-          icon={<Users />} 
-          color="text-amber-500" 
-          subValue={stats.followers < 250 ? `Obj. 250` : 'Élite'}
-        />
-        <DashboardMetric 
-          label="Qualité Li" 
-          value={`${stats.views > 0 ? ((stats.totalCertified / stats.views) * 100).toFixed(1) : 0}%`} 
-          icon={<Sparkles />} 
-          color="text-teal-500" 
-          subValue="Engagement"
-        />
+        <DashboardMetric label="Visibilité" value={stats.views.toLocaleString()} icon={<Eye />} color="text-blue-500" subValue="Vues" />
+        <DashboardMetric label="Production" value={stats.texts} icon={<BookOpen />} color="text-indigo-500" subValue="Textes" />
+        <DashboardMetric label="Influence" value={stats.followers} icon={<Users />} color="text-amber-500" subValue={stats.followers < 250 ? `Obj. 250` : 'Élite'} />
+        <DashboardMetric label="Qualité Li" value={`${stats.views > 0 ? ((stats.totalCertified / stats.views) * 100).toFixed(1) : 0}%`} icon={<Sparkles />} color="text-teal-500" subValue="Engagement" />
       </div>
 
       <LocalQuickActions />
@@ -214,14 +191,14 @@ export default function AuthorDashboard() {
                   onClick={handleWithdrawal}
                   className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-lg ${stats.canWithdraw ? 'bg-teal-600 text-white hover:bg-slate-900 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                 >
-                  Demander le paiement <ArrowUpRight size={18}/>
+                  Retirer mes fonds <ArrowUpRight size={18}/>
                 </button>
             </div>
 
             <div className="px-4">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Progression Monétisation (250 abonnés)</p>
                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-100">
-                  <div className="h-full bg-gradient-to-r from-blue-600 to-teal-500 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(20,184,166,0.4)]" style={{ width: `${Math.min((stats.followers / 250) * 100, 100)}%` }}></div>
+                  <div className="h-full bg-gradient-to-r from-blue-600 to-teal-500 transition-all duration-1000 ease-out" style={{ width: `${Math.min((stats.followers / 250) * 100, 100)}%` }}></div>
                </div>
             </div>
           </div>
@@ -234,17 +211,20 @@ export default function AuthorDashboard() {
            </div>
            <div className="space-y-2 relative z-10">
               <h3 className="text-2xl font-black italic tracking-tighter uppercase">Le Pouvoir du Li</h3>
-              <p className="text-slate-400 text-xs font-medium leading-relaxed px-10">
-                Chaque certification reçue par vos lecteurs crédite votre compte de 1 Li. <br />
-                <span className="text-teal-400 font-black mt-2 block tracking-widest">100 Li = 1.00 USD</span>
-              </p>
+              <div className="space-y-1">
+                <p className="text-slate-400 text-xs font-medium tracking-wide">
+                  1 000 Li = <span className="text-white font-bold">0.20 USD</span>
+                </p>
+                <p className="text-teal-400 text-[10px] font-black uppercase tracking-widest">
+                  Retrait dès 5.00$ (25 000 Li)
+                </p>
+              </div>
            </div>
            <div className="pt-4 relative z-10">
              <Link href="/faq-monetisation" className="text-[9px] font-black border border-white/10 px-6 py-3 rounded-xl uppercase tracking-[0.2em] hover:bg-white hover:text-slate-900 transition-all">
-               En savoir plus sur les retraits
+               Guide de l'Économie Li
              </Link>
            </div>
-           {/* Décoration d'arrière-plan */}
            <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-teal-500/10 to-transparent"></div>
         </div>
       </div>
