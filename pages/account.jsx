@@ -1,25 +1,21 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // Changement pour compatibilité App Router
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, BookOpen, Eye, Heart, Plus,
-  RefreshCcw, Sparkles, Layout, BarChart3, Save
+  ShieldCheck, Loader2, RefreshCcw, Save, 
+  Layout, BarChart3, Eye, CheckCircle2, Wallet
 } from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
-import Link from "next/link";
 
 export default function AccountPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshingLi, setIsRefreshingLi] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [editingPayment, setEditingPayment] = useState(false);
-  const [myTexts, setMyTexts] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
   
-  // États spécifiques Partenaire
   const [adsConfig, setAdsConfig] = useState({ ads: [] });
   const [partnerStats, setPartnerStats] = useState({});
 
@@ -28,6 +24,10 @@ export default function AccountPage() {
   });
 
   const isSpecialPartner = user?.email?.toLowerCase() === "cmo.lablitteraire7@gmail.com";
+  
+  // MISE À JOUR DU SEUIL À 25 000 Li
+  const WITHDRAWAL_THRESHOLD = 25000;
+  const canWithdraw = (user?.wallet?.balance || 0) >= WITHDRAWAL_THRESHOLD;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
@@ -56,57 +56,55 @@ export default function AccountPage() {
           profilePic: freshUser.profilePic || ""
         });
         
-        if (freshUser.email) fetchAuthorTexts(freshUser.email);
         if (email.toLowerCase() === "cmo.lablitteraire7@gmail.com") loadPartnerData();
       }
     } catch (e) { console.error(e); }
     finally { setIsRefreshingLi(false); setLoading(false); }
   };
 
-  const loadPartnerData = async () => {
-    try {
-      const [configRes, statsRes] = await Promise.all([
-        fetch('/api/admin-update-partner'),
-        fetch('/api/partner-tracker-stats')
-      ]);
-      if (configRes.ok) setAdsConfig(await configRes.json());
-      if (statsRes.ok) setPartnerStats(await statsRes.json());
-    } catch (e) { console.error("Partner Load Error", e); }
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) return toast.error("Image trop lourde (max 2Mo)");
+      const reader = new FileReader();
+      reader.onloadend = () => setFormData({ ...formData, profilePic: reader.result });
+      reader.readAsDataURL(file);
+    }
   };
 
-  const fetchAuthorTexts = async (email) => {
+  const saveProfile = async () => {
+    setIsSaving(true);
+    const t = toast.loading("Mise à jour du registre...");
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
-      if (!res.ok) return;
-      const files = await res.json();
-      const textPromises = files.filter(f => f.name.endsWith('.json')).map(file => fetch(file.download_url).then(r => r.json()));
-      const allTexts = await Promise.all(textPromises);
-      const filtered = allTexts.filter(t => t.authorEmail?.toLowerCase() === email.toLowerCase());
-      setMyTexts(filtered.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    } catch (e) { console.error(e); }
-  };
-
-  const saveAds = async () => {
-    const t = toast.loading("Mise à jour des publicités...");
-    try {
-      await fetch('/api/admin-update-partner', {
-        method: 'POST',
+      const updatedUser = { ...user, ...formData };
+      const res = await fetch('/api/update-user', { 
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ads: adsConfig.ads, adminUser: user.email })
+        body: JSON.stringify({ email: user.email, userData: updatedUser })
       });
-      toast.success("Espace publicitaire mis à jour", { id: t });
-    } catch (e) { toast.error("Erreur", { id: t }); }
+
+      if (res.ok) {
+        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+        toast.success("Profil mis à jour avec succès", { id: t });
+      } else { throw new Error(); }
+    } catch (e) { toast.error("Erreur de sauvegarde", { id: t }); }
+    finally { setIsSaving(false); }
+  };
+
+  const handleWithdraw = () => {
+    if (!canWithdraw) return toast.info(`Seuil de ${WITHDRAWAL_THRESHOLD} Li non atteint.`);
+    toast.success("Demande de versement transmise à l'administration.");
   };
 
   if (loading) return (
     <div className="flex flex-col justify-center items-center h-screen bg-white">
       <Loader2 className="animate-spin text-teal-600 mb-2" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Synchronisation du Registre...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Accès au registre...</p>
     </div>
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-500">
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-500 pb-20">
       
       {/* HEADER */}
       <header className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
@@ -116,21 +114,21 @@ export default function AccountPage() {
            </div>
            <div>
             <h1 className="text-4xl font-black text-slate-900 italic tracking-tighter">Mon Compte</h1>
-            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Registre Officiel Lisible</p>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Identité & Trésorerie</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-6 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100">
              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Mon Trésor</span>
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Solde Actuel</span>
                 <span className="text-2xl font-black text-slate-900">{(user?.wallet?.balance || 0)} <span className="text-xs text-teal-600">Li</span></span>
              </div>
              <button onClick={() => refreshUserData(user.email)} className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all">
                <RefreshCcw size={20} className={isRefreshingLi ? "animate-spin" : ""} />
              </button>
           </div>
-          <button onClick={() => router.back()} className="p-4 border border-slate-100 rounded-2xl text-slate-400 hover:text-teal-600">
+          <button onClick={() => router.back()} className="p-4 border border-slate-100 rounded-2xl text-slate-400 hover:text-teal-600 transition-colors">
             <ArrowLeft size={24} />
           </button>
         </div>
@@ -144,15 +142,29 @@ export default function AccountPage() {
           {/* IDENTITÉ */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
             <h2 className="text-[11px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
-               <Edit3 size={18} /> {isSpecialPartner ? "Gestion du Partenaire" : "Profil Public & Civil"}
+               <Edit3 size={18} /> Configuration du Profil
             </h2>
             
-            <div className="flex items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-               <img src={formData.profilePic || "/avatar.png"} className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-lg" alt="" />
-               <div>
-                  <p className="text-2xl font-black text-slate-900 italic">{formData.penName || user?.name}</p>
-                  <span className="text-[10px] font-black text-teal-600 uppercase flex items-center gap-1">
-                    <ShieldCheck size={14} /> {isSpecialPartner ? "Partenaire Officiel" : "Auteur Certifié"}
+            <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 relative group">
+               <div className="relative">
+                  <img 
+                    src={formData.profilePic || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + user.email} 
+                    className="w-32 h-32 rounded-[2rem] object-cover border-4 border-white shadow-2xl transition-transform group-hover:scale-105" 
+                    alt="Profil" 
+                  />
+                  <label className="absolute -bottom-2 -right-2 p-3 bg-teal-600 text-white rounded-xl cursor-pointer hover:bg-slate-900 transition-all shadow-lg">
+                    <Camera size={18} />
+                    <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                  </label>
+               </div>
+               <div className="text-center sm:text-left">
+                  <p className="text-2xl font-black text-slate-900 italic leading-none mb-2">{formData.penName || user?.name}</p>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2">
+                    {isSpecialPartner ? (
+                      <><Layout size={14} className="text-teal-600" /> Partenaire Lisible</>
+                    ) : (
+                      <><CheckCircle2 size={14} className="text-teal-600" /> Membre du Club</>
+                    )}
                   </span>
                </div>
             </div>
@@ -160,109 +172,68 @@ export default function AccountPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
               {!isSpecialPartner && (
                 <>
-                  <InputBlock label="Prénom" value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />
-                  <InputBlock label="Nom" value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />
+                  <InputBlock label="Prénom Civil" value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />
+                  <InputBlock label="Nom Civil" value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />
                 </>
               )}
-              <InputBlock label="Nom de plume / Partenaire" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
-              <InputBlock label="Date de naissance / Création" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
+              <InputBlock label="Pseudonyme" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
+              <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
             </div>
 
-            <button onClick={() => refreshUserData(user.email)} className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all">
-              Sauvegarder les informations
+            <button 
+              disabled={isSaving}
+              onClick={saveProfile} 
+              className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={20} />}
+              Sauvegarder les modifications
             </button>
           </div>
-
-          {/* GESTIONNAIRE DE PUB (RÉSERVÉ PARTENAIRE) */}
-          {isSpecialPartner && (
-            <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl space-y-8 text-white">
-              <div className="flex justify-between items-center">
-                <h2 className="text-[11px] font-black italic text-teal-400 uppercase tracking-[0.3em] flex items-center gap-2">
-                   <Layout size={18} /> Gestionnaire de Pub
-                </h2>
-                <button onClick={saveAds} className="px-6 py-3 bg-teal-500 text-slate-950 rounded-xl font-black text-[10px] uppercase flex items-center gap-2">
-                  <Save size={16} /> Publier les changements
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {adsConfig.ads.map((ad, idx) => (
-                  <div key={idx} className="bg-slate-800 p-6 rounded-2xl border border-white/5 space-y-4">
-                    <div className="flex justify-between text-teal-400">
-                      <span className="text-[10px] font-black uppercase tracking-widest">Bannière #{ad.id}</span>
-                      <div className="flex gap-4">
-                        <span className="flex items-center gap-1 text-xs font-black"><Eye size={12}/> {partnerStats[ad.id]?.views || 0}</span>
-                        <span className="flex items-center gap-1 text-xs font-black"><BarChart3 size={12}/> {partnerStats[ad.id]?.clicks || 0}</span>
-                      </div>
-                    </div>
-                    <input 
-                      className="w-full bg-slate-900 border-none rounded-lg p-3 text-xs" 
-                      placeholder="URL de l'image"
-                      value={ad.imageUrl}
-                      onChange={(e) => {
-                        const newAds = [...adsConfig.ads];
-                        newAds[idx].imageUrl = e.target.value;
-                        setAdsConfig({ ...adsConfig, ads: newAds });
-                      }}
-                    />
-                    <input 
-                      className="w-full bg-slate-900 border-none rounded-lg p-3 text-xs" 
-                      placeholder="Lien de destination"
-                      value={ad.link}
-                      onChange={(e) => {
-                        const newAds = [...adsConfig.ads];
-                        newAds[idx].link = e.target.value;
-                        setAdsConfig({ ...adsConfig, ads: newAds });
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </section>
 
-        {/* COLONNE DROITE : VERSEMENTS OU STATS GLOBALES */}
-        {!isSpecialPartner ? (
-          <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl h-fit sticky top-10">
+        {/* SECTION VERSEMENTS OPTIMISÉE POUR 25 000 Li */}
+        <aside className="space-y-6">
+          <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24">
             <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
               <CreditCard size={24} /> Versements
             </h2>
-            <div className="space-y-6">
-              <div className="p-6 bg-slate-900 rounded-2xl border border-white/5 space-y-2">
-                 <p className="text-[8px] font-black text-slate-500 uppercase">Seuil : 5000 Li</p>
-                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="h-full bg-teal-500" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 5000) * 100, 100)}%` }} />
+            
+            <div className="space-y-8">
+              <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                 <div className="flex justify-between items-end mb-4">
+                    <div>
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Progression Seuil</p>
+                      <p className="text-2xl font-black">{user?.wallet?.balance || 0} <span className="text-xs text-slate-500">/ {WITHDRAWAL_THRESHOLD} Li</span></p>
+                    </div>
+                    <Wallet className="text-teal-500 opacity-20" size={40} />
+                 </div>
+                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-teal-500 shadow-[0_0_15px_rgba(20,184,166,0.5)] transition-all duration-1000" 
+                      style={{ width: `${Math.min(((user?.wallet?.balance || 0) / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} 
+                    />
                  </div>
               </div>
-              <button className="w-full py-5 bg-slate-800 text-teal-400 rounded-xl font-black text-[10px] uppercase border border-slate-700">
-                Modifier Méthode
-              </button>
-            </div>
-          </section>
-        ) : (
-          <section className="bg-teal-600 rounded-[3rem] p-8 text-slate-950 shadow-2xl h-fit sticky top-10">
-            <h2 className="text-xl font-black italic mb-6">Performance Marketing</h2>
-            <div className="space-y-4">
-              <div className="p-5 bg-white/20 rounded-2xl backdrop-blur-md">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Vues Pub</p>
-                <p className="text-3xl font-black tracking-tighter">
-                  {Object.values(partnerStats).reduce((acc, curr) => acc + (curr.views || 0), 0)}
-                </p>
-              </div>
-              <div className="p-5 bg-white/20 rounded-2xl backdrop-blur-md">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Taux de Clic Moyen</p>
-                <p className="text-3xl font-black tracking-tighter">
-                  {(() => {
-                    const v = Object.values(partnerStats).reduce((acc, curr) => acc + (curr.views || 0), 0);
-                    const c = Object.values(partnerStats).reduce((acc, curr) => acc + (curr.clicks || 0), 0);
-                    return v > 0 ? ((c / v) * 100).toFixed(1) : 0;
-                  })()}%
+
+              <div className="space-y-3">
+                <button 
+                  onClick={handleWithdraw}
+                  disabled={!canWithdraw}
+                  className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                    canWithdraw 
+                    ? "bg-teal-500 text-slate-950 hover:scale-[1.02] shadow-xl shadow-teal-500/20" 
+                    : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                  }`}
+                >
+                  Demander le versement
+                </button>
+                <p className="text-[9px] text-center text-slate-500 font-medium px-4">
+                  Le versement est disponible une fois le seuil de {WITHDRAWAL_THRESHOLD} Li atteint.
                 </p>
               </div>
             </div>
           </section>
-        )}
+        </aside>
       </div>
     </div>
   );
