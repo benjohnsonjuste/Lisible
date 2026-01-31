@@ -50,7 +50,7 @@ export default function ClubPage() {
             </button>
             <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-500 rounded-xl border border-amber-500/20">
               <Construction size={16} />
-              <span className="text-[9px] font-black uppercase tracking-[0.2em]">Maintenance</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em]">En attente</span>
             </div>
           </div>
 
@@ -77,10 +77,10 @@ export default function ClubPage() {
             <Lock className="text-slate-900" size={32} />
           </div>
 
-          <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Accès limité au Studio</h2>
+          <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Accès limité</h2>
           
           <p className="text-slate-500 font-medium leading-relaxed mb-10 max-w-md mx-auto">
-            Le <span className="text-slate-900 font-bold italic">Lisible Club</span> est actuellement en cours de reconfiguration pour vous offrir une expérience de streaming littéraire inédite.
+            Le <span className="text-slate-900 font-bold italic">Lisible Club</span> sera ouvert prochainement pour vous offrir une expérience de streaming littéraire inédite.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -109,14 +109,14 @@ export default function ClubPage() {
                 ))}
              </div>
              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Déjà <span className="text-teal-600">42 plumes</span> attendent l'ouverture
+                Déjà <span className="text-teal-600">Veuillez patienter</span> pour l'ouverture
              </p>
           </div>
         </motion.div>
 
         {/* Note de pied de page pour le style */}
         <p className="text-center mt-8 text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">
-          Lancement prévu : Printemps 2026
+          Lancement prévu pour bientôt 
         </p>
       </div>
     </main>
