@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Heart, MessageSquare, BookOpen, Clock, ArrowLeft, Sparkles, UserPlus, Radio, Loader2, RefreshCw } from "lucide-react";
+import { 
+  Bell, Heart, MessageSquare, BookOpen, Clock, 
+  ArrowLeft, Sparkles, UserPlus, Radio, Loader2, 
+  RefreshCw, Coins, Zap 
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import Pusher from "pusher-js";
@@ -14,7 +18,6 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // Utilisation d'une ref pour accéder aux notifications actuelles dans les callbacks Pusher
   const notifsRef = useRef([]);
 
   useEffect(() => {
@@ -27,7 +30,6 @@ export default function NotificationsPage() {
     else setIsSyncing(true);
 
     try {
-      // Le t=${Date.now()} est crucial pour forcer la mise à jour automatique
       const res = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/notifications.json?t=${Date.now()}`);
       if (!res.ok) return;
       const allNotifs = await res.json();
@@ -56,21 +58,17 @@ export default function NotificationsPage() {
       const userData = JSON.parse(loggedUser);
       setUser(userData);
       
-      // 1. Chargement initial
       fetchNotifications(userData.email);
 
-      // 2. Mise à jour automatique (Polling) toutes les 20 secondes
       interval = setInterval(() => {
         fetchNotifications(userData.email, true);
       }, 20000);
 
-      // 3. Temps réel via Pusher
       const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
       const channel = pusher.subscribe('global-notifications');
       
       channel.bind('new-alert', (newNotif) => {
         if (newNotif.targetEmail === "all" || newNotif.targetEmail?.toLowerCase() === userData.email?.toLowerCase()) {
-          // Éviter les doublons si le polling a déjà récupéré la notif
           setNotifications(prev => {
             if (prev.find(n => n.id === newNotif.id)) return prev;
             const updated = [newNotif, ...prev];
@@ -99,9 +97,12 @@ export default function NotificationsPage() {
     }
   };
 
+  // MISE À JOUR DES ICÔNES POUR L'ÉCONOMIE DU LI
   const getIcon = (type, isRead) => {
     const cls = isRead ? "text-slate-300" : "";
     switch (type) {
+      case 'li_received': return <Coins size={20} className={`${cls || "text-amber-500 animate-pulse"}`} />;
+      case 'certified_read': return <Zap size={20} className={`${cls || "text-amber-400"}`} />;
       case 'subscription': return <UserPlus size={20} className={`${cls || "text-teal-500"}`} />;
       case 'like': return <Heart size={20} className={`${cls || "text-rose-500 fill-rose-500"}`} />;
       case 'comment': return <MessageSquare size={20} className={`${cls || "text-blue-500"}`} />;
@@ -112,29 +113,34 @@ export default function NotificationsPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-white">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Récupération des ondes...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Capture des signaux...</p>
     </div>
   );
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen">
+    <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen animate-in fade-in duration-700">
       <header className="flex items-center justify-between mb-10">
-        <button onClick={() => router.back()} className="p-4 bg-white rounded-[1.2rem] border border-slate-100 shadow-sm hover:bg-slate-50 transition-all">
+        <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
           <ArrowLeft size={20} />
         </button>
         <div className="text-center">
             <h1 className="text-2xl font-black italic tracking-tight text-slate-900">Activités</h1>
             {isSyncing && (
-                <div className="flex items-center justify-center gap-1 mt-1 text-teal-500 animate-pulse">
+                <div className="flex items-center justify-center gap-1 mt-1 text-amber-500 animate-pulse">
                     <RefreshCw size={10} className="animate-spin" />
-                    <span className="text-[8px] font-black uppercase">Mise à jour...</span>
+                    <span className="text-[8px] font-black uppercase tracking-tighter">Synchronisation Li...</span>
                 </div>
             )}
         </div>
-        <div className="w-12 h-12 flex items-center justify-center bg-slate-50 rounded-full border border-slate-100">
-           <Bell size={18} className="text-slate-400" />
+        <div className="relative">
+          <div className="w-12 h-12 flex items-center justify-center bg-slate-900 rounded-full text-white shadow-xl">
+             <Bell size={18} />
+          </div>
+          {notifications.some(n => !readIds.includes(n.id)) && (
+             <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 border-2 border-white rounded-full" />
+          )}
         </div>
       </header>
 
@@ -142,42 +148,56 @@ export default function NotificationsPage() {
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-slate-300 gap-4">
             <Sparkles size={40} className="opacity-20" />
-            <p className="font-black uppercase text-[10px] tracking-widest">Le silence est d'or ici.</p>
+            <p className="font-black uppercase text-[10px] tracking-[0.4em]">Aucune onde détectée</p>
           </div>
         ) : (
           notifications.map((n) => {
             const isRead = readIds.includes(n.id);
+            const isFinancial = n.type === 'li_received' || n.type === 'certified_read';
+
             return (
               <Link 
                 href={n.link || "/dashboard"} 
                 key={n.id} 
                 onClick={() => markAsRead(n.id)} 
-                className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-300 ${isRead ? 'bg-slate-50/50 border-transparent opacity-60' : 'bg-white border-slate-100 shadow-2xl shadow-slate-200/50'}`}
+                className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-300 group ${
+                  isRead 
+                  ? 'bg-slate-50/50 border-transparent opacity-60 grayscale' 
+                  : isFinancial 
+                  ? 'bg-gradient-to-br from-white to-amber-50/30 border-amber-100 shadow-xl shadow-amber-500/5' 
+                  : 'bg-white border-slate-100 shadow-xl shadow-slate-200/50'
+                }`}
               >
-                <div className={`p-4 rounded-2xl shrink-0 ${isRead ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 shadow-inner'}`}>
+                <div className={`p-4 rounded-2xl shrink-0 transition-transform group-hover:scale-110 ${
+                  isRead ? 'bg-slate-100' : isFinancial ? 'bg-amber-100 shadow-inner' : 'bg-slate-50'
+                }`}>
                   {getIcon(n.type, isRead)}
                 </div>
                 <div className="flex-grow pt-1">
-                  <p className={`text-sm leading-relaxed ${isRead ? 'text-slate-500' : 'text-slate-900 font-bold'}`}>
-                    {n.message}
-                  </p>
+                  <div className="flex justify-between items-start gap-2">
+                    <p className={`text-sm leading-relaxed ${isRead ? 'text-slate-500 font-medium' : 'text-slate-900 font-black italic'}`}>
+                      {n.message}
+                    </p>
+                    {!isRead && (
+                      <div className="mt-1 w-2.5 h-2.5 bg-teal-500 rounded-full shadow-lg shadow-teal-500/40 shrink-0" />
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 mt-3">
                     <p className="text-[9px] text-slate-400 uppercase font-black tracking-widest flex items-center gap-1.5">
-                      <Clock size={12} /> {new Date(n.date).toLocaleDateString()}
+                      <Clock size={12} className="text-slate-300" /> {new Date(n.date).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
-                {!isRead && (
-                  <div className="mt-2 w-3 h-3 bg-teal-500 rounded-full shadow-lg shadow-teal-500/40 ring-4 ring-teal-50" />
-                )}
               </Link>
             );
           })
         )}
       </div>
       
-      <footer className="mt-20 text-center opacity-30">
-          <p className="text-[8px] font-black uppercase tracking-[0.5em]">Vivez le futur dès aujourd'hui avec Lisible</p>
+      <footer className="mt-20 text-center py-10">
+          <p className="text-[10px] font-black uppercase tracking-[0.6em] text-slate-200">
+            Lisible.biz • Le futur est écrit ici
+          </p>
       </footer>
     </div>
   );
