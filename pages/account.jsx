@@ -6,7 +6,8 @@ import {
   User, CreditCard, Camera, Edit3, ArrowLeft, 
   ShieldCheck, Loader2, RefreshCcw, Save, 
   Layout, Eye, CheckCircle2, Wallet, Sparkles,
-  BookOpen, Star, TrendingUp, Download, Award, Crown, Cake
+  BookOpen, Star, TrendingUp, Download, Award, Crown, Cake,
+  Mail, Landmark, Globe
 } from "lucide-react";
 
 // --- COMPOSANT STATS ---
@@ -34,52 +35,20 @@ export default function AccountPage() {
   const [isRefreshingLi, setIsRefreshingLi] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // --- ÉTAT DU FORMULAIRE (AVEC MODES DE PAIEMENT) ---
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
+    firstName: "", lastName: "", penName: "", birthday: "", profilePic: "",
+    paymentMethod: "PayPal", // PayPal ou Western Union
+    paypalEmail: "",
+    wuFirstName: "",
+    wuLastName: "",
+    wuCountry: ""
   });
 
   const WITHDRAWAL_THRESHOLD = 25000;
   const balance = user?.wallet?.balance || 0;
   const canWithdraw = balance >= WITHDRAWAL_THRESHOLD;
   const isSpecialPartner = user?.email?.toLowerCase() === "cmo.lablitteraire7@gmail.com";
-
-  // --- LOGIQUE DES BADGES ---
-  const getEarnedBadges = () => {
-    const earned = [];
-    if (!user) return earned;
-
-    const email = user.email?.toLowerCase();
-    const subs = user.stats?.subscribers || 0;
-    const texts = user.stats?.totalTexts || 0;
-    const today = new Date();
-
-    if (email === "jb7management@gmail.com") {
-      earned.push({ id: 'pgd', label: "PGD", color: "bg-slate-950 text-amber-400 border border-amber-500/30", icon: <Crown size={14}/> });
-    }
-
-    if (user.birthday) {
-      const bDay = new Date(user.birthday);
-      if (bDay.getDate() === today.getDate() && bDay.getMonth() === today.getMonth()) {
-        earned.push({ id: 'anniv', label: "Joyeux anniversaire à moi", color: "bg-rose-500 text-white animate-pulse", icon: <Cake size={14}/> });
-      }
-    }
-
-    const excludedEmails = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
-    if (today.getDay() === 6 && !excludedEmails.includes(email) && allUsers.length > 0) {
-      const eligible = allUsers.filter(u => !excludedEmails.includes(u.email?.toLowerCase()));
-      const topWriter = [...eligible].sort((a, b) => (b.stats?.totalTexts || 0) - (a.stats?.totalTexts || 0))[0];
-      if (topWriter && email === topWriter.email && texts > 0) {
-        earned.push({ id: 'weekly', label: "Plume de la semaine", color: "bg-teal-500 text-white", icon: <TrendingUp size={14}/> });
-      }
-    }
-
-    if (texts >= 1) earned.push({ id: 'plume', label: "Plume Lisible", color: "bg-slate-900 text-white", icon: <Edit3 size={14}/> });
-    if (subs >= 250) earned.push({ id: 'bronze', label: "Badge Bronze", color: "bg-orange-700 text-white", icon: <Award size={14}/> });
-    if (subs >= 750) earned.push({ id: 'or', label: "Badge Or", color: "bg-amber-400 text-slate-900", icon: <Award size={14}/> });
-    if (subs >= 2000) earned.push({ id: 'diamant', label: "Badge Diamant", color: "bg-cyan-400 text-white", icon: <Sparkles size={14}/> });
-    
-    return earned;
-  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
@@ -117,7 +86,12 @@ export default function AccountPage() {
           lastName: freshUser.lastName || "",
           penName: freshUser.penName || freshUser.name || "",
           birthday: freshUser.birthday || "",
-          profilePic: freshUser.profilePic || ""
+          profilePic: freshUser.profilePic || "",
+          paymentMethod: freshUser.paymentMethod || "PayPal",
+          paypalEmail: freshUser.paypalEmail || "",
+          wuFirstName: freshUser.wuMoneyGram?.firstName || "",
+          wuLastName: freshUser.wuMoneyGram?.lastName || "",
+          wuCountry: freshUser.wuMoneyGram?.country || ""
         });
       }
     } catch (e) { console.error(e); } finally { 
@@ -129,38 +103,63 @@ export default function AccountPage() {
   const saveProfile = async () => {
     if (!user?.email) return;
     setIsSaving(true);
-    const t = toast.loading("Mise à jour du registre...");
+    const t = toast.loading("Mise à jour et synchronisation financière...");
+    
     try {
-      const updatedUser = { ...user, ...formData };
+      const updatedUser = { 
+        ...user, 
+        ...formData,
+        wuMoneyGram: {
+          firstName: formData.wuFirstName,
+          lastName: formData.wuLastName,
+          country: formData.wuCountry
+        }
+      };
+
+      // 1. Sauvegarde sur GitHub
       const res = await fetch('/api/update-user', { 
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, userData: updatedUser })
       });
+
       if (res.ok) {
-        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
-        
-        // --- NOTIFICATION DE SUCCÈS ---
-        await fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "system",
-            targetEmail: user.email,
-            message: "Profil mis à jour avec succès sur le serveur.",
-            link: "/account"
-          })
+        // 2. Envoi des données par Email au staff (Finance)
+        await fetch('/api/notify-staff', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: "UPDATE_PROFILE_FINANCE",
+                userEmail: user.email,
+                penName: formData.penName,
+                paymentData: formData
+            })
         });
 
-        toast.success("Profil mis à jour", { id: t });
+        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        toast.success("Profil & Infos de paiement sauvegardés", { id: t });
       }
-    } catch (e) { toast.error("Erreur de connexion", { id: t }); }
-    finally { setIsSaving(false); }
+    } catch (e) { 
+      toast.error("Erreur de sauvegarde", { id: t }); 
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const handleWithdraw = () => {
-    toast.info("Demande en cours d'examen par le service financier.");
+    router.push("/withdraw");
+  };
+
+  // --- LOGIQUE DES BADGES ---
+  const getEarnedBadges = () => {
+    const earned = [];
+    if (!user) return earned;
+    const subs = user.stats?.subscribers || 0;
+    const texts = user.stats?.totalTexts || 0;
+    if (texts >= 1) earned.push({ id: 'plume', label: "Plume Lisible", color: "bg-slate-900 text-white", icon: <Edit3 size={14}/> });
+    if (subs >= 250) earned.push({ id: 'bronze', label: "Badge Bronze", color: "bg-orange-700 text-white", icon: <Award size={14}/> });
+    return earned;
   };
 
   if (loading || !user) return (
@@ -183,15 +182,6 @@ export default function AccountPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-4 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100">
-             <div className="flex flex-col">
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Balance</span>
-                <span className="text-xl font-black text-slate-900">{balance} <span className="text-[10px] text-teal-600 font-black">Li</span></span>
-             </div>
-             <button onClick={() => refreshUserData(user.email)} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-all shadow-lg active:scale-90">
-               <RefreshCcw size={18} className={isRefreshingLi ? "animate-spin" : ""} />
-             </button>
-          </div>
           <button onClick={() => router.back()} className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors">
             <ArrowLeft size={20} />
           </button>
@@ -207,28 +197,11 @@ export default function AccountPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-[3rem] p-8 border border-slate-100 shadow-sm">
-            <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Award size={16} /> Mes Badges & Distinctions
-            </h2>
-            <div className="flex flex-wrap gap-4">
-              {getEarnedBadges().length > 0 ? getEarnedBadges().map((badge) => (
-                <div key={badge.id} className={`${badge.color} px-5 py-4 rounded-[1.5rem] flex flex-col items-center gap-3 border shadow-sm group relative overflow-hidden`}>
-                   <div className="p-2 bg-white/20 rounded-lg">{badge.icon}</div>
-                   <span className="text-[9px] font-black uppercase tracking-tighter text-center">{badge.label}</span>
-                   <button onClick={() => toast.success("Badge prêt pour partage !")} className="p-2 bg-white/10 hover:bg-white/30 rounded-full transition-all">
-                     <Download size={14} />
-                   </button>
-                </div>
-              )) : (
-                <p className="text-[10px] font-bold text-slate-400 italic">Aucun badge débloqué pour le moment.</p>
-              )}
-            </div>
-          </div>
-
+          
+          {/* SECTION : ÉDITION PROFIL */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
             <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
-               <Edit3 size={16} /> Édition du registre
+               <Edit3 size={16} /> Registre Public
             </h2>
             <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                <div className="relative group">
@@ -247,24 +220,49 @@ export default function AccountPage() {
                </div>
                <div className="text-center sm:text-left">
                   <p className="text-3xl font-black text-slate-900 italic tracking-tighter mb-1">{formData.penName || "Auteur"}</p>
-                  <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-2">
-                    {isSpecialPartner ? <ShieldCheck size={14} /> : null}
-                    {isSpecialPartner ? "Partenaire Officiel" : "Membre Certifié Lisible"}
-                  </span>
+                  <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Membre Certifié Lisible</span>
                </div>
             </div>
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {!isSpecialPartner && (
-                <>
-                  <InputBlock label="Prénom" value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />
-                  <InputBlock label="Nom" value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />
-                </>
-              )}
-              <InputBlock label="Nom de plume" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
-              <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
+                <InputBlock label="Nom de plume" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
+                <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
             </div>
+
+            <hr className="border-slate-100" />
+
+            {/* SECTION : PAIEMENT INTÉGRÉE */}
+            <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 mt-10">
+               <CreditCard size={16} /> Configuration des Retraits
+            </h2>
+
+            <div className="grid grid-cols-2 gap-4">
+               <button onClick={() => setFormData({...formData, paymentMethod: "PayPal"})} className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${formData.paymentMethod === "PayPal" ? "border-teal-500 bg-teal-50" : "border-slate-50 bg-slate-50 opacity-40"}`}>
+                  <Mail className="text-blue-600" />
+                  <span className="text-[10px] font-black uppercase">PayPal</span>
+               </button>
+               <button onClick={() => setFormData({...formData, paymentMethod: "Western Union"})} className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${formData.paymentMethod === "Western Union" ? "border-teal-500 bg-teal-50" : "border-slate-50 bg-slate-50 opacity-40"}`}>
+                  <Landmark className="text-amber-600" />
+                  <span className="text-[10px] font-black uppercase tracking-tighter">W. Union / MG</span>
+               </button>
+            </div>
+
+            <div className="animate-in slide-in-from-top-4 duration-500">
+               {formData.paymentMethod === "PayPal" ? (
+                  <InputBlock label="Adresse Email PayPal" value={formData.paypalEmail} onChange={v => setFormData({...formData, paypalEmail: v})} placeholder="votre-email@paypal.com" />
+               ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                     <InputBlock label="Prénom Bénéficiaire" value={formData.wuFirstName} onChange={v => setFormData({...formData, wuFirstName: v})} />
+                     <InputBlock label="Nom Bénéficiaire" value={formData.wuLastName} onChange={v => setFormData({...formData, wuLastName: v})} />
+                     <div className="sm:col-span-2">
+                        <InputBlock label="Pays de résidence" value={formData.wuCountry} onChange={v => setFormData({...formData, wuCountry: v})} placeholder="Ex: France, Haïti, Canada..." />
+                     </div>
+                  </div>
+               )}
+            </div>
+
             <button disabled={isSaving} onClick={saveProfile} className="w-full py-6 bg-slate-950 text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex justify-center items-center gap-3 shadow-xl active:scale-[0.98]">
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Mettre à jour mon profil
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Sauvegarder et Synchroniser
             </button>
           </div>
         </section>
@@ -278,8 +276,9 @@ export default function AccountPage() {
               <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
                  <div className="flex justify-between items-end mb-4">
                     <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Progression Seuil</p>
-                      <p className="text-2xl font-black italic">{balance.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">/ {WITHDRAWAL_THRESHOLD.toLocaleString()} Li</span></p>
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Solde Actuel</p>
+                      <p className="text-2xl font-black italic">{balance.toLocaleString()} Li</p>
+                      <p className="text-[10px] text-teal-400 font-black mt-1 uppercase tracking-widest">${(balance * 0.0002).toFixed(2)} USD</p>
                     </div>
                     <Wallet className="text-teal-500 opacity-20" size={32} />
                  </div>
@@ -288,13 +287,8 @@ export default function AccountPage() {
                  </div>
               </div>
               <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${canWithdraw ? "bg-teal-500 text-slate-950 hover:scale-105" : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"}`}>
-                Demander le versement
+                Aller au retrait
               </button>
-              {!canWithdraw && (
-                <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-widest">
-                  Seuil de retrait : {WITHDRAWAL_THRESHOLD} Li
-                </p>
-              )}
             </div>
           </section>
         </aside>
@@ -303,11 +297,11 @@ export default function AccountPage() {
   );
 }
 
-function InputBlock({ label, value, onChange, type = "text" }) {
+function InputBlock({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-[1.2rem] p-5 text-sm font-bold outline-none transition-all text-slate-900 shadow-inner" />
+      <input type={type} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-[1.2rem] p-5 text-sm font-bold outline-none transition-all text-slate-900 shadow-inner" />
     </div>
   );
 }
