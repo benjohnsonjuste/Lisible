@@ -67,7 +67,7 @@ export default function UsersPage() {
       <header className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
         <div>
           <h1 className="text-6xl font-black italic text-slate-900 tracking-tighter">Communauté</h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600">L'Économie de l'Esprit</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600">Écosystème littéraire</p>
         </div>
         <div className="relative w-full md:w-80">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
