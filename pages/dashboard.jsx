@@ -2,8 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QuickActions from "@/components/QuickActions";
-import { Sparkles, BookOpen, Loader2, Users, Star, Coins, Zap, ShieldCheck } from "lucide-react";
+import { 
+  Sparkles, BookOpen, Loader2, Users, 
+  Star, Coins, Zap, ShieldCheck, TrendingUp, ArrowUpRight 
+} from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function AuthorDashboard() {
   const router = useRouter();
@@ -13,10 +17,12 @@ export default function AuthorDashboard() {
     views: 0, 
     texts: 0, 
     followers: 0,
-    liBalance: 0, // Nouveau : Solde réel de Li
-    totalCertified: 0, // Nouveau : Cumul des lectures finies
+    liBalance: 0,
+    totalCertified: 0,
     estimatedEarnings: "0.00",
-    isMonetized: false 
+    isMonetized: false,
+    canWithdraw: false,
+    remainingSubscribers: 250
   });
 
   useEffect(() => {
@@ -28,7 +34,7 @@ export default function AuthorDashboard() {
         setUser(parsedUser);
 
         try {
-          // Appel à l'API unique mise à jour avec le système de Li
+          // Appel à l'API de statistiques avec un cache-buster (t=...) pour forcer la mise à jour du Wallet
           const res = await fetch(`/api/get-user-stats?email=${encodeURIComponent(parsedUser.email)}&t=${Date.now()}`);
           if (res.ok) {
             const data = await res.json();
@@ -39,43 +45,37 @@ export default function AuthorDashboard() {
               liBalance: data.liBalance || 0,
               totalCertified: data.totalCertified || 0,
               estimatedEarnings: data.estimatedValueUSD || "0.00",
-              isMonetized: data.isMonetized || false
+              isMonetized: data.isMonetized || false,
+              canWithdraw: data.canWithdraw || false,
+              remainingSubscribers: data.remainingSubscribers || 0
             });
           }
         } catch (error) {
-          console.error("Erreur Analytics Dashboard:", error);
+          console.error("Erreur Sync Dashboard:", error);
+          toast.error("Erreur de synchronisation du portefeuille.");
         }
+      } else {
+        router.push("/login");
       }
       setLoading(false);
     }
 
     initDashboard();
-  }, []);
+  }, [router]);
 
   if (loading) return (
     <div className="flex flex-col justify-center items-center py-40 text-teal-600 bg-white min-h-screen">
       <Loader2 className="animate-spin h-10 w-10 mb-4" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronisation du Portefeuille...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Calcul des revenus en cours...</p>
     </div>
   );
 
-  if (!user) {
-    return (
-      <div className="max-w-md mx-auto mt-20 p-12 bg-white rounded-[3rem] text-center shadow-2xl border border-slate-50">
-        <h1 className="text-2xl font-black text-slate-900 mb-4 italic tracking-tighter">Accès restreint.</h1>
-        <Link href="/login" className="block w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-[10px] uppercase hover:bg-teal-600 transition-all">
-          SE CONNECTER
-        </Link>
-      </div>
-    );
-  }
-
-  const displayName = user.penName || user.firstName || "Auteur";
+  const displayName = user?.penName || user?.firstName || "Auteur";
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 animate-in fade-in duration-700">
       
-      {/* HEADER : LE STUDIO DU LI */}
+      {/* HEADER : LE STUDIO & WALLET */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-amber-400 mb-4">
@@ -86,26 +86,26 @@ export default function AuthorDashboard() {
             Bonjour, {displayName}
           </h1>
           <p className="text-slate-400 font-medium max-w-sm">
-            Vos revenus sont calculés sur vos lectures certifiées.
+            Vos revenus sont basés sur vos Lectures Certifiées.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10">
           <StatMini 
-            label="Portefeuille" 
+            label="Mon Solde" 
             value={`${stats.liBalance} Li`} 
             icon={<Coins size={14}/>} 
             color="text-amber-400"
           />
           <StatMini 
-            label="Attention" 
+            label="Certifications" 
             value={stats.totalCertified} 
             icon={<ShieldCheck size={14}/>} 
             color="text-teal-400"
           />
           <StatMini 
-            label="Lectures" 
-            value={stats.views} 
+            label="Manuscrits" 
+            value={stats.texts} 
             icon={<BookOpen size={14}/>} 
             color="text-slate-400"
           />
@@ -120,7 +120,7 @@ export default function AuthorDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* PROGRESSION MONÉTISATION (250 ABONNÉS) */}
+        {/* PROGRESSION MONÉTISATION & RETRAITS */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -151,37 +151,54 @@ export default function AuthorDashboard() {
                 ></div>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-slate-200/50 flex justify-between items-center">
+            <div className="mt-8 pt-6 border-t border-slate-200/50 flex justify-between items-center">
                 <div>
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Gains Accumulés</p>
-                  <p className="text-2xl font-black text-slate-900 italic">${stats.estimatedEarnings}</p>
+                  <p className="text-3xl font-black text-slate-900 italic">${stats.estimatedEarnings}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Taux</p>
-                  <p className="text-[10px] font-bold text-teal-600">0.20$ / 1000 Li</p>
+                   <button 
+                     onClick={() => stats.canWithdraw ? router.push('/account') : toast.error("Seuil de retrait non atteint (5$)")}
+                     className={`flex items-center gap-2 px-4 py-3 rounded-xl font-black text-[9px] uppercase transition-all ${stats.canWithdraw ? 'bg-teal-600 text-white shadow-lg' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                   >
+                     Retirer <ArrowUpRight size={14}/>
+                   </button>
                 </div>
             </div>
           </div>
         </div>
 
-        {/* ANALYTICS QUALITATIF (LI VS VUES) */}
+        {/* ANALYTICS : QUALITÉ VS QUANTITÉ */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-            <Sparkles size={16} className="text-amber-500" />
-            Qualité de Lecture
-          </h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <TrendingUp size={16} className="text-amber-500" />
+              Qualité de Lecture
+            </h3>
+          </div>
+
           <div className="space-y-4">
-            <div className="p-5 bg-teal-50/50 rounded-2xl border border-teal-100 flex justify-between items-center">
-              <span className="text-[10px] font-black text-teal-700 uppercase tracking-widest">Lectures Certifiées (Li)</span>
-              <span className="font-black text-slate-900 text-xl">{stats.totalCertified}</span>
+            <div className="p-5 bg-teal-50/50 rounded-2xl border border-teal-100 flex justify-between items-center group hover:bg-teal-50 transition-colors">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-teal-700 uppercase tracking-widest">Lectures Certifiées (Li)</span>
+                <span className="text-[8px] text-teal-600 font-bold uppercase italic">Revenu généré</span>
+              </div>
+              <span className="font-black text-slate-900 text-2xl">{stats.totalCertified}</span>
             </div>
-            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vues (Simples clics)</span>
-              <span className="font-bold text-slate-400 text-xl">{stats.views}</span>
+
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center group hover:bg-white transition-all">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vues (Simples clics)</span>
+                <span className="text-[8px] text-slate-300 font-bold uppercase italic">Sans récompense</span>
+              </div>
+              <span className="font-bold text-slate-400 text-2xl">{stats.views}</span>
             </div>
-            <p className="text-[9px] text-slate-400 text-center font-medium italic">
-              Seules les Lectures Certifiées génèrent des Li et des revenus.
-            </p>
+
+            <div className="mt-4 p-4 rounded-2xl bg-slate-900 text-center">
+               <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">
+                 Ratio d'attention : <span className="text-amber-400">{stats.views > 0 ? ((stats.totalCertified / stats.views) * 100).toFixed(1) : 0}%</span>
+               </p>
+            </div>
           </div>
         </div>
       </div>
