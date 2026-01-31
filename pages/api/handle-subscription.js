@@ -4,54 +4,63 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
 
   const { subscriberEmail, subscriberName, targetEmail, type } = req.body;
+  if (!targetEmail || !subscriberEmail) return res.status(400).json({ error: "Emails manquants" });
+
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-  const fileName = Buffer.from(targetEmail).toString('base64').replace(/=/g, "") + ".json";
+  
+  // UNIFICATION : On utilise l'email direct comme dans save-user-github.js
+  const fileName = `${targetEmail.toLowerCase().trim()}.json`;
   const path = `data/users/${fileName}`;
 
   try {
     // 1. Récupérer le profil de l'auteur cible
-    const { data } = await octokit.repos.getContent({
+    const { data: fileData } = await octokit.repos.getContent({
       owner: "benjohnsonjuste",
       repo: "Lisible",
       path
     });
 
-    const userProfile = JSON.parse(Buffer.from(data.content, "base64").toString());
+    const userProfile = JSON.parse(Buffer.from(fileData.content, "base64").toString("utf-8"));
     let subs = userProfile.subscribers || [];
 
-    // 2. Modifier la liste des abonnés
+    // 2. Modifier la liste (vériﬁcation doublon)
     if (type === "subscribe") {
-      if (!subs.includes(subscriberEmail)) subs.push(subscriberEmail);
+      if (!subs.includes(subscriberEmail.toLowerCase())) {
+        subs.push(subscriberEmail.toLowerCase());
+      }
     } else {
-      subs = subs.filter(email => email !== subscriberEmail);
+      subs = subs.filter(email => email !== subscriberEmail.toLowerCase());
     }
 
-    // 3. Mettre à jour GitHub
+    // 3. Sauvegarde sur GitHub
     await octokit.repos.createOrUpdateFileContents({
       owner: "benjohnsonjuste",
       repo: "Lisible",
       path,
-      message: `Abonnement: ${subscriberName} -> ${userProfile.name}`,
+      message: `👥 ${type === 'subscribe' ? 'Nouvel abonné' : 'Désabonnement'} : ${subscriberName}`,
       content: Buffer.from(JSON.stringify({ ...userProfile, subscribers: subs }, null, 2)).toString("base64"),
-      sha: data.sha
+      sha: fileData.sha
     });
 
-    // 4. Envoyer une notification si c'est un nouvel abonné
+    // 4. Notification Automatique (Temps Réel)
     if (type === "subscribe") {
-      await fetch(`${req.headers.origin}/api/push-notification`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "new_follower",
-          message: `${subscriberName} s'est abonné à votre profil !`,
-          targetEmail: targetEmail,
-          link: "/users"
-        })
-      });
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/send-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "new_follower",
+            targetEmail: targetEmail,
+            message: `${subscriberName} suit désormais vos œuvres !`,
+            link: "/dashboard"
+          }),
+        });
+      } catch (e) { console.error("Notif Error:", e); }
     }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, count: subs.length });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Subscription Error:", error);
+    res.status(500).json({ error: "Impossible de modifier l'abonnement" });
   }
 }
