@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, Sparkles } from "lucide-react"; 
+import { FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, Sparkles, Image as ImageIcon } from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -47,7 +47,9 @@ export default function PublishPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (countWords(content) > MAX_WORDS) return toast.error("Trop de mots !");
+    const words = countWords(content);
+    if (words > MAX_WORDS) return toast.error(`Trop de mots (${words}/${MAX_WORDS})`);
+    if (words < 10) return toast.error("Votre texte est un peu court pour être publié.");
 
     setLoading(true);
     const loadingToast = toast.loading("Impression du manuscrit...");
@@ -56,33 +58,40 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
+      // --- CRÉATION DE L'OBJET TEXTE ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: user.penName || user.name,
-          authorEmail: user.email,
+          authorEmail: user.email.toLowerCase().trim(),
           title: title.trim(),
           content: content.trim(),
           imageBase64,
-          isConcours: false, // Publication standard
-          date: new Date().toISOString()
+          isConcours: false, 
+          date: new Date().toISOString(),
+          // Initialisation des compteurs pour le système Li
+          views: 0,
+          likes: 0,
+          certifiedReads: 0, // Compteur de prestige
+          liEarned: 0,
+          comments: []
         })
       });
 
       if (!res.ok) throw new Error("Erreur serveur");
       
       const data = await res.json();
-      const generatedId = data.id;
 
+      // Notification globale en temps réel
       await fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "new_text", 
-          message: `📖 Nouveau manuscrit : "${title.trim()}" par ${user.penName || user.name}`,
+          message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
           targetEmail: "all",
-          link: `/texts/${generatedId}`
+          link: `/texts/${data.id}`
         })
       });
 
@@ -90,7 +99,7 @@ export default function PublishPage() {
       localStorage.removeItem("draft_content");
 
       toast.success("Œuvre diffusée avec succès !", { id: loadingToast });
-      router.push(`/texts/${generatedId}`);
+      router.push(`/texts/${data.id}`);
       
     } catch (err) {
       toast.error("Échec de la publication.", { id: loadingToast });
@@ -102,80 +111,127 @@ export default function PublishPage() {
   if (isChecking) return null;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-10 px-4 animate-in fade-in duration-500">
+    <div className="max-w-3xl mx-auto space-y-8 pb-20 px-4 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       
       {/* HEADER ACTIONS */}
-      <div className="flex items-center justify-between mt-6">
-        <Link href="/dashboard" className="p-3 bg-white rounded-2xl text-slate-400 hover:text-teal-600 shadow-sm border border-slate-100 transition-all">
-          <ArrowLeft size={20} />
+      <div className="flex items-center justify-between">
+        <Link href="/dashboard" className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all">
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Retour Studio
         </Link>
-        <button onClick={() => { setTitle(""); setContent(""); }} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl">
-          <Trash2 size={14} /> Effacer le brouillon
+        <button 
+          onClick={() => { if(confirm("Effacer le brouillon ?")) { setTitle(""); setContent(""); } }} 
+          className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl"
+        >
+          <Trash2 size={14} /> Corbeille
         </button>
       </div>
 
-      {/* --- BOUTON CONCOURS (PROMOTIONNEL) --- */}
+      {/* BANNIÈRE PROMO BATTLE */}
       <Link href="/concours-publish" className="block group">
-        <div className="bg-gradient-to-r from-teal-600 to-teal-800 p-1 rounded-[2.5rem] shadow-xl shadow-teal-900/20 group-hover:scale-[1.02] transition-transform duration-500">
-          <div className="bg-white/10 backdrop-blur-md rounded-[2.4rem] p-6 flex items-center justify-between border border-white/20">
+        <div className="bg-slate-900 p-1 rounded-[2.5rem] shadow-2xl shadow-slate-900/20 group-hover:scale-[1.01] transition-all duration-500">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-[2.4rem] p-6 flex items-center justify-between border border-white/5">
             <div className="flex items-center gap-5 text-white">
-              <div className="p-4 bg-white rounded-[1.5rem] text-teal-700 shadow-inner">
-                <Trophy size={28} className="animate-bounce" />
+              <div className="p-4 bg-teal-600 rounded-2xl text-white shadow-lg group-hover:rotate-12 transition-transform">
+                <Trophy size={24} />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-teal-100 opacity-80 mb-1">Événement Spécial</p>
-                <h3 className="text-xl font-black italic tracking-tighter">Battle Poétique International</h3>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-teal-400 mb-1">Passer en mode Battle</p>
+                <h3 className="text-xl font-black italic tracking-tighter">Entrer dans l'Arène Poétique</h3>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-white/60 group-hover:text-white transition-colors">
-               <span className="text-[9px] font-black uppercase tracking-widest">Participer</span>
-               <Sparkles size={16} />
-            </div>
+            <Sparkles size={20} className="text-amber-400 animate-pulse mr-4" />
           </div>
         </div>
       </Link>
 
-      <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] space-y-8 border border-slate-50 shadow-2xl relative overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] space-y-8 border border-slate-100 shadow-2xl relative overflow-hidden">
         <header className="space-y-2 relative">
           <div className="flex items-center gap-4 text-slate-900">
-            <div className="p-3 bg-slate-100 rounded-2xl text-slate-900">
+            <div className="p-3 bg-teal-50 rounded-2xl text-teal-600">
                 <FileText size={24} />
             </div>
-            <h1 className="text-3xl font-black italic tracking-tighter">Publication Standard</h1>
+            <h1 className="text-3xl font-black italic tracking-tighter">Nouvelle Publication</h1>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-16">Diffuser votre plume dans la bibliothèque</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-16">Chaque lecture certifiée vous rapportera 1 Li</p>
         </header>
 
         <div className="space-y-6">
-             <input
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-300 ml-5">Titre de l'œuvre</label>
+              <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-slate-50 border-none rounded-2xl p-6 text-xl italic outline-none focus:ring-2 ring-teal-500/20 font-bold transition-all"
-                placeholder="Titre de votre œuvre..."
+                className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic font-bold outline-none focus:border-teal-100 focus:bg-white transition-all text-slate-900"
+                placeholder="Ex: Le Chant des Plaines"
                 required
               />
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-slate-50 border-none rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:ring-2 ring-teal-500/20 resize-none transition-all"
-              placeholder="Écrivez ici..."
-              required
-            />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-300 ml-5">Corps du texte</label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:border-teal-100 focus:bg-white resize-none transition-all text-slate-800"
+                placeholder="Exprimez votre talent ici..."
+                required
+              />
+              <div className="flex justify-end pr-5">
+                <span className={`text-[10px] font-black uppercase ${countWords(content) > MAX_WORDS ? 'text-rose-500' : 'text-slate-300'}`}>
+                  {countWords(content)} / {MAX_WORDS} MOTS
+                </span>
+              </div>
+            </div>
         </div>
 
-        <div className="p-8 bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center cursor-pointer hover:border-teal-400 transition-colors">
-          <label className="cursor-pointer block">
-            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} className="hidden" />
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                {imageFile ? imageFile.name : "Ajouter une image de couverture"}
-            </p>
+        {/* UPLOAD IMAGE COUVERTURE */}
+        <div className="relative group/img">
+          <input 
+            type="file" 
+            id="cover-upload"
+            accept="image/*" 
+            onChange={(e) => setImageFile(e.target.files[0])} 
+            className="hidden" 
+          />
+          <label 
+            htmlFor="cover-upload"
+            className="flex flex-col items-center justify-center p-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] cursor-pointer hover:bg-teal-50 hover:border-teal-200 transition-all group-hover/img:shadow-inner"
+          >
+            {imageFile ? (
+              <div className="flex items-center gap-3 text-teal-600 font-bold text-sm">
+                <ImageIcon size={20} />
+                <span>{imageFile.name}</span>
+              </div>
+            ) : (
+              <>
+                <ImageIcon size={30} className="text-slate-300 mb-2" />
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                   Ajouter une couverture <br />
+                   <span className="text-[8px] font-bold opacity-60">(Optionnel - JPG, PNG)</span>
+                </p>
+              </>
+            )}
           </label>
         </div>
 
-        <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-6 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3">
-          {loading ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> PUBLIER DANS LA BIBLIOTHÈQUE</>}
-        </button>
+        <div className="pt-4">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-slate-950 text-white py-7 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3 active:scale-95 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : (
+              <>
+                <Send size={18} /> 
+                Diffuser dans la Bibliothèque
+              </>
+            )}
+          </button>
+          <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-6">
+            En publiant, vous acceptez la charte communautaire de Lisible.
+          </p>
+        </div>
       </form>
     </div>
   );
