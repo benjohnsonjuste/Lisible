@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Eye, Heart, MessageCircle, Loader2, Share2, Trophy, Megaphone } from "lucide-react";
+import { Eye, Heart, MessageCircle, Loader2, Share2, Trophy, Megaphone, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Bibliotheque() {
@@ -20,6 +20,7 @@ export default function Bibliotheque() {
             .map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
           
           const data = await Promise.all(promises);
+          // Tri par date décroissante
           setTexts(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
         }
       } catch (e) { 
@@ -52,9 +53,9 @@ export default function Bibliotheque() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 grid gap-10 md:grid-cols-2">
       {texts.map((item) => {
-        // Logique de distinction Concours vs Annonce
         const isConcours = item.isConcours === true;
         const isAnnonce = item.authorEmail === "adm.lablitteraire7@gmail.com" || item.authorName === "Lisible Support Team";
+        const certifiedCount = item.totalCertified || 0;
 
         return (
           <Link href={`/texts/${item.id}`} key={item.id} className="group relative">
@@ -67,9 +68,7 @@ export default function Bibliotheque() {
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 to-teal-50 flex items-center justify-center font-black italic text-slate-200 text-4xl">Lisible.</div>
                 )}
 
-                {/* BADGES */}
                 <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
-                    {/* Badge Concours PRIORITAIRE */}
                     {isConcours ? (
                         <div className="bg-teal-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg animate-pulse border border-teal-400">
                             <Trophy size={12} />
@@ -98,19 +97,29 @@ export default function Bibliotheque() {
                 <h2 className={`text-3xl font-black italic mb-4 tracking-tighter leading-none transition-colors ${isConcours ? 'text-teal-700' : isAnnonce ? 'text-amber-900' : 'text-slate-900 group-hover:text-teal-600'}`}>
                   {item.title}
                 </h2>
+                
+                {/* Certification Badge Stat */}
+                <div className="mb-4 flex items-center gap-2">
+                   <ShieldCheck size={14} className={certifiedCount > 0 ? "text-teal-500" : "text-slate-300"} />
+                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                     {certifiedCount} {certifiedCount > 1 ? "Lectures Certifiées" : "Lecture Certifiée"}
+                   </span>
+                </div>
+
                 <p className="text-slate-500 line-clamp-3 font-serif italic mb-8 leading-relaxed">
                   {item.content}
                 </p>
+
                 <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full animate-pulse ${isConcours ? 'bg-teal-500' : isAnnonce ? 'bg-amber-500' : 'bg-slate-300'}`} />
                     <span className={`font-black text-[10px] uppercase tracking-widest ${isConcours ? 'text-teal-600' : isAnnonce ? 'text-amber-700' : 'text-slate-500'}`}>
-                      @{item.authorName} {/* Ici authorName est l'ID Concurrent si Concours */}
+                      @{item.authorName}
                     </span>
                   </div>
                   <div className="flex gap-4 text-slate-400 font-black text-[11px]">
                     <span className="flex items-center gap-1.5"><Eye size={16}/> {item.views || 0}</span>
-                    <span className="flex items-center gap-1.5"><Heart size={16}/> {item.likes?.length || 0}</span>
+                    <span className="flex items-center gap-1.5"><Heart size={16}/> {item.totalLikes || 0}</span>
                   </div>
                 </div>
               </div>
