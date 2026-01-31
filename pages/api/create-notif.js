@@ -12,32 +12,33 @@ const pusher = new Pusher({
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Non autorisé" });
 
-  const { type, message, targetEmail, link } = req.body;
+  const { type, message, targetEmail, link, amountLi } = req.body;
   const token = process.env.GITHUB_TOKEN;
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
   const path = "data/notifications.json";
 
-  // Création d'une structure de données solide
+  // Structure enrichie pour l'économie du Li
   const newNotif = {
-    id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // ID unique garanti
-    type: type || "info",
-    message: message || "Nouvelle notification",
+    id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type: type || "info", // types suggérés : 'li_received', 'certified_read', 'subscription'
+    message: message || "Nouvelle activité sur votre compte",
     targetEmail: targetEmail || "all",
-    link: link || "/lisible-club", // Lien par défaut vers le club
+    link: link || "/dashboard",
+    amountLi: amountLi || 0, // Optionnel : pour afficher "+5 Li" dans la notif
     date: new Date().toISOString()
   };
 
   try {
-    // 1. DÉCLENCHEMENT PUSHER (Instantanéité)
-    // On utilise un try/catch spécifique pour Pusher afin qu'un bug Pusher ne bloque pas l'écriture GitHub
+    // 1. DÉCLENCHEMENT PUSHER (Temps Réel)
+    // On envoie la notification instantanément au client connecté
     try {
       await pusher.trigger("global-notifications", "new-alert", newNotif);
     } catch (e) {
-      console.error("Pusher Error:", e);
+      console.error("Pusher Sync Error:", e);
     }
 
-    // 2. RÉCUPÉRATION GITHUB (Lecture)
+    // 2. RÉCUPÉRATION DE L'HISTORIQUE SUR GITHUB
     const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -56,8 +57,8 @@ export default async function handler(req, res) {
       currentNotifs = JSON.parse(content);
     }
 
-    // 3. MISE À JOUR (Écriture)
-    // On garde les 50 dernières notifications pour éviter que le fichier devienne trop lourd
+    // 3. MISE À JOUR PERMANENTE
+    // On limite à 50 pour la performance, mais on place la plus récente en haut
     const updatedNotifs = [newNotif, ...currentNotifs].slice(0, 50);
 
     const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
@@ -67,21 +68,22 @@ export default async function handler(req, res) {
         "Content-Type": "application/json" 
       },
       body: JSON.stringify({
-        message: `🔔 Notification : ${message.substring(0, 30)}...`,
+        message: `🔔 Notification [${type}] : ${targetEmail}`,
         content: Buffer.from(JSON.stringify(updatedNotifs, null, 2)).toString("base64"),
-        sha: sha, // Requis par GitHub pour prouver qu'on a lu la dernière version
+        sha: sha,
       }),
     });
 
-    if (!putRes.ok) {
-      const errorData = await putRes.json();
-      throw new Error(`GitHub API error: ${errorData.message}`);
-    }
+    if (!putRes.ok) throw new Error("Erreur d'écriture GitHub");
 
-    return res.status(200).json({ success: true, notification: newNotif });
+    return res.status(200).json({ 
+      success: true, 
+      message: "Notification propagée et archivée",
+      notification: newNotif 
+    });
 
   } catch (error) {
-    console.error("Critical API Error:", error);
-    return res.status(500).json({ error: "Échec de la création de la notification", details: error.message });
+    console.error("Critical Notification Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
