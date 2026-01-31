@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation"; // Changement pour compatibilité App Router
 import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
   ShieldCheck, Loader2, BookOpen, Eye, Heart, Plus,
-  Lock, Trash2, AlertTriangle, RefreshCcw, Sparkles, Coins
+  RefreshCcw, Sparkles, Layout, BarChart3, Save
 } from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
 import Link from "next/link";
@@ -18,34 +18,27 @@ export default function AccountPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [editingPayment, setEditingPayment] = useState(false);
   const [myTexts, setMyTexts] = useState([]);
+  
+  // États spécifiques Partenaire
+  const [adsConfig, setAdsConfig] = useState({ ads: [] });
+  const [partnerStats, setPartnerStats] = useState({});
 
-  // États pour les formulaires
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
   });
 
-  const [payment, setPayment] = useState({
-    method: "PayPal", paypalEmail: "",
-    wuFirstName: "", wuLastName: "", country: "", areaCode: "", phone: "",
-  });
+  const isSpecialPartner = user?.email?.toLowerCase() === "cmo.lablitteraire7@gmail.com";
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const storedUser = localStorage.getItem("lisible_user");
-        if (storedUser) {
-          const parsed = JSON.parse(storedUser);
-          // On recharge les données fraîches depuis le serveur pour le Wallet
-          await refreshUserData(parsed.email);
-        } else {
-          router.push("/");
-        }
-      } catch (error) { console.error(error); } finally { setLoading(false); }
-    };
-    if (router.isReady) loadData();
-  }, [router.isReady]);
+    const storedUser = localStorage.getItem("lisible_user");
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      refreshUserData(parsed.email);
+    } else {
+      router.push("/login");
+    }
+  }, []);
 
-  // --- RECHARGER LES DONNÉES UTILISATEUR (WALLET INCLUS) ---
   const refreshUserData = async (email) => {
     setIsRefreshingLi(true);
     try {
@@ -53,9 +46,7 @@ export default function AccountPage() {
       if (res.ok) {
         const file = await res.json();
         const freshUser = JSON.parse(decodeURIComponent(escape(atob(file.content))));
-        
         setUser(freshUser);
-        localStorage.setItem("lisible_user", JSON.stringify(freshUser));
         
         setFormData({
           firstName: freshUser.firstName || "",
@@ -65,10 +56,22 @@ export default function AccountPage() {
           profilePic: freshUser.profilePic || ""
         });
         
-        if (freshUser.email) await fetchAuthorTexts(freshUser.email);
+        if (freshUser.email) fetchAuthorTexts(freshUser.email);
+        if (email.toLowerCase() === "cmo.lablitteraire7@gmail.com") loadPartnerData();
       }
-    } catch (e) { console.error("Erreur refresh:", e); }
-    finally { setIsRefreshingLi(false); }
+    } catch (e) { console.error(e); }
+    finally { setIsRefreshingLi(false); setLoading(false); }
+  };
+
+  const loadPartnerData = async () => {
+    try {
+      const [configRes, statsRes] = await Promise.all([
+        fetch('/api/admin-update-partner'),
+        fetch('/api/partner-tracker-stats')
+      ]);
+      if (configRes.ok) setAdsConfig(await configRes.json());
+      if (statsRes.ok) setPartnerStats(await statsRes.json());
+    } catch (e) { console.error("Partner Load Error", e); }
   };
 
   const fetchAuthorTexts = async (email) => {
@@ -83,54 +86,33 @@ export default function AccountPage() {
     } catch (e) { console.error(e); }
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setFormData(prev => ({ ...prev, profilePic: ev.target.result }));
-      setIsUploading(false);
-      toast.success("Photo prête");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const saveAllToStaffRegistry = async () => {
-    const loadingToast = toast.loading("Mise à jour...");
-    const updatedUserData = {
-      ...user, ...formData, paymentMethod: payment.method, paypalEmail: payment.paypalEmail,
-      wuMoneyGram: { ...payment }
-    };
+  const saveAds = async () => {
+    const t = toast.loading("Mise à jour des publicités...");
     try {
-      const res = await fetch("/api/save-user-github", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedUserData),
+      await fetch('/api/admin-update-partner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ads: adsConfig.ads, adminUser: user.email })
       });
-      if (res.ok) {
-        localStorage.setItem("lisible_user", JSON.stringify(updatedUserData));
-        setUser(updatedUserData);
-        toast.success("Profil mis à jour !", { id: loadingToast });
-        setEditingPayment(false);
-      }
-    } catch (err) { toast.error("Échec", { id: loadingToast }); }
+      toast.success("Espace publicitaire mis à jour", { id: t });
+    } catch (e) { toast.error("Erreur", { id: t }); }
   };
 
   if (loading) return (
     <div className="flex flex-col justify-center items-center h-screen bg-white">
-      <Loader2 className="animate-spin text-teal-600 mb-2" />
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Accès au registre...</p>
+      <Loader2 className="animate-spin text-teal-600 mb-2" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Synchronisation du Registre...</p>
     </div>
   );
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-500">
       
-      {/* HEADER AVEC SOLDE DE LI */}
-      <header className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
+      {/* HEADER */}
+      <header className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
            <div className="p-4 bg-slate-900 rounded-2xl text-white">
-              <User size={32} strokeWidth={2.5} />
+              <User size={32} />
            </div>
            <div>
             <h1 className="text-4xl font-black text-slate-900 italic tracking-tighter">Mon Compte</h1>
@@ -138,26 +120,20 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* COMPOSANT WALLET (LE LI) */}
-        <div className="flex items-center gap-6 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100">
-           <div className="flex flex-col">
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Mon Trésor</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-slate-900 italic">{(user?.wallet?.balance || 0)}</span>
-                <span className="text-[10px] font-black text-teal-600 uppercase">Li</span>
-              </div>
-           </div>
-           <button 
-             onClick={() => refreshUserData(user.email)} 
-             className={`p-4 rounded-2xl transition-all ${isRefreshingLi ? 'bg-teal-100 text-teal-600' : 'bg-slate-900 text-white hover:bg-teal-600'}`}
-           >
-             <RefreshCcw size={20} className={isRefreshingLi ? "animate-spin" : ""} />
-           </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100">
+             <div className="flex flex-col">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Mon Trésor</span>
+                <span className="text-2xl font-black text-slate-900">{(user?.wallet?.balance || 0)} <span className="text-xs text-teal-600">Li</span></span>
+             </div>
+             <button onClick={() => refreshUserData(user.email)} className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all">
+               <RefreshCcw size={20} className={isRefreshingLi ? "animate-spin" : ""} />
+             </button>
+          </div>
+          <button onClick={() => router.back()} className="p-4 border border-slate-100 rounded-2xl text-slate-400 hover:text-teal-600">
+            <ArrowLeft size={24} />
+          </button>
         </div>
-
-        <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
-          <ArrowLeft size={24} />
-        </button>
       </header>
 
       {user && <MetricsOverview user={user} />}
@@ -167,142 +143,139 @@ export default function AccountPage() {
           
           {/* IDENTITÉ */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
-            <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
-              <Edit3 className="text-teal-600" size={18} /> Profil Public & Civil
+            <h2 className="text-[11px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
+               <Edit3 size={18} /> {isSpecialPartner ? "Gestion du Partenaire" : "Profil Public & Civil"}
             </h2>
             
-            <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
-              <div className="relative">
-                <div className="w-32 h-32 rounded-[2.5rem] bg-white overflow-hidden border-4 border-white shadow-2xl relative group">
-                  {isUploading ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/80"><Loader2 className="animate-spin text-teal-600" /></div>
-                  ) : (
-                    <img src={formData.profilePic || "/avatar.png"} className="w-full h-full object-cover" alt="Profil" />
-                  )}
-                </div>
-                <label className="absolute -bottom-2 -right-2 p-3 bg-teal-600 text-white rounded-2xl cursor-pointer shadow-xl hover:bg-slate-900 transition-all hover:scale-110">
-                  <Camera size={20} />
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
-                </label>
-              </div>
-              <div className="text-center sm:text-left space-y-1">
-                <p className="text-2xl font-black text-slate-900 italic tracking-tight">{formData.penName || user?.name}</p>
-                <div className="flex items-center justify-center sm:justify-start gap-2 text-[10px] text-teal-600 font-black uppercase tracking-widest">
-                   <ShieldCheck size={14} /> Membre Auteur Certifié
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <InputBlock label="Prénom" value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />
-              <InputBlock label="Nom" value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />
-              <InputBlock label="Nom de plume" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
-              <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
-            </div>
-
-            <button onClick={saveAllToStaffRegistry} className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] hover:bg-teal-600 transition-all shadow-xl active:scale-[0.98]">
-              Enregistrer les modifications
-            </button>
-          </div>
-
-          {/* HISTORIQUE DU WALLET LI */}
-          <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-8">
-            <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
-              <Sparkles className="text-teal-600" size={18} /> Historique de l'Attention (Li)
-            </h2>
-            <div className="space-y-4">
-              {user?.wallet?.history?.length > 0 ? (
-                user.wallet.history.slice().reverse().map((entry, i) => (
-                  <div key={i} className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{entry.reason}</span>
-                      <span className="text-[8px] font-bold text-slate-400">{new Date(entry.date).toLocaleDateString()}</span>
-                    </div>
-                    <span className="text-sm font-black text-teal-600">+{entry.amount} Li</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center py-10 text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Aucune transaction de Li enregistrée.</p>
-              )}
-            </div>
-          </div>
-
-          {/* MES MANUSCRITS */}
-          <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
-                <BookOpen className="text-teal-600" /> Mes Manuscrits ({myTexts.length})
-              </h2>
-              <Link href="/publish" className="flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-teal-500/20 active:scale-95">
-                <Plus size={16} /> Nouveau Manuscrit
-              </Link>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              {myTexts.map((txt) => (
-                <Link href={`/texts/${txt.id}`} key={txt.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] hover:bg-white hover:shadow-lg transition-all border border-transparent hover:border-slate-100 group">
-                  <div className="flex flex-col">
-                    <span className="text-lg font-black text-slate-900 group-hover:text-teal-600 transition-colors">{txt.title}</span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Publié le {new Date(txt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                  </div>
-                  <div className="flex gap-4 sm:gap-6 text-slate-400">
-                    <div className="flex items-center gap-1.5"><Eye size={14}/> <span className="text-xs font-black text-slate-700">{txt.views || 0}</span></div>
-                    <div className="flex items-center gap-1.5"><Heart size={14} className="group-hover:text-rose-500 transition-colors" /> <span className="text-xs font-black text-slate-700">{txt.likes?.length || 0}</span></div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* VERSEMENTS */}
-        <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl h-fit sticky top-10 border border-white/5">
-          <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
-            <CreditCard size={24} /> Versements
-          </h2>
-          
-          <div className="space-y-6">
-            <div className="p-6 bg-slate-900 rounded-2xl border border-white/5 space-y-2">
-               <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Retrait possible dès 5000 Li</p>
-               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-teal-500 transition-all duration-1000" 
-                    style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 5000) * 100, 100)}%` }}
-                  />
+            <div className="flex items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+               <img src={formData.profilePic || "/avatar.png"} className="w-24 h-24 rounded-3xl object-cover border-4 border-white shadow-lg" alt="" />
+               <div>
+                  <p className="text-2xl font-black text-slate-900 italic">{formData.penName || user?.name}</p>
+                  <span className="text-[10px] font-black text-teal-600 uppercase flex items-center gap-1">
+                    <ShieldCheck size={14} /> {isSpecialPartner ? "Partenaire Officiel" : "Auteur Certifié"}
+                  </span>
                </div>
             </div>
 
-            <div className="space-y-2">
-               <label className="text-[9px] font-black text-slate-500 uppercase ml-2 tracking-widest">Méthode préférée</label>
-                <select disabled={!editingPayment} value={payment.method} onChange={e => setPayment({...payment, method: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-5 text-sm font-bold text-white outline-none ring-teal-500/30 focus:ring-2 transition-all">
-                  <option value="PayPal">PayPal (Monde)</option>
-                  <option value="Western Union">Western Union</option>
-                  <option value="MoneyGram">MoneyGram</option>
-                </select>
-            </div>
-            
-            <div className="pt-6">
-              {editingPayment ? (
-                <button onClick={saveAllToStaffRegistry} className="w-full py-5 bg-teal-500 text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Confirmer</button>
-              ) : (
-                <button onClick={() => setEditingPayment(true)} className="w-full py-5 bg-slate-800 text-teal-400 rounded-xl font-black text-[10px] uppercase border border-slate-700 flex items-center justify-center gap-2 hover:bg-slate-700 transition-all">
-                  <Edit3 size={16} /> Modifier
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              {!isSpecialPartner && (
+                <>
+                  <InputBlock label="Prénom" value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />
+                  <InputBlock label="Nom" value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />
+                </>
               )}
+              <InputBlock label="Nom de plume / Partenaire" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
+              <InputBlock label="Date de naissance / Création" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
             </div>
+
+            <button onClick={() => refreshUserData(user.email)} className="w-full py-6 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all">
+              Sauvegarder les informations
+            </button>
           </div>
+
+          {/* GESTIONNAIRE DE PUB (RÉSERVÉ PARTENAIRE) */}
+          {isSpecialPartner && (
+            <div className="bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl space-y-8 text-white">
+              <div className="flex justify-between items-center">
+                <h2 className="text-[11px] font-black italic text-teal-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                   <Layout size={18} /> Gestionnaire de Pub
+                </h2>
+                <button onClick={saveAds} className="px-6 py-3 bg-teal-500 text-slate-950 rounded-xl font-black text-[10px] uppercase flex items-center gap-2">
+                  <Save size={16} /> Publier les changements
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {adsConfig.ads.map((ad, idx) => (
+                  <div key={idx} className="bg-slate-800 p-6 rounded-2xl border border-white/5 space-y-4">
+                    <div className="flex justify-between text-teal-400">
+                      <span className="text-[10px] font-black uppercase tracking-widest">Bannière #{ad.id}</span>
+                      <div className="flex gap-4">
+                        <span className="flex items-center gap-1 text-xs font-black"><Eye size={12}/> {partnerStats[ad.id]?.views || 0}</span>
+                        <span className="flex items-center gap-1 text-xs font-black"><BarChart3 size={12}/> {partnerStats[ad.id]?.clicks || 0}</span>
+                      </div>
+                    </div>
+                    <input 
+                      className="w-full bg-slate-900 border-none rounded-lg p-3 text-xs" 
+                      placeholder="URL de l'image"
+                      value={ad.imageUrl}
+                      onChange={(e) => {
+                        const newAds = [...adsConfig.ads];
+                        newAds[idx].imageUrl = e.target.value;
+                        setAdsConfig({ ...adsConfig, ads: newAds });
+                      }}
+                    />
+                    <input 
+                      className="w-full bg-slate-900 border-none rounded-lg p-3 text-xs" 
+                      placeholder="Lien de destination"
+                      value={ad.link}
+                      onChange={(e) => {
+                        const newAds = [...adsConfig.ads];
+                        newAds[idx].link = e.target.value;
+                        setAdsConfig({ ...adsConfig, ads: newAds });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
+
+        {/* COLONNE DROITE : VERSEMENTS OU STATS GLOBALES */}
+        {!isSpecialPartner ? (
+          <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl h-fit sticky top-10">
+            <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
+              <CreditCard size={24} /> Versements
+            </h2>
+            <div className="space-y-6">
+              <div className="p-6 bg-slate-900 rounded-2xl border border-white/5 space-y-2">
+                 <p className="text-[8px] font-black text-slate-500 uppercase">Seuil : 5000 Li</p>
+                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="h-full bg-teal-500" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 5000) * 100, 100)}%` }} />
+                 </div>
+              </div>
+              <button className="w-full py-5 bg-slate-800 text-teal-400 rounded-xl font-black text-[10px] uppercase border border-slate-700">
+                Modifier Méthode
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="bg-teal-600 rounded-[3rem] p-8 text-slate-950 shadow-2xl h-fit sticky top-10">
+            <h2 className="text-xl font-black italic mb-6">Performance Marketing</h2>
+            <div className="space-y-4">
+              <div className="p-5 bg-white/20 rounded-2xl backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Total Vues Pub</p>
+                <p className="text-3xl font-black tracking-tighter">
+                  {Object.values(partnerStats).reduce((acc, curr) => acc + (curr.views || 0), 0)}
+                </p>
+              </div>
+              <div className="p-5 bg-white/20 rounded-2xl backdrop-blur-md">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Taux de Clic Moyen</p>
+                <p className="text-3xl font-black tracking-tighter">
+                  {(() => {
+                    const v = Object.values(partnerStats).reduce((acc, curr) => acc + (curr.views || 0), 0);
+                    const c = Object.values(partnerStats).reduce((acc, curr) => acc + (curr.clicks || 0), 0);
+                    return v > 0 ? ((c / v) * 100).toFixed(1) : 0;
+                  })()}%
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
 }
 
-// COMPOSANTS RÉUTILISABLES
 function InputBlock({ label, value, onChange, type = "text" }) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all text-slate-700 shadow-sm" />
+      <input 
+        type={type} value={value} onChange={e => onChange(e.target.value)} 
+        className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all" 
+      />
     </div>
   );
 }
