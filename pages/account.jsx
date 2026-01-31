@@ -16,30 +16,32 @@ export default function AccountPage() {
   const [isRefreshingLi, setIsRefreshingLi] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [adsConfig, setAdsConfig] = useState({ ads: [] });
-  const [partnerStats, setPartnerStats] = useState({});
-
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
   });
 
+  // Sécurisation de la vérification partenaire
   const isSpecialPartner = user?.email?.toLowerCase() === "cmo.lablitteraire7@gmail.com";
   
-  // MISE À JOUR DU SEUIL À 25 000 Li
   const WITHDRAWAL_THRESHOLD = 25000;
   const canWithdraw = (user?.wallet?.balance || 0) >= WITHDRAWAL_THRESHOLD;
 
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      refreshUserData(parsed.email);
+      try {
+        const parsed = JSON.parse(storedUser);
+        refreshUserData(parsed.email);
+      } catch (e) {
+        router.push("/login");
+      }
     } else {
       router.push("/login");
     }
   }, []);
 
   const refreshUserData = async (email) => {
+    if (!email) return;
     setIsRefreshingLi(true);
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${email.toLowerCase().trim()}.json?t=${Date.now()}`);
@@ -56,10 +58,14 @@ export default function AccountPage() {
           profilePic: freshUser.profilePic || ""
         });
         
-        if (email.toLowerCase() === "cmo.lablitteraire7@gmail.com") loadPartnerData();
+        // Suppression de l'appel à loadPartnerData() inexistant pour éviter le crash
       }
-    } catch (e) { console.error(e); }
-    finally { setIsRefreshingLi(false); setLoading(false); }
+    } catch (e) { 
+      console.error("Erreur de récupération:", e); 
+    } finally { 
+      setIsRefreshingLi(false); 
+      setLoading(false); 
+    }
   };
 
   const handlePhotoUpload = (e) => {
@@ -73,6 +79,7 @@ export default function AccountPage() {
   };
 
   const saveProfile = async () => {
+    if (!user?.email) return;
     setIsSaving(true);
     const t = toast.loading("Mise à jour du registre...");
     try {
@@ -85,6 +92,7 @@ export default function AccountPage() {
 
       if (res.ok) {
         localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
         toast.success("Profil mis à jour avec succès", { id: t });
       } else { throw new Error(); }
     } catch (e) { toast.error("Erreur de sauvegarde", { id: t }); }
@@ -96,7 +104,7 @@ export default function AccountPage() {
     toast.success("Demande de versement transmise à l'administration.");
   };
 
-  if (loading) return (
+  if (loading || !user) return (
     <div className="flex flex-col justify-center items-center h-screen bg-white">
       <Loader2 className="animate-spin text-teal-600 mb-2" size={40} />
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">Accès au registre...</p>
@@ -158,7 +166,7 @@ export default function AccountPage() {
                   </label>
                </div>
                <div className="text-center sm:text-left">
-                  <p className="text-2xl font-black text-slate-900 italic leading-none mb-2">{formData.penName || user?.name}</p>
+                  <p className="text-2xl font-black text-slate-900 italic leading-none mb-2">{formData.penName || user?.penName || user?.firstName}</p>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2">
                     {isSpecialPartner ? (
                       <><Layout size={14} className="text-teal-600" /> Partenaire Lisible</>
@@ -191,7 +199,6 @@ export default function AccountPage() {
           </div>
         </section>
 
-        {/* SECTION VERSEMENTS OPTIMISÉE POUR 25 000 Li */}
         <aside className="space-y-6">
           <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24">
             <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-8">
