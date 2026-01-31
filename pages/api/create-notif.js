@@ -18,72 +18,50 @@ export default async function handler(req, res) {
   const repo = "Lisible";
   const path = "data/notifications.json";
 
-  // Structure enrichie pour l'économie du Li
   const newNotif = {
-    id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    type: type || "info", // types suggérés : 'li_received', 'certified_read', 'subscription'
-    message: message || "Nouvelle activité sur votre compte",
+    id: `notif-${Date.now()}`,
+    type: type || "info",
+    message: message || "Nouvelle activité",
     targetEmail: targetEmail || "all",
     link: link || "/dashboard",
-    amountLi: amountLi || 0, // Optionnel : pour afficher "+5 Li" dans la notif
-    date: new Date().toISOString()
+    amountLi: amountLi || 0,
+    date: new Date().toISOString(),
+    read: false
   };
 
   try {
-    // 1. DÉCLENCHEMENT PUSHER (Temps Réel)
-    // On envoie la notification instantanément au client connecté
-    try {
-      await pusher.trigger("global-notifications", "new-alert", newNotif);
-    } catch (e) {
-      console.error("Pusher Sync Error:", e);
-    }
+    // 1. PUSHER : Envoi instantané (pour l'alerte à l'écran)
+    await pusher.trigger("global-notifications", "new-alert", newNotif);
 
-    // 2. RÉCUPÉRATION DE L'HISTORIQUE SUR GITHUB
+    // 2. GITHUB : Archivage pour l'historique
     const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Accept": "application/vnd.github.v3+json"
-        },
+        headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
     });
 
     let currentNotifs = [];
     let sha = null;
 
-    if (getRes.status === 200) {
+    if (getRes.ok) {
       const fileData = await getRes.json();
       sha = fileData.sha;
-      const content = Buffer.from(fileData.content, "base64").toString("utf-8");
-      currentNotifs = JSON.parse(content);
+      currentNotifs = JSON.parse(Buffer.from(fileData.content, "base64").toString("utf-8"));
     }
 
-    // 3. MISE À JOUR PERMANENTE
-    // On limite à 50 pour la performance, mais on place la plus récente en haut
-    const updatedNotifs = [newNotif, ...currentNotifs].slice(0, 50);
+    const updatedNotifs = [newNotif, ...currentNotifs].slice(0, 100);
 
-    const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
       method: "PUT",
-      headers: { 
-        Authorization: `Bearer ${token}`, 
-        "Content-Type": "application/json" 
-      },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: `🔔 Notification [${type}] : ${targetEmail}`,
+        message: `🔔 Notif pour ${targetEmail}`,
         content: Buffer.from(JSON.stringify(updatedNotifs, null, 2)).toString("base64"),
         sha: sha,
       }),
     });
 
-    if (!putRes.ok) throw new Error("Erreur d'écriture GitHub");
-
-    return res.status(200).json({ 
-      success: true, 
-      message: "Notification propagée et archivée",
-      notification: newNotif 
-    });
-
+    return res.status(200).json({ success: true, notification: newNotif });
   } catch (error) {
-    console.error("Critical Notification Error:", error);
     return res.status(500).json({ error: error.message });
   }
 }
