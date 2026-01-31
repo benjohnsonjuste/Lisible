@@ -1,0 +1,29 @@
+{
+  "ads": [
+    {
+      "id": "banner-sidebar",
+      "name": "Bannière Latérale",
+      "imageUrl": "https://placehold.co/600x400/0f172a/6366f1?text=Publicité+Lisible",
+      "link": "https://lisible.art",
+      "active": true
+    },
+    {
+      "id": "banner-footer",
+      "name": "Bannière de Fin de Texte",
+      "imageUrl": "https://placehold.co/728x90/0f172a/14b8a6?text=Espace+Partenaire",
+      "link": "https://lisible.art",
+      "active": true
+    },
+    {
+      "id": "banner-popup",
+      "name": "Annonce Interstitielle",
+      "imageUrl": "https://placehold.co/500x500/0f172a/f59e0b?text=Sponsor+du+Mois",
+      "link": "https://lisible.art",
+      "active": false
+    }
+  ],
+  "_metadata": {
+    "lastUpdate": "2024-01-01T00:00:00.000Z",
+    "updatedBy": "system"
+  }
+}
