@@ -8,12 +8,12 @@ export default async function handler(req, res) {
 
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   
-  // UNIFICATION : On utilise l'email direct comme dans save-user-github.js
+  // UNIFICATION : On utilise l'email en minuscules comme nom de fichier
   const fileName = `${targetEmail.toLowerCase().trim()}.json`;
   const path = `data/users/${fileName}`;
 
   try {
-    // 1. Récupérer le profil de l'auteur cible
+    // 1. Récupérer le profil de l'auteur cible sur GitHub
     const { data: fileData } = await octokit.repos.getContent({
       owner: "benjohnsonjuste",
       repo: "Lisible",
@@ -23,16 +23,17 @@ export default async function handler(req, res) {
     const userProfile = JSON.parse(Buffer.from(fileData.content, "base64").toString("utf-8"));
     let subs = userProfile.subscribers || [];
 
-    // 2. Modifier la liste (vériﬁcation doublon)
+    // 2. Modifier la liste des abonnés (évite les doublons)
+    const cleanSubEmail = subscriberEmail.toLowerCase().trim();
     if (type === "subscribe") {
-      if (!subs.includes(subscriberEmail.toLowerCase())) {
-        subs.push(subscriberEmail.toLowerCase());
+      if (!subs.includes(cleanSubEmail)) {
+        subs.push(cleanSubEmail);
       }
     } else {
-      subs = subs.filter(email => email !== subscriberEmail.toLowerCase());
+      subs = subs.filter(email => email !== cleanSubEmail);
     }
 
-    // 3. Sauvegarde sur GitHub
+    // 3. Sauvegarde de la nouvelle liste sur GitHub
     await octokit.repos.createOrUpdateFileContents({
       owner: "benjohnsonjuste",
       repo: "Lisible",
@@ -42,25 +43,31 @@ export default async function handler(req, res) {
       sha: fileData.sha
     });
 
-    // 4. Notification Automatique (Temps Réel)
+    // 4. Notification Automatique via le nouveau système create-notif
     if (type === "subscribe") {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/send-notification`, {
+        // On détermine l'URL de base dynamiquement
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const baseUrl = `${protocol}://${req.headers.host}`;
+
+        await fetch(`${baseUrl}/api/create-notif`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            type: "new_follower",
+            type: "subscription",
             targetEmail: targetEmail,
-            message: `${subscriberName} suit désormais vos œuvres !`,
-            link: "/dashboard"
+            message: `${subscriberName} vient de s'abonner à vous !`,
+            link: `/auteur/${encodeURIComponent(cleanSubEmail)}`
           }),
         });
-      } catch (e) { console.error("Notif Error:", e); }
+      } catch (e) { 
+        console.error("Échec de l'envoi de la notification Pusher:", e); 
+      }
     }
 
     res.status(200).json({ success: true, count: subs.length });
   } catch (error) {
     console.error("Subscription Error:", error);
-    res.status(500).json({ error: "Impossible de modifier l'abonnement" });
+    res.status(500).json({ error: "Impossible de modifier l'abonnement sur GitHub" });
   }
 }
