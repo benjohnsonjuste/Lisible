@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import QuickActions from "@/components/QuickActions";
-import { Sparkles, BookOpen, BarChart, Settings, Loader2, Users, Star } from "lucide-react";
+import { Sparkles, BookOpen, Loader2, Users, Star, Coins, Zap, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 export default function AuthorDashboard() {
@@ -12,7 +12,10 @@ export default function AuthorDashboard() {
   const [stats, setStats] = useState({ 
     views: 0, 
     texts: 0, 
-    followers: 0, 
+    followers: 0,
+    liBalance: 0, // Nouveau : Solde réel de Li
+    totalCertified: 0, // Nouveau : Cumul des lectures finies
+    estimatedEarnings: "0.00",
     isMonetized: false 
   });
 
@@ -25,14 +28,17 @@ export default function AuthorDashboard() {
         setUser(parsedUser);
 
         try {
-          // Appel à l'API unique qui centralise tout
+          // Appel à l'API unique mise à jour avec le système de Li
           const res = await fetch(`/api/get-user-stats?email=${encodeURIComponent(parsedUser.email)}&t=${Date.now()}`);
           if (res.ok) {
             const data = await res.json();
             setStats({
               views: data.totalViews || 0,
               texts: data.totalTexts || 0,
-              followers: data.subscribers || 0, // Utilise 'subscribers' renvoyé par l'API
+              followers: data.subscribers || 0,
+              liBalance: data.liBalance || 0,
+              totalCertified: data.totalCertified || 0,
+              estimatedEarnings: data.estimatedValueUSD || "0.00",
               isMonetized: data.isMonetized || false
             });
           }
@@ -47,18 +53,15 @@ export default function AuthorDashboard() {
   }, []);
 
   if (loading) return (
-    <div className="flex flex-col justify-center items-center py-40 text-teal-600">
+    <div className="flex flex-col justify-center items-center py-40 text-teal-600 bg-white min-h-screen">
       <Loader2 className="animate-spin h-10 w-10 mb-4" />
-      <p className="text-[10px] font-black uppercase tracking-widest">Calcul des statistiques...</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronisation du Portefeuille...</p>
     </div>
   );
 
   if (!user) {
     return (
       <div className="max-w-md mx-auto mt-20 p-12 bg-white rounded-[3rem] text-center shadow-2xl border border-slate-50">
-        <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
-          <Settings size={40} />
-        </div>
         <h1 className="text-2xl font-black text-slate-900 mb-4 italic tracking-tighter">Accès restreint.</h1>
         <Link href="/login" className="block w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-[10px] uppercase hover:bg-teal-600 transition-all">
           SE CONNECTER
@@ -67,48 +70,48 @@ export default function AuthorDashboard() {
     );
   }
 
-  const displayName = user.penName || user.firstName || user.name?.split(' ')[0] || "Auteur";
+  const displayName = user.penName || user.firstName || "Auteur";
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 animate-in fade-in duration-700">
       
-      {/* SECTION BIENVENUE */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl border border-white/5">
+      {/* HEADER : LE STUDIO DU LI */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-10 rounded-[3rem] text-white relative overflow-hidden shadow-2xl">
         <div className="relative z-10">
-          <div className="flex items-center gap-2 text-teal-400 mb-4">
-            <Sparkles size={16} fill="currentColor" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Studio Auteur</span>
+          <div className="flex items-center gap-2 text-amber-400 mb-4">
+            <Zap size={16} fill="currentColor" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em]">Économie de l'Attention</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic mb-2">
             Bonjour, {displayName}
           </h1>
           <p className="text-slate-400 font-medium max-w-sm">
-            Vos statistiques sont synchronisées avec vos publications.
+            Vos revenus sont calculés sur vos lectures certifiées.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3 relative z-10">
           <StatMini 
-            label="Abonnés" 
-            value={stats.followers.toLocaleString()} 
-            icon={<Users size={14}/>} 
+            label="Portefeuille" 
+            value={`${stats.liBalance} Li`} 
+            icon={<Coins size={14}/>} 
+            color="text-amber-400"
+          />
+          <StatMini 
+            label="Attention" 
+            value={stats.totalCertified} 
+            icon={<ShieldCheck size={14}/>} 
             color="text-teal-400"
           />
           <StatMini 
-            label="Vues" 
-            value={stats.views.toLocaleString()} 
-            icon={<BarChart size={14}/>} 
-            color="text-slate-400"
-          />
-          <StatMini 
-            label="Textes" 
-            value={stats.texts} 
+            label="Lectures" 
+            value={stats.views} 
             icon={<BookOpen size={14}/>} 
             color="text-slate-400"
           />
         </div>
 
-        <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
       </header>
 
       <section>
@@ -116,54 +119,68 @@ export default function AuthorDashboard() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* PROGRESSION MONÉTISATION */}
+        
+        {/* PROGRESSION MONÉTISATION (250 ABONNÉS) */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <Users size={16} className="text-teal-500" />
-              Monétisation
+              <Users size={16} className="text-blue-500" />
+              Statut Partenaire
             </h3>
             {stats.isMonetized && (
-              <span className="flex items-center gap-1 text-[9px] font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full border border-teal-100 uppercase tracking-widest animate-pulse">
-                <Star size={10} fill="currentColor" /> Actif
+              <span className="flex items-center gap-1 text-[9px] font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full border border-teal-100 uppercase tracking-widest">
+                <Star size={10} fill="currentColor" /> Éligible
               </span>
             )}
           </div>
           
           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
             <div className="flex justify-between items-end mb-3">
-               <p className="text-slate-900 text-sm font-bold">
-                {stats.isMonetized ? "Félicitations, profil monétisé" : "Objectif 250 abonnés"}
+               <p className="text-slate-900 text-xs font-black uppercase italic tracking-tighter">
+                Seuil de Communauté (250)
               </p>
               <span className="text-[11px] font-black text-slate-900">
-                {stats.followers} <span className="text-slate-400 font-bold">/ 250</span>
+                {stats.followers} <span className="text-slate-300">/ 250</span>
               </span>
             </div>
             
-            <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden shadow-inner">
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-1000 ease-out ${stats.isMonetized ? 'bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]' : 'bg-blue-600'}`} 
+                  className={`h-full transition-all duration-1000 ${stats.isMonetized ? 'bg-teal-500' : 'bg-blue-600'}`} 
                   style={{ width: `${Math.min((stats.followers / 250) * 100, 100)}%` }}
                 ></div>
             </div>
 
-            {!stats.isMonetized && (
-              <p className="text-[10px] text-slate-400 mt-4 font-medium italic">
-                Encore {Math.max(0, 250 - stats.followers)} abonnés pour commencer à générer des revenus.
-              </p>
-            )}
+            <div className="mt-6 pt-6 border-t border-slate-200/50 flex justify-between items-center">
+                <div>
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Gains Accumulés</p>
+                  <p className="text-2xl font-black text-slate-900 italic">${stats.estimatedEarnings}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Taux</p>
+                  <p className="text-[10px] font-bold text-teal-600">0.20$ / 1000 Li</p>
+                </div>
+            </div>
           </div>
         </div>
 
-        {/* CONSEIL */}
+        {/* ANALYTICS QUALITATIF (LI VS VUES) */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
             <Sparkles size={16} className="text-amber-500" />
-            Conseil du jour
+            Qualité de Lecture
           </h3>
-          <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100/50 flex flex-col justify-center h-[116px]">
-            <p className="text-slate-700 text-sm leading-relaxed font-serif italic">
-              "Un abonné est un lecteur qui a choisi de vous suivre. Offrez-lui la qualité qu'il mérite."
+          <div className="space-y-4">
+            <div className="p-5 bg-teal-50/50 rounded-2xl border border-teal-100 flex justify-between items-center">
+              <span className="text-[10px] font-black text-teal-700 uppercase tracking-widest">Lectures Certifiées (Li)</span>
+              <span className="font-black text-slate-900 text-xl">{stats.totalCertified}</span>
+            </div>
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vues (Simples clics)</span>
+              <span className="font-bold text-slate-400 text-xl">{stats.views}</span>
+            </div>
+            <p className="text-[9px] text-slate-400 text-center font-medium italic">
+              Seules les Lectures Certifiées génèrent des Li et des revenus.
             </p>
           </div>
         </div>
@@ -171,7 +188,7 @@ export default function AuthorDashboard() {
 
       <footer className="text-center pt-10">
          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">
-            Lisible Analytics © 2026 • Données certifiées
+            Lisible Studio • L'Économie de l'Attention Humaine
          </p>
       </footer>
     </div>
@@ -180,10 +197,10 @@ export default function AuthorDashboard() {
 
 function StatMini({ label, value, icon, color }) {
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-4 py-3 rounded-2xl min-w-[100px] text-center transition-transform hover:scale-105">
-      <div className={`flex justify-center ${color} mb-1`}>{icon}</div>
-      <p className="text-xl font-black">{value}</p>
-      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 px-5 py-4 rounded-[1.5rem] min-w-[110px] text-center transition-all hover:bg-white/10 group">
+      <div className={`flex justify-center ${color} mb-1 group-hover:scale-110 transition-transform`}>{icon}</div>
+      <p className="text-xl font-black tracking-tighter">{value}</p>
+      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">{label}</p>
     </div>
   );
 }
