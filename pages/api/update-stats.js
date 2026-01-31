@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Méthode non autorisée" });
 
   try {
-    const { textId, views, likes, comments } = req.body;
+    // AJOUT DE certifiedReads DANS LE REQ.BODY
+    const { textId, views, likes, comments, certifiedReads } = req.body;
     if (!textId) throw new Error("ID du texte requis");
 
     const token = process.env.GITHUB_TOKEN;
@@ -26,15 +27,23 @@ export default async function handler(req, res) {
         },
       }
     );
+    
+    if (!response.ok) throw new Error("Impossible de récupérer l'index");
+    
     const json = await response.json();
-
     const decoded = Buffer.from(json.content, "base64").toString("utf-8");
     const data = JSON.parse(decoded);
 
-    // Mettre à jour l’entrée correspondante
+    // Mise à jour de l'entrée incluant la preuve de lecture (Certified Reads)
     const updated = data.map((item) =>
       item.id === textId
-        ? { ...item, views, likes, comments }
+        ? { 
+            ...item, 
+            views: views ?? item.views, 
+            likes: likes ?? item.likes, 
+            comments: comments ?? item.comments,
+            certifiedReads: certifiedReads ?? item.certifiedReads // SYNCHRONISATION DU LI
+          }
         : item
     );
 
@@ -46,13 +55,13 @@ export default async function handler(req, res) {
       repo: REPO,
       path: INDEX_PATH,
       content: newContent,
-      message: `🔁 Update stats for text ${textId}`,
+      message: `🔁 Update stats & Li-Certification for text ${textId}`,
       branch: BRANCH,
       token,
       sha: json.sha,
     });
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, certifiedReads });
   } catch (error) {
     console.error("Erreur update-stats:", error);
     return res.status(500).json({ error: error.message });
