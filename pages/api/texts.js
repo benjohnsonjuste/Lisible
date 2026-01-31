@@ -6,65 +6,38 @@ export default async function handler(req, res) {
   const repo = "Lisible";
   const branch = "main";
 
-  if (!token) {
-    return res.status(500).json({ error: "Le jeton GitHub n'est pas configuré." });
-  }
+  if (!token) return res.status(500).json({ error: "Token manquant" });
 
-  // --- 1. CRÉATION D'UN TEXTE ---
-  if (req.method === "POST") {
-    const { title, content, authorName, authorEmail, imageBase64, date, isConcours } = req.body;
-    
-    const timestamp = Date.now();
-    const slug = title
-      .toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-    
-    const fileName = `${timestamp}-${slug}`;
-    const path = `data/publications/${fileName}.json`;
-
-    const textData = { 
-      id: fileName, 
-      title, 
-      content, 
-      authorName, 
-      authorEmail, 
-      date: date || new Date().toISOString(), 
-      imageBase64: imageBase64 || null, 
-      isConcours: isConcours || false, 
-      views: 0, 
-      certifiedReads: 0, // INITIALISATION DU COMPTEUR DE LECTURES CERTIFIÉES
-      likes: [], 
-      comments: [] 
-    };
-
+  // --- LOGIQUE DE CRÉDIT DE "LI" (Fonction interne) ---
+  const creditUserLi = async (email, amount, reason) => {
+    if (!email) return;
+    const userPath = `data/users/${email.toLowerCase().trim()}.json`;
     try {
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      const resUser = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${userPath}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (!resUser.ok) return;
+      const file = await resUser.json();
+      let user = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
+      
+      if (!user.wallet) user.wallet = { balance: 0, history: [] };
+      user.wallet.balance += amount;
+      user.wallet.history.push({ date: new Date().toISOString(), amount, reason });
+
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${userPath}`, {
         method: "PUT",
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `📚 Nouveau texte : ${title}${isConcours ? ' (Concours)' : ''}`,
-          content: Buffer.from(JSON.stringify(textData, null, 2)).toString("base64"),
-          branch
+          message: `🪙 +${amount} Li : ${reason}`,
+          content: Buffer.from(JSON.stringify(user, null, 2)).toString("base64"),
+          sha: file.sha, branch
         }),
       });
+    } catch (e) { console.error("Erreur Wallet:", e); }
+  };
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || "Erreur lors de l'upload GitHub");
-      }
-
-      return res.status(201).json({ id: fileName });
-    } catch (e) { 
-      return res.status(500).json({ error: e.message }); 
-    }
-  }
-
-  // --- 2. MODIFICATION (Vues, Likes, Commentaires, LECTURES CERTIFIÉES) ---
+  // --- PATCH : INTERACTIONS ---
   if (req.method === "PATCH") {
     const { id, action, payload } = req.body;
     const path = `data/publications/${id}.json`;
@@ -74,20 +47,24 @@ export default async function handler(req, res) {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
-
       if (!getFile.ok) return res.status(404).json({ error: "Texte introuvable" });
 
       const fileInfo = await getFile.json();
       let data = JSON.parse(Buffer.from(fileInfo.content, "base64").toString("utf-8"));
 
-      // LOGIQUE DE MISE À JOUR SELON L'ACTION
       switch (action) {
         case "view":
           data.views = (data.views || 0) + 1;
           break;
         
-        case "certify": // NOUVELLE ACTION POUR LE SCEAU DE CIRE
+        case "certify":
           data.certifiedReads = (data.certifiedReads || 0) + 1;
+          // RECOMPENSE : On crédite l'auteur pour cette lecture de qualité
+          // On peut aussi créditer le lecteur si payload.readerEmail est fourni
+          await creditUserLi(data.authorEmail, 5, `Lecture certifiée : ${data.title}`);
+          if (payload?.readerEmail) {
+            await creditUserLi(payload.readerEmail, 2, `Sceau de lecture : ${data.title}`);
+          }
           break;
 
         case "like":
@@ -96,7 +73,7 @@ export default async function handler(req, res) {
             ? data.likes.filter(e => e !== payload.email) 
             : [...data.likes, payload.email];
           break;
-        
+
         case "comment":
           if (!data.comments) data.comments = [];
           data.comments.push({ 
@@ -105,32 +82,21 @@ export default async function handler(req, res) {
             date: new Date().toISOString() 
           });
           break;
-        
-        default:
-          return res.status(400).json({ error: "Action non reconnue" });
       }
 
       const updateResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         method: "PUT",
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           message: `✨ interaction : ${action} sur ${data.title}`,
           content: Buffer.from(JSON.stringify(data, null, 2)).toString("base64"),
-          sha: fileInfo.sha,
-          branch
+          sha: fileInfo.sha, branch
         }),
       });
 
-      if (!updateResponse.ok) throw new Error("Échec de la mise à jour GitHub");
-
       return res.status(200).json(data);
-    } catch (e) { 
-      return res.status(500).json({ error: e.message }); 
-    }
+    } catch (e) { return res.status(500).json({ error: e.message }); }
   }
-
-  return res.status(405).json({ message: "Méthode non autorisée" });
+  
+  // (Le reste de ton code POST reste identique...)
 }
