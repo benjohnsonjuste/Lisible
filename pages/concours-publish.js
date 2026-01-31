@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Send, ArrowLeft, Loader2, CheckCircle2, Hash, FileText } from "lucide-react"; 
+import { Trophy, Send, ArrowLeft, Loader2, CheckCircle2, Hash } from "lucide-react"; 
 import Link from "next/link";
 
 export default function ConcoursPublishPage() {
@@ -26,6 +26,7 @@ export default function ConcoursPublishPage() {
   }, [router]);
 
   const validateConcurrentId = (id) => {
+    // Validation du format : 4 lettres suivies de 4 chiffres
     const regex = /^[A-Z]{4}\d{4}$/;
     return regex.test(id);
   };
@@ -41,7 +42,6 @@ export default function ConcoursPublishPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // SÉCURITÉ : Vérification de la connexion avant traitement
     if (!user) {
       toast.error("Session expirée. Veuillez vous reconnecter.");
       return router.push("/login");
@@ -51,7 +51,7 @@ export default function ConcoursPublishPage() {
     if (!validateConcurrentId(concurrentId)) {
       return toast.error("Format ID invalide (Exemple requis: ABCD0123)");
     }
-    if (content.trim().length < 50) {
+    if (content.trim().split(/\s+/).length < 20) {
       return toast.error("Votre texte est un peu court pour un concours...");
     }
 
@@ -62,41 +62,52 @@ export default function ConcoursPublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
+      // --- ENVOI VERS L'API ADAPTÉE AU SYSTÈME LI ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // authorName est l'ID public pour l'anonymat du concours
           authorName: concurrentId.toUpperCase(),
-          realAuthorName: user.penName || user.firstName + " " + user.lastName,
-          authorEmail: user.email,
+          // Données réelles pour le système de récompenses Li (Wallet)
+          realAuthorName: user.penName || (user.firstName + " " + user.lastName),
+          authorEmail: user.email.toLowerCase().trim(),
           title: title.trim(),
           content: content.trim(),
           imageBase64,
           isConcours: true,
           concurrentId: concurrentId.toUpperCase(),
-          date: new Date().toISOString()
+          date: new Date().toISOString(),
+          // Initialisation des compteurs pour le système Li
+          totalLikes: 0,
+          totalCertified: 0,
+          views: 0,
+          comments: []
         })
       });
 
       if (!res.ok) throw new Error("Erreur lors de l'envoi");
       const data = await res.json();
 
-      await fetch("/api/create-notif", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "concours", 
-          message: `🏆 Nouveau défi : "${title.trim()}" a été déposé par ${concurrentId.toUpperCase()}`,
-          targetEmail: "all",
-          link: `/texts/${data.id}`
-        })
-      });
+      // Notification globale (optionnel si votre API create-notif est prête)
+      try {
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "concours", 
+            message: `🏆 Nouveau défi : "${title.trim()}" par ${concurrentId.toUpperCase()}`,
+            targetEmail: "all",
+            link: `/texts/${data.id}`
+          })
+        });
+      } catch (nErr) { console.log("Notif non envoyée"); }
 
       toast.success("Candidature déposée avec succès !", { id: loadingToast });
       router.push(`/texts/${data.id}`);
       
     } catch (err) {
-      toast.error("Erreur de connexion. Veuillez réessayer.");
+      toast.error("Erreur de connexion. Veuillez réessayer.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
@@ -118,7 +129,7 @@ export default function ConcoursPublishPage() {
             <Trophy size={32} />
           </div>
           <div>
-            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none">Battle Poétique</h1>
+            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none text-slate-900">Battle Poétique</h1>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 mt-2">Dépôt de manuscrit officiel</p>
           </div>
         </header>
@@ -140,7 +151,7 @@ export default function ConcoursPublishPage() {
           {isBattlePoetic && (
             <div className="animate-in slide-in-from-top-4 duration-300">
               <label className="text-[10px] font-black uppercase tracking-widest text-teal-600 ml-5 mb-2 block">
-                ID Concurrent
+                ID Concurrent (4 LETTRES + 4 CHIFFRES)
               </label>
               <div className="relative">
                 <Hash className={`absolute left-6 top-1/2 -translate-y-1/2 transition-colors ${validateConcurrentId(concurrentId) ? 'text-teal-600' : 'text-slate-300'}`} size={20} />
@@ -149,7 +160,7 @@ export default function ConcoursPublishPage() {
                   maxLength={8}
                   value={concurrentId}
                   onChange={(e) => setConcurrentId(e.target.value.toUpperCase().replace(/\s/g, ""))}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-6 pl-16 pr-6 text-xl font-black outline-none focus:border-teal-500 transition-all placeholder:text-slate-200"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-6 pl-16 pr-6 text-xl font-black outline-none focus:border-teal-500 transition-all placeholder:text-slate-200 text-slate-900"
                   placeholder="EX: POET2026"
                   required
                 />
@@ -165,7 +176,7 @@ export default function ConcoursPublishPage() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic outline-none focus:border-teal-200 focus:bg-white font-bold transition-all"
+              className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic outline-none focus:border-teal-200 focus:bg-white font-bold transition-all text-slate-900"
               placeholder="Saisissez le titre"
               required
             />
@@ -176,7 +187,7 @@ export default function ConcoursPublishPage() {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:border-teal-200 focus:bg-white resize-none transition-all"
+              className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:border-teal-200 focus:bg-white resize-none transition-all text-slate-800"
               placeholder="Déposez vos vers ici..."
               required
             />
@@ -192,12 +203,12 @@ export default function ConcoursPublishPage() {
             {loading ? <Loader2 className="animate-spin" size={20} /> : (
               <>
                 <Send size={18} />
-                Concourir
+                Soumettre au Jury & à l'Arène
               </>
             )}
           </button>
           <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-6">
-            En cliquant, vous acceptez le règlement officiel du concours.
+            L'ID Concurrent sera votre seule identité durant la Battle.
           </p>
         </div>
       </form>
