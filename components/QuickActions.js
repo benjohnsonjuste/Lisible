@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation"; // Utilisation de navigation pour le App Router
-import { PenTool, User, BarChart3, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { PenTool, User, Coins, ChevronRight, Sparkles } from "lucide-react";
 
 export default function QuickActions() {
   const router = useRouter();
@@ -9,12 +9,20 @@ export default function QuickActions() {
   const actions = [
     {
       title: "Nouvelle œuvre",
-      description: "Publiez un texte sur le label",
+      description: "Publiez et accumulez des Li",
       icon: <PenTool size={22} />,
       color: "text-teal-600",
       bgColor: "bg-teal-50",
-      shadow: "shadow-teal-100",
       href: "/publish",
+    },
+    {
+      title: "Portefeuille",
+      description: "Gérez vos gains et vos Li",
+      icon: <Coins size={22} />,
+      color: "text-amber-600",
+      bgColor: "bg-amber-50",
+      href: "/analytics", // Redirige vers la page de stats/retrait
+      isPremium: true
     },
     {
       title: "Mon Profil",
@@ -22,26 +30,16 @@ export default function QuickActions() {
       icon: <User size={22} />,
       color: "text-slate-600",
       bgColor: "bg-slate-50",
-      shadow: "shadow-slate-100",
       href: "/account",
-    },
-    {
-      title: "Statistiques",
-      description: "Analysez vos performances",
-      icon: <BarChart3 size={22} />,
-      color: "text-amber-600",
-      bgColor: "bg-amber-50",
-      shadow: "shadow-amber-100",
-      href: "/analytics",
     },
   ];
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 p-8">
+    <div className="bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40 p-10">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic">Actions rapides</h2>
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Gestion du catalogue</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tighter italic">Commandes</h2>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Outils de croissance</p>
         </div>
       </div>
 
@@ -50,25 +48,32 @@ export default function QuickActions() {
           <button
             key={idx}
             onClick={() => router.push(item.href)}
-            className="group relative flex flex-col items-start p-6 rounded-[2rem] bg-white border border-slate-50 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 active:scale-95 text-left"
+            className="group relative flex flex-col items-start p-8 rounded-[2.5rem] bg-white border border-slate-50 shadow-sm hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-500 active:scale-95 text-left overflow-hidden"
           >
-            {/* Icône avec fond doux */}
-            <div className={`mb-5 p-4 ${item.bgColor} ${item.color} rounded-2xl transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300`}>
+            {/* Badge Premium pour le Portefeuille */}
+            {item.isPremium && (
+              <div className="absolute top-6 right-6 text-amber-500 animate-pulse">
+                <Sparkles size={16} fill="currentColor" />
+              </div>
+            )}
+
+            {/* Icône stylisée */}
+            <div className={`mb-6 p-5 ${item.bgColor} ${item.color} rounded-[1.5rem] transition-all group-hover:scale-110 group-hover:rotate-6 duration-500 shadow-inner`}>
               {item.icon}
             </div>
 
-            <div className="space-y-1">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <div className="space-y-1 relative z-10">
+              <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                 {item.title}
                 <ChevronRight size={14} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-teal-500" />
               </h3>
-              <p className="text-xs font-medium text-slate-400 leading-relaxed">
+              <p className="text-xs font-medium text-slate-400 leading-relaxed italic">
                 {item.description}
               </p>
             </div>
 
-            {/* Décoration discrète en arrière-plan au survol */}
-            <div className={`absolute top-4 right-4 w-2 h-2 rounded-full ${item.bgColor} opacity-0 group-hover:opacity-100 transition-opacity`} />
+            {/* Effet de fond au survol */}
+            <div className={`absolute -bottom-4 -right-4 w-24 h-24 rounded-full ${item.bgColor} opacity-0 group-hover:opacity-20 transition-opacity blur-2xl`} />
           </button>
         ))}
       </div>
