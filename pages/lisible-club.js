@@ -109,7 +109,7 @@ export default function ClubPage() {
                 ))}
              </div>
              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Déjà <span className="text-teal-600">Veuillez patienter</span> pour l'ouverture
+                Veuillez <span className="text-teal-600"> patienter</span> pour l'ouverture
              </p>
           </div>
         </motion.div>
