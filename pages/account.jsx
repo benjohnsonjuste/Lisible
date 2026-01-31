@@ -6,7 +6,7 @@ import {
   User, CreditCard, Camera, Edit3, ArrowLeft, 
   ShieldCheck, Loader2, RefreshCcw, Save, 
   Layout, Eye, CheckCircle2, Wallet, Sparkles,
-  BookOpen, Star, TrendingUp, Download, Award
+  BookOpen, Star, TrendingUp, Download, Award, Crown, Cake
 } from "lucide-react";
 
 function AccountStatCard({ label, value, icon, color }) {
@@ -28,6 +28,7 @@ function AccountStatCard({ label, value, icon, color }) {
 export default function AccountPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [allUsers, setAllUsers] = useState([]); // Nécessaire pour le calcul "Plume de la semaine"
   const [loading, setLoading] = useState(true);
   const [isRefreshingLi, setIsRefreshingLi] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -44,20 +45,47 @@ export default function AccountPage() {
   // --- LOGIQUE DES BADGES ---
   const getEarnedBadges = () => {
     const earned = [];
-    const subs = user?.stats?.subscribers || 0;
-    const texts = user?.stats?.totalTexts || 0;
+    if (!user) return earned;
 
+    const email = user.email?.toLowerCase();
+    const subs = user.stats?.subscribers || 0;
+    const texts = user.stats?.totalTexts || 0;
+    const today = new Date();
+
+    // 1. Badge PGD
+    if (email === "jb7management@gmail.com") {
+      earned.push({ id: 'pgd', label: "PGD", color: "bg-slate-950 text-amber-400 border border-amber-500/30", icon: <Crown size={14}/> });
+    }
+
+    // 2. Badge Anniversaire (Valable 24h le jour J)
+    if (user.birthday) {
+      const bDay = new Date(user.birthday);
+      if (bDay.getDate() === today.getDate() && bDay.getMonth() === today.getMonth()) {
+        earned.push({ id: 'anniv', label: "Joyeux anniversaire à moi", color: "bg-rose-500 text-white animate-pulse", icon: <Cake size={14}/> });
+      }
+    }
+
+    // 3. Plume de la semaine (Samedi + Exclusion)
+    const excludedEmails = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
+    if (today.getDay() === 6 && !excludedEmails.includes(email) && allUsers.length > 0) {
+      const eligible = allUsers.filter(u => !excludedEmails.includes(u.email?.toLowerCase()));
+      const topWriter = [...eligible].sort((a, b) => (b.stats?.totalTexts || 0) - (a.stats?.totalTexts || 0))[0];
+      if (topWriter && email === topWriter.email && texts > 0) {
+        earned.push({ id: 'weekly', label: "Plume de la semaine", color: "bg-teal-500 text-white", icon: <TrendingUp size={14}/> });
+      }
+    }
+
+    // 4. Paliers Classiques
     if (texts >= 1) earned.push({ id: 'plume', label: "Plume Lisible", color: "bg-slate-900 text-white", icon: <Edit3 size={14}/> });
-    if (subs >= 250) earned.push({ id: 'bronze', label: "Rang Bronze", color: "bg-orange-700 text-white", icon: <Award size={14}/> });
-    if (subs >= 750) earned.push({ id: 'or', label: "Rang Or", color: "bg-amber-400 text-slate-900", icon: <Award size={14}/> });
-    if (subs >= 2000) earned.push({ id: 'diamant', label: "Rang Diamant", color: "bg-cyan-400 text-white", icon: <Sparkles size={14}/> });
+    if (subs >= 250) earned.push({ id: 'bronze', label: "Badge Bronze", color: "bg-orange-700 text-white", icon: <Award size={14}/> });
+    if (subs >= 750) earned.push({ id: 'or', label: "Badge Or", color: "bg-amber-400 text-slate-900", icon: <Award size={14}/> });
+    if (subs >= 2000) earned.push({ id: 'diamant', label: "Badge Diamant", color: "bg-cyan-400 text-white", icon: <Sparkles size={14}/> });
     
     return earned;
   };
 
   const downloadBadge = (badgeLabel) => {
     toast.success(`Téléchargement du badge ${badgeLabel}...`);
-    // Ici vous pourriez générer un canvas ou pointer vers un asset statique
   };
 
   useEffect(() => {
@@ -66,9 +94,20 @@ export default function AccountPage() {
       try {
         const parsed = JSON.parse(storedUser);
         refreshUserData(parsed.email);
+        loadAllUsers(); // Charger pour le calcul de la plume de la semaine
       } catch (e) { router.push("/login"); }
     } else { router.push("/login"); }
   }, []);
+
+  const loadAllUsers = async () => {
+    try {
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users?t=${Date.now()}`);
+      const files = await res.json();
+      const dataPromises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()));
+      const users = await Promise.all(dataPromises);
+      setAllUsers(users);
+    } catch (e) { console.error(e); }
+  };
 
   const refreshUserData = async (email) => {
     if (!email) return;
@@ -168,19 +207,19 @@ export default function AccountPage() {
           {/* BADGES DE PRESTIGE */}
           <div className="bg-white rounded-[3rem] p-8 border border-slate-100 shadow-sm">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-              <Award size={16} /> Badges de Prestige
+              <Award size={16} /> Mes Badges & Distinctions
             </h2>
             <div className="flex flex-wrap gap-4">
               {getEarnedBadges().length > 0 ? getEarnedBadges().map((badge) => (
-                <div key={badge.id} className={`${badge.color} px-5 py-4 rounded-[1.5rem] flex flex-col items-center gap-3 border shadow-sm group`}>
+                <div key={badge.id} className={`${badge.color} px-5 py-4 rounded-[1.5rem] flex flex-col items-center gap-3 border shadow-sm group relative`}>
                    <div className="p-2 bg-white/20 rounded-lg">{badge.icon}</div>
-                   <span className="text-[9px] font-black uppercase tracking-tighter">{badge.label}</span>
+                   <span className="text-[9px] font-black uppercase tracking-tighter text-center">{badge.label}</span>
                    <button onClick={() => downloadBadge(badge.label)} className="p-2 bg-white/10 hover:bg-white/30 rounded-full transition-all">
                      <Download size={14} />
                    </button>
                 </div>
               )) : (
-                <p className="text-[10px] font-bold text-slate-400 italic">Publiez votre premier texte ou gagnez des abonnés pour débloquer des badges.</p>
+                <p className="text-[10px] font-bold text-slate-400 italic">Aucun badge débloqué pour le moment.</p>
               )}
             </div>
           </div>
