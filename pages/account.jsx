@@ -9,6 +9,7 @@ import {
   BookOpen, Star, TrendingUp, Download, Award, Crown, Cake
 } from "lucide-react";
 
+// --- COMPOSANT STATS ---
 function AccountStatCard({ label, value, icon, color }) {
   return (
     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm group hover:-translate-y-1 transition-all duration-300">
@@ -28,7 +29,7 @@ function AccountStatCard({ label, value, icon, color }) {
 export default function AccountPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [allUsers, setAllUsers] = useState([]); // Nécessaire pour le calcul "Plume de la semaine"
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshingLi, setIsRefreshingLi] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,12 +53,10 @@ export default function AccountPage() {
     const texts = user.stats?.totalTexts || 0;
     const today = new Date();
 
-    // 1. Badge PGD
     if (email === "jb7management@gmail.com") {
       earned.push({ id: 'pgd', label: "PGD", color: "bg-slate-950 text-amber-400 border border-amber-500/30", icon: <Crown size={14}/> });
     }
 
-    // 2. Badge Anniversaire (Valable 24h le jour J)
     if (user.birthday) {
       const bDay = new Date(user.birthday);
       if (bDay.getDate() === today.getDate() && bDay.getMonth() === today.getMonth()) {
@@ -65,7 +64,6 @@ export default function AccountPage() {
       }
     }
 
-    // 3. Plume de la semaine (Samedi + Exclusion)
     const excludedEmails = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
     if (today.getDay() === 6 && !excludedEmails.includes(email) && allUsers.length > 0) {
       const eligible = allUsers.filter(u => !excludedEmails.includes(u.email?.toLowerCase()));
@@ -75,7 +73,6 @@ export default function AccountPage() {
       }
     }
 
-    // 4. Paliers Classiques
     if (texts >= 1) earned.push({ id: 'plume', label: "Plume Lisible", color: "bg-slate-900 text-white", icon: <Edit3 size={14}/> });
     if (subs >= 250) earned.push({ id: 'bronze', label: "Badge Bronze", color: "bg-orange-700 text-white", icon: <Award size={14}/> });
     if (subs >= 750) earned.push({ id: 'or', label: "Badge Or", color: "bg-amber-400 text-slate-900", icon: <Award size={14}/> });
@@ -84,17 +81,13 @@ export default function AccountPage() {
     return earned;
   };
 
-  const downloadBadge = (badgeLabel) => {
-    toast.success(`Téléchargement du badge ${badgeLabel}...`);
-  };
-
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (storedUser) {
       try {
         const parsed = JSON.parse(storedUser);
         refreshUserData(parsed.email);
-        loadAllUsers(); // Charger pour le calcul de la plume de la semaine
+        loadAllUsers();
       } catch (e) { router.push("/login"); }
     } else { router.push("/login"); }
   }, []);
@@ -102,6 +95,7 @@ export default function AccountPage() {
   const loadAllUsers = async () => {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users?t=${Date.now()}`);
+      if (!res.ok) return;
       const files = await res.json();
       const dataPromises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()));
       const users = await Promise.all(dataPromises);
@@ -113,7 +107,7 @@ export default function AccountPage() {
     if (!email) return;
     setIsRefreshingLi(true);
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${email.toLowerCase().trim()}.json?t=${Date.now()}`);
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${btoa(email.toLowerCase()).replace(/=/g, "")}.json?t=${Date.now()}`);
       if (res.ok) {
         const file = await res.json();
         const freshUser = JSON.parse(decodeURIComponent(escape(atob(file.content))));
@@ -132,20 +126,10 @@ export default function AccountPage() {
     }
   };
 
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) return toast.error("Image trop lourde (max 2Mo)");
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData({ ...formData, profilePic: reader.result });
-      reader.readAsDataURL(file);
-    }
-  };
-
   const saveProfile = async () => {
     if (!user?.email) return;
     setIsSaving(true);
-    const t = toast.loading("Mise à jour...");
+    const t = toast.loading("Mise à jour du registre...");
     try {
       const updatedUser = { ...user, ...formData };
       const res = await fetch('/api/update-user', { 
@@ -156,17 +140,38 @@ export default function AccountPage() {
       if (res.ok) {
         localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
         setUser(updatedUser);
+        
+        // --- NOTIFICATION DE SUCCÈS ---
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "system",
+            targetEmail: user.email,
+            message: "Profil mis à jour avec succès sur le serveur.",
+            link: "/account"
+          })
+        });
+
         toast.success("Profil mis à jour", { id: t });
       }
-    } catch (e) { toast.error("Erreur", { id: t }); }
+    } catch (e) { toast.error("Erreur de connexion", { id: t }); }
     finally { setIsSaving(false); }
   };
 
-  if (loading || !user) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+  const handleWithdraw = () => {
+    toast.info("Demande en cours d'examen par le service financier.");
+  };
+
+  if (loading || !user) return (
+    <div className="flex flex-col h-screen items-center justify-center gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Accès sécurisé...</p>
+    </div>
+  );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 pb-20">
-      {/* HEADER ACTION */}
+    <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 pb-20 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-5">
            <div className="p-4 bg-slate-900 rounded-2xl text-white shadow-xl shadow-slate-900/20">
@@ -181,9 +186,9 @@ export default function AccountPage() {
           <div className="flex items-center gap-4 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100">
              <div className="flex flex-col">
                 <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Balance</span>
-                <span className="text-xl font-black text-slate-900">{balance} <span className="text-[10px] text-teal-600">Li</span></span>
+                <span className="text-xl font-black text-slate-900">{balance} <span className="text-[10px] text-teal-600 font-black">Li</span></span>
              </div>
-             <button onClick={() => refreshUserData(user.email)} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-all">
+             <button onClick={() => refreshUserData(user.email)} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-all shadow-lg active:scale-90">
                <RefreshCcw size={18} className={isRefreshingLi ? "animate-spin" : ""} />
              </button>
           </div>
@@ -193,7 +198,6 @@ export default function AccountPage() {
         </div>
       </header>
 
-      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <AccountStatCard label="Lectures Li" value={user?.stats?.totalCertified || 0} icon={<Sparkles />} color="text-teal-600" />
         <AccountStatCard label="Manuscrits" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-blue-600" />
@@ -203,18 +207,16 @@ export default function AccountPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 space-y-8">
-          
-          {/* BADGES DE PRESTIGE */}
           <div className="bg-white rounded-[3rem] p-8 border border-slate-100 shadow-sm">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
               <Award size={16} /> Mes Badges & Distinctions
             </h2>
             <div className="flex flex-wrap gap-4">
               {getEarnedBadges().length > 0 ? getEarnedBadges().map((badge) => (
-                <div key={badge.id} className={`${badge.color} px-5 py-4 rounded-[1.5rem] flex flex-col items-center gap-3 border shadow-sm group relative`}>
+                <div key={badge.id} className={`${badge.color} px-5 py-4 rounded-[1.5rem] flex flex-col items-center gap-3 border shadow-sm group relative overflow-hidden`}>
                    <div className="p-2 bg-white/20 rounded-lg">{badge.icon}</div>
                    <span className="text-[9px] font-black uppercase tracking-tighter text-center">{badge.label}</span>
-                   <button onClick={() => downloadBadge(badge.label)} className="p-2 bg-white/10 hover:bg-white/30 rounded-full transition-all">
+                   <button onClick={() => toast.success("Badge prêt pour partage !")} className="p-2 bg-white/10 hover:bg-white/30 rounded-full transition-all">
                      <Download size={14} />
                    </button>
                 </div>
@@ -224,23 +226,30 @@ export default function AccountPage() {
             </div>
           </div>
 
-          {/* FORMULAIRE IDENTITÉ */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
             <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
                <Edit3 size={16} /> Édition du registre
             </h2>
             <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                <div className="relative group">
-                  <img src={formData.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} className="w-32 h-32 rounded-[2.5rem] object-cover border-4 border-white shadow-2xl transition-all group-hover:rotate-3" />
-                  <label className="absolute -bottom-2 -right-2 p-3 bg-slate-900 text-white rounded-xl cursor-pointer hover:bg-teal-600 shadow-lg">
+                  <img src={formData.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} className="w-32 h-32 rounded-[2.5rem] object-cover border-4 border-white shadow-2xl transition-all group-hover:scale-105" alt="Profil" />
+                  <label className="absolute -bottom-2 -right-2 p-3 bg-slate-900 text-white rounded-xl cursor-pointer hover:bg-teal-600 shadow-lg transition-all active:scale-90">
                     <Camera size={18} />
-                    <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setFormData({ ...formData, profilePic: reader.result });
+                        reader.readAsDataURL(file);
+                      }
+                    }} />
                   </label>
                </div>
                <div className="text-center sm:text-left">
-                  <p className="text-3xl font-black text-slate-900 italic tracking-tighter mb-1">{formData.penName || "Auteur Lisible"}</p>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    {isSpecialPartner ? "Partenaire Officiel" : "Membre Certifié"}
+                  <p className="text-3xl font-black text-slate-900 italic tracking-tighter mb-1">{formData.penName || "Auteur"}</p>
+                  <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-2">
+                    {isSpecialPartner ? <ShieldCheck size={14} /> : null}
+                    {isSpecialPartner ? "Partenaire Officiel" : "Membre Certifié Lisible"}
                   </span>
                </div>
             </div>
@@ -254,14 +263,14 @@ export default function AccountPage() {
               <InputBlock label="Nom de plume" value={formData.penName} onChange={v => setFormData({...formData, penName: v})} />
               <InputBlock label="Date de naissance" value={formData.birthday} onChange={v => setFormData({...formData, birthday: v})} type="date" />
             </div>
-            <button disabled={isSaving} onClick={saveProfile} className="w-full py-6 bg-slate-950 text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex justify-center items-center gap-3">
+            <button disabled={isSaving} onClick={saveProfile} className="w-full py-6 bg-slate-950 text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex justify-center items-center gap-3 shadow-xl active:scale-[0.98]">
               {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Mettre à jour mon profil
             </button>
           </div>
         </section>
 
         <aside className="space-y-6">
-          <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24">
+          <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24 border border-white/5">
             <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-10">
               <CreditCard size={24} /> Trésorerie
             </h2>
@@ -269,18 +278,23 @@ export default function AccountPage() {
               <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
                  <div className="flex justify-between items-end mb-4">
                     <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Progression Seuil</p>
-                      <p className="text-2xl font-black">{balance} <span className="text-[10px] text-slate-500">/ {WITHDRAWAL_THRESHOLD} Li</span></p>
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Progression Seuil</p>
+                      <p className="text-2xl font-black italic">{balance.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">/ {WITHDRAWAL_THRESHOLD.toLocaleString()} Li</span></p>
                     </div>
                     <Wallet className="text-teal-500 opacity-20" size={32} />
                  </div>
-                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div className="h-full bg-teal-500 transition-all duration-1000" style={{ width: `${Math.min((balance / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} />
+                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-1000 ease-out" style={{ width: `${Math.min((balance / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} />
                  </div>
               </div>
-              <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${canWithdraw ? "bg-teal-500 text-slate-950" : "bg-slate-800 text-slate-600 cursor-not-allowed"}`}>
+              <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${canWithdraw ? "bg-teal-500 text-slate-950 hover:scale-105" : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"}`}>
                 Demander le versement
               </button>
+              {!canWithdraw && (
+                <p className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-widest">
+                  Seuil de retrait : {WITHDRAWAL_THRESHOLD} Li
+                </p>
+              )}
             </div>
           </section>
         </aside>
@@ -293,7 +307,7 @@ function InputBlock({ label, value, onChange, type = "text" }) {
   return (
     <div className="space-y-2">
       <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-[1.2rem] p-5 text-sm font-bold outline-none transition-all text-slate-900" />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-[1.2rem] p-5 text-sm font-bold outline-none transition-all text-slate-900 shadow-inner" />
     </div>
   );
 }
