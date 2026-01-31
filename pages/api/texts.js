@@ -4,111 +4,136 @@ export default async function handler(req, res) {
   const token = process.env.GITHUB_TOKEN;
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
-  const branch = "main";
 
-  if (req.method !== "PATCH") return res.status(405).json({ error: "Method not allowed" });
+  // --- ACTION : CERTIFIER LA LECTURE (Sceau) ---
+  if (req.method === "PATCH" && req.body.action === "certify") {
+    const { id, payload } = req.body; // id = nom du fichier texte
+    const readerEmail = payload.readerEmail;
 
-  const { id, action, payload } = req.body;
-  const path = `data/publications/${id}.json`;
-
-  // URL de base pour les appels API internes
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const baseUrl = `${protocol}://${req.headers.host}`;
-
-  // --- HELPER: ENVOI DE NOTIFICATION ---
-  const sendNotif = async (targetEmail, message, type, amountLi = 0) => {
     try {
-      await fetch(`${baseUrl}/api/create-notif`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetEmail, message, type, amountLi, link: "/dashboard" }),
-      });
-    } catch (e) { console.error("Notif Error:", e); }
-  };
-
-  // --- HELPER: CRÉDIT DE LI ---
-  const creditUserLi = async (email, amount, reason, type = "income") => {
-    if (!email || amount <= 0) return;
-    const userPath = `data/users/${email.toLowerCase().trim()}.json`;
-    try {
-      const resU = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${userPath}`, {
+      // 1. Récupérer le texte pour augmenter le compteur
+      const textPath = `data/publications/${id}.json`;
+      const textRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
         headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
       });
-      if (!resU.ok) return;
-      const file = await resU.json();
-      let user = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
+      const textFile = await textRes.json();
+      let textData = JSON.parse(Buffer.from(textFile.content, "base64").toString("utf-8"));
       
-      if (!user.wallet) user.wallet = { balance: 0, history: [], totalEarned: 0 };
-      user.wallet.balance += amount;
-      if (type === "income") user.wallet.totalEarned += amount;
-      user.wallet.history.unshift({ id: `tx-${Date.now()}`, date: new Date().toISOString(), amount, reason, type });
-      user.wallet.history = user.wallet.history.slice(0, 30);
+      textData.totalCertified = (textData.totalCertified || 0) + 1;
+      const authorEmail = textData.authorEmail;
 
-      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${userPath}`, {
+      // 2. Créditer l'AUTEUR (+1 Li)
+      const authorPath = `data/users/${authorEmail.toLowerCase()}.json`;
+      const authRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${authorPath}`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+      });
+      if (authRes.ok) {
+        const authFile = await authRes.json();
+        let author = JSON.parse(Buffer.from(authFile.content, "base64").toString("utf-8"));
+        author.wallet.balance += 1;
+        author.wallet.history.unshift({
+          date: new Date().toISOString(),
+          amount: 1,
+          reason: `Lecture certifiée : ${textData.title}`,
+          type: "reward"
+        });
+        
+        await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${authorPath}`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            message: "📈 +1 Li (Auteur) via Certification",
+            content: Buffer.from(JSON.stringify(author, null, 2)).toString("base64"),
+            sha: authFile.sha
+          })
+        });
+      }
+
+      // 3. Créditer le LECTEUR (+1 Li) si connecté et différent de l'auteur
+      if (readerEmail && readerEmail !== "anonymous@lisible.biz" && readerEmail !== authorEmail) {
+        const readerPath = `data/users/${readerEmail.toLowerCase()}.json`;
+        const readRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${readerPath}`, {
+          headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+        });
+        if (readRes.ok) {
+          const readFile = await readRes.json();
+          let reader = JSON.parse(Buffer.from(readFile.content, "base64").toString("utf-8"));
+          reader.wallet.balance += 1;
+          reader.wallet.history.unshift({
+            date: new Date().toISOString(),
+            amount: 1,
+            reason: `Lecture récompensée : ${textData.title}`,
+            type: "reward"
+          });
+
+          await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${readerPath}`, {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              message: "📖 +1 Li (Lecteur) via Certification",
+              content: Buffer.from(JSON.stringify(reader, null, 2)).toString("base64"),
+              sha: readFile.sha
+            })
+          });
+        }
+      }
+
+      // 4. Sauvegarder le nouveau compteur du TEXTE
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          message: `🪙 +${amount} Li : ${reason}`,
-          content: Buffer.from(JSON.stringify(user, null, 2)).toString("base64"),
-          sha: file.sha, branch
-        }),
+          message: "✅ Incrémentation compteur lecture certifiée",
+          content: Buffer.from(JSON.stringify(textData, null, 2)).toString("base64"),
+          sha: textFile.sha
+        })
       });
 
-      // Notification Pusher après crédit réussi
-      await sendNotif(email, `+${amount} Li : ${reason}`, "li_received", amount);
-      
-    } catch (e) { console.error("Wallet Error:", e); }
-  };
+      return res.status(200).json({ success: true });
+    } catch (e) { return res.status(500).json({ error: e.message }); }
+  }
 
-  try {
-    const getFile = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-      headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
-    });
-    const fileInfo = await getFile.json();
-    let data = JSON.parse(Buffer.from(fileInfo.content, "base64").toString("utf-8"));
+  // --- ACTION : COMMENTAIRE ---
+  if (req.method === "PATCH" && req.body.action === "comment") {
+    const { id, payload } = req.body;
+    const textPath = `data/publications/${id}.json`;
 
-    switch (action) {
-      case "certify":
-        // 1. Mise à jour du compteur sur le texte
-        data.certifiedReads = (data.certifiedReads || 0) + 1;
-        
-        // 2. Récompense Auteur (Revenu de création)
-        await creditUserLi(data.authorEmail, 5, `Lecture Certifiée : ${data.title}`, "income");
-        
-        // 3. Récompense Lecteur (Prime d'attention)
-        if (payload?.readerEmail && payload.readerEmail !== data.authorEmail) {
-          await creditUserLi(payload.readerEmail, 1, `Attention validée : ${data.title}`, "reward");
-        }
-        break;
+    try {
+      const resGet = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+      });
+      const fileData = await resGet.json();
+      let text = JSON.parse(Buffer.from(fileData.content, "base64").toString("utf-8"));
 
-      case "view":
-        data.views = (data.views || 0) + 1;
-        break;
-      
-      case "like":
-        if (!data.likes) data.likes = [];
-        const readerEmail = payload?.email;
-        if (readerEmail) {
-            data.likes = data.likes.includes(readerEmail) 
-              ? data.likes.filter(e => e !== readerEmail) 
-              : [...data.likes, readerEmail];
-        }
-        break;
-    }
+      if (!text.comments) text.comments = [];
+      text.comments.unshift(payload);
 
-    // Sauvegarde du texte mis à jour sur GitHub
-    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          message: `💬 Nouveau commentaire de ${payload.userName}`,
+          content: Buffer.from(JSON.stringify(text, null, 2)).toString("base64"),
+          sha: fileData.sha
+        })
+      });
+      return res.status(200).json({ success: true });
+    } catch (e) { return res.status(500).json({ error: e.message }); }
+  }
+
+  // --- ACTION : PUBLICATION (POST) ---
+  if (req.method === "POST") {
+    const { fileName, content } = req.body;
+    const path = `data/publications/${fileName}.json`;
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
       method: "PUT",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: `✨ ${action} : ${data.title}`,
-        content: Buffer.from(JSON.stringify(data, null, 2)).toString("base64"),
-        sha: fileInfo.sha, branch
-      }),
+        message: `📝 Publication : ${fileName}`,
+        content: Buffer.from(JSON.stringify(content, null, 2)).toString("base64")
+      })
     });
-
-    return res.status(200).json(data);
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
+    if (response.ok) return res.status(200).json({ success: true });
+    return res.status(500).json({ error: "Erreur GitHub" });
   }
 }
