@@ -32,36 +32,79 @@ export default function AuthorDashboard() {
       if (loggedUser) {
         const parsedUser = JSON.parse(loggedUser);
         setUser(parsedUser);
-
-        try {
-          // Appel à l'API de statistiques avec un cache-buster (t=...) pour forcer la mise à jour du Wallet
-          const res = await fetch(`/api/get-user-stats?email=${encodeURIComponent(parsedUser.email)}&t=${Date.now()}`);
-          if (res.ok) {
-            const data = await res.json();
-            setStats({
-              views: data.totalViews || 0,
-              texts: data.totalTexts || 0,
-              followers: data.subscribers || 0,
-              liBalance: data.liBalance || 0,
-              totalCertified: data.totalCertified || 0,
-              estimatedEarnings: data.estimatedValueUSD || "0.00",
-              isMonetized: data.isMonetized || false,
-              canWithdraw: data.canWithdraw || false,
-              remainingSubscribers: data.remainingSubscribers || 0
-            });
-          }
-        } catch (error) {
-          console.error("Erreur Sync Dashboard:", error);
-          toast.error("Erreur de synchronisation du portefeuille.");
-        }
+        await refreshStats(parsedUser.email);
       } else {
         router.push("/login");
       }
       setLoading(false);
     }
-
     initDashboard();
   }, [router]);
+
+  // Fonction pour charger/rafraîchir les données
+  const refreshStats = async (email) => {
+    try {
+      const res = await fetch(`/api/get-user-stats?email=${encodeURIComponent(email)}&t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStats({
+          views: data.totalViews || 0,
+          texts: data.totalTexts || 0,
+          followers: data.subscribers || 0,
+          liBalance: data.liBalance || 0,
+          totalCertified: data.totalCertified || 0,
+          estimatedEarnings: data.estimatedValueUSD || "0.00",
+          isMonetized: data.isMonetized || false,
+          canWithdraw: data.canWithdraw || false,
+          remainingSubscribers: data.remainingSubscribers || 0
+        });
+      }
+    } catch (error) {
+      console.error("Erreur Sync Dashboard:", error);
+      toast.error("Erreur de synchronisation du portefeuille.");
+    }
+  };
+
+  // NOUVEAU : Gestion du processus de retrait
+  const handleWithdrawal = async () => {
+    if (!stats.canWithdraw) return;
+
+    const confirmWithdraw = window.confirm(
+      `Souhaitez-vous retirer vos ${stats.estimatedEarnings}$ ? \nUn email d'ordre de paiement sera envoyé au staff.`
+    );
+    
+    if (!confirmWithdraw) return;
+
+    const loadingToast = toast.loading("Traitement de votre demande de paiement...");
+    
+    try {
+      const res = await fetch("/api/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          amountLi: stats.liBalance,
+          amountUSD: stats.estimatedEarnings
+        })
+      });
+
+      if (res.ok) {
+        toast.success("Demande validée ! Votre paiement est en cours de traitement.", { id: loadingToast });
+        // Mise à jour immédiate de l'interface
+        setStats(prev => ({ 
+          ...prev, 
+          liBalance: 0, 
+          estimatedEarnings: "0.00", 
+          canWithdraw: false 
+        }));
+      } else {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur lors du retrait.");
+      }
+    } catch (e) {
+      toast.error(e.message, { id: loadingToast });
+    }
+  };
 
   if (loading) return (
     <div className="flex flex-col justify-center items-center py-40 text-teal-600 bg-white min-h-screen">
@@ -157,11 +200,13 @@ export default function AuthorDashboard() {
                   <p className="text-3xl font-black text-slate-900 italic">${stats.estimatedEarnings}</p>
                 </div>
                 <div className="text-right">
+                   {/* BOUTON MIS À JOUR */}
                    <button 
-                     onClick={() => stats.canWithdraw ? router.push('/account') : toast.error("Seuil de retrait non atteint (5$)")}
-                     className={`flex items-center gap-2 px-4 py-3 rounded-xl font-black text-[9px] uppercase transition-all ${stats.canWithdraw ? 'bg-teal-600 text-white shadow-lg' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                     onClick={handleWithdrawal}
+                     disabled={!stats.canWithdraw}
+                     className={`flex items-center gap-2 px-4 py-3 rounded-xl font-black text-[9px] uppercase transition-all ${stats.canWithdraw ? 'bg-teal-600 text-white shadow-lg hover:bg-teal-700 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                    >
-                     Retirer <ArrowUpRight size={14}/>
+                     Paiement <ArrowUpRight size={14}/>
                    </button>
                 </div>
             </div>
