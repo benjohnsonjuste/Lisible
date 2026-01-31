@@ -186,11 +186,31 @@ export default function TextPage() {
     }
   }, []);
 
+  const handleAutoLike = async (textId) => {
+    const likeKey = `like_${textId}`;
+    if (!localStorage.getItem(likeKey)) {
+      setHasLiked(true);
+      localStorage.setItem(likeKey, "true");
+      try {
+        await fetch('/api/texts', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: textId, action: "like" })
+        });
+        // On rafraîchit localement le compteur pour l'UI
+        setText(prev => prev ? ({ ...prev, totalLikes: (prev.totalLikes || 0) + 1 }) : null);
+      } catch (e) { console.error("Auto-like error", e); }
+    } else {
+      setHasLiked(true);
+    }
+  };
+
   useEffect(() => {
     if (router.isReady && id) {
       setUser(JSON.parse(localStorage.getItem("lisible_user")));
       fetchData(id);
 
+      // 1. COMPTEUR DE VUES AUTOMATIQUE
       const viewKey = `view_${id}`;
       if (!localStorage.getItem(viewKey)) {
         fetch('/api/texts', {
@@ -200,23 +220,10 @@ export default function TextPage() {
         }).then(() => localStorage.setItem(viewKey, "true"));
       }
 
-      if (localStorage.getItem(`like_${id}`)) setHasLiked(true);
+      // 2. APPRÉCIATION (LIKE) AUTOMATIQUE
+      handleAutoLike(id);
     }
   }, [router.isReady, id, fetchData]);
-
-  const handleLike = async () => {
-    if (hasLiked) return;
-    setHasLiked(true);
-    localStorage.setItem(`like_${id}`, "true");
-    try {
-      await fetch('/api/texts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: "like" })
-      });
-      setText(prev => ({ ...prev, totalLikes: (prev.totalLikes || 0) + 1 }));
-    } catch (e) { console.error(e); }
-  };
 
   const handleShare = () => {
     if (navigator.share) {
@@ -256,14 +263,14 @@ export default function TextPage() {
       </article>
 
       <div className="flex justify-center mb-16">
-          <button onClick={handleLike} className={`group flex flex-col items-center gap-2 transition-all duration-500 ${hasLiked ? "scale-110" : "hover:scale-105 active:scale-95"}`}>
-            <div className={`p-6 rounded-full transition-all duration-500 ${hasLiked ? "bg-rose-50 text-rose-500 shadow-xl shadow-rose-500/10" : "bg-slate-50 text-slate-300 hover:bg-rose-50 hover:text-rose-400"}`}>
-                <Heart size={32} className={`${hasLiked ? "fill-rose-500 animate-bounce" : ""}`} />
+          <div className={`group flex flex-col items-center gap-2 transition-all duration-500 scale-110`}>
+            <div className={`p-6 rounded-full transition-all duration-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-500/10`}>
+                <Heart size={32} className="fill-rose-500 animate-bounce" />
             </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${hasLiked ? "text-rose-500" : "text-slate-400"}`}>
+            <span className={`text-[10px] font-black uppercase tracking-widest text-rose-500`}>
                 {text.totalLikes || 0} Appréciations
             </span>
-          </button>
+          </div>
       </div>
 
       <SceauCertification 
