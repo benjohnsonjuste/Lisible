@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation"; // Correction pour Next.js 13+
 import { toast } from "sonner";
 import { Mail, User, Lock, ArrowRight, Loader2, KeyRound, ArrowLeft } from "lucide-react";
 
@@ -14,6 +14,31 @@ export default function AuthForm() {
     email: "",
     password: ""
   });
+
+  // --- LOGIQUE NOTIFICATION ANNIVERSAIRE ---
+  const checkAndNotifyBirthday = async (userData) => {
+    if (!userData.birthday) return;
+
+    const today = new Date();
+    const birthDate = new Date(userData.birthday);
+
+    if (today.getDate() === birthDate.getDate() && today.getMonth() === birthDate.getMonth()) {
+      try {
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "anniversaire",
+            message: `🎂 Joyeux anniversaire ${userData.penName || userData.name} ! Votre badge spécial est actif pour 24h.`,
+            targetEmail: userData.email,
+            link: "/account"
+          })
+        });
+      } catch (e) {
+        console.error("Erreur notification anniversaire", e);
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,7 +75,7 @@ export default function AuthForm() {
           body: JSON.stringify({
             name: formData.name.trim(),
             email: emailClean,
-            password: formData.password, // On envoie le password
+            password: formData.password,
             joinedAt: new Date().toISOString()
           })
         });
@@ -61,16 +86,34 @@ export default function AuthForm() {
         }
       }
 
-      // --- SIMULATION CONNEXION / SESSION ---
-      // (Ici on sauvegarde en local pour simuler la session)
-      const userData = {
-        name: mode === "register" ? formData.name : emailClean.split('@')[0],
-        email: emailClean,
-        isLoggedIn: true
-      };
+      // --- SIMULATION CONNEXION / RÉCUPÉRATION DATA ---
+      // On récupère le profil complet pour vérifier l'anniversaire
+      const profileRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${Buffer.from(emailClean).toString('base64').replace(/=/g, "")}.json?t=${Date.now()}`);
+      
+      let finalUserData;
 
-      localStorage.setItem("lisible_user", JSON.stringify(userData));
-      toast.success(mode === "login" ? `Bienvenue, ${userData.name} !` : "Compte créé !");
+      if (profileRes.ok) {
+        const file = await profileRes.json();
+        finalUserData = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+        
+        // Vérification de sécurité mot de passe simple (à améliorer avec un vrai Auth)
+        if (finalUserData.password !== formData.password) {
+          throw new Error("Mot de passe incorrect");
+        }
+      } else {
+        // Fallback si l'utilisateur vient de s'inscrire et n'est pas encore propagé
+        finalUserData = {
+          name: formData.name,
+          email: emailClean,
+          isLoggedIn: true
+        };
+      }
+
+      // Déclenchement de la notification d'anniversaire
+      await checkAndNotifyBirthday(finalUserData);
+
+      localStorage.setItem("lisible_user", JSON.stringify(finalUserData));
+      toast.success(mode === "login" ? `Bienvenue, ${finalUserData.penName || finalUserData.name} !` : "Compte créé !");
       router.push("/dashboard");
 
     } catch (err) {
