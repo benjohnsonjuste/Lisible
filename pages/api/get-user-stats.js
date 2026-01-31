@@ -8,12 +8,9 @@ export default async function handler(req, res) {
 
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const cleanEmail = email.trim().toLowerCase();
-  
-  // Utilisation directe de l'email pour le nom de fichier (cohérent avec tes autres APIs)
   const userFileName = `${cleanEmail}.json`;
 
   try {
-    // 1. Récupération du Profil & Portefeuille de Li
     let subscribersCount = 0;
     let currentLiBalance = 0;
     try {
@@ -30,7 +27,6 @@ export default async function handler(req, res) {
       console.log("Profil ou Wallet non trouvé.");
     }
 
-    // 2. Récupération des Manuscrits
     const { data: files } = await octokit.repos.getContent({
       owner: "benjohnsonjuste",
       repo: "Lisible",
@@ -51,7 +47,6 @@ export default async function handler(req, res) {
 
     const allTexts = (await Promise.all(textPromises)).filter(t => t !== null);
 
-    // 3. Filtrage et Calcul (Inclusion de certifiedReads)
     const userTexts = allTexts.filter(t => 
       t.authorEmail && t.authorEmail.trim().toLowerCase() === cleanEmail
     );
@@ -65,21 +60,33 @@ export default async function handler(req, res) {
       };
     }, { totalViews: 0, totalLikes: 0, totalCertified: 0, totalTexts: 0 });
 
-    // 4. Conversion des Li en Valeur Monétaire (ex: 1000 Li = 1 USD)
-    const LI_TO_USD_RATE = 0.001; 
+    // --- LOGIQUE DE MONÉTISATION ET RETRAIT ---
+    const LI_TO_USD_RATE = 0.0002; // 1000 Li = 0.20$
+    const MINIMUM_WITHDRAWAL_USD = 5.00;
+    
     const estimatedValueUSD = (currentLiBalance * LI_TO_USD_RATE).toFixed(2);
+    
+    // Condition 1: 250 Abonnés
+    const isEligibleForMonetization = subscribersCount >= 250;
+    
+    // Condition 2: Solde suffisant pour retrait (5$)
+    const canWithdraw = isEligibleForMonetization && (parseFloat(estimatedValueUSD) >= MINIMUM_WITHDRAWAL_USD);
 
     res.status(200).json({
       subscribers: subscribersCount,
       totalViews: stats.totalViews,
-      totalLikes: stats.totalLikes,
-      totalCertified: stats.totalCertified, // Nouvelle stat clé
+      totalCertified: stats.totalCertified, 
       totalTexts: stats.totalTexts,
-      liBalance: currentLiBalance, // Ton solde actuel de Li
+      liBalance: currentLiBalance, 
       estimatedValueUSD: estimatedValueUSD,
-      // On simule l'activité basée sur les lectures certifiées (plus gratifiant)
+      isMonetized: isEligibleForMonetization,
+      canWithdraw: canWithdraw, // Nouvelle info pour activer le bouton de retrait
+      minimumWithdrawal: MINIMUM_WITHDRAWAL_USD,
+      remainingForWithdrawal: Math.max(0, MINIMUM_WITHDRAWAL_USD - parseFloat(estimatedValueUSD)).toFixed(2),
+      remainingSubscribers: Math.max(0, 250 - subscribersCount),
       dailyActivity: generateActivity(stats.totalCertified || stats.totalViews / 10), 
-      currency: "Li"
+      currency: "Li",
+      rateInfo: "0.20$ / 1000 Li"
     });
 
   } catch (error) {
@@ -88,7 +95,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Fonction utilitaire pour le graphique
 const generateActivity = (total) => {
   if (total === 0) return [0, 0, 0, 0, 0, 0, 0];
   const base = total / 7;
