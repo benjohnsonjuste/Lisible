@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, FileText, X, Sparkles,
-  ChevronRight, Radio 
+  ChevronRight, Radio, Coins, Zap, MessageSquare 
 } from "lucide-react";
 
 export default function Navbar() {
@@ -20,56 +20,66 @@ export default function Navbar() {
   const [isLiveActive, setIsLiveActive] = useState(false);
 
   useEffect(() => {
-    const checkUser = () => {
-      const loggedUser = localStorage.getItem("lisible_user");
-      setUser(loggedUser ? JSON.parse(loggedUser) : null);
-    };
+    // 1. Récupération immédiate de l'utilisateur pour le filtrage Pusher
+    const loggedUser = localStorage.getItem("lisible_user");
+    const currentUser = loggedUser ? JSON.parse(loggedUser) : null;
+    setUser(currentUser);
 
-    // --- LOGIQUE PUSHER & SON ---
+    // 2. Configuration Pusher
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
     const channel = pusher.subscribe('global-notifications');
     
     channel.bind('new-alert', (notif) => {
-      // 1. Génération du son cristallin (Web Audio API)
+      // FILTRAGE : On vérifie si la notif est pour tout le monde ou l'utilisateur actuel
+      const isForMe = notif.targetEmail === "all" || 
+                      (currentUser && notif.targetEmail?.toLowerCase() === currentUser.email?.toLowerCase());
+
+      if (!isForMe) return;
+
+      // --- LOGIQUE SONORE ---
       const playNotifSound = () => {
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           const oscillator = audioCtx.createOscillator();
           const gainNode = audioCtx.createGain();
-
           oscillator.type = 'sine';
           oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
-          oscillator.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.1); 
-
           gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-
           oscillator.connect(gainNode);
           gainNode.connect(audioCtx.destination);
-
           oscillator.start();
-          oscillator.stop(audioCtx.currentTime + 0.4);
-        } catch (e) { console.warn("Audio bloqué"); }
+          oscillator.stop(audioCtx.currentTime + 0.3);
+        } catch (e) { console.warn("Audio bloqué par le navigateur"); }
       };
-
       playNotifSound();
 
-      // 2. Mise à jour de l'état Live
+      // --- MISE À JOUR LIVE ---
       if (notif.type === 'live') setIsLiveActive(true);
       
-      // 3. Affichage du Toast
+      // --- AFFICHAGE TOAST DYNAMIQUE ---
+      const getToastIcon = () => {
+        switch(notif.type) {
+          case 'li_received': return <Coins size={18} className="text-amber-500 animate-bounce" />;
+          case 'certified_read': return <Zap size={18} className="text-teal-400" />;
+          case 'comment': return <MessageSquare size={18} className="text-blue-500" />;
+          case 'live': return <Radio size={18} className="text-red-500 animate-pulse" />;
+          default: return <Sparkles size={18} className="text-teal-500" />;
+        }
+      };
+
       toast(notif.message, {
-        description: "Un événement en direct commence !",
-        icon: <Radio size={18} className="text-red-500 animate-pulse" />,
+        description: notif.description || "Nouvelle activité sur Lisible",
+        icon: getToastIcon(),
         action: {
-          label: "REJOINDRE",
-          onClick: () => router.push(notif.link)
+          label: "VOIR",
+          onClick: () => router.push(notif.link || "/notifications")
         },
-        duration: 8000,
-        className: "rounded-[1.5rem] border-teal-100 shadow-2xl",
+        duration: 6000,
+        className: "rounded-[1.5rem] border-slate-100 shadow-2xl font-sans",
       });
     });
 
+    // 3. Statut du Live (Polling)
     const checkLiveStatus = async () => {
       try {
         const res = await fetch("https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/live_status.json?t=" + Date.now());
@@ -80,14 +90,18 @@ export default function Navbar() {
       } catch (e) { setIsLiveActive(false); }
     };
 
-    checkUser();
     checkLiveStatus();
-    
-    window.addEventListener('storage', checkUser);
     const liveTimer = setInterval(checkLiveStatus, 45000); 
 
+    // 4. Écouteur de changement de session
+    const handleStorageChange = () => {
+      const updatedUser = localStorage.getItem("lisible_user");
+      setUser(updatedUser ? JSON.parse(updatedUser) : null);
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
-      window.removeEventListener('storage', checkUser);
+      window.removeEventListener('storage', handleStorageChange);
       clearInterval(liveTimer);
       pusher.unsubscribe('global-notifications');
     };
@@ -144,7 +158,9 @@ export default function Navbar() {
             </nav>
 
             <div className="flex items-center gap-2">
-              <NotificationBell />
+              {/* On passe l'email à la cloche pour sa propre logique interne si besoin */}
+              <NotificationBell userEmail={user?.email} />
+              
               {user ? (
                 <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-rose-500 transition-all">
                   <LogOut size={22} />
