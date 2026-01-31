@@ -3,12 +3,11 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, Star, Coins, Gift, Loader2, 
-  Share2, MessageCircle, Send, CheckCircle,
-  Eye, Heart, Sparkles, ShieldCheck, Trophy // Ajout de Trophy
+  ArrowLeft, Loader2, Share2, MessageCircle, 
+  Send, Eye, Heart, Sparkles, ShieldCheck, Trophy 
 } from "lucide-react";
 
-// --- NOUVEAU COMPOSANT : BADGE CONCOURS ---
+// --- BADGE CONCOURS ---
 function BadgeConcours() {
   return (
     <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-2xl shadow-lg shadow-teal-600/20 mb-6 animate-in zoom-in duration-500">
@@ -18,59 +17,85 @@ function BadgeConcours() {
   );
 }
 
-// ... (Gardez SceauCertification et CommentSection identiques) ...
+// ... (SceauCertification et CommentSection doivent être définis ici ou importés)
 
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
   const [text, setText] = useState(null);
   const [user, setUser] = useState(null);
-  const [hasLiked, setHasLiked] = useState(false);
+  const [error, setError] = useState(false);
 
+  // Fonction de récupération sécurisée
   const fetchData = useCallback(async (textId) => {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-        setText(content);
-        return content;
-      }
-    } catch (e) { console.error("Fetch error", e); }
+      if (!res.ok) throw new Error("Fichier introuvable");
+      
+      const data = await res.json();
+      // Décodage sécurisé UTF-8
+      const contentString = decodeURIComponent(escape(atob(data.content)));
+      const parsedData = JSON.parse(contentString);
+      
+      setText(parsedData);
+      return parsedData;
+    } catch (e) { 
+      console.error("Fetch error", e);
+      setError(true);
+      return null;
+    }
   }, []);
 
   useEffect(() => {
-    if (router.isReady && id) {
-      const stored = localStorage.getItem("lisible_user");
-      if (stored) setUser(JSON.parse(stored));
+    // On attend que le router soit prêt et que l'ID existe
+    if (!router.isReady || !id) return;
 
-      fetchData(id).then((loadedText) => {
-        if (loadedText) {
-          const viewKey = `view_${id}`;
-          if (!localStorage.getItem(viewKey)) {
-            fetch('/api/texts', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id, action: "view" })
-            }).then(() => localStorage.setItem(viewKey, "true"));
-          }
-          // On peut aussi déclencher le handleAutoLike ici
+    const stored = localStorage.getItem("lisible_user");
+    if (stored) setUser(JSON.parse(stored));
+
+    fetchData(id).then((loadedText) => {
+      if (loadedText) {
+        const viewKey = `view_${id}`;
+        if (!localStorage.getItem(viewKey)) {
+          fetch('/api/texts', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, action: "view" })
+          }).then(() => localStorage.setItem(viewKey, "true"))
+            .catch(err => console.error("View update failed", err));
         }
-      });
-    }
+      }
+    });
   }, [router.isReady, id, fetchData]);
 
   const handleShare = () => {
     if (!text) return;
+    const url = window.location.href;
     if (navigator.share) {
-      navigator.share({ title: text.title, url: window.location.href });
+      navigator.share({ title: text.title, url });
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(url);
       toast.success("Lien copié !");
     }
   };
 
-  if (!text) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
+  // ÉCRAN DE CHARGEMENT
+  if (!text && !error) return (
+    <div className="flex flex-col h-screen items-center justify-center gap-4 bg-white">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
+        Chargement de la bibliothèque...
+      </p>
+    </div>
+  );
+
+  // ÉCRAN D'ERREUR
+  if (error) return (
+    <div className="flex flex-col h-screen items-center justify-center gap-4">
+      <p className="text-slate-500 font-bold text-center">Ce texte semble avoir disparu dans les méandres de l'oubli.</p>
+      <button onClick={() => router.push('/bibliotheque')} className="text-teal-600 font-black uppercase text-xs tracking-widest">Retourner lire</button>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
@@ -89,14 +114,14 @@ export default function TextPage() {
       </header>
 
       <article>
-        {/* AFFICHAGE CONDITIONNEL DU BADGE */}
         {(text.isConcours === true || text.isConcours === "true") && <BadgeConcours />}
 
-        <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9]">{text.title}</h1>
+        <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9]">
+          {text.title}
+        </h1>
         
         <p className="text-[11px] font-black text-teal-600 uppercase tracking-[0.4em] mb-16 flex items-center gap-2">
             <span className="w-8 h-[2px] bg-teal-600"></span> 
-            {/* Si c'est un concours, on affiche l'ID Concurrent, sinon le nom de plume */}
             {text.isConcours ? `Concurrent ${text.authorName}` : `Par ${text.authorName}`}
         </p>
         
@@ -105,7 +130,6 @@ export default function TextPage() {
         </div>
       </article>
 
-      {/* ... (Le reste de votre page avec Sceau et Commentaires) ... */}
       <div className="flex justify-center mb-16">
           <div className="group flex flex-col items-center gap-2 scale-110">
             <div className="p-6 rounded-full bg-rose-50 text-rose-500 shadow-xl shadow-rose-500/10">
@@ -117,8 +141,10 @@ export default function TextPage() {
           </div>
       </div>
 
+      {/* Sceau et Commentaires */}
+      {/* Assurez-vous que ces composants gèrent aussi les valeurs null/undefined par défaut */}
       <SceauCertification 
-        wordCount={text.content ? text.content.split(/\s+/).length : 0} 
+        wordCount={text.content ? text.content.trim().split(/\s+/).length : 0} 
         fileName={id} 
         userEmail={user?.email} 
         onValidated={() => fetchData(id)} 
