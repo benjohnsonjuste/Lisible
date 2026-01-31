@@ -8,7 +8,7 @@ import {
   Eye, Heart, Sparkles, ShieldCheck
 } from "lucide-react";
 
-// --- SCEAU DE CERTIFICATION (MODERNE & HIGH-TECH) ---
+// --- SCEAU DE CERTIFICATION ---
 function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount }) {
   const [seconds, setSeconds] = useState(Math.max(5, Math.floor(wordCount / 60)));
   const [isValidated, setIsValidated] = useState(false);
@@ -93,7 +93,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
       <div className="flex items-center gap-4 bg-white border border-slate-100 shadow-sm px-6 py-3 rounded-2xl">
         <Sparkles size={16} className="text-teal-500" />
         <span className="text-xs font-black text-slate-900 uppercase tracking-tighter">
-          {certifiedCount || 0} { (certifiedCount || 0) > 1 ? "Lectures Certifiées" : "Lecture Certifiée" }
+          {certifiedCount || 0} {(certifiedCount || 0) > 1 ? "Lectures Certifiées" : "Lecture Certifiée"}
         </span>
       </div>
     </div>
@@ -179,11 +179,15 @@ export default function TextPage() {
   const [hasLiked, setHasLiked] = useState(false);
 
   const fetchData = useCallback(async (textId) => {
-    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
-    if (res.ok) {
-      const data = await res.json();
-      setText(JSON.parse(decodeURIComponent(escape(atob(data.content)))));
-    }
+    try {
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+        setText(content);
+        return content;
+      }
+    } catch (e) { console.error("Fetch error", e); }
   }, []);
 
   const handleAutoLike = async (textId) => {
@@ -197,7 +201,6 @@ export default function TextPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: textId, action: "like" })
         });
-        // On rafraîchit localement le compteur pour l'UI
         setText(prev => prev ? ({ ...prev, totalLikes: (prev.totalLikes || 0) + 1 }) : null);
       } catch (e) { console.error("Auto-like error", e); }
     } else {
@@ -207,25 +210,31 @@ export default function TextPage() {
 
   useEffect(() => {
     if (router.isReady && id) {
-      setUser(JSON.parse(localStorage.getItem("lisible_user")));
-      fetchData(id);
+      // Charger l'utilisateur
+      const stored = localStorage.getItem("lisible_user");
+      if (stored) setUser(JSON.parse(stored));
 
-      // 1. COMPTEUR DE VUES AUTOMATIQUE
-      const viewKey = `view_${id}`;
-      if (!localStorage.getItem(viewKey)) {
-        fetch('/api/texts', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, action: "view" })
-        }).then(() => localStorage.setItem(viewKey, "true"));
-      }
-
-      // 2. APPRÉCIATION (LIKE) AUTOMATIQUE
-      handleAutoLike(id);
+      // Lancer le chargement du texte et les actions auto seulement après succès
+      fetchData(id).then((loadedText) => {
+        if (loadedText) {
+          // 1. VUE AUTO
+          const viewKey = `view_${id}`;
+          if (!localStorage.getItem(viewKey)) {
+            fetch('/api/texts', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id, action: "view" })
+            }).then(() => localStorage.setItem(viewKey, "true"));
+          }
+          // 2. LIKE AUTO
+          handleAutoLike(id);
+        }
+      });
     }
   }, [router.isReady, id, fetchData]);
 
   const handleShare = () => {
+    if (!text) return;
     if (navigator.share) {
       navigator.share({ title: text.title, url: window.location.href });
     } else {
@@ -240,14 +249,14 @@ export default function TextPage() {
     <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
       <header className="flex justify-between items-center mb-16">
         <button onClick={() => router.back()} className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition-all">
-          <ArrowLeft size={20} />
+          <ArrowLeft size(20) />
         </button>
         <div className="flex gap-3">
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 text-slate-400">
                <Eye size={14} /> <span className="text-xs font-bold">{text.views || 0}</span>
             </div>
             <button onClick={handleShare} className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all">
-              <Share2 size={20} />
+              <Share2 size(20) />
             </button>
         </div>
       </header>
@@ -263,18 +272,18 @@ export default function TextPage() {
       </article>
 
       <div className="flex justify-center mb-16">
-          <div className={`group flex flex-col items-center gap-2 transition-all duration-500 scale-110`}>
-            <div className={`p-6 rounded-full transition-all duration-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-500/10`}>
+          <div className="group flex flex-col items-center gap-2 scale-110">
+            <div className="p-6 rounded-full bg-rose-50 text-rose-500 shadow-xl shadow-rose-500/10">
                 <Heart size={32} className="fill-rose-500 animate-bounce" />
             </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest text-rose-500`}>
+            <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
                 {text.totalLikes || 0} Appréciations
             </span>
           </div>
       </div>
 
       <SceauCertification 
-        wordCount={text.content.split(/\s+/).length} 
+        wordCount={text.content ? text.content.split(/\s+/).length : 0} 
         fileName={id} 
         userEmail={user?.email} 
         onValidated={() => fetchData(id)} 
