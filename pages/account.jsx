@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
   ShieldCheck, Loader2, BookOpen, Eye, Heart, Plus,
-  Lock, Trash2, AlertTriangle, RefreshCcw 
+  Lock, Trash2, AlertTriangle, RefreshCcw, Sparkles, Coins
 } from "lucide-react";
 import MetricsOverview from "@/components/MetricsOverview";
 import Link from "next/link";
@@ -14,6 +14,7 @@ export default function AccountPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRefreshingLi, setIsRefreshingLi] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [editingPayment, setEditingPayment] = useState(false);
   const [myTexts, setMyTexts] = useState([]);
@@ -22,10 +23,6 @@ export default function AccountPage() {
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: ""
   });
-
-  // États pour la Sécurité
-  const [passwords, setPasswords] = useState({ current: "", new: "" });
-  const [isChangingPass, setIsChangingPass] = useState(false);
 
   const [payment, setPayment] = useState({
     method: "PayPal", paypalEmail: "",
@@ -38,24 +35,8 @@ export default function AccountPage() {
         const storedUser = localStorage.getItem("lisible_user");
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
-          setUser(parsed);
-          setFormData({
-            firstName: parsed.firstName || "",
-            lastName: parsed.lastName || "",
-            penName: parsed.penName || parsed.name || "",
-            birthday: parsed.birthday || "",
-            profilePic: parsed.profilePic || ""
-          });
-          setPayment({
-            method: parsed.paymentMethod || "PayPal",
-            paypalEmail: parsed.paypalEmail || "",
-            wuFirstName: parsed.wuMoneyGram?.firstName || "",
-            wuLastName: parsed.wuMoneyGram?.lastName || "",
-            country: parsed.wuMoneyGram?.country || "",
-            areaCode: parsed.wuMoneyGram?.areaCode || "",
-            phone: parsed.wuMoneyGram?.phone || "",
-          });
-          if (parsed.email) await fetchAuthorTexts(parsed.email, parsed.penName || parsed.name);
+          // On recharge les données fraîches depuis le serveur pour le Wallet
+          await refreshUserData(parsed.email);
         } else {
           router.push("/");
         }
@@ -64,47 +45,33 @@ export default function AccountPage() {
     if (router.isReady) loadData();
   }, [router.isReady]);
 
-  // --- CHANGEMENT DE MOT DE PASSE ---
-  const handlePasswordChange = async () => {
-    if (!passwords.current || !passwords.new) return toast.error("Remplissez les deux champs");
-    setIsChangingPass(true);
+  // --- RECHARGER LES DONNÉES UTILISATEUR (WALLET INCLUS) ---
+  const refreshUserData = async (email) => {
+    setIsRefreshingLi(true);
     try {
-      const res = await fetch("/api/update-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, currentPassword: passwords.current, newPassword: passwords.new }),
-      });
-      const data = await res.json();
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${email.toLowerCase().trim()}.json?t=${Date.now()}`);
       if (res.ok) {
-        toast.success("Mot de passe mis à jour !");
-        setPasswords({ current: "", new: "" });
-      } else {
-        throw new Error(data.error || "Échec de la mise à jour");
+        const file = await res.json();
+        const freshUser = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+        
+        setUser(freshUser);
+        localStorage.setItem("lisible_user", JSON.stringify(freshUser));
+        
+        setFormData({
+          firstName: freshUser.firstName || "",
+          lastName: freshUser.lastName || "",
+          penName: freshUser.penName || freshUser.name || "",
+          birthday: freshUser.birthday || "",
+          profilePic: freshUser.profilePic || ""
+        });
+        
+        if (freshUser.email) await fetchAuthorTexts(freshUser.email);
       }
-    } catch (e) { toast.error(e.message); } finally { setIsChangingPass(false); }
+    } catch (e) { console.error("Erreur refresh:", e); }
+    finally { setIsRefreshingLi(false); }
   };
 
-  // --- SUPPRESSION DE COMPTE ---
-  const handleDeleteAccount = async () => {
-    const confirm = window.confirm("ATTENTION : Cette action est irréversible. Vos publications et votre compte seront effacés. Continuer ?");
-    if (!confirm) return;
-
-    const loadingToast = toast.loading("Suppression définitive...");
-    try {
-      const res = await fetch("/api/delete-account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email }),
-      });
-      if (res.ok) {
-        localStorage.clear();
-        toast.success("Compte supprimé", { id: loadingToast });
-        router.push("/");
-      } else { throw new Error(); }
-    } catch (e) { toast.error("Erreur lors de la suppression", { id: loadingToast }); }
-  };
-
-  const fetchAuthorTexts = async (email, penName) => {
+  const fetchAuthorTexts = async (email) => {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
       if (!res.ok) return;
@@ -158,10 +125,11 @@ export default function AccountPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-10 animate-in fade-in duration-500">
-      {/* HEADER */}
-      <header className="flex items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+      
+      {/* HEADER AVEC SOLDE DE LI */}
+      <header className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden">
         <div className="flex items-center gap-4">
-           <div className="p-4 bg-teal-50 rounded-2xl text-teal-600">
+           <div className="p-4 bg-slate-900 rounded-2xl text-white">
               <User size={32} strokeWidth={2.5} />
            </div>
            <div>
@@ -169,7 +137,25 @@ export default function AccountPage() {
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Registre Officiel Lisible</p>
           </div>
         </div>
-        <button onClick={() => router.back()} className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
+
+        {/* COMPOSANT WALLET (LE LI) */}
+        <div className="flex items-center gap-6 bg-slate-50 p-2 pl-6 rounded-3xl border border-slate-100">
+           <div className="flex flex-col">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Mon Trésor</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-slate-900 italic">{(user?.wallet?.balance || 0)}</span>
+                <span className="text-[10px] font-black text-teal-600 uppercase">Li</span>
+              </div>
+           </div>
+           <button 
+             onClick={() => refreshUserData(user.email)} 
+             className={`p-4 rounded-2xl transition-all ${isRefreshingLi ? 'bg-teal-100 text-teal-600' : 'bg-slate-900 text-white hover:bg-teal-600'}`}
+           >
+             <RefreshCcw size={20} className={isRefreshingLi ? "animate-spin" : ""} />
+           </button>
+        </div>
+
+        <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl text-slate-400 hover:text-teal-600 border border-slate-100 transition-colors">
           <ArrowLeft size={24} />
         </button>
       </header>
@@ -219,23 +205,26 @@ export default function AccountPage() {
             </button>
           </div>
 
-          {/* SÉCURITÉ */}
+          {/* HISTORIQUE DU WALLET LI */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-8">
             <h2 className="text-[11px] font-black flex items-center gap-3 italic text-slate-400 uppercase tracking-[0.3em]">
-              <Lock className="text-teal-600" size={18} /> Sécurité de l'accès
+              <Sparkles className="text-teal-600" size={18} /> Historique de l'Attention (Li)
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 bg-slate-50 p-8 rounded-[2rem]">
-              <InputBlock label="Mot de passe actuel" type="password" value={passwords.current} onChange={v => setPasswords({...passwords, current: v})} />
-              <InputBlock label="Nouveau mot de passe" type="password" value={passwords.new} onChange={v => setPasswords({...passwords, new: v})} />
+            <div className="space-y-4">
+              {user?.wallet?.history?.length > 0 ? (
+                user.wallet.history.slice().reverse().map((entry, i) => (
+                  <div key={i} className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{entry.reason}</span>
+                      <span className="text-[8px] font-bold text-slate-400">{new Date(entry.date).toLocaleDateString()}</span>
+                    </div>
+                    <span className="text-sm font-black text-teal-600">+{entry.amount} Li</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center py-10 text-[9px] font-black text-slate-300 uppercase tracking-widest italic">Aucune transaction de Li enregistrée.</p>
+              )}
             </div>
-            <button 
-              onClick={handlePasswordChange}
-              disabled={isChangingPass}
-              className="w-full py-4 border-2 border-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all flex justify-center items-center gap-2"
-            >
-              {isChangingPass ? <Loader2 size={16} className="animate-spin" /> : <RefreshCcw size={16} />} 
-              Mettre à jour le mot de passe
-            </button>
           </div>
 
           {/* MES MANUSCRITS */}
@@ -250,7 +239,7 @@ export default function AccountPage() {
             </div>
             
             <div className="grid grid-cols-1 gap-4">
-              {myTexts.length > 0 ? myTexts.map((txt) => (
+              {myTexts.map((txt) => (
                 <Link href={`/texts/${txt.id}`} key={txt.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-[2rem] hover:bg-white hover:shadow-lg transition-all border border-transparent hover:border-slate-100 group">
                   <div className="flex flex-col">
                     <span className="text-lg font-black text-slate-900 group-hover:text-teal-600 transition-colors">{txt.title}</span>
@@ -261,27 +250,8 @@ export default function AccountPage() {
                     <div className="flex items-center gap-1.5"><Heart size={14} className="group-hover:text-rose-500 transition-colors" /> <span className="text-xs font-black text-slate-700">{txt.likes?.length || 0}</span></div>
                   </div>
                 </Link>
-              )) : (
-                <div className="text-center py-16 text-slate-300 font-black uppercase text-[9px] tracking-[0.3em] border-2 border-dashed border-slate-100 rounded-[2rem]">Aucun manuscrit trouvé</div>
-              )}
+              ))}
             </div>
-          </div>
-
-          {/* ZONE DANGEREUSE */}
-          <div className="bg-rose-50/30 rounded-[3rem] p-10 border-2 border-dashed border-rose-100 space-y-6">
-            <div className="flex items-center gap-4 text-rose-600">
-               <AlertTriangle size={32} />
-               <div>
-                 <h3 className="font-black italic text-xl uppercase tracking-tighter leading-none">Zone de Danger</h3>
-                 <p className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-70">Action Irréversible</p>
-               </div>
-            </div>
-            <button 
-              onClick={handleDeleteAccount}
-              className="flex items-center gap-2 px-8 py-4 bg-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg"
-            >
-              <Trash2 size={16} /> Supprimer mon compte
-            </button>
           </div>
         </section>
 
@@ -292,6 +262,16 @@ export default function AccountPage() {
           </h2>
           
           <div className="space-y-6">
+            <div className="p-6 bg-slate-900 rounded-2xl border border-white/5 space-y-2">
+               <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Retrait possible dès 5000 Li</p>
+               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-teal-500 transition-all duration-1000" 
+                    style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 5000) * 100, 100)}%` }}
+                  />
+               </div>
+            </div>
+
             <div className="space-y-2">
                <label className="text-[9px] font-black text-slate-500 uppercase ml-2 tracking-widest">Méthode préférée</label>
                 <select disabled={!editingPayment} value={payment.method} onChange={e => setPayment({...payment, method: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-5 text-sm font-bold text-white outline-none ring-teal-500/30 focus:ring-2 transition-all">
@@ -300,22 +280,6 @@ export default function AccountPage() {
                   <option value="MoneyGram">MoneyGram</option>
                 </select>
             </div>
-
-            {payment.method === "PayPal" ? (
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-500 uppercase ml-2 tracking-widest">Email PayPal</label>
-                <input type="email" disabled={!editingPayment} value={payment.paypalEmail} onChange={e => setPayment({...payment, paypalEmail: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-5 text-sm font-bold text-teal-400 outline-none" placeholder="votre@email.com" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <InputBlockDark label="Prénom" value={payment.wuFirstName} onChange={v => setPayment({...payment, wuFirstName: v})} disabled={!editingPayment} />
-                <InputBlockDark label="Nom" value={payment.wuLastName} onChange={v => setPayment({...payment, wuLastName: v})} disabled={!editingPayment} />
-                <div className="grid grid-cols-2 gap-4">
-                  <InputBlockDark label="Pays" value={payment.country} onChange={v => setPayment({...payment, country: v})} disabled={!editingPayment} />
-                  <InputBlockDark label="Téléphone" value={payment.phone} onChange={v => setPayment({...payment, phone: v})} disabled={!editingPayment} />
-                </div>
-              </div>
-            )}
             
             <div className="pt-6">
               {editingPayment ? (
@@ -339,15 +303,6 @@ function InputBlock({ label, value, onChange, type = "text" }) {
     <div className="space-y-2">
       <label className="text-[10px] font-black text-slate-400 uppercase ml-4 tracking-widest">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-50 focus:border-teal-200 focus:bg-white rounded-2xl p-5 text-sm font-bold outline-none transition-all text-slate-700 shadow-sm" />
-    </div>
-  );
-}
-
-function InputBlockDark({ label, value, onChange, disabled }) {
-  return (
-    <div className="space-y-2">
-      <label className="text-[9px] font-black text-slate-500 uppercase ml-2 tracking-widest">{label}</label>
-      <input disabled={disabled} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 text-xs font-bold text-white outline-none focus:border-teal-500 transition-all disabled:opacity-50" />
     </div>
   );
 }
