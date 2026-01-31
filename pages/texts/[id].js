@@ -3,20 +3,20 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { 
-  Heart, ArrowLeft, Eye, Loader2, MessageSquare, 
-  Send, Share2, BookOpen, Trophy, RefreshCcw,
-  Clock, Star, ShieldCheck, CheckCircle2, Sparkles
+  ArrowLeft, Eye, Loader2, Share2, BookOpen, 
+  Clock, Star, CheckCircle2, Sparkles 
 } from "lucide-react";
 import Link from "next/link";
 import { InTextAd } from "@/components/InTextAd";
 
-// --- COMPOSANT INTERNE : PROOF OF READING (VERSION LI) ---
-function ProofOfReading({ wordCount, fileName, onValidated, userEmail, textTitle }) {
+// --- COMPOSANT : PREUVE DE LECTURE (LOGIQUE ÉCONOMIQUE) ---
+function ProofOfReading({ wordCount, fileName, onValidated, userEmail, currentCertified }) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [isValidated, setIsValidated] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Calcul du temps requis (vitesse de lecture humaine moyenne)
   const requiredTime = Math.max(10, Math.floor(wordCount / 50));
 
   useEffect(() => {
@@ -34,9 +34,10 @@ function ProofOfReading({ wordCount, fileName, onValidated, userEmail, textTitle
 
   const handleValidation = async () => {
     setIsSyncing(true);
-    const loadingToast = toast.loading("Récupération de vos Li...");
+    const loadingToast = toast.loading("Sécurisation de vos Li...");
+    
     try {
-      // On envoie l'action 'certify' avec l'email du lecteur pour le portefeuille
+      // 1. Créditer le Wallet et incrémenter le fichier texte individuel
       const res = await fetch('/api/texts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -47,16 +48,27 @@ function ProofOfReading({ wordCount, fileName, onValidated, userEmail, textTitle
         })
       });
 
-      if (res.ok) {
-        setIsValidated(true);
-        toast.success("Lecture certifiée ! +Li accumulés.", { 
-          id: loadingToast,
-          icon: <Sparkles className="text-amber-500" size={16} /> 
-        });
-        if (onValidated) onValidated();
-      } else throw new Error();
+      if (!res.ok) throw new Error("Échec de la certification");
+
+      // 2. Mettre à jour l'index global pour la bibliothèque
+      await fetch('/api/update-stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          textId: fileName, 
+          certifiedReads: (currentCertified || 0) + 1 
+        })
+      });
+
+      setIsValidated(true);
+      toast.success("Sceau de Cire obtenu ! +Li ajoutés.", { 
+        id: loadingToast,
+        icon: <Sparkles className="text-amber-500" /> 
+      });
+      
+      if (onValidated) onValidated();
     } catch (err) {
-      toast.error("Erreur de synchronisation", { id: loadingToast });
+      toast.error("Erreur de synchronisation GitHub", { id: loadingToast });
     } finally {
       setIsSyncing(false);
     }
@@ -96,7 +108,7 @@ function ProofOfReading({ wordCount, fileName, onValidated, userEmail, textTitle
       ) : (
         <div className="animate-in zoom-in duration-700 flex flex-col items-center space-y-4">
           <div className="relative group">
-            <div className="absolute inset-0 bg-teal-500 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="absolute inset-0 bg-teal-500 blur-2xl opacity-20" />
             <div className="relative w-28 h-28 bg-slate-900 rounded-full border-4 border-white shadow-2xl flex flex-col items-center justify-center text-teal-400 rotate-12 transition-transform hover:rotate-0 duration-500">
                 <Star size={32} fill="currentColor" />
                 <span className="text-[10px] font-black tracking-tighter mt-1 italic">LI CERTIFIÉ</span>
@@ -109,7 +121,7 @@ function ProofOfReading({ wordCount, fileName, onValidated, userEmail, textTitle
   );
 }
 
-// --- PAGE PRINCIPALE ---
+// --- PAGE PRINCIPALE : TEXT PAGE ---
 export default function TextPage() {
   const router = useRouter();
   const { id: textId } = router.query;
@@ -149,24 +161,33 @@ export default function TextPage() {
     }
   }, [router.isReady, textId, fetchData]);
 
-  if (loading || !router.isReady) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
-  if (!text) return <div className="py-40 text-center font-black uppercase text-slate-300 tracking-widest">Inconnu</div>;
+  if (loading || !router.isReady) return (
+    <div className="flex h-screen items-center justify-center bg-white">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+    </div>
+  );
+
+  if (!text) return (
+    <div className="py-40 text-center font-black uppercase text-slate-300 tracking-[0.5em]">
+      Manuscrit Introuvable
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-6 pb-24 space-y-16 animate-in fade-in duration-1000">
       <header className="pt-12 flex justify-between items-center">
-        <button onClick={() => router.back()} className="text-slate-400 font-black text-[10px] uppercase flex items-center gap-2 tracking-[0.2em]">
+        <button onClick={() => router.back()} className="text-slate-400 font-black text-[10px] uppercase flex items-center gap-2 tracking-[0.2em] hover:text-teal-600 transition-colors">
           <ArrowLeft size={16}/> Retour
         </button>
         <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-4 px-6 py-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-2">
                     <CheckCircle2 size={14} className="text-teal-500"/>
-                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">{text.certifiedReads || 0} Li-Certifiés</span>
+                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">{text.certifiedReads || 0} Lectures Certifiées</span>
                 </div>
             </div>
             <Link href="/bibliotheque" className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-teal-600 shadow-xl transition-all">
-                <BookOpen size={14}/> Cercle
+                <BookOpen size={14}/> Explorer
             </Link>
         </div>
       </header>
@@ -176,7 +197,7 @@ export default function TextPage() {
           {text.title}
         </h1>
         
-        <div className="text-slate-800 leading-[1.8] font-serif text-xl md:text-2xl mb-16">
+        <div className="text-slate-800 leading-[1.8] font-serif text-xl md:text-2xl mb-16 selection:bg-teal-100">
           {text.content.split('\n').filter(p => p.trim() !== "").map((para, index) => (
             <React.Fragment key={index}>
               <p className="mb-10 whitespace-pre-wrap">{para}</p>
@@ -185,12 +206,13 @@ export default function TextPage() {
           ))}
         </div>
 
-        {/* SYSTÈME DE PREUVE DE LECTURE : On passe l'email du lecteur */}
+        {/* --- SYSTÈME DE VALIDATION --- */}
         <ProofOfReading 
           wordCount={text.content.split(/\s+/).length} 
           fileName={textId} 
           textTitle={text.title}
           userEmail={user?.email}
+          currentCertified={text.certifiedReads}
           onValidated={() => fetchData(textId, true)} 
         />
 
@@ -202,11 +224,17 @@ export default function TextPage() {
             </div>
 
             <div className="flex flex-col items-center bg-teal-50 px-6 py-4 rounded-[2rem] border border-teal-100 shadow-lg shadow-teal-500/5">
-               <span className="text-[8px] font-black text-teal-600 uppercase tracking-widest mb-1">Lectures Li</span>
+               <span className="text-[8px] font-black text-teal-600 uppercase tracking-widest mb-1">Attention (Li)</span>
                <span className="font-black text-lg text-slate-900 italic">{text.certifiedReads || 0}</span>
             </div>
 
-            <button onClick={() => toast.success("Lien copié")} className="ml-4 p-5 bg-slate-900 text-white rounded-[1.5rem] hover:bg-teal-600 transition-all shadow-xl">
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                toast.success("Lien copié dans le presse-papier");
+              }} 
+              className="ml-4 p-5 bg-slate-900 text-white rounded-[1.5rem] hover:bg-teal-600 transition-all shadow-xl"
+            >
               <Share2 size={20} />
             </button>
           </div>
@@ -219,7 +247,7 @@ export default function TextPage() {
       </article>
 
       <footer className="text-center pt-20 border-t border-slate-50">
-        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">Lisible.biz • L'économie de l'esprit</p>
+        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">Lisible.biz • Certifié par l'Attention Humaine</p>
       </footer>
     </div>
   );
