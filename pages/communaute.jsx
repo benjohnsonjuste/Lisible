@@ -4,7 +4,7 @@ import {
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
   TrendingUp, Cake, Crown 
-} from "lucide-center"; // Note: Assurez-vous d'utiliser lucide-react
+} from "lucide-react"; // Note: Assurez-vous d'utiliser lucide-react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
