@@ -1,56 +1,38 @@
-import { Octokit } from "@octokit/rest";
+import { getFile } from "@/lib/github";
+import { Buffer } from "buffer";
 
 export default async function handler(req, res) {
-  // Désactiver le cache au niveau du navigateur/CDN pour cette API
+  // Désactiver le cache pour avoir le vrai nombre d'abonnés en temps réel
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
 
   try {
-    const { authorId } = req.query;
+    const { authorId } = req.query; // authorId peut être un email ou l'ID Base64
 
     if (!authorId) {
       return res.status(400).json({ error: "ID auteur manquant." });
     }
 
-    const octokit = new Octokit({
-      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
-    });
-
-    const owner = process.env.GITHUB_OWNER;
-    const repo = process.env.GITHUB_REPO;
-    const path = `data/users/${authorId}.json`;
-
-    try {
-      // AJOUT : On demande le contenu avec un timestamp pour forcer GitHub à bypasser son cache interne
-      const { data } = await octokit.repos.getContent({
-        owner,
-        repo,
-        path,
-        headers: {
-          'If-None-Match': '', // Force la revalidation
-        },
-        // On ajoute un paramètre bidon dans la query si nécessaire (via ref)
-        ref: 'main' 
-      });
-
-      const content = JSON.parse(
-        Buffer.from(data.content, "base64").toString("utf-8")
-      );
-
-      // Sécurité : s'assurer que subscribers est bien un tableau
-      const followersCount = Array.isArray(content.subscribers) ? content.subscribers.length : 0;
-      
-      return res.status(200).json({ followersCount });
-
-    } catch (err) {
-      if (err.status === 404) {
-        return res.status(200).json({ followersCount: 0 });
-      }
-      throw err;
+    // Sécurité : Si l'ID contient un "@", on le transforme en Base64 automatiquement
+    let fileName = authorId;
+    if (authorId.includes("@")) {
+      fileName = Buffer.from(authorId.toLowerCase().trim()).toString("base64").replace(/=/g, "");
     }
+
+    const path = `data/users/${fileName}.json`;
+    const userFile = await getFile(path);
+
+    if (!userFile) {
+      return res.status(200).json({ followersCount: 0 });
+    }
+
+    // On compte soit la longueur du tableau subscribers, soit la valeur numérique
+    const subscribers = userFile.content.subscribers;
+    const count = Array.isArray(subscribers) ? subscribers.length : (parseInt(subscribers) || 0);
+    
+    return res.status(200).json({ followersCount: count });
+
   } catch (error) {
-    console.error("Erreur /api/get-followers-count :", error);
+    console.error("Erreur Count:", error);
     return res.status(500).json({ error: "Erreur serveur." });
   }
 }
