@@ -153,7 +153,7 @@ export default function AuthorCataloguePage() {
             </div>
             <div className="bg-slate-50 px-5 py-2.5 rounded-xl flex items-center gap-3 border border-slate-100 text-slate-500">
               <TrendingUp size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">{author?.subscribers?.length || 0} Abonnés</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{author?.subscribersCount || author?.subscribers?.length || 0} Abonnés</span>
             </div>
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function AuthorCataloguePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Heart size={16} className="text-slate-200" />
-                  <span className="font-black text-xs">{txt.likes?.length || 0}</span>
+                  <span className="font-black text-xs">{txt.totalLikes || txt.likes?.length || 0}</span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-all">
                   <ArrowLeft size={18} className="rotate-180" />
