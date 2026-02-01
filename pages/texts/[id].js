@@ -28,6 +28,11 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
   const totalTime = Math.max(5, Math.floor(wordCount / 60));
 
   useEffect(() => {
+    const deviceKey = `cert_${fileName}`;
+    if (localStorage.getItem(deviceKey)) setIsValidated(true);
+  }, [fileName]);
+
+  useEffect(() => {
     if (isValidated || seconds <= 0) return;
     const timer = setInterval(() => {
       setSeconds(s => {
@@ -68,7 +73,6 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
             })
           });
         }
-
         localStorage.setItem(deviceKey, "true");
         setIsValidated(true);
         toast.success("Sceau apposé ! +1 Li envoyé.", { id: t });
@@ -130,11 +134,15 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: textId, action: "comment",
-          payload: { userEmail: user.email, userName: user.penName || user.firstName, text: msg.trim(), date: new Date().toISOString() }
+          payload: { userEmail: user.email, userName: user.penName || user.firstName || "Plume", text: msg.trim(), date: new Date().toISOString() }
         })
       });
-      if (res.ok) { setMsg(""); onCommented(); toast.success("Commentaire publié"); }
-    } catch (e) { toast.error("Erreur"); }
+      if (res.ok) { 
+        setMsg(""); 
+        onCommented(); 
+        toast.success("Commentaire publié"); 
+      }
+    } catch (e) { toast.error("Erreur de connexion"); }
     finally { setSending(false); }
   };
 
@@ -143,21 +151,25 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
       <h3 className="text-xl font-black italic mb-8 flex items-center gap-3 text-slate-900">
         <MessageCircle className="text-teal-600" /> Salon de discussion
       </h3>
-      {user ? (
-        <div className="flex gap-4 mb-12">
-          <input value={msg} onChange={e => setMsg(e.target.value)} placeholder="Votre pensée..." className="flex-1 bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm outline-none focus:ring-4 focus:ring-teal-500/10" />
-          <button onClick={postComment} disabled={sending} className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all">
-            {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
-          </button>
-        </div>
-      ) : (
-        <div className="p-6 bg-slate-50 rounded-2xl text-center text-[10px] font-black text-slate-400 mb-10 uppercase tracking-widest border-2 border-dashed">
-          Connectez-vous pour laisser un avis
-        </div>
-      )}
+      <div className="flex gap-4 mb-12">
+        <input 
+          value={msg} 
+          onChange={e => setMsg(e.target.value)} 
+          placeholder={user ? "Votre pensée..." : "Connectez-vous pour commenter"} 
+          disabled={!user || sending}
+          className="flex-1 bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm outline-none focus:ring-4 focus:ring-teal-500/10 disabled:opacity-50" 
+        />
+        <button 
+          onClick={postComment} 
+          disabled={sending || !user} 
+          className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all disabled:bg-slate-200"
+        >
+          {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
+        </button>
+      </div>
       <div className="space-y-6">
-        {comments.map((c, i) => (
-          <div key={i} className="bg-white p-6 rounded-3xl border border-slate-50 shadow-sm transition-all hover:border-teal-100">
+        {comments.slice().reverse().map((c, i) => (
+          <div key={i} className="bg-white p-6 rounded-3xl border border-slate-50 shadow-sm transition-all hover:border-teal-100 animate-in slide-in-from-bottom-2">
             <div className="flex justify-between mb-2">
               <span className="text-[10px] font-black text-teal-600 uppercase">{c.userName}</span>
               <span className="text-[8px] text-slate-300 font-bold">{new Date(c.date).toLocaleDateString()}</span>
@@ -176,6 +188,7 @@ export default function TextPage() {
   const { id } = router.query;
   const [text, setText] = useState(null);
   const [user, setUser] = useState(null);
+  const [isLiking, setIsLiking] = useState(false);
 
   const fetchData = useCallback(async (textId) => {
     try {
@@ -189,6 +202,27 @@ export default function TextPage() {
     } catch (e) { console.error("Fetch error", e); }
   }, []);
 
+  const handleLike = async () => {
+    const likeKey = `like_${id}`;
+    if (localStorage.getItem(likeKey)) return toast.info("Vous appréciez déjà ce texte.");
+    if (isLiking) return;
+    
+    setIsLiking(true);
+    try {
+      const res = await fetch('/api/texts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: "like" })
+      });
+      if (res.ok) {
+        localStorage.setItem(likeKey, "true");
+        await fetchData(id);
+        toast.success("Appréciation enregistrée !");
+      }
+    } catch (e) { toast.error("Action impossible"); }
+    finally { setIsLiking(false); }
+  };
+
   useEffect(() => {
     if (router.isReady && id) {
       const stored = localStorage.getItem("lisible_user");
@@ -196,11 +230,14 @@ export default function TextPage() {
 
       fetchData(id).then((loaded) => {
         if (loaded) {
-          fetch('/api/texts', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, action: "view" })
-          });
+          const viewKey = `view_${id}`;
+          if (!localStorage.getItem(viewKey)) {
+            fetch('/api/texts', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id, action: "view" })
+            }).then(r => { if(r.ok) localStorage.setItem(viewKey, "true") });
+          }
         }
       });
     }
@@ -219,7 +256,7 @@ export default function TextPage() {
   if (!text) return (
     <div className="flex flex-col h-screen items-center justify-center gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Chargement de la bibliothèque...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Chargement...</p>
     </div>
   );
 
@@ -252,14 +289,18 @@ export default function TextPage() {
       </article>
 
       <div className="flex justify-center mb-16">
-          <div className="group flex flex-col items-center gap-2 scale-110">
-            <div className="p-6 rounded-full bg-rose-50 text-rose-500 shadow-xl shadow-rose-500/10">
-                <Heart size={32} className="fill-rose-500 animate-bounce" />
+          <button 
+            onClick={handleLike}
+            disabled={isLiking}
+            className="group flex flex-col items-center gap-2 scale-110 active:scale-95 transition-transform"
+          >
+            <div className={`p-6 rounded-full shadow-xl transition-all ${isLiking ? 'bg-slate-100' : 'bg-rose-50 hover:bg-rose-100 shadow-rose-500/10'}`}>
+                <Heart size={32} className={`transition-colors ${isLiking ? 'text-slate-300' : 'text-rose-500 fill-rose-500 animate-bounce'}`} />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-                {text.totalLikes || 0} Appréciations
+                {text.totalLikes || 0} { (text.totalLikes || 0) > 1 ? "Appréciations" : "Appréciation" }
             </span>
-          </div>
+          </button>
       </div>
 
       <SceauCertification 
@@ -272,7 +313,6 @@ export default function TextPage() {
         certifiedCount={text.totalCertified}
       />
 
-      {/* --- APPEL DU COMPOSANT PUBLICITAIRE --- */}
       <InTextAd />
 
       <CommentSection 
