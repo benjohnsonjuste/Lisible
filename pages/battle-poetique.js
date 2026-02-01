@@ -33,8 +33,8 @@ export default function BattlePoetique() {
         const filtered = data
           .filter(item => item.isConcours === true || item.isConcours === "true")
           .sort((a, b) => {
-            const certA = a.certifiedReads || 0;
-            const certB = b.certifiedReads || 0;
+            const certA = a.totalCertified || 0;
+            const certB = b.totalCertified || 0;
             if (certB !== certA) return certB - certA;
             return new Date(b.date) - new Date(a.date);
           });
@@ -122,7 +122,7 @@ export default function BattlePoetique() {
       {texts.length > 0 ? (
         <div className="grid gap-10 md:grid-cols-2">
           {texts.map((item) => {
-            const hasHighLi = (item.certifiedReads || 0) > 0;
+            const hasHighLi = (item.totalCertified || 0) > 0;
             
             return (
               <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -180,7 +180,7 @@ export default function BattlePoetique() {
                         : "bg-slate-50 text-slate-400"
                       }`}>
                         <Sparkles size={14} className={hasHighLi ? "animate-spin" : ""}/> 
-                        {item.certifiedReads || 0} <span className="text-[8px] opacity-70">LI-CERTIFIED</span>
+                        {item.totalCertified || 0} <span className="text-[8px] opacity-70">LI-CERTIFIED</span>
                       </div>
 
                       <div className="flex gap-5">
@@ -188,7 +188,7 @@ export default function BattlePoetique() {
                           <Eye size={16} className="text-slate-300"/> {item.views || 0}
                         </div>
                         <div className="flex items-center gap-1.5 text-rose-500 font-black text-[11px] bg-rose-50 px-4 py-2 rounded-2xl">
-                          <Heart size={16} fill="currentColor" className="group-hover:scale-125 transition-transform"/> {item.likes || 0}
+                          <Heart size={16} fill="currentColor" className="group-hover:scale-125 transition-transform"/> {item.totalLikes || 0}
                         </div>
                       </div>
                     </div>
