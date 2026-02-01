@@ -62,17 +62,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
       });
 
       if (resText.ok) {
-        if (authorEmail) {
-          await fetch('/api/wallet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: authorEmail,
-              amount: 1,
-              reason: `Lecture certifiée : ${textTitle}`
-            })
-          });
-        }
+        // Note: Le crédit auteur +1 Li est maintenant géré automatiquement côté API /api/texts
         localStorage.setItem(deviceKey, "true");
         setIsValidated(true);
         toast.success("Sceau apposé ! +1 Li envoyé.", { id: t });
@@ -303,6 +293,11 @@ export default function TextPage() {
           </button>
       </div>
 
+      {/* PUBLICITÉ IN-TEXT */}
+      <div className="my-16">
+        <InTextAd />
+      </div>
+
       <SceauCertification 
         wordCount={text.content ? text.content.trim().split(/\s+/).length : 0} 
         fileName={id} 
@@ -312,8 +307,6 @@ export default function TextPage() {
         onValidated={() => fetchData(id)} 
         certifiedCount={text.totalCertified}
       />
-
-      <InTextAd />
 
       <CommentSection 
         textId={id} 
