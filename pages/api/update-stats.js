@@ -71,7 +71,7 @@ export default async function handler(req, res) {
           targetEmail: authorEmail,
           message: certifiedReads 
             ? `✨ Lecture Certifiée sur "${targetText?.title || 'votre texte'}" (+50 Li)`
-            : `❤️ ${senderName || 'Quelqu'un'} a aimé "${targetText?.title}"`,
+            : `❤️ ${senderName || "Quelqu'un"} a aimé "${targetText?.title}"`,
           amountLi: certifiedReads ? 50 : 0,
           link: `/bibliotheque` 
         })
