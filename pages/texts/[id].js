@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 // --- IMPORT DU COMPOSANT EXTÉRIEUR ---
-import InTextAd from "@/components/InTextAd";
+import { InTextAd } from "@/components/InTextAd";
 
 // --- 1. COMPOSANT : BADGE CONCOURS ---
 function BadgeConcours() {
