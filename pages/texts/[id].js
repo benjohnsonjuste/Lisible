@@ -7,6 +7,9 @@ import {
   ShieldCheck, Sparkles, Send, MessageCircle 
 } from "lucide-react";
 
+// --- IMPORT DU COMPOSANT EXTÉRIEUR ---
+import InTextAd from "@/components/InTextAd";
+
 // --- 1. COMPOSANT : BADGE CONCOURS ---
 function BadgeConcours() {
   return (
@@ -18,7 +21,7 @@ function BadgeConcours() {
 }
 
 // --- 2. COMPOSANT : SCEAU DE CERTIFICATION (SYSTÈME LI) ---
-function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount }) {
+function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount, authorEmail, textTitle }) {
   const [seconds, setSeconds] = useState(Math.max(5, Math.floor(wordCount / 60)));
   const [isValidated, setIsValidated] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -43,7 +46,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
 
     const t = toast.loading("Cryptage du sceau...");
     try {
-      const res = await fetch('/api/texts', {
+      const resText = await fetch('/api/texts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -52,7 +55,20 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
           payload: { readerEmail: userEmail || "anonymous@lisible.biz" } 
         })
       });
-      if (res.ok) {
+
+      if (resText.ok) {
+        if (authorEmail) {
+          await fetch('/api/wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: authorEmail,
+              amount: 1,
+              reason: `Lecture certifiée : ${textTitle}`
+            })
+          });
+        }
+
         localStorage.setItem(deviceKey, "true");
         setIsValidated(true);
         toast.success("Sceau apposé ! +1 Li envoyé.", { id: t });
@@ -250,9 +266,14 @@ export default function TextPage() {
         wordCount={text.content ? text.content.trim().split(/\s+/).length : 0} 
         fileName={id} 
         userEmail={user?.email} 
+        authorEmail={text.authorEmail}
+        textTitle={text.title}
         onValidated={() => fetchData(id)} 
         certifiedCount={text.totalCertified}
       />
+
+      {/* --- APPEL DU COMPOSANT PUBLICITAIRE --- */}
+      <InTextAd />
 
       <CommentSection 
         textId={id} 
