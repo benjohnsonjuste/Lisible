@@ -1,6 +1,6 @@
 // components/Footer.js
 import Link from "next/link";
-import { MapPin, Copyright, Heart } from "lucide-react";
+import { MapPin, Copyright, Heart, Phone } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -35,11 +35,19 @@ export default function Footer() {
               </span>
             </p>
             
-            <div className="flex items-center justify-center gap-2 text-slate-400">
-              <MapPin size={14} className="text-teal-500" />
-              <address className="not-italic text-xs font-semibold tracking-wide">
-                22 RUE A. LAZARRE, DELMAS, HAÏTI
-              </address>
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center justify-center gap-2 text-slate-400">
+                <MapPin size={14} className="text-teal-500" />
+                <address className="not-italic text-xs font-semibold tracking-wide uppercase">
+                  22 RUE A. LAZARRE, DELMAS, HAÏTI
+                </address>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-slate-400">
+                <Phone size={14} className="text-teal-500" />
+                <span className="text-xs font-semibold tracking-wide">
+                  (509) 4352 4498
+                </span>
+              </div>
             </div>
           </div>
 
@@ -50,13 +58,17 @@ export default function Footer() {
               {currentYear} Lisible — Tous droits réservés
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap justify-center">
               <Link href="/terms" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
-                Conditions
+                Conditions Générales d'Utilisation (CGU)
               </Link>
               <div className="w-1 h-1 bg-slate-200 rounded-full" />
               <Link href="/confidentialite" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
                 Confidentialité
+              </Link>
+              <div className="w-1 h-1 bg-slate-200 rounded-full" />
+              <Link href="/refund" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+                Politique de remboursement
               </Link>
             </div>
 
