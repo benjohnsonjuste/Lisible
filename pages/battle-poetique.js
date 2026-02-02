@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Sparkles, Zap
+  Heart, Share2, ArrowRight, RefreshCcw, Sparkles, Zap, Coins
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,13 +12,11 @@ export default function BattlePoetique() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // --- LOGIQUE DE CHARGEMENT DYNAMIQUE ---
   const loadConcoursTexts = useCallback(async (showSilent = false) => {
     if (!showSilent) setLoading(true);
     else setIsRefreshing(true);
 
     try {
-      // Bypass du cache GitHub pour des stats en temps réel
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
       const files = await res.json();
       
@@ -29,7 +27,6 @@ export default function BattlePoetique() {
         
         const data = await Promise.all(promises);
         
-        // Filtrage Concours + Tri par impact (Certification Li puis Date)
         const filtered = data
           .filter(item => item.isConcours === true || item.isConcours === "true")
           .sort((a, b) => {
@@ -42,7 +39,7 @@ export default function BattlePoetique() {
         setTexts(filtered);
       }
     } catch (e) { 
-      console.error("Erreur de mise à jour de l'arène:", e); 
+      console.error("Erreur de mise à jour:", e); 
     } finally { 
       setLoading(false); 
       setIsRefreshing(false);
@@ -53,7 +50,6 @@ export default function BattlePoetique() {
     loadConcoursTexts();
   }, [loadConcoursTexts]);
 
-  // Sync automatique (toutes les 60s) pour refléter les gains Li des auteurs en direct
   useEffect(() => {
     const interval = setInterval(() => {
       loadConcoursTexts(true);
@@ -89,11 +85,10 @@ export default function BattlePoetique() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-700">
       
-      {/* HEADER : L'ARÈNE DES MOTS */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-100 pb-12">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-900/20">
+            <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-900/20 border border-slate-700">
               <Trophy size={14} className="text-amber-400 animate-pulse" /> Battle Poétique
             </div>
             {isRefreshing && (
@@ -118,48 +113,52 @@ export default function BattlePoetique() {
         </div>
       </header>
 
-      {/* LISTE DES PUBLICATIONS DE CONCOURS */}
       {texts.length > 0 ? (
         <div className="grid gap-10 md:grid-cols-2">
-          {texts.map((item) => {
-            const hasHighLi = (item.totalCertified || 0) > 0;
+          {texts.map((item, index) => {
+            const isLeader = index === 0;
+            const certifiedCount = item.totalCertified || 0;
             
             return (
               <Link href={`/texts/${item.id}`} key={item.id} className="group">
-                <div className={`bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 hover:-translate-y-2 flex flex-col h-full ${
-                  hasHighLi ? "border-teal-100 shadow-2xl shadow-teal-600/10" : "border-slate-100 shadow-xl shadow-slate-200/50"
+                <div className={`bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 hover:-translate-y-2 flex flex-col h-full relative ${
+                  isLeader ? "border-amber-200 shadow-2xl shadow-amber-900/10" : "border-slate-100 shadow-xl shadow-slate-200/50 hover:border-teal-200"
                 }`}>
                   
+                  {isLeader && (
+                    <div className="absolute top-0 right-10 z-30">
+                      <div className="bg-amber-400 text-slate-900 px-4 py-6 rounded-b-2xl shadow-xl flex flex-col items-center gap-1">
+                        <Trophy size={20} />
+                        <span className="text-[8px] font-black uppercase">Leader</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="h-64 bg-slate-100 relative overflow-hidden">
                     {item.imageBase64 ? (
                       <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 flex items-center justify-center">
-                         <Zap size={60} className="text-white/10 -rotate-12 animate-pulse" />
+                      <div className={`w-full h-full flex items-center justify-center ${
+                        isLeader ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900'
+                      }`}>
+                         <Zap size={60} className="text-white/20 -rotate-12 animate-pulse" />
                       </div>
                     )}
                     
-                    {/* Share Button */}
-                    <button onClick={(e) => handleShare(e, item)} className="absolute top-6 right-6 p-3 bg-white/90 backdrop-blur-md text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-lg z-10">
+                    <button onClick={(e) => handleShare(e, item)} className="absolute top-6 left-6 p-3 bg-white/90 backdrop-blur-md text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-lg z-10">
                       <Share2 size={18} />
                     </button>
 
-                    {/* Badge Concurrent */}
                     <div className="absolute bottom-6 left-6 flex gap-2">
-                      <div className="bg-slate-900/80 backdrop-blur-md text-white text-[8px] font-black px-4 py-2 rounded-xl uppercase tracking-[0.2em]">
-                        Candidat #{item.concurrentId || 'BATTLE'}
+                      <div className="bg-slate-900/80 backdrop-blur-md text-white text-[8px] font-black px-4 py-2 rounded-xl uppercase tracking-[0.2em] border border-white/10">
+                        Concurrent #{item.concurrentId || (index + 1)}
                       </div>
-                      {hasHighLi && (
-                        <div className="bg-amber-400 text-slate-900 text-[8px] font-black px-4 py-2 rounded-xl uppercase tracking-[0.2em] animate-bounce">
-                          Top Li
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   <div className="p-10 flex-grow flex flex-col">
                     <div className="flex items-center gap-2 mb-4">
-                       <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest">{item.genre || "Poésie"}</span>
+                       <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest">{item.genre || "Candidat"}</span>
                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(item.date).toLocaleDateString()}</span>
                     </div>
@@ -173,14 +172,15 @@ export default function BattlePoetique() {
                     </p>
                     
                     <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
-                      {/* SYSTÈME LI : Lectures Certifiées */}
-                      <div className={`flex items-center gap-2 font-black text-[11px] px-4 py-2 rounded-2xl transition-all ${
-                        hasHighLi 
-                        ? "bg-teal-600 text-white shadow-lg shadow-teal-600/30" 
-                        : "bg-slate-50 text-slate-400"
-                      }`}>
-                        <Sparkles size={14} className={hasHighLi ? "animate-spin" : ""}/> 
-                        {item.totalCertified || 0} <span className="text-[8px] opacity-70">LI-CERTIFIED</span>
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-[11px] transition-all border ${
+                          certifiedCount > 0 
+                          ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm" 
+                          : "bg-slate-50 border-slate-100 text-slate-400"
+                        }`}>
+                          <Coins size={14} className={certifiedCount > 0 ? "animate-pulse" : ""}/> 
+                          {certifiedCount} <span className="text-[8px] opacity-70">LI GÉNÉRÉS</span>
+                        </div>
                       </div>
 
                       <div className="flex gap-5">
@@ -188,9 +188,16 @@ export default function BattlePoetique() {
                           <Eye size={16} className="text-slate-300"/> {item.views || 0}
                         </div>
                         <div className="flex items-center gap-1.5 text-rose-500 font-black text-[11px] bg-rose-50 px-4 py-2 rounded-2xl">
-                          <Heart size={16} fill="currentColor" className="group-hover:scale-125 transition-transform"/> {item.totalLikes || 0}
+                          <Heart size={16} fill={item.totalLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform"/> {item.totalLikes || 0}
                         </div>
                       </div>
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-3">
+                       <div className="w-6 h-6 rounded-full bg-slate-100 border border-white shadow-sm overflow-hidden">
+                          <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${item.authorName}`} alt="" />
+                       </div>
+                       <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">@{item.authorName}</span>
                     </div>
                   </div>
                 </div>
@@ -204,18 +211,18 @@ export default function BattlePoetique() {
              <Trophy size={40} className="text-slate-200" />
           </div>
           <div className="space-y-2">
-            <p className="font-black uppercase text-slate-900 tracking-[0.2em] text-sm">L'arène est ouverte</p>
-            <p className="text-slate-400 text-xs font-medium">En attente du premier poète pour lancer la Battle.</p>
+            <p className="font-black uppercase text-slate-900 tracking-[0.2em] text-sm">L'arène est vide</p>
+            <p className="text-slate-400 text-xs font-medium">Les poètes fourbissent leurs armes.</p>
           </div>
           <Link href="/concours-publish" className="inline-flex items-center gap-3 bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
-             Devenir le premier concurrent <ArrowRight size={16} />
+             Lancer le défi <ArrowRight size={16} />
           </Link>
         </div>
       )}
 
-      <footer className="pt-20 text-center">
+      <footer className="pt-20 text-center border-t border-slate-100">
          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">
-           Battle Poétique • Lisible.biz • Le Prestige par les mots
+           Lisible.biz • Arène Officielle • {new Date().getFullYear()}
          </p>
       </footer>
     </div>
