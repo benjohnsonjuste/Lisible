@@ -3,103 +3,100 @@ import React, { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
-  TrendingUp, Cake, Crown 
-} from "lucide-react"; // Note: Assurez-vous d'utiliser lucide-react
+  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase
+} from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function UsersPage() {
   const [authors, setAuthors] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const loadData = async () => {
-      const logged = localStorage.getItem("lisible_user");
-      if (logged) setCurrentUser(JSON.parse(logged));
-      await loadUsers();
-    };
-    loadData();
+    loadUsers();
   }, []);
 
   async function loadUsers() {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users?t=${Date.now()}`);
       const files = await res.json();
-      
       if (!Array.isArray(files)) return;
-
-      const dataPromises = files
-        .filter(f => f.name.endsWith('.json'))
-        .map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
-      
+      const dataPromises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
       const allUsers = await Promise.all(dataPromises);
-      
-      // Tri de prestige : Solde Li décroissant
       setAuthors(allUsers.sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0)));
     } catch (e) { 
-      toast.error("Erreur de synchronisation de la communauté"); 
-    } finally { 
-      setLoading(false); 
-    }
+      toast.error("Erreur de synchronisation"); 
+    } finally { setLoading(false); }
   }
 
   const getBadges = (author, allUsers) => {
     const badges = [];
     const email = author.email?.toLowerCase();
-    const subs = author.stats?.subscribers || 0;
-    const texts = author.stats?.totalTexts || 0;
+    const subs = author.stats?.subscribers || author.subscribers?.length || 0;
     const today = new Date();
-
-    // 1. BADGE PGD
+    
+    // --- 1. RÔLES ADMINISTRATIFS FIXES ---
     if (email === "jb7management@gmail.com") {
-      badges.push({ 
-        icon: <Crown size={10} />, 
-        label: "PGD", 
-        color: "bg-slate-950 text-amber-400 border border-amber-500/30" 
-      });
+      badges.push({ icon: <Crown size={10} />, label: "Fondateur & PGD", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
+    }
+    if (email === "robergeaurodley97@gmail.com") {
+      badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-blue-900 text-white" });
+    }
+    if (email === "woolsleypierre01@gmail.com") {
+      badges.push({ icon: <ShieldCheck size={10} />, label: "Directrice Éditoriale", color: "bg-purple-700 text-white" });
+    }
+    if (email === "adm.lablitteraire7@gmail.com" || email === "cmo.lablitteraire7@gmail.com") {
+      badges.push({ icon: <ShieldCheck size={10} />, label: "Staff Officiel", color: "bg-indigo-600 text-white" });
     }
 
-    // 2. STAFF
-    const staffEmails = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
-    if (staffEmails.includes(email)) {
-      badges.push({ icon: <ShieldCheck size={10} />, label: "Staff", color: "bg-indigo-600 text-white" });
-    }
-
-    // 3. ANNIVERSAIRE (Optimisé)
+    // --- 2. ANNIVERSAIRE (24H - 00:01 à 23:59) ---
     if (author.birthday) {
       const bDay = new Date(author.birthday);
       if (bDay.getDate() === today.getDate() && bDay.getMonth() === today.getMonth()) {
-        badges.push({ 
-          icon: <Cake size={10} />, 
-          label: "C'est mon jour !", 
-          color: "bg-rose-500 text-white animate-pulse" 
-        });
+        badges.push({ icon: <Cake size={10} />, label: "Joyeux anniversaire à moi", color: "bg-pink-500 text-white animate-bounce" });
       }
     }
 
-    // 4. PLUME DE LA SEMAINE (Calcul temps réel)
-    const excludedEmails = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
-    if (!excludedEmails.includes(email) && today.getDay() === 6) { // Samedi
-      const eligible = allUsers.filter(u => !excludedEmails.includes(u.email?.toLowerCase()));
+    // --- 3. BADGES HEBDOMADAIRES (Logique Dimanche) ---
+    const excluded = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
+    if (!excluded.includes(email)) {
+      // On filtre les éligibles pour les calculs de tête
+      const eligible = allUsers.filter(u => !excluded.includes(u.email?.toLowerCase()));
+
+      // Encrier (Plus de textes cette semaine - simulé par totalTexts pour l'exemple réel)
       const topWriter = [...eligible].sort((a, b) => (b.stats?.totalTexts || 0) - (a.stats?.totalTexts || 0))[0];
-      
-      if (topWriter && email === topWriter.email && texts > 0) {
-        badges.push({ 
-          icon: <TrendingUp size={10} />, 
-          label: "Plume de la semaine", 
-          color: "bg-teal-500 text-white" 
-        });
+      if (topWriter && email === topWriter.email && (author.stats?.totalTexts > 0)) {
+        badges.push({ icon: <Edit3 size={10} />, label: "Encrier", color: "bg-teal-600 text-white" });
+      }
+
+      // Élite (Plus de Li accumulés/wallet)
+      const topElite = [...eligible].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
+      if (topElite && email === topElite.email) {
+        badges.push({ icon: <Medal size={10} />, label: "Élite", color: "bg-amber-500 text-white shadow-amber-200" });
+      }
+
+      // VIP (Plus de Li envoyés/cadeaux)
+      const topVIP = [...eligible].sort((a, b) => {
+        const sentA = a.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
+        const sentB = b.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
+        return sentB - sentA;
+      })[0];
+      if (topVIP && email === topVIP.email) {
+        badges.push({ icon: <Gem size={10} />, label: "VIP", color: "bg-rose-600 text-white" });
       }
     }
 
-    // 5. RANGS DE PRESTIGE
-    if (subs >= 2000) badges.push({ icon: <Sparkles size={10} />, label: "Diamant", color: "bg-cyan-500 text-white" });
-    else if (subs >= 750) badges.push({ icon: <Award size={10} />, label: "Or", color: "bg-amber-400 text-slate-900" });
-    else if (subs >= 250) badges.push({ icon: <Award size={10} />, label: "Bronze", color: "bg-orange-700 text-white" });
-    else if (texts >= 1) badges.push({ icon: <Edit3 size={10} />, label: "Plume", color: "bg-slate-900 text-white" });
+    // --- 4. RANGS PAR ABONNÉS ---
+    if (subs >= 5000) {
+      badges.push({ icon: <Sparkles size={10} />, label: "Compte Diamant", color: "bg-cyan-400 text-slate-900 font-bold" });
+    } else if (subs >= 3000) {
+      badges.push({ icon: <Award size={10} />, label: "Compte Or", color: "bg-yellow-400 text-yellow-900" });
+    } else if (subs >= 1000) {
+      badges.push({ icon: <Award size={10} />, label: "Compte Argent", color: "bg-slate-300 text-slate-800" });
+    } else if (subs >= 250) {
+      badges.push({ icon: <Award size={10} />, label: "Compte Bronze", color: "bg-orange-600 text-white" });
+    }
 
     return badges;
   };
@@ -122,93 +119,64 @@ export default function UsersPage() {
         <div>
           <h1 className="text-6xl md:text-8xl font-black italic text-slate-900 tracking-tighter leading-[0.8]">Communauté</h1>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 mt-4 flex items-center gap-2">
-            <Sparkles size={14} /> L'Élite de la littérature certifiée
+            <TrendingUp size={14} /> Le classement de l'élite hebdomadaire
           </p>
         </div>
         <div className="relative w-full md:w-96">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
           <input 
             type="text" 
-            placeholder="Chercher un auteur ou un email..." 
+            placeholder="Chercher une plume..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-3xl pl-14 pr-6 py-5 text-sm font-bold outline-none focus:border-teal-500/20 focus:bg-white transition-all shadow-inner" 
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-3xl pl-14 pr-6 py-5 text-sm font-bold outline-none focus:border-teal-500/20 transition-all" 
           />
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {filtered.length > 0 ? filtered.map((a) => {
-          const authorBadges = getBadges(a, authors);
-          const isPGD = a.email?.toLowerCase() === "jb7management@gmail.com";
-          
-          return (
-            <div key={a.email} className={`relative bg-white rounded-[3.5rem] p-10 border transition-all duration-500 group ${
-              isPGD ? "border-amber-100 shadow-amber-900/5 shadow-2xl" : "border-slate-100 shadow-xl shadow-slate-200/50 hover:border-teal-100"
-            }`}>
-              
-              {/* Conteneur de Badges */}
-              <div className="absolute -top-4 left-8 flex flex-wrap gap-2 max-w-[90%] z-20">
-                {authorBadges.map((b, i) => (
-                  <div key={i} className={`${b.color} px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg text-[9px] font-black uppercase tracking-tighter transition-transform group-hover:-translate-y-1`}>
-                    {b.icon} {b.label}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-8 mt-4">
-                <div className="relative">
-                  <img 
-                    src={a.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${a.email}`} 
-                    className="w-24 h-24 rounded-[2.5rem] object-cover bg-slate-100 border-4 border-white shadow-2xl transition-transform duration-700 group-hover:rotate-3 group-hover:scale-110" 
-                    alt={a.penName}
-                  />
-                  {isPGD && <Crown className="absolute -top-3 -right-3 text-amber-500 drop-shadow-lg" size={24} />}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        {filtered.map((a) => (
+          <div key={a.email} className="relative bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 group hover:border-teal-200 transition-all">
+            
+            {/* Badges Dynamiques */}
+            <div className="absolute -top-5 left-8 flex flex-wrap gap-2 max-w-[95%] z-20">
+              {getBadges(a, authors).map((b, i) => (
+                <div key={i} className={`${b.color} px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg text-[8px] font-black uppercase tracking-tighter`}>
+                  {b.icon} {b.label}
                 </div>
-                
-                <div className="space-y-1">
-                  <h2 className="text-3xl font-black italic text-slate-900 leading-none tracking-tighter group-hover:text-teal-600 transition-colors">
-                    {a.penName || a.name || "Anonyme"}
-                  </h2>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                        <UsersIcon size={14} className="text-slate-300" />
-                        {a.stats?.subscribers || 0}
-                      </div>
-                      <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                      <div className="flex items-center gap-1.5 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                        <Edit3 size={14} className="text-slate-300" />
-                        {a.stats?.totalTexts || 0} textes
-                      </div>
-                    </div>
-                    {/* Badge de Fortune (Li) */}
-                    <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-700 w-fit px-3 py-1 rounded-xl">
-                      <Coins size={12} className="text-teal-500" />
-                      <span className="text-[11px] font-black">{ (a.wallet?.balance || 0).toLocaleString() } Li</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Link 
-                href={`/auteur/${encodeURIComponent(a.email)}`} 
-                className="mt-10 flex items-center justify-center gap-3 w-full py-5 bg-slate-950 text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-teal-600 transition-all shadow-xl active:scale-95 group"
-              >
-                Explorer son univers <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
+              ))}
             </div>
-          );
-        }) : (
-          <div className="col-span-full py-20 text-center bg-slate-50 rounded-[4rem] border-2 border-dashed border-slate-200">
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aucune plume ne correspond à votre recherche</p>
-          </div>
-        )}
-      </div>
 
-      <footer className="mt-20 pt-10 border-t border-slate-100 flex justify-center">
-         <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.8em]">Lisible.biz • La Communauté de l'Excellence</p>
-      </footer>
+            <div className="flex items-center gap-8 mt-4">
+              <div className="relative">
+                <img 
+                  src={a.profilePic || `https://api.dicebear.com/7.x/initials/svg?seed=${a.penName}`} 
+                  className="w-24 h-24 rounded-[2.5rem] object-cover bg-slate-50 border-4 border-white shadow-xl" 
+                  alt=""
+                />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter">{a.penName || "Plume"}</h2>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase">
+                    <UsersIcon size={12}/> {a.stats?.subscribers || a.subscribers?.length || 0}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">
+                    <Coins size={12}/> {a.wallet?.balance || 0} Li
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <Link 
+              href={`/auteur/${encodeURIComponent(a.email)}`} 
+              className="mt-10 flex items-center justify-center gap-3 w-full py-5 bg-slate-950 text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all"
+            >
+              Voir le catalogue <ArrowRight size={16} />
+            </Link>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
