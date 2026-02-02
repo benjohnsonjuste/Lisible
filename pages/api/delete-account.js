@@ -15,8 +15,9 @@ export default async function handler(req, res) {
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
   
-  // Recréation du nom de fichier exact utilisé à l'inscription
-  const fileName = Buffer.from(email.toLowerCase()).toString('base64').replace(/=/g, "") + ".json";
+  // Recréation du nom de fichier exact (trim et lowercase pour la précision)
+  const emailClean = email.toLowerCase().trim();
+  const fileName = Buffer.from(emailClean).toString('base64').replace(/=/g, "") + ".json";
   const path = `data/users/${fileName}`;
 
   try {
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
       owner,
       repo,
       path,
-      message: `Suppression définitive du compte : ${email}`,
+      message: `🗑️ Suppression définitive du compte : ${emailClean}`,
       sha: fileData.sha,
     });
 
