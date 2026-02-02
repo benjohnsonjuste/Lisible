@@ -2,8 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getEmailId } from "@/lib/utils"; // Importation de ton nouveau helper
-import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
+import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles } from "lucide-react";
 
 export default function AuthForm() {
   const router = useRouter();
@@ -16,7 +15,6 @@ export default function AuthForm() {
     password: ""
   });
 
-  // --- LOGIQUE NOTIFICATION ANNIVERSAIRE ---
   const checkAndNotifyBirthday = async (userData) => {
     if (!userData.birthday) return;
     const today = new Date();
@@ -43,7 +41,6 @@ export default function AuthForm() {
     try {
       const emailClean = formData.email.trim().toLowerCase();
 
-      // 1. GESTION DU MODE OUBLI
       if (mode === "forgot") {
         const res = await fetch("/api/reset-password", {
           method: "POST",
@@ -56,7 +53,6 @@ export default function AuthForm() {
         return;
       }
 
-      // 2. GESTION DU MODE INSCRIPTION
       if (mode === "register") {
         const regRes = await fetch("/api/register-user", {
           method: "POST",
@@ -73,7 +69,6 @@ export default function AuthForm() {
         }
       }
 
-      // 3. CONNEXION VIA TON API SECURISEE (Plus de fetch direct GitHub ici !)
       const loginRes = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,10 +79,8 @@ export default function AuthForm() {
       });
 
       const result = await loginRes.json();
-
       if (!loginRes.ok) throw new Error(result.error || "Identifiants invalides");
 
-      // 4. FINALISATION
       const userData = result.user;
       await checkAndNotifyBirthday(userData);
       
@@ -102,5 +95,94 @@ export default function AuthForm() {
     }
   };
 
-  // ... (Garde ton code de rendu JSX identique, il est très beau !)
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {mode === "register" && (
+        <div className="relative group">
+          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={18} />
+          <input
+            type="text"
+            placeholder="Nom complet ou Pseudo"
+            required
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          />
+        </div>
+      )}
+
+      <div className="relative group">
+        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={18} />
+        <input
+          type="email"
+          placeholder="Email"
+          required
+          className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+        />
+      </div>
+
+      {mode !== "forgot" && (
+        <div className="relative group">
+          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={18} />
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            required
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          />
+        </div>
+      )}
+
+      {mode === "login" && (
+        <div className="flex justify-end px-2">
+          <button 
+            type="button" 
+            onClick={() => setMode("forgot")}
+            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors"
+          >
+            Secret oublié ?
+          </button>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] shadow-xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3 disabled:opacity-50 active:scale-[0.98]"
+      >
+        {loading ? (
+          <Loader2 className="animate-spin" size={18} />
+        ) : (
+          <>
+            {mode === "login" ? "Entrer dans l'Arène" : mode === "register" ? "Créer mon Profil" : "Retrouver l'accès"}
+            <ArrowRight size={16} />
+          </>
+        )}
+      </button>
+
+      <div className="pt-4 text-center">
+        {mode === "forgot" ? (
+          <button 
+            type="button" 
+            onClick={() => setMode("login")}
+            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all"
+          >
+            <ArrowLeft size={14} /> Retour à la connexion
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMode(mode === "login" ? "register" : "login")}
+            className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all"
+          >
+            {mode === "login" ? "Pas encore de plume ? Créer un compte" : "Déjà membre ? Se connecter"}
+          </button>
+        )}
+      </div>
+    </form>
+  );
 }
