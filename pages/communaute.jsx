@@ -38,7 +38,7 @@ export default function UsersPage() {
     
     // --- 1. RÔLES ADMINISTRATIFS FIXES ---
     if (email === "jb7management@gmail.com") {
-      badges.push({ icon: <Crown size={10} />, label: "Fondateur & PGD", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
+      badges.push({ icon: <Crown size={10} />, label: "Fondateur & PDG", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
     }
     if (email === "robergeaurodley97@gmail.com") {
       badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-blue-900 text-white" });
@@ -109,7 +109,7 @@ export default function UsersPage() {
   if (loading) return (
     <div className="flex flex-col h-screen items-center justify-center bg-white gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Ouverture de l'Arène...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Ouverture de la bibliothèque...</p>
     </div>
   );
 
@@ -119,7 +119,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-6xl md:text-8xl font-black italic text-slate-900 tracking-tighter leading-[0.8]">Communauté</h1>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 mt-4 flex items-center gap-2">
-            <TrendingUp size={14} /> Le classement de l'élite hebdomadaire
+            <TrendingUp size={14} /> Le cercle d’or hebdomadaire
           </p>
         </div>
         <div className="relative w-full md:w-96">
