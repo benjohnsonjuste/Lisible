@@ -10,21 +10,29 @@ const pusher = new Pusher({
 });
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ message: "Non autorisé" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Méthode non autorisée" });
+  }
 
   const { type, message, targetEmail, link, amountLi } = req.body;
+
+  if (!targetEmail) {
+    return res.status(400).json({ error: "L'email cible est requis" });
+  }
+
   const token = process.env.GITHUB_TOKEN;
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
 
-  // Formatage du chemin utilisateur (Base64)
-  const userFileName = Buffer.from(targetEmail.toLowerCase().trim()).toString("base64").replace(/=/g, "");
-  const path = `data/users/${userFileName}.json`;
+  // Normalisation du nom de fichier identique à login/register/delete
+  const emailClean = targetEmail.toLowerCase().trim();
+  const userFileId = Buffer.from(emailClean).toString("base64").replace(/=/g, "");
+  const path = `data/users/${userFileId}.json`;
 
   const newNotif = {
     id: `notif-${Date.now()}`,
     type: type || "info",
-    message: message || "Nouvelle activité",
+    message: message || "Nouvelle activité sur votre compte",
     link: link || "/account",
     amountLi: amountLi || 0,
     date: new Date().toISOString(),
@@ -32,36 +40,47 @@ export default async function handler(req, res) {
   };
 
   try {
-    // 1. Pusher Temps Réel
-    const channel = `user-${userFileName}`;
+    // 1. Déclenchement Pusher pour le temps réel (Frontend)
+    // Le canal correspond à l'ID base64 de l'utilisateur
+    const channel = `user-${userFileId}`;
     await pusher.trigger(channel, "new-alert", newNotif);
 
-    // 2. Mise à jour du profil utilisateur pour stocker la notif
+    // 2. Persistance dans GitHub (Stockage historique)
     const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store'
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
     });
 
     if (getRes.ok) {
       const fileData = await getRes.json();
+      // Encodage robuste en utf-8
       let user = JSON.parse(Buffer.from(fileData.content, "base64").toString("utf-8"));
       
       if (!user.notifications) user.notifications = [];
+      
+      // Ajout en haut de liste
       user.notifications.unshift(newNotif);
-      user.notifications = user.notifications.slice(0, 20); // Garder 20 notifs
+      
+      // Limitation pour éviter de faire exploser la taille du fichier JSON sur GitHub
+      user.notifications = user.notifications.slice(0, 30); 
 
       await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          "Content-Type": "application/json" 
+        },
         body: JSON.stringify({
-          message: `🔔 Notif pour ${user.penName}`,
+          message: `🔔 Notification : ${message.substring(0, 30)}...`,
           content: Buffer.from(JSON.stringify(user, null, 2)).toString("base64"),
           sha: fileData.sha,
         }),
       });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, notifId: newNotif.id });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Erreur Notification:", error);
+    return res.status(500).json({ error: "Échec de l'envoi de la notification" });
   }
 }
