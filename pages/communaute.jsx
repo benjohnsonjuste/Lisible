@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
-  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase
+  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase, Star
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -32,62 +32,79 @@ export default function UsersPage() {
 
   const getBadges = (author, allUsers) => {
     const badges = [];
-    const email = author.email?.toLowerCase();
-    const subs = author.stats?.subscribers || author.subscribers?.length || 0;
+    const email = author.email?.toLowerCase().trim();
     const today = new Date();
     
+    // Calcul de la semaine glissante (Dimanche dernier à aujourd'hui)
+    const lastSunday = new Date();
+    lastSunday.setDate(today.getDate() - today.getDay());
+    lastSunday.setHours(0, 0, 0, 0);
+
+    // Filtrer l'historique pour la semaine en cours
+    const weeklyHistory = author.wallet?.history?.filter(h => new Date(h.date) >= lastSunday) || [];
+
+    // --- BADGES ADMINISTRATIFS ---
     if (email === "jb7management@gmail.com") {
       badges.push({ icon: <Crown size={10} />, label: "Fondateur & PDG", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
     }
-    if (email === "robergeaurodley97@gmail.com") {
+    // Badge DG Rodley Robergeau
+    if (email === "rodleyrobergeau97@gmail.com") {
+      badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-blue-600 text-white shadow-lg" });
+    }
+    if (email === "robergeaurodley97@gmail.com") { // Ancien email maintenu pour compatibilité
       badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-blue-900 text-white" });
     }
     if (email === "woolsleypierre01@gmail.com") {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Directrice Éditoriale", color: "bg-purple-700 text-white" });
     }
-    if (email === "adm.lablitteraire7@gmail.com" || email === "cmo.lablitteraire7@gmail.com") {
-      badges.push({ icon: <ShieldCheck size={10} />, label: "Staff Officiel", color: "bg-indigo-600 text-white" });
+
+    // --- LOGIQUE HEBDOMADAIRE AUTOMATIQUE ---
+    const eligible = allUsers.filter(u => ![
+      "jb7management@gmail.com", 
+      "adm.lablitteraire7@gmail.com", 
+      "rodleyrobergeau97@gmail.com"
+    ].includes(u.email?.toLowerCase().trim()));
+
+    // 1. PLUME SPÉCIALE (Plus de textes partagés hors concours cette semaine)
+    const topPlume = [...eligible].sort((a, b) => {
+      const countA = a.wallet?.history?.filter(h => h.type === "text_published" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
+      const countB = b.wallet?.history?.filter(h => h.type === "text_published" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
+      return countB - countA;
+    })[0];
+    
+    const weeklyTexts = author.wallet?.history?.filter(h => h.type === "text_published" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
+    if (topPlume && email === topPlume.email && weeklyTexts > 0) {
+      badges.push({ icon: <Edit3 size={10} />, label: "Plume Spéciale", color: "bg-teal-600 text-white animate-pulse" });
     }
 
-    if (author.birthday) {
-      const bDay = new Date(author.birthday);
-      if (bDay.getDate() === today.getDate() && bDay.getMonth() === today.getMonth()) {
-        badges.push({ icon: <Cake size={10} />, label: "Joyeux anniversaire à moi", color: "bg-pink-500 text-white animate-bounce" });
-      }
+    // 2. ÉLITE (Plus de lectures certifiées hors concours cette semaine)
+    const topElite = [...eligible].sort((a, b) => {
+      const certA = a.wallet?.history?.filter(h => h.type === "certified_received" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
+      const certB = b.wallet?.history?.filter(h => h.type === "certified_received" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
+      return certB - certA;
+    })[0];
+    
+    const weeklyCerts = author.wallet?.history?.filter(h => h.type === "certified_received" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
+    if (topElite && email === topElite.email && weeklyCerts > 0) {
+      badges.push({ icon: <Medal size={10} />, label: "Élite", color: "bg-amber-500 text-white shadow-amber-200" });
     }
 
-    const excluded = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
-    if (!excluded.includes(email)) {
-      const eligible = allUsers.filter(u => !excluded.includes(u.email?.toLowerCase()));
+    // 3. VIP (Plus grand nombre de clics sur "Certifier" pour les autres cette semaine)
+    const topVIP = [...eligible].sort((a, b) => {
+      const sentA = a.wallet?.history?.filter(h => h.type === "certified_sent" && new Date(h.date) >= lastSunday).length || 0;
+      const sentB = b.wallet?.history?.filter(h => h.type === "certified_sent" && new Date(h.date) >= lastSunday).length || 0;
+      return sentB - sentA;
+    })[0];
 
-      const topWriter = [...eligible].sort((a, b) => (b.stats?.totalTexts || 0) - (a.stats?.totalTexts || 0))[0];
-      if (topWriter && email === topWriter.email && (author.stats?.totalTexts > 0)) {
-        badges.push({ icon: <Edit3 size={10} />, label: "Encrier", color: "bg-teal-600 text-white" });
-      }
-
-      const topElite = [...eligible].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
-      if (topElite && email === topElite.email) {
-        badges.push({ icon: <Medal size={10} />, label: "Élite", color: "bg-amber-500 text-white shadow-amber-200" });
-      }
-
-      const topVIP = [...eligible].sort((a, b) => {
-        const sentA = a.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
-        const sentB = b.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
-        return sentB - sentA;
-      })[0];
-      if (topVIP && email === topVIP.email) {
-        badges.push({ icon: <Gem size={10} />, label: "VIP", color: "bg-rose-600 text-white" });
-      }
+    const weeklySent = author.wallet?.history?.filter(h => h.type === "certified_sent" && new Date(h.date) >= lastSunday).length || 0;
+    if (topVIP && email === topVIP.email && weeklySent > 0) {
+      badges.push({ icon: <Gem size={10} />, label: "VIP", color: "bg-rose-600 text-white" });
     }
 
-    if (subs >= 5000) {
-      badges.push({ icon: <Sparkles size={10} />, label: "Compte Diamant", color: "bg-cyan-400 text-slate-900 font-bold" });
-    } else if (subs >= 3000) {
-      badges.push({ icon: <Award size={10} />, label: "Compte Or", color: "bg-yellow-400 text-yellow-900" });
-    } else if (subs >= 1000) {
-      badges.push({ icon: <Award size={10} />, label: "Compte Argent", color: "bg-slate-300 text-slate-800" });
-    } else if (subs >= 250) {
-      badges.push({ icon: <Award size={10} />, label: "Compte Bronze", color: "bg-orange-600 text-white" });
+    // 4. CONCOURS (Si l'auteur a au moins un texte concours actif)
+    const hasConcours = author.wallet?.history?.some(h => h.isConcours === true);
+    if (hasConcours) {
+      badges.push({ icon: <Star size={10} />, label: "Concours", color: "bg-indigo-500 text-white" });
     }
 
     return badges;
@@ -101,7 +118,6 @@ export default function UsersPage() {
   if (loading) return (
     <div className="flex flex-col h-screen items-center justify-center bg-white gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Ouverture de la bibliothèque...</p>
     </div>
   );
 
@@ -111,7 +127,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-6xl md:text-8xl font-black italic text-slate-900 tracking-tighter leading-[0.8]">Communauté</h1>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 mt-4 flex items-center gap-2">
-            <TrendingUp size={14} /> Le cercle d'or de la littérature
+            <TrendingUp size={14} /> Synchronisation des statistiques réelles
           </p>
         </div>
         <div className="relative w-full md:w-96">
@@ -140,13 +156,16 @@ export default function UsersPage() {
 
             <div className="flex items-center gap-8 mt-4">
               <div className="relative">
-                <div className="p-1.5 bg-gradient-to-tr from-slate-200 to-slate-100 rounded-[2.8rem] shadow-inner">
-                  <img 
-                    src={a.profilePic || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.penName || a.email}&backgroundColor=f8fafc`} 
-                    className="w-24 h-24 rounded-[2.2rem] object-cover bg-white border-2 border-white shadow-sm" 
-                    alt={a.penName}
-                    onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}&backgroundColor=f8fafc`; }}
-                  />
+                {/* Cercle de profil large style réseau social */}
+                <div className="p-1 bg-gradient-to-tr from-teal-400 via-slate-200 to-amber-400 rounded-full shadow-lg">
+                  <div className="p-1 bg-white rounded-full">
+                    <img 
+                      src={a.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}&backgroundColor=f1f5f9`} 
+                      className="w-28 h-28 rounded-full object-cover bg-slate-50" 
+                      alt={a.penName}
+                      onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}`; }}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">
