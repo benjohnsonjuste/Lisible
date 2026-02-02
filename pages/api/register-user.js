@@ -1,5 +1,7 @@
 import { getFile, updateFile } from "@/lib/github";
 import { Buffer } from "buffer";
+// On utilise l'API crypto native de Node.js pour masquer le mot de passe
+import crypto from "crypto";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -9,27 +11,28 @@ export default async function handler(req, res) {
   const { name, email, password, joinedAt } = req.body;
 
   if (!name || !email || !password) {
-    return res.status(400).json({ error: "Données manquantes pour l'inscription" });
+    return res.status(400).json({ error: "Données manquantes" });
   }
 
   const cleanEmail = email.toLowerCase().trim();
-  // Encodage Base64 cohérent avec login.js et wallet.js
   const fileName = Buffer.from(cleanEmail).toString('base64').replace(/=/g, "");
   const path = `data/users/${fileName}.json`;
 
   try {
-    // 1. Vérifier si l'utilisateur existe déjà pour éviter d'écraser un compte
     const existingUser = await getFile(path);
     if (existingUser) {
       return res.status(409).json({ error: "Un compte avec cet email existe déjà." });
     }
 
-    // 2. Structure du nouveau profil (ton modèle complet)
+    // --- SÉCURISATION DU MOT DE PASSE ---
+    // On crée un "hash" SHA-256 du mot de passe pour qu'il ne soit plus lisible en clair
+    const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
+
     const newUserProfile = {
       name,
       penName: name,
       email: cleanEmail,
-      password, // Note: À hacher plus tard pour la production
+      password: hashedPassword, // Le mot de passe est maintenant masqué (ex: 5e884898...)
       birthday: "",
       joinedAt: joinedAt || new Date().toISOString(),
       profilePic: "",
@@ -70,8 +73,6 @@ export default async function handler(req, res) {
       }
     };
 
-    // 3. Écriture du fichier sur GitHub via le Helper
-    // On passe 'null' pour le SHA car c'est une création de fichier
     const success = await updateFile(
       path, 
       newUserProfile, 
@@ -80,10 +81,9 @@ export default async function handler(req, res) {
     );
 
     if (!success) {
-      throw new Error("Erreur lors de la sauvegarde sur le serveur de données.");
+      throw new Error("Erreur lors de la sauvegarde.");
     }
 
-    // 4. Réponse : On renvoie le profil (sans le mot de passe par sécurité)
     const { password: _, ...safeUser } = newUserProfile;
     return res.status(200).json({ 
       success: true, 
