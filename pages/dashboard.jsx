@@ -62,7 +62,7 @@ export default function AuthorDashboard() {
   };
 
   const shareOnSocial = (platform) => {
-    const text = encodeURIComponent(`Je viens de rejoindre l'avant-garde littéraire sur Lisible ! Suivez ma plume. ✨`);
+    const text = encodeURIComponent(`J'ai mon compte officiel sur Lisible ! Visitez-moi. ✨`);
     const url = encodeURIComponent("https://lisible.biz");
     
     const links = {
@@ -107,7 +107,7 @@ export default function AuthorDashboard() {
       <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex justify-between items-center shadow-2xl">
         <div>
           <h1 className="text-4xl font-black italic tracking-tighter">{user?.penName}</h1>
-          <p className="text-teal-400 text-[10px] font-black uppercase tracking-widest mt-2">Membre Lisible certifié</p>
+          <p className="text-teal-400 text-[10px] font-black uppercase tracking-widest mt-2">Compte Officiel Lisible</p>
         </div>
         <div className="text-right">
           <p className="text-5xl font-black text-amber-400 tracking-tighter">{formatLi(user?.wallet?.balance)} <span className="text-sm">Li</span></p>
@@ -192,9 +192,9 @@ export default function AuthorDashboard() {
               </defs>
               <rect width="800" height="800" fill="url(#grad)"/>
               <rect x="60" y="60" width="680" height="680" fill="none" stroke="#14b8a6" strokeWidth="8"/>
-              <text x="400" y="320" fontFamily="sans-serif" fontSize="20" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '12px'}}>AUTEUR CERTIFIÉ</text>
+              <text x="400" y="320" fontFamily="sans-serif" fontSize="20" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '12px'}}>COMPTE OFFICIEL</text>
               <text x="400" y="440" fontFamily="serif" fontSize="85" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user?.penName || "Plume"}</text>
-              <text x="400" y="530" fontFamily="sans-serif" fontSize="24" fontWeight="bold" fill="#fbbf24" textAnchor="middle" style={{letterSpacing: '4px'}}>LISIBLE.BIZ</text>
+              <text x="400" y="530" fontFamily="sans-serif" fontSize="24" fontWeight="bold" fill="#fbbf24" textAnchor="middle" style={{letterSpacing: '4px'}}>lisible.biz</text>
             </svg>
           </div>
           
@@ -203,7 +203,7 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="space-y-1">
-            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Auteur</h3>
+            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Lisible</h3>
             <div className="flex flex-wrap justify-center gap-2 mt-2">
                <button onClick={() => shareOnSocial('whatsapp')} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all">
                   <MessageCircle size={16} />
@@ -224,7 +224,7 @@ export default function AuthorDashboard() {
             onClick={handleDownloadBadge}
             className="w-full flex items-center justify-center gap-2 py-4 bg-slate-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-lg"
           >
-            <Download size={14} /> Télécharger & Partager
+            <Download size={14} /> Télécharger
           </button>
         </div>
       </div>
