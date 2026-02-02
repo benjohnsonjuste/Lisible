@@ -1,19 +1,17 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
-  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase, Download, Share2
+  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
 
 export default function UsersPage() {
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const badgeRef = useRef(null);
 
   useEffect(() => {
     loadUsers();
@@ -31,21 +29,6 @@ export default function UsersPage() {
       toast.error("Erreur de synchronisation"); 
     } finally { setLoading(false); }
   }
-
-  const downloadAsset = async (id, fileName) => {
-    const element = document.getElementById(id);
-    if (!element) return;
-    try {
-      const canvas = await html2canvas(element, { useCORS: true, scale: 2 });
-      const link = document.createElement("a");
-      link.download = `${fileName}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("Téléchargement réussi !");
-    } catch (err) {
-      toast.error("Erreur lors de la génération");
-    }
-  };
 
   const getBadges = (author, allUsers) => {
     const badges = [];
@@ -76,14 +59,17 @@ export default function UsersPage() {
     const excluded = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
     if (!excluded.includes(email)) {
       const eligible = allUsers.filter(u => !excluded.includes(u.email?.toLowerCase()));
+
       const topWriter = [...eligible].sort((a, b) => (b.stats?.totalTexts || 0) - (a.stats?.totalTexts || 0))[0];
       if (topWriter && email === topWriter.email && (author.stats?.totalTexts > 0)) {
         badges.push({ icon: <Edit3 size={10} />, label: "Encrier", color: "bg-teal-600 text-white" });
       }
+
       const topElite = [...eligible].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
       if (topElite && email === topElite.email) {
         badges.push({ icon: <Medal size={10} />, label: "Élite", color: "bg-amber-500 text-white shadow-amber-200" });
       }
+
       const topVIP = [...eligible].sort((a, b) => {
         const sentA = a.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
         const sentB = b.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
@@ -142,7 +128,7 @@ export default function UsersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         {filtered.map((a) => (
-          <div key={a.email} className="relative bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 group hover:border-teal-200 transition-all flex flex-col">
+          <div key={a.email} className="relative bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 group hover:border-teal-200 transition-all">
             
             <div className="absolute -top-5 left-8 flex flex-wrap gap-2 max-w-[95%] z-20">
               {getBadges(a, authors).map((b, i) => (
@@ -154,11 +140,13 @@ export default function UsersPage() {
 
             <div className="flex items-center gap-8 mt-4">
               <div className="relative">
+                {/* Bordure large style réseaux sociaux avec padding pour l'effet d'épaisseur */}
                 <div className="p-1.5 bg-gradient-to-tr from-slate-200 to-slate-100 rounded-[2.8rem] shadow-inner">
                   <img 
                     src={a.profilePic || `https://api.dicebear.com/7.x/micah/svg?seed=${a.penName || a.email}&backgroundColor=f8fafc`} 
                     className="w-24 h-24 rounded-[2.2rem] object-cover bg-white border-2 border-white shadow-sm" 
                     alt={a.penName}
+                    onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/micah/svg?seed=${a.email}&backgroundColor=f8fafc`; }}
                   />
                 </div>
               </div>
@@ -174,54 +162,10 @@ export default function UsersPage() {
                 </div>
               </div>
             </div>
-
-            {/* LOGIQUE CERTIFICAT CMO & BADGE NOUVEAU */}
-            <div className="mt-6 space-y-3">
-               {a.email === "cmo.lablitteraire7@gmail.com" ? (
-                 <>
-                  {/* Modèle Certificat Participation */}
-                  <div id={`cert-${a.email}`} className="hidden bg-white w-[800px] h-[600px] p-12 border-[16px] border-double border-slate-900 flex-col items-center text-center font-serif text-slate-900 relative">
-                      <img src="/icon-192.png" className="w-20 h-20 mb-4" />
-                      <h1 className="text-4xl font-black uppercase tracking-[0.2em] mb-8 border-b-2 border-slate-900 pb-2">Certificat de participation</h1>
-                      <p className="text-lg italic mb-2">Ce certificat est décerné à</p>
-                      <h2 className="text-5xl font-black italic my-4 tracking-tight">{a.name || a.penName}</h2>
-                      <p className="text-xl leading-relaxed max-w-xl">pour marquer son passage au Battle Poétique International 2026</p>
-                      <div className="mt-12 w-full flex justify-between px-10 items-end">
-                        <div className="text-left">
-                          <p className="text-sm font-bold">Date : 02/02/2026</p>
-                          <p className="text-sm font-bold">Fait à : Delmas, Ouest, Haïti</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                          <img src="/icon-192.png" className="w-16 h-16 opacity-80 grayscale" />
-                          <p className="text-[10px] font-black uppercase mt-2">Ben Johnson Juste (CEO)</p>
-                        </div>
-                      </div>
-                  </div>
-                  <button onClick={() => downloadAsset(`cert-${a.email}`, "Certificat_Battle_2026")} className="w-full py-4 bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-teal-700 transition-all">
-                    <Award size={16}/> Télécharger mon certificat Battle
-                  </button>
-                 </>
-               ) : (
-                 <>
-                  {/* Modèle Badge Officiel Nouveau */}
-                  <div id={`badge-${a.email}`} className="hidden bg-slate-950 w-[500px] h-[500px] flex flex-col items-center justify-center p-10 text-white text-center relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-2 bg-teal-500"></div>
-                      <img src="/icon-192.png" className="w-24 h-24 mb-8" />
-                      <p className="text-teal-500 font-black uppercase tracking-[0.3em] text-sm mb-4">J'ai un Compte Officiel</p>
-                      <h2 className="text-4xl font-black uppercase leading-none mb-2">{a.name || a.penName}</h2>
-                      <p className="text-slate-400 text-lg font-medium mb-8 lowercase opacity-80">{a.email}</p>
-                      <p className="text-xs font-black tracking-widest uppercase border-t border-white/20 pt-4">sur lisible.biz</p>
-                  </div>
-                  <button onClick={() => downloadAsset(`badge-${a.email}`, `Badge_Officiel_${a.penName}`)} className="w-full py-4 bg-slate-100 text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-200 transition-all">
-                    <Download size={16}/> Télécharger mon badge officiel
-                  </button>
-                 </>
-               )}
-            </div>
             
             <Link 
               href={`/auteur/${encodeURIComponent(a.email)}`} 
-              className="mt-4 flex items-center justify-center gap-3 w-full py-5 bg-slate-950 text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all"
+              className="mt-10 flex items-center justify-center gap-3 w-full py-5 bg-slate-950 text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all"
             >
               Voir le catalogue <ArrowRight size={16} />
             </Link>
@@ -231,4 +175,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
