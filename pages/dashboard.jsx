@@ -56,7 +56,7 @@ export default function AuthorDashboard() {
       downloadLink.download = `Lisible_Badge_${user?.penName}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
-      toast.success("Badge certifié téléchargé !");
+      toast.success("Badge certifié 1024px téléchargé !");
     };
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
@@ -98,6 +98,19 @@ export default function AuthorDashboard() {
       } else { toast.error(data.error, { id: tid }); }
     } catch (e) { toast.error("Erreur de connexion", { id: tid }); }
   };
+
+  // Logique pour séparer le nom en deux lignes si trop long (> 15 chars)
+  const getFormattedName = () => {
+    const name = user?.penName || "Plume";
+    if (name.length > 15 && name.includes(" ")) {
+      const parts = name.split(" ");
+      const mid = Math.ceil(parts.length / 2);
+      return [parts.slice(0, mid).join(" "), parts.slice(mid).join(" ")];
+    }
+    return [name, ""];
+  };
+
+  const [line1, line2] = getFormattedName();
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-teal-600" /></div>;
 
@@ -180,21 +193,33 @@ export default function AuthorDashboard() {
            </div>
         </div>
 
-        {/* BADGE DE BIENVENUE & PARTAGE */}
+        {/* BADGE DE BIENVENUE & PARTAGE - FORMAT 1024x1024 */}
         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-5 shadow-sm lg:col-span-1">
           <div className="hidden">
-            <svg ref={badgeRef} width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+            <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style={{stopColor:'#0f172a', stopOpacity:1}} />
                   <stop offset="100%" style={{stopColor:'#1e293b', stopOpacity:1}} />
                 </linearGradient>
               </defs>
-              <rect width="800" height="800" fill="url(#grad)"/>
-              <rect x="60" y="60" width="680" height="680" fill="none" stroke="#14b8a6" strokeWidth="8"/>
-              <text x="400" y="320" fontFamily="sans-serif" fontSize="20" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '12px'}}>COMPTE OFFICIEL</text>
-              <text x="400" y="440" fontFamily="serif" fontSize="85" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user?.penName || "Plume"}</text>
-              <text x="400" y="530" fontFamily="sans-serif" fontSize="24" fontWeight="bold" fill="#fbbf24" textAnchor="middle" style={{letterSpacing: '4px'}}>lisible.biz</text>
+              <rect width="1024" height="1024" fill="url(#grad)"/>
+              <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
+              <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
+              
+              {/* Logique deux lignes */}
+              {line2 ? (
+                <>
+                  <text x="512" y="520" fontFamily="serif" fontSize="90" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{line1}</text>
+                  <text x="512" y="620" fontFamily="serif" fontSize="90" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{line2}</text>
+                </>
+              ) : (
+                <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{line1}</text>
+              )}
+              
+              <text x="512" y="750" fontFamily="sans-serif" fontSize="35" fontWeight="bold" fill="#fbbf24" textAnchor="middle" style={{letterSpacing: '6px'}}>lisible.biz</text>
+              <circle cx="512" cy="850" r="40" fill="#14b8a6" />
+              <text x="512" y="865" fontFamily="sans-serif" fontSize="40" fill="white" textAnchor="middle">✓</text>
             </svg>
           </div>
           
@@ -203,7 +228,8 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="space-y-1">
-            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Lisible</h3>
+            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Lisible HQ</h3>
+            <p className="text-[9px] text-slate-400 font-bold uppercase italic">Format 1024x1024 Certifié</p>
             <div className="flex flex-wrap justify-center gap-2 mt-2">
                <button onClick={() => shareOnSocial('whatsapp')} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all">
                   <MessageCircle size={16} />
