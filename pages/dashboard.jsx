@@ -48,8 +48,8 @@ export default function AuthorDashboard() {
     const ctx = canvas.getContext("2d");
     const img = new Image();
     img.onload = () => {
-      canvas.width = 800;
-      canvas.height = 800;
+      canvas.width = 1024;
+      canvas.height = 1024;
       ctx.drawImage(img, 0, 0);
       const pngFile = canvas.toDataURL("image/png");
       const downloadLink = document.createElement("a");
