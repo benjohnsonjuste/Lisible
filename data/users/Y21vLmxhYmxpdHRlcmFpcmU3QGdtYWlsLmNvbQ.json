@@ -1,0 +1,41 @@
+{
+  "name": "Lisible Support Team",
+  "penName": "Lisible Support Team",
+  "email": "cmo.lablitteraire7@gmail.com",
+  "password": "benhelene",
+  "birthday": "",
+  "joinedAt": "2026-02-02T14:06:07.550Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-02T14:06:07.550Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": true,
+      "isMecene": false
+    }
+  }
+}
