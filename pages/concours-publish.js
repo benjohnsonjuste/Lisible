@@ -23,7 +23,6 @@ export default function ConcoursPublishPage() {
     } else {
       const parsed = JSON.parse(loggedUser);
       setUser(parsed);
-      // Synchronisation automatique de l'ID s'il existe déjà
       if (parsed.concurrentId) setConcurrentId(parsed.concurrentId);
     }
   }, [router]);
@@ -66,13 +65,13 @@ export default function ConcoursPublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- PUBLICATION ET MISE À JOUR STATISTIQUES ---
+      // --- PUBLICATION AVEC CLÉS API RÉELLES ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: concurrentId.toUpperCase(),
-          realAuthorEmail: user.email.toLowerCase().trim(),
+          authorEmail: user.email.toLowerCase().trim(), // Clé standard pour l'API
           authorPenName: user.penName || user.name || "Anonyme",
           title: title.trim(),
           content: content.trim(),
@@ -80,7 +79,6 @@ export default function ConcoursPublishPage() {
           isConcours: true,
           concurrentId: concurrentId.toUpperCase(),
           date: new Date().toISOString(),
-          // Données réelles pour le système économique
           views: 0,
           totalLikes: 0,
           totalCertified: 0, 
@@ -90,28 +88,31 @@ export default function ConcoursPublishPage() {
         })
       });
 
-      if (!res.ok) throw new Error("Erreur serveur lors de la publication");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur serveur");
+      }
+      
       const data = await res.json();
 
-      // Notification globale automatique
-      try {
-        await fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "concours", 
-            message: `🏆 BATTLE : Un nouveau poème "${title.trim()}" est en ligne !`,
-            targetEmail: "all",
-            link: `/texts/${data.id}`
-          })
-        });
-      } catch (nErr) { console.error("Notif failed", nErr); }
+      // Notification (Optionnel, ne doit pas bloquer le succès)
+      fetch("/api/create-notif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "concours", 
+          message: `🏆 BATTLE : Un nouveau poème "${title.trim()}" est en ligne !`,
+          targetEmail: "all",
+          link: `/texts/${data.id}`
+        })
+      }).catch(e => console.error("Notification non envoyée"));
 
       toast.success("Candidature publiée !", { id: loadingToast });
       router.push(`/texts/${data.id}`);
       
     } catch (err) {
-      toast.error("Échec de l'envoi. Réessayez.", { id: loadingToast });
+      console.error(err);
+      toast.error(err.message || "Échec de l'envoi. Réessayez.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
