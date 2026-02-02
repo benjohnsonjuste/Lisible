@@ -1,5 +1,6 @@
 import { getFile } from "@/lib/github";
 import { Buffer } from "buffer";
+import crypto from "crypto"; // Import indispensable pour la sécurité
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -12,12 +13,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Email et mot de passe requis" });
   }
 
-  // Génération du nom de fichier attendu (Base64)
-  const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
+  const cleanEmail = email.toLowerCase().trim();
+  const fileName = Buffer.from(cleanEmail).toString("base64").replace(/=/g, "");
   const path = `data/users/${fileName}.json`;
 
   try {
-    // 1. On va chercher le profil sur GitHub
     const userFile = await getFile(path);
 
     if (!userFile) {
@@ -26,13 +26,16 @@ export default async function handler(req, res) {
 
     const userData = userFile.content;
 
-    // 2. Vérification du mot de passe (Simple pour l'instant)
-    // Idéalement, à l'avenir, utilise bcrypt pour comparer des hashes
-    if (userData.password !== password) {
+    // --- VÉRIFICATION SÉCURISÉE ---
+    // On hache le mot de passe reçu pour voir s'il correspond au hash enregistré
+    const inputHash = crypto.createHash("sha256").update(password).digest("hex");
+
+    // On vérifie si ça match (soit le nouveau format haché, soit l'ancien format pour ne pas bloquer tout le monde d'un coup)
+    if (userData.password !== inputHash && userData.password !== password) {
       return res.status(401).json({ error: "Mot de passe incorrect." });
     }
 
-    // 3. Succès : On retourne les données essentielles (SANS le mot de passe pour la sécurité)
+    // On ne renvoie jamais le mot de passe au client
     const { password: _, ...safeUserData } = userData;
 
     return res.status(200).json({
@@ -42,6 +45,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("Login Error:", error);
-    return res.status(500).json({ error: "Erreur lors de la connexion au serveur." });
+    return res.status(500).json({ error: "Erreur de connexion au serveur." });
   }
 }
