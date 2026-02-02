@@ -11,7 +11,7 @@ export default function PublishPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null); // État pour la prévisualisation
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -60,7 +60,7 @@ export default function PublishPage() {
     e.preventDefault();
     const words = countWords(content);
     if (words > MAX_WORDS) return toast.error(`Trop de mots (${words}/${MAX_WORDS})`);
-    if (words < 10) return toast.error("Votre texte est un peu court pour être publié.");
+    if (words < 10) return toast.error("Texte trop court.");
 
     setLoading(true);
     const loadingToast = toast.loading("Impression du manuscrit...");
@@ -73,34 +73,40 @@ export default function PublishPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          authorName: user.penName || user.name,
+          // Utilisation systématique du PenName pour l'affichage public
+          authorName: user.penName || user.firstName || "Auteur Lisible",
           authorEmail: user.email.toLowerCase().trim(),
           title: title.trim(),
           content: content.trim(),
           imageBase64,
           isConcours: false, 
           date: new Date().toISOString(),
+          // Initialisation des statistiques réelles
           views: 0,
           totalLikes: 0,
           totalCertified: 0, 
           liEarned: 0,
-          comments: []
+          comments: [],
+          genre: "Littérature" // Genre par défaut pour la bibliothèque
         })
       });
 
       if (!res.ok) throw new Error("Erreur serveur");
       const data = await res.json();
 
-      await fetch("/api/create-notif", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "new_text", 
-          message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
-          targetEmail: "all",
-          link: `/texts/${data.id}`
-        })
-      });
+      // Notification automatique pour la communauté
+      try {
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "new_text", 
+            message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.firstName}`,
+            targetEmail: "all",
+            link: `/texts/${data.id}`
+          })
+        });
+      } catch (e) { console.error("Notif failed", e); }
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
@@ -121,11 +127,11 @@ export default function PublishPage() {
     <div className="max-w-3xl mx-auto space-y-8 pb-20 px-4 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       
       <div className="flex items-center justify-between">
-        <Link href="/dashboard" className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all">
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Retour Studio
+        <Link href="/bibliotheque" className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all">
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Bibliothèque
         </Link>
         <button 
-          onClick={() => { if(confirm("Effacer le brouillon ?")) { setTitle(""); setContent(""); setImageFile(null); setImagePreview(null); } }} 
+          onClick={() => { if(confirm("Effacer le brouillon ?")) { setTitle(""); setContent(""); setImageFile(null); setImagePreview(null); localStorage.removeItem("draft_title"); localStorage.removeItem("draft_content"); } }} 
           className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl"
         >
           <Trash2 size={14} /> Corbeille
@@ -155,7 +161,7 @@ export default function PublishPage() {
             <div className="p-3 bg-teal-50 rounded-2xl text-teal-600">
                 <FileText size={24} />
             </div>
-            <h1 className="text-3xl font-black italic tracking-tighter leading-none">Nouveau Manuscrit</h1>
+            <h1 className="text-3xl font-black italic tracking-tighter leading-none">Manuscrit</h1>
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest pl-16 flex items-center gap-2 text-teal-600">
             <Coins size={12} /> Monétisation Li activée
@@ -164,13 +170,13 @@ export default function PublishPage() {
 
         <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-300 ml-5">Titre de l'œuvre</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-300 ml-5">Titre</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic font-bold outline-none focus:border-teal-100 focus:bg-white transition-all text-slate-900"
-                placeholder="Ex: Le Chant des Plaines"
+                placeholder="Titre de l'œuvre..."
                 required
               />
             </div>
@@ -181,7 +187,7 @@ export default function PublishPage() {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:border-teal-100 focus:bg-white resize-none transition-all text-slate-800"
-                placeholder="Rédigez votre chef-d'œuvre..."
+                placeholder="Exprimez-vous..."
                 required
               />
               <div className="flex justify-end pr-5">
@@ -219,8 +225,7 @@ export default function PublishPage() {
             >
               <ImageIcon size={30} className="text-slate-300 mb-2" />
               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
-                 Couverture personnalisée <br />
-                 <span className="text-[8px] font-bold opacity-60">(Optionnel)</span>
+                 Couverture <span className="text-[8px] font-bold opacity-60">(Optionnel)</span>
               </p>
             </label>
           )}
@@ -232,12 +237,7 @@ export default function PublishPage() {
             disabled={loading} 
             className="w-full bg-slate-950 text-white py-7 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3 active:scale-95 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : (
-              <>
-                <Send size={18} /> 
-                Publier maintenant
-              </>
-            )}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} /> Publier maintenant</>}
           </button>
         </div>
       </form>
