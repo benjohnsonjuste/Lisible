@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
-  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase, Star
+  TrendingUp, Cake, Crown, Medal, HeartHandshake, Briefcase, Star, Phone
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -35,37 +35,30 @@ export default function UsersPage() {
     const email = author.email?.toLowerCase().trim();
     const today = new Date();
     
-    // Calcul de la semaine glissante (Dimanche dernier à aujourd'hui)
     const lastSunday = new Date();
     lastSunday.setDate(today.getDate() - today.getDay());
     lastSunday.setHours(0, 0, 0, 0);
 
-    // Filtrer l'historique pour la semaine en cours
-    const weeklyHistory = author.wallet?.history?.filter(h => new Date(h.date) >= lastSunday) || [];
-
-    // --- BADGES ADMINISTRATIFS ---
     if (email === "jb7management@gmail.com") {
       badges.push({ icon: <Crown size={10} />, label: "Fondateur & PDG", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
     }
-    // Badge DG Rodley Robergeau
-    if (email === "rodleyrobergeau97@gmail.com") {
+    if (email === "robergeaurodley97@gmail.com") {
       badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-blue-600 text-white shadow-lg" });
-    }
-    if (email === "robergeaurodley97@gmail.com") { // Ancien email maintenu pour compatibilité
-      badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-blue-900 text-white" });
     }
     if (email === "woolsleypierre01@gmail.com") {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Directrice Éditoriale", color: "bg-purple-700 text-white" });
     }
+    // Nouveau Badge Staff Support
+    if (email === "cmo.lablitteraire7@gmail.com") {
+      badges.push({ icon: <ShieldCheck size={10} />, label: "Staff Admin", color: "bg-teal-700 text-white shadow-md border border-teal-400/20" });
+    }
 
-    // --- LOGIQUE HEBDOMADAIRE AUTOMATIQUE ---
     const eligible = allUsers.filter(u => ![
       "jb7management@gmail.com", 
       "adm.lablitteraire7@gmail.com", 
       "rodleyrobergeau97@gmail.com"
     ].includes(u.email?.toLowerCase().trim()));
 
-    // 1. PLUME SPÉCIALE (Plus de textes partagés hors concours cette semaine)
     const topPlume = [...eligible].sort((a, b) => {
       const countA = a.wallet?.history?.filter(h => h.type === "text_published" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
       const countB = b.wallet?.history?.filter(h => h.type === "text_published" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
@@ -77,7 +70,6 @@ export default function UsersPage() {
       badges.push({ icon: <Edit3 size={10} />, label: "Plume Spéciale", color: "bg-teal-600 text-white animate-pulse" });
     }
 
-    // 2. ÉLITE (Plus de lectures certifiées hors concours cette semaine)
     const topElite = [...eligible].sort((a, b) => {
       const certA = a.wallet?.history?.filter(h => h.type === "certified_received" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
       const certB = b.wallet?.history?.filter(h => h.type === "certified_received" && !h.isConcours && new Date(h.date) >= lastSunday).length || 0;
@@ -89,7 +81,6 @@ export default function UsersPage() {
       badges.push({ icon: <Medal size={10} />, label: "Élite", color: "bg-amber-500 text-white shadow-amber-200" });
     }
 
-    // 3. VIP (Plus grand nombre de clics sur "Certifier" pour les autres cette semaine)
     const topVIP = [...eligible].sort((a, b) => {
       const sentA = a.wallet?.history?.filter(h => h.type === "certified_sent" && new Date(h.date) >= lastSunday).length || 0;
       const sentB = b.wallet?.history?.filter(h => h.type === "certified_sent" && new Date(h.date) >= lastSunday).length || 0;
@@ -101,7 +92,6 @@ export default function UsersPage() {
       badges.push({ icon: <Gem size={10} />, label: "VIP", color: "bg-rose-600 text-white" });
     }
 
-    // 4. CONCOURS (Si l'auteur a au moins un texte concours actif)
     const hasConcours = author.wallet?.history?.some(h => h.isConcours === true);
     if (hasConcours) {
       badges.push({ icon: <Star size={10} />, label: "Concours", color: "bg-indigo-500 text-white" });
@@ -122,55 +112,58 @@ export default function UsersPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-16 animate-in fade-in duration-1000">
-      <header className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 md:py-16 animate-in fade-in duration-1000">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 md:mb-16 gap-6">
         <div>
-          <h1 className="text-6xl md:text-8xl font-black italic text-slate-900 tracking-tighter leading-[0.8]">Communauté</h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 mt-4 flex items-center gap-2">
-            <TrendingUp size={14} /> Synchronisation des statistiques réelles
+          <h1 className="text-5xl sm:text-6xl md:text-8xl font-black italic text-slate-900 tracking-tighter leading-tight md:leading-[0.8]">
+            Communauté
+          </h1>
+          <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.4em] text-teal-600 mt-4 flex items-center gap-2">
+            <TrendingUp size={14} /> Cercle d'or de la littérature
           </p>
         </div>
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
           <input 
             type="text" 
             placeholder="Chercher une plume..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-3xl pl-14 pr-6 py-5 text-sm font-bold outline-none focus:border-teal-500/20 transition-all" 
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl md:rounded-3xl pl-12 md:pl-14 pr-6 py-4 md:py-5 text-sm font-bold outline-none focus:border-teal-500/20 transition-all" 
           />
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
         {filtered.map((a) => (
-          <div key={a.email} className="relative bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 group hover:border-teal-200 transition-all">
+          <div key={a.email} className="relative bg-white rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-10 border border-slate-100 shadow-xl shadow-slate-200/50 group hover:border-teal-200 transition-all">
             
-            <div className="absolute -top-5 left-8 flex flex-wrap gap-2 max-w-[95%] z-20">
+            <div className="absolute -top-4 left-4 md:left-8 flex flex-wrap gap-2 max-w-[95%] z-20">
               {getBadges(a, authors).map((b, i) => (
-                <div key={i} className={`${b.color} px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg text-[8px] font-black uppercase tracking-tighter`}>
+                <div key={i} className={`${b.color} px-3 py-1.5 md:px-4 md:py-2 rounded-xl md:rounded-2xl flex items-center gap-2 shadow-lg text-[7px] md:text-[8px] font-black uppercase tracking-tighter whitespace-nowrap`}>
                   {b.icon} {b.label}
                 </div>
               ))}
             </div>
 
-            <div className="flex items-center gap-8 mt-4">
-              <div className="relative">
-                {/* Cercle de profil large style réseau social */}
-                <div className="p-1 bg-gradient-to-tr from-teal-400 via-slate-200 to-amber-400 rounded-full shadow-lg">
-                  <div className="p-1 bg-white rounded-full">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-6 md:gap-8 mt-6 sm:mt-4 text-center sm:text-left">
+              <div className="relative flex-shrink-0">
+                <div className="aspect-square p-1 bg-gradient-to-tr from-teal-400 via-slate-200 to-amber-400 rounded-full shadow-lg">
+                  <div className="p-1 bg-white rounded-full h-full w-full overflow-hidden">
                     <img 
                       src={a.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}&backgroundColor=f1f5f9`} 
-                      className="w-28 h-28 rounded-full object-cover bg-slate-50" 
+                      className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover bg-slate-50" 
                       alt={a.penName}
                       onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}`; }}
                     />
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter">{a.penName || "Plume"}</h2>
-                <div className="flex flex-wrap gap-3">
+              <div className="space-y-2 flex-grow">
+                <h2 className="text-2xl md:text-3xl font-black italic text-slate-900 tracking-tighter truncate max-w-[250px] mx-auto sm:mx-0">
+                  {a.penName || "Plume"}
+                </h2>
+                <div className="flex flex-wrap justify-center sm:justify-start gap-3">
                   <div className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase">
                     <UsersIcon size={12}/> {a.stats?.subscribers || a.subscribers?.length || 0}
                   </div>
@@ -183,7 +176,7 @@ export default function UsersPage() {
             
             <Link 
               href={`/auteur/${encodeURIComponent(a.email)}`} 
-              className="mt-10 flex items-center justify-center gap-3 w-full py-5 bg-slate-950 text-white rounded-[1.8rem] text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all"
+              className="mt-8 md:mt-10 flex items-center justify-center gap-3 w-full py-4 md:py-5 bg-slate-950 text-white rounded-2xl md:rounded-[1.8rem] text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-lg active:scale-[0.98]"
             >
               Voir le catalogue <ArrowRight size={16} />
             </Link>
