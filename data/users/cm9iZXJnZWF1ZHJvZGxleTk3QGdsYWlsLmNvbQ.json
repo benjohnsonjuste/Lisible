@@ -1,0 +1,41 @@
+{
+  "name": "Rodley Robergeau Fontaine",
+  "penName": "Rodley Robergeau Fontaine",
+  "email": "robergeaudrodley97@glail.com",
+  "password": "37925732",
+  "birthday": "",
+  "joinedAt": "2026-02-02T15:24:26.180Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-02T15:24:26.180Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": false,
+      "isMecene": false
+    }
+  }
+}
