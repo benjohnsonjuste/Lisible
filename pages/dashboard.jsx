@@ -1,19 +1,23 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Coins, ShieldCheck, Send, LogOut, TrendingUp, ArrowUpRight } from "lucide-react";
+import { 
+  Loader2, Coins, ShieldCheck, Send, LogOut, TrendingUp, 
+  ArrowUpRight, FileText, UserCircle, Download, Award, 
+  Instagram, Twitter, Facebook, MessageCircle 
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatLi } from "@/lib/utils";
 
 export default function AuthorDashboard() {
   const router = useRouter();
+  const badgeRef = useRef(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
 
   const fetchLatestData = useCallback(async (email) => {
     try {
-      // On utilise l'API login pour rafraîchir les données proprement
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,6 +40,41 @@ export default function AuthorDashboard() {
       fetchLatestData(u.email);
     } else { router.push("/login"); }
   }, [router, fetchLatestData]);
+
+  const handleDownloadBadge = () => {
+    const svg = badgeRef.current;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = 800;
+      canvas.height = 800;
+      ctx.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = `Lisible_Badge_${user?.penName}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+      toast.success("Badge certifié téléchargé !");
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const shareOnSocial = (platform) => {
+    const text = encodeURIComponent(`Je viens de rejoindre l'avant-garde littéraire sur Lisible ! Suivez ma plume. ✨`);
+    const url = encodeURIComponent("https://lisible.biz");
+    
+    const links = {
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      whatsapp: `https://api.whatsapp.com/send?text=${text}%20${url}`,
+      instagram: `https://www.instagram.com/`
+    };
+
+    window.open(links[platform], "_blank");
+    toast.info(`Redirection vers ${platform}...`);
+  };
 
   const handleTransfer = async () => {
     if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
@@ -76,30 +115,58 @@ export default function AuthorDashboard() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* QUICK ACTIONS */}
+      <div className="grid grid-cols-2 gap-4">
+        <button 
+          onClick={() => router.push("/publish")}
+          className="group flex items-center justify-between p-6 bg-white border-2 border-slate-50 rounded-[2rem] hover:border-teal-500 hover:shadow-xl hover:shadow-teal-500/5 transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-teal-50 text-teal-600 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-colors">
+              <FileText size={20} />
+            </div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-900">Publier une œuvre</span>
+          </div>
+          <ArrowUpRight size={18} className="text-slate-300 group-hover:text-teal-500 transition-colors" />
+        </button>
+
+        <button 
+          onClick={() => router.push("/account")}
+          className="group flex items-center justify-between p-6 bg-white border-2 border-slate-50 rounded-[2rem] hover:border-slate-900 hover:shadow-xl transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-slate-900 group-hover:text-white transition-colors">
+              <UserCircle size={20} />
+            </div>
+            <span className="text-[11px] font-black uppercase tracking-widest text-slate-900">Gérer mon profil</span>
+          </div>
+          <ArrowUpRight size={18} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* MODULE TRANSFERT */}
-        <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6">
+        <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6 lg:col-span-1">
           <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Send size={18}/> Envoyer des Li</h3>
-          <p className="text-xs text-slate-500">Soutenez un autre auteur. Minimum 1000 Li.</p>
           <div className="space-y-4">
             <input 
-              type="email" placeholder="Email du destinataire" 
-              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 ring-teal-500"
+              type="email" placeholder="Email" 
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 ring-teal-500 text-sm"
               onChange={(e) => setTransfer({...transfer, email: e.target.value})}
             />
             <input 
-              type="number" placeholder="Montant (ex: 1500)" 
-              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 ring-teal-500"
+              type="number" placeholder="Montant" 
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none focus:ring-2 ring-teal-500 text-sm"
               onChange={(e) => setTransfer({...transfer, amount: e.target.value})}
             />
-            <button onClick={handleTransfer} className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all">
-              Confirmer l'envoi
+            <button onClick={handleTransfer} className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all text-[10px]">
+              Confirmer
             </button>
           </div>
         </div>
 
         {/* STATS RAPIDES */}
-        <div className="bg-teal-50 p-8 rounded-[3rem] border border-teal-100 flex flex-col justify-between">
+        <div className="bg-teal-50 p-8 rounded-[3rem] border border-teal-100 flex flex-col justify-between lg:col-span-1">
            <div className="flex justify-between items-start">
               <TrendingUp className="text-teal-600" size={30} />
               <span className="text-[10px] font-black bg-white px-3 py-1 rounded-full text-teal-600 uppercase">Valeur : ${(user?.wallet?.balance * 0.0002).toFixed(2)}</span>
@@ -109,8 +176,56 @@ export default function AuthorDashboard() {
               <div className="w-full bg-slate-200 h-2 rounded-full mt-4 overflow-hidden">
                 <div className="bg-teal-500 h-full" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }}></div>
               </div>
-              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Objectif : 25 000 Li (5.00$)</p>
+              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Objectif : 25 000 Li</p>
            </div>
+        </div>
+
+        {/* BADGE DE BIENVENUE & PARTAGE */}
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-5 shadow-sm lg:col-span-1">
+          <div className="hidden">
+            <svg ref={badgeRef} width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{stopColor:'#0f172a', stopOpacity:1}} />
+                  <stop offset="100%" style={{stopColor:'#1e293b', stopOpacity:1}} />
+                </linearGradient>
+              </defs>
+              <rect width="800" height="800" fill="url(#grad)"/>
+              <rect x="60" y="60" width="680" height="680" fill="none" stroke="#14b8a6" strokeWidth="8"/>
+              <text x="400" y="320" fontFamily="sans-serif" fontSize="20" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '12px'}}>AUTEUR CERTIFIÉ</text>
+              <text x="400" y="440" fontFamily="serif" fontSize="85" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user?.penName || "Plume"}</text>
+              <text x="400" y="530" fontFamily="sans-serif" fontSize="24" fontWeight="bold" fill="#fbbf24" textAnchor="middle" style={{letterSpacing: '4px'}}>LISIBLE.BIZ</text>
+            </svg>
+          </div>
+          
+          <div className="relative p-5 bg-slate-900 rounded-3xl text-teal-400">
+            <Award size={40} />
+          </div>
+
+          <div className="space-y-1">
+            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Auteur</h3>
+            <div className="flex flex-wrap justify-center gap-2 mt-2">
+               <button onClick={() => shareOnSocial('whatsapp')} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all">
+                  <MessageCircle size={16} />
+               </button>
+               <button onClick={() => shareOnSocial('facebook')} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all">
+                  <Facebook size={16} />
+               </button>
+               <button onClick={() => shareOnSocial('instagram')} className="p-2 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all">
+                  <Instagram size={16} />
+               </button>
+               <button onClick={() => shareOnSocial('twitter')} className="p-2 bg-slate-50 text-slate-900 rounded-lg hover:bg-slate-900 hover:text-white transition-all">
+                  <Twitter size={16} />
+               </button>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleDownloadBadge}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-slate-950 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-lg"
+          >
+            <Download size={14} /> Télécharger & Partager
+          </button>
         </div>
       </div>
     </div>
