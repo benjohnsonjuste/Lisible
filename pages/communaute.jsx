@@ -140,13 +140,12 @@ export default function UsersPage() {
 
             <div className="flex items-center gap-8 mt-4">
               <div className="relative">
-                {/* Bordure large style réseaux sociaux avec padding pour l'effet d'épaisseur */}
                 <div className="p-1.5 bg-gradient-to-tr from-slate-200 to-slate-100 rounded-[2.8rem] shadow-inner">
                   <img 
-                    src={a.profilePic || `https://api.dicebear.com/7.x/micah/svg?seed=${a.penName || a.email}&backgroundColor=f8fafc`} 
+                    src={a.profilePic || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.penName || a.email}&backgroundColor=f8fafc`} 
                     className="w-24 h-24 rounded-[2.2rem] object-cover bg-white border-2 border-white shadow-sm" 
                     alt={a.penName}
-                    onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/micah/svg?seed=${a.email}&backgroundColor=f8fafc`; }}
+                    onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}&backgroundColor=f8fafc`; }}
                   />
                 </div>
               </div>
