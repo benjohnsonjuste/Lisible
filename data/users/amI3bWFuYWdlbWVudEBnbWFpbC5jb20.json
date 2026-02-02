@@ -1,0 +1,41 @@
+{
+  "name": "Ben Johnson Juste",
+  "penName": "Ben Johnson Juste",
+  "email": "jb7management@gmail.com",
+  "password": "benhelene",
+  "birthday": "",
+  "joinedAt": "2026-02-02T04:05:45.730Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-02T04:05:45.730Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": false,
+      "isMecene": false
+    }
+  }
+}
