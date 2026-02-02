@@ -7,10 +7,8 @@ import {
   ShieldCheck, Sparkles, Send, MessageCircle 
 } from "lucide-react";
 
-// --- IMPORT DU COMPOSANT EXTÉRIEUR ---
 import { InTextAd } from "@/components/InTextAd";
 
-// --- 1. COMPOSANT : BADGE CONCOURS ---
 function BadgeConcours() {
   return (
     <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-2xl shadow-lg mb-6 animate-in zoom-in duration-500">
@@ -20,8 +18,7 @@ function BadgeConcours() {
   );
 }
 
-// --- 2. COMPOSANT : SCEAU DE CERTIFICATION (SYSTÈME LI) ---
-function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount, authorEmail, textTitle }) {
+function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount }) {
   const [seconds, setSeconds] = useState(Math.max(5, Math.floor(wordCount / 60)));
   const [isValidated, setIsValidated] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -62,7 +59,6 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
       });
 
       if (resText.ok) {
-        // Note: Le crédit auteur +1 Li est maintenant géré automatiquement côté API /api/texts
         localStorage.setItem(deviceKey, "true");
         setIsValidated(true);
         toast.success("Sceau apposé ! +1 Li envoyé.", { id: t });
@@ -109,14 +105,13 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
   );
 }
 
-// --- 3. COMPOSANT : SECTION COMMENTAIRES ---
 function CommentSection({ textId, comments = [], user, onCommented }) {
   const [msg, setMsg] = useState("");
   const [sending, setSending] = useState(false);
 
   const postComment = async () => {
     if (!user) return toast.error("Connectez-vous pour commenter.");
-    if (msg.trim().length < 3) return;
+    if (msg.trim().length < 2) return;
     setSending(true);
     try {
       const res = await fetch('/api/texts', {
@@ -124,13 +119,13 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: textId, action: "comment",
-          payload: { userEmail: user.email, userName: user.penName || user.firstName || "Plume", text: msg.trim(), date: new Date().toISOString() }
+          payload: { userEmail: user.email, userName: user.penName || "Plume", text: msg.trim(), date: new Date().toISOString() }
         })
       });
       if (res.ok) { 
         setMsg(""); 
+        toast.success("Commentaire publié");
         onCommented(); 
-        toast.success("Commentaire publié"); 
       }
     } catch (e) { toast.error("Erreur de connexion"); }
     finally { setSending(false); }
@@ -147,7 +142,7 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
           onChange={e => setMsg(e.target.value)} 
           placeholder={user ? "Votre pensée..." : "Connectez-vous pour commenter"} 
           disabled={!user || sending}
-          className="flex-1 bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm outline-none focus:ring-4 focus:ring-teal-500/10 disabled:opacity-50" 
+          className="flex-1 bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm outline-none focus:ring-4 focus:ring-teal-500/10 disabled:opacity-50 text-slate-900" 
         />
         <button 
           onClick={postComment} 
@@ -158,7 +153,7 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
         </button>
       </div>
       <div className="space-y-6">
-        {comments.slice().reverse().map((c, i) => (
+        {[...comments].reverse().map((c, i) => (
           <div key={i} className="bg-white p-6 rounded-3xl border border-slate-50 shadow-sm transition-all hover:border-teal-100 animate-in slide-in-from-bottom-2">
             <div className="flex justify-between mb-2">
               <span className="text-[10px] font-black text-teal-600 uppercase">{c.userName}</span>
@@ -172,7 +167,6 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
   );
 }
 
-// --- 4. PAGE PRINCIPALE ---
 export default function TextPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -181,6 +175,7 @@ export default function TextPage() {
   const [isLiking, setIsLiking] = useState(false);
 
   const fetchData = useCallback(async (textId) => {
+    if (!textId) return;
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
       if (res.ok) {
@@ -206,8 +201,8 @@ export default function TextPage() {
       });
       if (res.ok) {
         localStorage.setItem(likeKey, "true");
-        await fetchData(id);
         toast.success("Appréciation enregistrée !");
+        await fetchData(id); 
       }
     } catch (e) { toast.error("Action impossible"); }
     finally { setIsLiking(false); }
@@ -235,10 +230,11 @@ export default function TextPage() {
 
   const handleShare = () => {
     if (!text) return;
+    const url = window.location.href;
     if (navigator.share) {
-      navigator.share({ title: text.title, url: window.location.href });
+      navigator.share({ title: text.title, url });
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(url);
       toast.success("Lien copié !");
     }
   };
@@ -249,6 +245,9 @@ export default function TextPage() {
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Chargement...</p>
     </div>
   );
+
+  // Correction de la variable pour l'affichage du compteur (assure la compatibilité API)
+  const likesCount = text.totalLikes || text.likes || 0;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
@@ -271,7 +270,7 @@ export default function TextPage() {
         <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9] text-slate-900">{text.title}</h1>
         <p className="text-[11px] font-black text-teal-600 uppercase tracking-[0.4em] mb-16 flex items-center gap-2">
             <span className="w-8 h-[2px] bg-teal-600"></span> 
-            {text.isConcours ? `Concurrent ${text.authorName}` : `Par ${text.authorName}`}
+            {text.isConcours ? `Concurrent ${text.authorName || text.concurrentId}` : `Par ${text.authorName}`}
         </p>
         <div className="prose prose-xl font-serif text-slate-800 leading-relaxed mb-24 whitespace-pre-wrap">
           {text.content}
@@ -288,12 +287,11 @@ export default function TextPage() {
                 <Heart size={32} className={`transition-colors ${isLiking ? 'text-slate-300' : 'text-rose-500 fill-rose-500 animate-bounce'}`} />
             </div>
             <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">
-                {text.totalLikes || 0} { (text.totalLikes || 0) > 1 ? "Appréciations" : "Appréciation" }
+                {likesCount} { likesCount > 1 ? "Appréciations" : "Appréciation" }
             </span>
           </button>
       </div>
 
-      {/* PUBLICITÉ IN-TEXT */}
       <div className="my-16">
         <InTextAd />
       </div>
@@ -302,10 +300,8 @@ export default function TextPage() {
         wordCount={text.content ? text.content.trim().split(/\s+/).length : 0} 
         fileName={id} 
         userEmail={user?.email} 
-        authorEmail={text.authorEmail}
-        textTitle={text.title}
         onValidated={() => fetchData(id)} 
-        certifiedCount={text.totalCertified}
+        certifiedCount={text.totalCertified || 0}
       />
 
       <CommentSection 
