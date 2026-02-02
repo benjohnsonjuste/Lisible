@@ -18,6 +18,7 @@
     "framer-motion": "^11.0.0",
     "pusher-js": "^8.4.0",
     "@livepeer/react": "^3.1.5",
+    "html2canvas": "^1.4.1",
     "react": "18.2.0",
     "react-onesignal": "latest",
     "nodemailer": "^6.9.13",
