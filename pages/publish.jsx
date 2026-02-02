@@ -69,44 +69,46 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
+      // --- ENVOI VERS L'API CORRIGÉE ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Utilisation systématique du PenName pour l'affichage public
-          authorName: user.penName || user.firstName || "Auteur Lisible",
+          authorName: user.penName || user.name || "Auteur Lisible",
           authorEmail: user.email.toLowerCase().trim(),
+          authorPenName: user.penName || user.name || "Anonyme",
           title: title.trim(),
           content: content.trim(),
           imageBase64,
           isConcours: false, 
           date: new Date().toISOString(),
-          // Initialisation des statistiques réelles
           views: 0,
           totalLikes: 0,
           totalCertified: 0, 
           liEarned: 0,
           comments: [],
-          genre: "Littérature" // Genre par défaut pour la bibliothèque
+          genre: "Littérature"
         })
       });
 
-      if (!res.ok) throw new Error("Erreur serveur");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur lors de la publication");
+      }
+
       const data = await res.json();
 
-      // Notification automatique pour la communauté
-      try {
-        await fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "new_text", 
-            message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.firstName}`,
-            targetEmail: "all",
-            link: `/texts/${data.id}`
-          })
-        });
-      } catch (e) { console.error("Notif failed", e); }
+      // Notification communautaire (non bloquante)
+      fetch("/api/create-notif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "new_text", 
+          message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
+          targetEmail: "all",
+          link: `/texts/${data.id}`
+        })
+      }).catch(() => {});
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
@@ -115,7 +117,7 @@ export default function PublishPage() {
       router.push(`/texts/${data.id}`);
       
     } catch (err) {
-      toast.error("Échec de la publication.", { id: loadingToast });
+      toast.error(err.message || "Échec de la publication.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
