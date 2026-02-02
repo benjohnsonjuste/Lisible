@@ -47,8 +47,12 @@ export default function AuthForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: emailClean })
         });
-        if (!res.ok) throw new Error("Compte inconnu");
-        toast.success("Secret retrouvé, vérifiez vos notifications");
+        const result = await res.json();
+        
+        if (!res.ok) throw new Error(result.error || "Compte inconnu");
+        
+        // Affichage de l'indice de sécurité récupéré
+        toast.success(`Indice : ${result.hint}. Alerte de sécurité envoyée.`);
         setMode("login");
         return;
       }
