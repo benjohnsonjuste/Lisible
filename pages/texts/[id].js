@@ -98,7 +98,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
       <div className="flex items-center gap-4 bg-white border border-slate-100 shadow-sm px-6 py-3 rounded-2xl">
         <Sparkles size={16} className="text-teal-500" />
         <span className="text-xs font-black text-slate-900 uppercase tracking-tighter">
-          {certifiedCount || 0} Lecture(s) Certifiée(s)
+          {Number(certifiedCount) || 0} Lecture(s) Certifiée(s)
         </span>
       </div>
     </div>
@@ -246,8 +246,8 @@ export default function TextPage() {
     </div>
   );
 
-  // Correction de la variable pour l'affichage du compteur (assure la compatibilité API)
-  const likesCount = text.totalLikes || text.likes || 0;
+  // Conversion forcée en nombre pour éviter l'affichage de l'email ou d'objet
+  const likesCount = Number(text.totalLikes || text.likes || 0);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 pb-32">
@@ -257,7 +257,7 @@ export default function TextPage() {
         </button>
         <div className="flex gap-3">
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 text-slate-400">
-               <Eye size={14} /> <span className="text-xs font-bold">{text.views || 0}</span>
+               <Eye size={14} /> <span className="text-xs font-bold">{Number(text.views) || 0}</span>
             </div>
             <button onClick={handleShare} className="p-3 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all">
               <Share2 size={20} />
@@ -301,7 +301,7 @@ export default function TextPage() {
         fileName={id} 
         userEmail={user?.email} 
         onValidated={() => fetchData(id)} 
-        certifiedCount={text.totalCertified || 0}
+        certifiedCount={Number(text.totalCertified) || 0}
       />
 
       <CommentSection 
