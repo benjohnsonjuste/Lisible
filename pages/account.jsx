@@ -7,7 +7,7 @@ import {
   ShieldCheck, Loader2, RefreshCcw, Save, 
   Layout, Eye, CheckCircle2, Wallet, Sparkles,
   BookOpen, Star, TrendingUp, Download, Award, Crown, Cake,
-  Mail, Landmark, Globe
+  Mail, Landmark, Globe, Key, Trash2, AlertTriangle
 } from "lucide-react";
 
 // --- COMPOSANT STATS ---
@@ -34,21 +34,24 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [isRefreshingLi, setIsRefreshingLi] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingPass, setIsUpdatingPass] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  // --- ÉTAT DU FORMULAIRE (AVEC MODES DE PAIEMENT) ---
+  // --- ÉTAT DU FORMULAIRE ---
   const [formData, setFormData] = useState({
     firstName: "", lastName: "", penName: "", birthday: "", profilePic: "",
-    paymentMethod: "PayPal", // PayPal ou Western Union
+    paymentMethod: "PayPal",
     paypalEmail: "",
     wuFirstName: "",
     wuLastName: "",
     wuCountry: ""
   });
 
+  const [passData, setPassData] = useState({ current: "", new: "" });
+
   const WITHDRAWAL_THRESHOLD = 25000;
   const balance = user?.wallet?.balance || 0;
   const canWithdraw = balance >= WITHDRAWAL_THRESHOLD;
-  const isSpecialPartner = user?.email?.toLowerCase() === "cmo.lablitteraire7@gmail.com";
 
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
@@ -76,10 +79,12 @@ export default function AccountPage() {
     if (!email) return;
     setIsRefreshingLi(true);
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${btoa(email.toLowerCase()).replace(/=/g, "")}.json?t=${Date.now()}`);
+      // Encodage Base64 standard identique à l'API de suppression
+      const fileName = btoa(email.toLowerCase().trim()).replace(/=/g, "");
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${fileName}.json?t=${Date.now()}`);
       if (res.ok) {
         const file = await res.json();
-        const freshUser = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+        const freshUser = JSON.parse(Buffer.from(file.content, 'base64').toString('utf-8'));
         setUser(freshUser);
         setFormData({
           firstName: freshUser.firstName || "",
@@ -103,64 +108,70 @@ export default function AccountPage() {
   const saveProfile = async () => {
     if (!user?.email) return;
     setIsSaving(true);
-    const t = toast.loading("Mise à jour et synchronisation financière...");
-    
+    const t = toast.loading("Mise à jour...");
     try {
       const updatedUser = { 
         ...user, 
         ...formData,
-        wuMoneyGram: {
-          firstName: formData.wuFirstName,
-          lastName: formData.wuLastName,
-          country: formData.wuCountry
-        }
+        wuMoneyGram: { firstName: formData.wuFirstName, lastName: formData.wuLastName, country: formData.wuCountry }
       };
-
-      // 1. Sauvegarde sur GitHub
       const res = await fetch('/api/update-user', { 
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email, userData: updatedUser })
       });
-
       if (res.ok) {
-        // 2. Envoi des données par Email au staff (Finance)
-        await fetch('/api/notify-staff', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: "UPDATE_PROFILE_FINANCE",
-                userEmail: user.email,
-                penName: formData.penName,
-                paymentData: formData
-            })
-        });
-
         localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
         setUser(updatedUser);
-        toast.success("Profil & Infos de paiement sauvegardés", { id: t });
+        toast.success("Profil sauvegardé", { id: t });
+      }
+    } catch (e) { toast.error("Erreur", { id: t }); } finally { setIsSaving(false); }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!passData.current || !passData.new) return toast.error("Champs requis");
+    setIsUpdatingPass(true);
+    try {
+      const res = await fetch("/api/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, currentPassword: passData.current, newPassword: passData.new })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Mot de passe mis à jour");
+        setPassData({ current: "", new: "" });
+      } else { toast.error(data.error); }
+    } catch (e) { toast.error("Erreur de connexion"); } finally { setIsUpdatingPass(false); }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirm = window.confirm("ATTENTION : Cette action est irréversible. Toutes vos Li et manuscrits seront supprimés. Confirmer ?");
+    if (!confirm) return;
+    setIsDeleting(true);
+    const tId = toast.loading("Suppression définitive en cours...");
+    try {
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email })
+      });
+      if (res.ok) {
+        toast.success("Compte supprimé. Adieu.", { id: tId });
+        localStorage.clear();
+        router.push("/login");
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Erreur de suppression", { id: tId });
+        setIsDeleting(false);
       }
     } catch (e) { 
-      toast.error("Erreur de sauvegarde", { id: t }); 
-    } finally { 
-      setIsSaving(false); 
+        toast.error("Erreur système", { id: tId }); 
+        setIsDeleting(false); 
     }
   };
 
-  const handleWithdraw = () => {
-    router.push("/withdraw");
-  };
-
-  // --- LOGIQUE DES BADGES ---
-  const getEarnedBadges = () => {
-    const earned = [];
-    if (!user) return earned;
-    const subs = user.stats?.subscribers || 0;
-    const texts = user.stats?.totalTexts || 0;
-    if (texts >= 1) earned.push({ id: 'plume', label: "Plume Lisible", color: "bg-slate-900 text-white", icon: <Edit3 size={14}/> });
-    if (subs >= 250) earned.push({ id: 'bronze', label: "Badge Bronze", color: "bg-orange-700 text-white", icon: <Award size={14}/> });
-    return earned;
-  };
+  const handleWithdraw = () => router.push("/withdraw");
 
   if (loading || !user) return (
     <div className="flex flex-col h-screen items-center justify-center gap-4">
@@ -231,7 +242,6 @@ export default function AccountPage() {
 
             <hr className="border-slate-100" />
 
-            {/* SECTION : PAIEMENT INTÉGRÉE */}
             <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 mt-10">
                <CreditCard size={16} /> Configuration des Retraits
             </h2>
@@ -247,22 +257,44 @@ export default function AccountPage() {
                </button>
             </div>
 
-            <div className="animate-in slide-in-from-top-4 duration-500">
-               {formData.paymentMethod === "PayPal" ? (
-                  <InputBlock label="Adresse Email PayPal" value={formData.paypalEmail} onChange={v => setFormData({...formData, paypalEmail: v})} placeholder="votre-email@paypal.com" />
-               ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                     <InputBlock label="Prénom Bénéficiaire" value={formData.wuFirstName} onChange={v => setFormData({...formData, wuFirstName: v})} />
-                     <InputBlock label="Nom Bénéficiaire" value={formData.wuLastName} onChange={v => setFormData({...formData, wuLastName: v})} />
-                     <div className="sm:col-span-2">
-                        <InputBlock label="Pays de résidence" value={formData.wuCountry} onChange={v => setFormData({...formData, wuCountry: v})} placeholder="Ex: France, Haïti, Canada..." />
-                     </div>
-                  </div>
-               )}
-            </div>
+            {formData.paymentMethod === "PayPal" ? (
+               <InputBlock label="Email PayPal" value={formData.paypalEmail} onChange={v => setFormData({...formData, paypalEmail: v})} />
+            ) : (
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <InputBlock label="Prénom" value={formData.wuFirstName} onChange={v => setFormData({...formData, wuFirstName: v})} />
+                  <InputBlock label="Nom" value={formData.wuLastName} onChange={v => setFormData({...formData, wuLastName: v})} />
+                  <div className="sm:col-span-2"><InputBlock label="Pays" value={formData.wuCountry} onChange={v => setFormData({...formData, wuCountry: v})} /></div>
+               </div>
+            )}
 
-            <button disabled={isSaving} onClick={saveProfile} className="w-full py-6 bg-slate-950 text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex justify-center items-center gap-3 shadow-xl active:scale-[0.98]">
-              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Sauvegarder et Synchroniser
+            <button disabled={isSaving} onClick={saveProfile} className="w-full py-6 bg-slate-950 text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex justify-center items-center gap-3 shadow-xl">
+              {isSaving ? <Loader2 className="animate-spin" /> : <Save size={18} />} Sauvegarder les infos
+            </button>
+          </div>
+
+          {/* SECTION : SÉCURITÉ (CHANGER MOT DE PASSE) */}
+          <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-8">
+            <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
+               <Key size={16} /> Sécurité de l'accès
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <InputBlock label="Secret actuel" type="password" value={passData.current} onChange={v => setPassData({...passData, current: v})} />
+              <InputBlock label="Nouveau secret" type="password" value={passData.new} onChange={v => setPassData({...passData, new: v})} />
+            </div>
+            <button disabled={isUpdatingPass} onClick={handleUpdatePassword} className="w-full py-5 border-2 border-slate-900 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 hover:text-white transition-all">
+              {isUpdatingPass ? <Loader2 className="animate-spin mx-auto" /> : "Actualiser mon secret"}
+            </button>
+          </div>
+
+          {/* ZONE DANGEREUSE */}
+          <div className="bg-rose-50 rounded-[3rem] p-8 md:p-12 border border-rose-100 space-y-6">
+            <div className="flex items-center gap-4 text-rose-600">
+              <AlertTriangle size={24} />
+              <h2 className="text-[10px] font-black uppercase tracking-[0.3em]">Zone de rupture</h2>
+            </div>
+            <p className="text-xs text-rose-800 font-medium">La suppression de votre compte est définitive. Toutes vos données, manuscrits et vos Li accumulés seront supprimés de nos serveurs sans possibilité de récupération.</p>
+            <button onClick={handleDeleteAccount} disabled={isDeleting} className="flex items-center gap-3 px-8 py-4 bg-rose-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200">
+              <Trash2 size={16} /> Supprimer mon compte
             </button>
           </div>
         </section>
@@ -283,10 +315,10 @@ export default function AccountPage() {
                     <Wallet className="text-teal-500 opacity-20" size={32} />
                  </div>
                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 transition-all duration-1000 ease-out" style={{ width: `${Math.min((balance / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} />
+                    <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400" style={{ width: `${Math.min((balance / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} />
                  </div>
               </div>
-              <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg ${canWithdraw ? "bg-teal-500 text-slate-950 hover:scale-105" : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"}`}>
+              <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${canWithdraw ? "bg-teal-500 text-slate-950" : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"}`}>
                 Aller au retrait
               </button>
             </div>
