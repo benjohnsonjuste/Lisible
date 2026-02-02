@@ -36,7 +36,6 @@ export default function UsersPage() {
     const subs = author.stats?.subscribers || author.subscribers?.length || 0;
     const today = new Date();
     
-    // --- 1. RÔLES ADMINISTRATIFS FIXES ---
     if (email === "jb7management@gmail.com") {
       badges.push({ icon: <Crown size={10} />, label: "Fondateur & PDG", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
     }
@@ -50,7 +49,6 @@ export default function UsersPage() {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Staff Officiel", color: "bg-indigo-600 text-white" });
     }
 
-    // --- 2. ANNIVERSAIRE (24H - 00:01 à 23:59) ---
     if (author.birthday) {
       const bDay = new Date(author.birthday);
       if (bDay.getDate() === today.getDate() && bDay.getMonth() === today.getMonth()) {
@@ -58,25 +56,20 @@ export default function UsersPage() {
       }
     }
 
-    // --- 3. BADGES HEBDOMADAIRES (Logique Dimanche) ---
     const excluded = ["jb7management@gmail.com", "adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"];
     if (!excluded.includes(email)) {
-      // On filtre les éligibles pour les calculs de tête
       const eligible = allUsers.filter(u => !excluded.includes(u.email?.toLowerCase()));
 
-      // Encrier (Plus de textes cette semaine - simulé par totalTexts pour l'exemple réel)
       const topWriter = [...eligible].sort((a, b) => (b.stats?.totalTexts || 0) - (a.stats?.totalTexts || 0))[0];
       if (topWriter && email === topWriter.email && (author.stats?.totalTexts > 0)) {
         badges.push({ icon: <Edit3 size={10} />, label: "Encrier", color: "bg-teal-600 text-white" });
       }
 
-      // Élite (Plus de Li accumulés/wallet)
       const topElite = [...eligible].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
       if (topElite && email === topElite.email) {
         badges.push({ icon: <Medal size={10} />, label: "Élite", color: "bg-amber-500 text-white shadow-amber-200" });
       }
 
-      // VIP (Plus de Li envoyés/cadeaux)
       const topVIP = [...eligible].sort((a, b) => {
         const sentA = a.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
         const sentB = b.wallet?.history?.filter(h => h.type === "gift_sent").length || 0;
@@ -87,7 +80,6 @@ export default function UsersPage() {
       }
     }
 
-    // --- 4. RANGS PAR ABONNÉS ---
     if (subs >= 5000) {
       badges.push({ icon: <Sparkles size={10} />, label: "Compte Diamant", color: "bg-cyan-400 text-slate-900 font-bold" });
     } else if (subs >= 3000) {
@@ -119,7 +111,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-6xl md:text-8xl font-black italic text-slate-900 tracking-tighter leading-[0.8]">Communauté</h1>
           <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 mt-4 flex items-center gap-2">
-            <TrendingUp size={14} /> Le cercle d’or hebdomadaire
+            <TrendingUp size={14} /> Le cercle d'or de la littérature
           </p>
         </div>
         <div className="relative w-full md:w-96">
@@ -138,7 +130,6 @@ export default function UsersPage() {
         {filtered.map((a) => (
           <div key={a.email} className="relative bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl shadow-slate-200/50 group hover:border-teal-200 transition-all">
             
-            {/* Badges Dynamiques */}
             <div className="absolute -top-5 left-8 flex flex-wrap gap-2 max-w-[95%] z-20">
               {getBadges(a, authors).map((b, i) => (
                 <div key={i} className={`${b.color} px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg text-[8px] font-black uppercase tracking-tighter`}>
@@ -149,11 +140,15 @@ export default function UsersPage() {
 
             <div className="flex items-center gap-8 mt-4">
               <div className="relative">
-                <img 
-                  src={a.profilePic || `https://api.dicebear.com/7.x/initials/svg?seed=${a.penName}`} 
-                  className="w-24 h-24 rounded-[2.5rem] object-cover bg-slate-50 border-4 border-white shadow-xl" 
-                  alt=""
-                />
+                {/* Bordure large style réseaux sociaux avec padding pour l'effet d'épaisseur */}
+                <div className="p-1.5 bg-gradient-to-tr from-slate-200 to-slate-100 rounded-[2.8rem] shadow-inner">
+                  <img 
+                    src={a.profilePic || `https://api.dicebear.com/7.x/micah/svg?seed=${a.penName || a.email}&backgroundColor=f8fafc`} 
+                    className="w-24 h-24 rounded-[2.2rem] object-cover bg-white border-2 border-white shadow-sm" 
+                    alt={a.penName}
+                    onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/micah/svg?seed=${a.email}&backgroundColor=f8fafc`; }}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter">{a.penName || "Plume"}</h2>
