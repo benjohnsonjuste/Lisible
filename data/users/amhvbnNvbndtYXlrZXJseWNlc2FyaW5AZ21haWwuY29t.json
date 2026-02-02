@@ -1,0 +1,41 @@
+{
+  "name": "Cesarin Jhonson Maykerly Woods",
+  "penName": "Cesarin Jhonson Maykerly Woods",
+  "email": "jhonsonwmaykerlycesarin@gmail.com",
+  "password": "cesarin",
+  "birthday": "",
+  "joinedAt": "2026-02-02T18:22:29.760Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-02T18:22:29.760Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": false,
+      "isMecene": false
+    }
+  }
+}
