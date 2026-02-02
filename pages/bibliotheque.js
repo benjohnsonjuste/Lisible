@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, MessageCircle, Loader2, Share2, 
-  Trophy, Megaphone, ShieldCheck, Sparkles 
+  Trophy, Megaphone, ShieldCheck, Sparkles, Search 
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Bibliotheque() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -35,7 +36,7 @@ export default function Bibliotheque() {
   const handleShare = async (e, item) => {
     e.preventDefault(); 
     e.stopPropagation();
-    const url = `${window.location.origin}/texts/${item.id}`;
+    const url = `${window.location.origin}/text/${item.id}`;
     try {
       if (navigator.share) { 
         await navigator.share({ title: item.title, url }); 
@@ -48,117 +49,141 @@ export default function Bibliotheque() {
     }
   };
 
+  const filteredTexts = texts.filter(t => 
+    t.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    t.authorName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40}/>
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des rayonnages...</p>
     </div>
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10 grid gap-10 md:grid-cols-2">
-      {texts.map((item) => {
-        const isConcours = item.isConcours === true || item.isConcours === "true";
-        
-        // --- LOGIQUE ANNONCE ADAPTÉE AUX EMAILS ADMIN ---
-        const isAdminEmail = item.authorEmail === "adm.lablitteraire7@gmail.com" || item.authorEmail === "cmo.lablitteraire7@gmail.com";
-        const isAnnonce = isAdminEmail || item.authorName === "Lisible Support Team";
-        
-        const certifiedCount = item.totalCertified || 0;
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+      {/* BARRE DE RECHERCHE ADAPTATIVE */}
+      <div className="relative mb-12 max-w-2xl mx-auto group">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
+        <input 
+          type="text" 
+          placeholder="Rechercher un titre ou une plume..." 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
+          className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2rem] pl-14 pr-6 py-5 text-sm font-bold outline-none focus:border-teal-500/10 focus:bg-white transition-all shadow-sm" 
+        />
+      </div>
 
-        return (
-          <Link href={`/texts/${item.id}`} key={item.id} className="group relative">
-            <div className={`bg-white rounded-[3rem] overflow-hidden border transition-all duration-500 h-full flex flex-col relative ${
-              isConcours 
-                ? 'border-teal-200 shadow-2xl shadow-teal-900/5' 
-                : isAnnonce 
-                  ? 'border-amber-200 bg-amber-50/10' 
-                  : 'border-slate-100 shadow-xl shadow-slate-200/50'
-            }`}>
-              
-              <div className="h-60 bg-slate-100 relative overflow-hidden">
-                {item.imageBase64 ? (
-                  <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                ) : (
-                  <div className={`w-full h-full flex items-center justify-center font-black italic text-4xl ${
-                    isConcours ? 'bg-gradient-to-br from-teal-500 to-teal-800 text-white/20' : 'bg-slate-50 text-slate-200'
-                  }`}>
-                    {isConcours ? "BATTLE" : "LISIBLE."}
-                  </div>
-                )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+        {filteredTexts.map((item) => {
+          const isConcours = item.isConcours === true || item.isConcours === "true";
+          const isAdminEmail = item.authorEmail === "adm.lablitteraire7@gmail.com" || item.authorEmail === "cmo.lablitteraire7@gmail.com";
+          const isAnnonce = isAdminEmail || item.authorName === "Lisible Support Team";
+          
+          const certifiedCount = Number(item.totalCertified) || 0;
+          const totalViews = Number(item.views) || 0;
+          const totalLikes = Number(item.totalLikes || item.likes) || 0;
 
-                {/* BADGES FLOTTANTS ADAPTÉS */}
-                <div className="absolute top-6 left-6 flex flex-col gap-2 z-20">
-                    {isConcours ? (
-                        <div className="bg-teal-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg border border-teal-400/50 animate-in zoom-in">
-                            <Trophy size={12} className="animate-bounce" />
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">Concours</span>
-                        </div>
-                    ) : isAnnonce ? (
-                        <div className="bg-amber-500 text-white px-4 py-2 rounded-2xl flex items-center gap-2 shadow-lg animate-in fade-in">
-                            <Megaphone size={12} />
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em]">Annonce</span>
-                        </div>
-                    ) : (
-                        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm border border-slate-100">
-                            <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">
-                            {new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                <button onClick={(e) => handleShare(e, item)} className="absolute top-6 right-6 p-3 bg-slate-900/80 hover:bg-teal-600 text-white backdrop-blur-md rounded-2xl transition-all z-20">
-                  <Share2 size={18} />
-                </button>
-              </div>
-
-              <div className="p-8 flex-grow flex flex-col">
-                <h2 className={`text-3xl font-black italic mb-4 tracking-tighter leading-[1.1] transition-colors ${
-                  isConcours ? 'text-teal-700' : isAnnonce ? 'text-amber-900' : 'text-slate-900 group-hover:text-teal-600'
-                }`}>
-                  {item.title}
-                </h2>
+          return (
+            <Link href={`/text/${item.id}`} key={item.id} className="group flex">
+              <div className={`bg-white rounded-[2.5rem] sm:rounded-[3rem] overflow-hidden border transition-all duration-500 w-full flex flex-col relative ${
+                isConcours 
+                  ? 'border-teal-200 shadow-2xl shadow-teal-900/5' 
+                  : isAnnonce 
+                    ? 'border-amber-200 bg-amber-50/10' 
+                    : 'border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl'
+              }`}>
                 
-                <div className="mb-6 flex items-center gap-2">
-                   <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${
-                     certifiedCount > 0 ? 'bg-teal-50 border-teal-100 text-teal-600' : 'bg-slate-50 border-slate-100 text-slate-400'
-                   }`}>
-                      <Sparkles size={12} className={certifiedCount > 0 ? "animate-pulse" : ""} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">
-                        {certifiedCount} Li {certifiedCount > 1 ? "Gagnés" : "Gagné"}
-                      </span>
-                   </div>
+                <div className="h-48 sm:h-60 bg-slate-100 relative overflow-hidden">
+                  {item.imageBase64 ? (
+                    <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center font-black italic text-2xl sm:text-4xl ${
+                      isConcours ? 'bg-gradient-to-br from-teal-500 to-teal-800 text-white/20' : 'bg-slate-50 text-slate-200'
+                    }`}>
+                      {isConcours ? "BATTLE" : "LISIBLE."}
+                    </div>
+                  )}
+
+                  <div className="absolute top-4 left-4 sm:top-6 sm:left-6 flex flex-col gap-2 z-20">
+                      {isConcours ? (
+                          <div className="bg-teal-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-2 shadow-lg animate-in zoom-in">
+                              <Trophy size={12} className="animate-bounce" />
+                              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em]">Concours</span>
+                          </div>
+                      ) : isAnnonce ? (
+                          <div className="bg-amber-500 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl flex items-center gap-2 shadow-lg">
+                              <Megaphone size={12} />
+                              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em]">Annonce</span>
+                          </div>
+                      ) : (
+                          <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl shadow-sm border border-slate-100">
+                              <span className="text-[8px] sm:text-[9px] font-black text-slate-900 uppercase tracking-widest">
+                              {new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
+                              </span>
+                          </div>
+                      )}
+                  </div>
+
+                  <button onClick={(e) => handleShare(e, item)} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 sm:p-3 bg-slate-900/80 hover:bg-teal-600 text-white backdrop-blur-md rounded-xl sm:rounded-2xl transition-all z-20">
+                    <Share2 size={16} />
+                  </button>
                 </div>
 
-                <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 leading-relaxed text-lg">
-                  {item.content}
-                </p>
-
-                <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isConcours ? 'bg-teal-500 animate-ping' : isAnnonce ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                    <span className={`font-black text-[10px] uppercase tracking-widest ${
-                      isConcours ? 'text-teal-600' : isAnnonce ? 'text-amber-700' : 'text-slate-500'
-                    }`}>
-                      @{item.authorName}
-                    </span>
-                  </div>
+                <div className="p-6 sm:p-8 flex-grow flex flex-col">
+                  <h2 className={`text-2xl sm:text-3xl font-black italic mb-3 tracking-tighter leading-tight transition-colors ${
+                    isConcours ? 'text-teal-700' : isAnnonce ? 'text-amber-900' : 'text-slate-900 group-hover:text-teal-600'
+                  }`}>
+                    {item.title}
+                  </h2>
                   
-                  <div className="flex gap-4 text-slate-400 font-black text-[11px]">
-                    <span className="flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-lg">
-                      <Eye size={14}/> {item.views || 0}
-                    </span>
-                    <span className="flex items-center gap-1.5 bg-rose-50 text-rose-500 px-3 py-1 rounded-lg">
-                      <Heart size={14} fill={item.totalLikes > 0 ? "currentColor" : "none"}/> {item.totalLikes || 0}
-                    </span>
+                  <div className="mb-4 flex items-center gap-2">
+                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${
+                       certifiedCount > 0 ? 'bg-teal-50 border-teal-100 text-teal-600' : 'bg-slate-50 border-slate-100 text-slate-400'
+                     }`}>
+                        <Sparkles size={10} className={certifiedCount > 0 ? "animate-pulse" : ""} />
+                        <span>{certifiedCount} Li {certifiedCount > 1 ? "Gagnés" : "Gagné"}</span>
+                     </div>
+                  </div>
+
+                  <p className="text-slate-500 line-clamp-2 sm:line-clamp-3 font-serif italic mb-8 text-base sm:text-lg leading-relaxed">
+                    {item.content}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-6 border-t border-slate-50 mt-auto">
+                    <div className="flex items-center gap-2 max-w-[50%] overflow-hidden">
+                      <div className={`w-2 h-2 shrink-0 rounded-full ${isConcours ? 'bg-teal-500 animate-ping' : isAnnonce ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                      <span className={`font-black text-[9px] sm:text-[10px] uppercase tracking-widest truncate ${
+                        isConcours ? 'text-teal-600' : isAnnonce ? 'text-amber-700' : 'text-slate-500'
+                      }`}>
+                        @{item.authorName}
+                      </span>
+                    </div>
+                    
+                    <div className="flex gap-3 sm:gap-4 text-slate-400 font-black text-[10px] sm:text-[11px]">
+                      <span className="flex items-center gap-1.5 bg-slate-50 px-2 sm:px-3 py-1 rounded-lg">
+                        <Eye size={14}/> {totalViews}
+                      </span>
+                      <span className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg transition-colors ${
+                          totalLikes > 0 ? "bg-rose-50 text-rose-500" : "bg-slate-50"
+                      }`}>
+                        <Heart size={14} fill={totalLikes > 0 ? "currentColor" : "none"}/> {totalLikes}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Link>
-        );
-      })}
+            </Link>
+          );
+        })}
+      </div>
+      
+      {filteredTexts.length === 0 && (
+        <div className="text-center py-20">
+          <p className="text-slate-300 font-black uppercase tracking-widest">Aucun résultat trouvé</p>
+        </div>
+      )}
     </div>
   );
 }
