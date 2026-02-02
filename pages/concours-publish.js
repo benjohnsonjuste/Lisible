@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Send, ArrowLeft, Loader2, CheckCircle2, Hash, Sparkles, Wand2 } from "lucide-react"; 
+import { Trophy, Send, ArrowLeft, Loader2, CheckCircle2, Hash, Sparkles, Wand2, Coins } from "lucide-react"; 
 import Link from "next/link";
 
 export default function ConcoursPublishPage() {
@@ -23,7 +23,6 @@ export default function ConcoursPublishPage() {
     } else {
       const parsed = JSON.parse(loggedUser);
       setUser(parsed);
-      // Récupérer l'ID s'il existe déjà dans son profil pour éviter les erreurs
       if (parsed.concurrentId) setConcurrentId(parsed.concurrentId);
     }
   }, [router]);
@@ -55,7 +54,6 @@ export default function ConcoursPublishPage() {
     if (!isBattlePoetic) return toast.error("Veuillez certifier votre participation.");
     if (!validateConcurrentId(concurrentId)) return toast.error("Format ID requis: ABCD0123");
     
-    // Sécurité de longueur pour le prestige de la Battle
     const wordCount = content.trim().split(/\s+/).length;
     if (wordCount < 20) return toast.error("Votre texte est trop court (min 20 mots).");
 
@@ -66,13 +64,13 @@ export default function ConcoursPublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- ENVOI UNIQUE POUR STATS ET INDEX ---
+      // --- CRÉATION DE L'ENTRÉE AVEC SYSTÈME LI ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: concurrentId.toUpperCase(),
-          realAuthorEmail: user.email.toLowerCase().trim(), // Pour créditer les Li
+          realAuthorEmail: user.email.toLowerCase().trim(),
           authorPenName: user.penName || "Anonyme",
           title: title.trim(),
           content: content.trim(),
@@ -80,11 +78,12 @@ export default function ConcoursPublishPage() {
           isConcours: true,
           concurrentId: concurrentId.toUpperCase(),
           date: new Date().toISOString(),
-          // Stats Initiales pour le Dashboard
+          // Statistiques Économiques Initiales
           views: 0,
-          likes: 0,
-          certifiedReads: 0, // Nouveau compteur de prestige
+          totalLikes: 0,
+          totalCertified: 0, 
           liEarned: 0,
+          genre: "Battle Poétique",
           comments: []
         })
       });
@@ -92,13 +91,13 @@ export default function ConcoursPublishPage() {
       if (!res.ok) throw new Error("Erreur serveur");
       const data = await res.json();
 
-      // Notification Globale Pusher
+      // Notification Pusher
       await fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "concours", 
-          message: `🏆 NOUVEAU DÉFI : "${title.trim()}" vient d'entrer dans l'Arène !`,
+          message: `🏆 BATTLE : Un nouveau concurrent "${title.trim()}" vient de publier !`,
           targetEmail: "all",
           link: `/texts/${data.id}`
         })
@@ -117,7 +116,7 @@ export default function ConcoursPublishPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8 pb-20 px-4 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <Link href="/dashboard" className="group inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all">
-        <ArrowLeft size={16} /> Retour au tableau de bord
+        <ArrowLeft size={16} /> Dashboard Auteur
       </Link>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] border-4 border-teal-500/10 shadow-2xl relative overflow-hidden">
@@ -128,9 +127,9 @@ export default function ConcoursPublishPage() {
             <Trophy size={32} className="text-amber-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none text-slate-900">Battle Poétique</h1>
+            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none text-slate-900">Entrer dans l'Arène</h1>
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 mt-2 flex items-center gap-2">
-              <Sparkles size={12}/> Manuscrit Officiel
+              <Coins size={12}/> Chaque certification vous rapporte 1 Li
             </p>
           </div>
         </header>
@@ -138,13 +137,13 @@ export default function ConcoursPublishPage() {
         <div className="space-y-6">
           <div 
             onClick={() => setIsBattlePoetic(!isBattlePoetic)}
-            className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between ${isBattlePoetic ? 'border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10' : 'border-slate-100 bg-slate-50 opacity-60'}`}
+            className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between ${isBattlePoetic ? 'border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10' : 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-100'}`}
           >
             <div className="flex gap-4 items-center">
               <CheckCircle2 className={isBattlePoetic ? "text-teal-600" : "text-slate-300"} />
               <div>
-                <p className="text-xs font-black uppercase tracking-widest text-slate-900">Engagement de l'auteur</p>
-                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tight">Je certifie mon texte pour la Battle</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-900">Règlement de la Battle</p>
+                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tight">Je certifie mon texte et accepte les votes via Li</p>
               </div>
             </div>
           </div>
@@ -154,7 +153,7 @@ export default function ConcoursPublishPage() {
               <div className="flex justify-between items-center px-5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-teal-600">ID Concurrent Unique</label>
                 <button type="button" onClick={generateId} className="text-[9px] font-black uppercase text-slate-400 hover:text-teal-600 flex items-center gap-1 transition-colors">
-                   <Wand2 size={12}/> Générer
+                   <Wand2 size={12}/> Générer aléatoirement
                 </button>
               </div>
               <div className="relative">
@@ -164,8 +163,8 @@ export default function ConcoursPublishPage() {
                   maxLength={8}
                   value={concurrentId}
                   onChange={(e) => setConcurrentId(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-6 pl-16 pr-6 text-xl font-black outline-none focus:border-teal-500 transition-all text-slate-900"
-                  placeholder="EX: POET2026"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-6 pl-16 pr-6 text-xl font-black outline-none focus:border-teal-500 transition-all text-slate-900 placeholder:text-slate-200"
+                  placeholder="ABCD0123"
                   required
                 />
               </div>
@@ -181,18 +180,18 @@ export default function ConcoursPublishPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic font-bold outline-none focus:border-teal-200 focus:bg-white transition-all text-slate-900 shadow-inner"
-              placeholder="Ex: Les Murmures du Soir"
+              placeholder="Donnez un nom à votre poème..."
               required
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-5">Corps du poème</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-5">Le Manuscrit</label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[350px] outline-none focus:border-teal-200 focus:bg-white resize-none transition-all text-slate-800 shadow-inner"
-              placeholder="Écrivez ici..."
+              placeholder="Votre poésie commence ici..."
               required
             />
           </div>
@@ -207,12 +206,12 @@ export default function ConcoursPublishPage() {
             {loading ? <Loader2 className="animate-spin" size={20} /> : (
               <>
                 <Send size={18} />
-                Publier dans l'Arène
+                Publier Candidature
               </>
             )}
           </button>
           <p className="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-6">
-            L'ID Concurrent garantit votre anonymat auprès du jury.
+            L'ID Concurrent garantit votre anonymat. Votre identité réelle est liée uniquement pour vos gains Li.
           </p>
         </div>
       </form>
