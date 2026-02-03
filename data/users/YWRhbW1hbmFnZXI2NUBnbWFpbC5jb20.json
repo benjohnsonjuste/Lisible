@@ -1,0 +1,41 @@
+{
+  "name": "Adam Ibrahim",
+  "penName": "Adam Ibrahim",
+  "email": "adammanager65@gmail.com",
+  "password": "f7f376a1fcd0d0e11a10ed1b6577c99784d3a6bbe669b1d13fae43eb64634f6e",
+  "birthday": "",
+  "joinedAt": "2026-02-03T01:00:52.671Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-03T01:00:52.671Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": false,
+      "isMecene": false
+    }
+  }
+}
