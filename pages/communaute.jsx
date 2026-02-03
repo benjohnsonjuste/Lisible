@@ -21,7 +21,7 @@ export default function UsersPage() {
     "jb7management@gmail.com",
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhaïniedarha@gmail.com",
-    "cmo.lablitteraire7@gmail.com" // Ajouté ici pour masquer les statistiques
+    "cmo.lablitteraire7@gmail.com" 
   ];
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function UsersPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          followerEmail: currentUser.email, // Correction du payload pour l'API
+          followerEmail: currentUser.email,
           targetEmail: targetEmail
         })
       });
@@ -63,7 +63,18 @@ export default function UsersPage() {
       if (!res.ok) throw new Error(data.error || "Erreur");
       
       toast.success(data.isSubscribed ? "Abonnement réussi" : "Désabonnement réussi");
-      loadUsers(); 
+      
+      // Synchronisation immédiate de l'UI locale
+      setAuthors(prevAuthors => prevAuthors.map(author => {
+        if (author.email === targetEmail) {
+          const newSubs = data.isSubscribed 
+            ? [...(author.subscribers || []), currentUser.email]
+            : (author.subscribers || []).filter(e => e !== currentUser.email);
+          return { ...author, subscribers: newSubs };
+        }
+        return author;
+      }));
+
     } catch (err) {
       toast.error("Action impossible pour le moment");
     } finally {
@@ -196,7 +207,6 @@ export default function UsersPage() {
                     {a.penName || "Plume"}
                   </h2>
                   
-                  {/* Les statistiques ne s'affichent pas si isStaff est true */}
                   {!isStaff && (
                     <div className="flex flex-wrap justify-center sm:justify-start gap-3">
                       <div className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase">
@@ -214,12 +224,12 @@ export default function UsersPage() {
                       disabled={submitting === a.email}
                       className={`mt-2 flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 ${
                         isFollowing 
-                        ? "bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-500" 
-                        : "bg-teal-600 text-white hover:bg-slate-900 shadow-md animate-in zoom-in-95 duration-300"
+                        ? "bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-500 border-slate-200" 
+                        : "bg-teal-600 text-white hover:bg-slate-900 shadow-md animate-in zoom-in-95 duration-300 border-transparent"
                       }`}
                     >
                       {submitting === a.email ? <Loader2 size={12} className="animate-spin" /> : (isFollowing ? <UserMinus size={12} /> : <UserPlus size={12} className="animate-bounce" />)}
-                      {isFollowing ? "Se désabonner" : "Suivre la plume"}
+                      {isFollowing ? "Désabonner" : "Suivre la plume"}
                     </button>
                   )}
                 </div>
