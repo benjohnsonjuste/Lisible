@@ -220,6 +220,7 @@ export default function TextPage() {
       if (res.ok) {
         localStorage.setItem(likeKey, "true");
         await fetchData(id); 
+        toast.success("Aimé !");
       }
     } catch (e) { toast.error("Action impossible."); }
     finally { setIsLiking(false); }
@@ -231,12 +232,18 @@ export default function TextPage() {
       if (stored) setUser(JSON.parse(stored));
       
       fetchData(id).then(loaded => {
-        if (loaded && !localStorage.getItem(`view_${id}`)) {
+        // Logique d'unicité pour les vues par appareil
+        const viewKey = `view_${id}`;
+        if (loaded && !localStorage.getItem(viewKey)) {
           fetch('/api/texts', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, action: "view" })
-          }).then(() => localStorage.setItem(`view_${id}`, "true"));
+          }).then(() => {
+            localStorage.setItem(viewKey, "true");
+            // Optionnel : rafraîchir pour voir la vue s'incrémenter
+            fetchData(id);
+          });
         }
       });
     }
@@ -266,12 +273,12 @@ export default function TextPage() {
                 <button 
                   onClick={handleLike} 
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all active:scale-90 ${
-                    localStorage.getItem(`like_${id}`) 
+                    typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) 
                     ? 'bg-rose-50 border-rose-100 text-rose-500' 
                     : 'bg-slate-50 border-slate-100 text-slate-400'
                   }`}
                 >
-                   <Heart size={14} className={localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
+                   <Heart size={14} className={typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
                    <span className="text-[10px] font-black">{Number(text.totalLikes || text.likes || 0)}</span>
                 </button>
               </>
