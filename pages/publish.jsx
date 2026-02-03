@@ -69,7 +69,7 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- ENVOI VERS L'API CORRIGÉE ---
+      // --- ENVOI VERS L'API (DÉCLENCHE AUSSI LES NOTIFS ABONNÉS CÔTÉ SERVEUR) ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,7 +98,7 @@ export default function PublishPage() {
 
       const data = await res.json();
 
-      // Notification communautaire (non bloquante)
+      // Notification communautaire globale (Email "all")
       fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -106,7 +106,7 @@ export default function PublishPage() {
           type: "new_text", 
           message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
           targetEmail: "all",
-          link: `/texts/${data.id}`
+          link: `/texte/${data.id}`
         })
       }).catch(() => {});
 
@@ -114,7 +114,7 @@ export default function PublishPage() {
       localStorage.removeItem("draft_content");
 
       toast.success("Œuvre diffusée avec succès !", { id: loadingToast });
-      router.push(`/texts/${data.id}`);
+      router.push(`/texte/${data.id}`);
       
     } catch (err) {
       toast.error(err.message || "Échec de la publication.", { id: loadingToast });
