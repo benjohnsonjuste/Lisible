@@ -11,7 +11,13 @@
   "totalLikes": 4,
   "totalCertified": 0,
   "liEarned": 0,
-  "comments": [],
+  "comments": [
+    {
+      "userName": "Lisible Support Team",
+      "text": "Bien dit. ✨",
+      "date": "2026-02-03T16:43:36.704Z"
+    }
+  ],
   "genre": "Littérature",
   "id": "caf--des-mots-perdus-1770123508776"
 }
