@@ -27,7 +27,7 @@ export default function AuthorCataloguePage() {
     "jb7management@gmail.com",
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhaïniedarha@gmail.com",
-    "cmo.lablitteraire7@gmail.com" // Masquage des stats pour ce compte
+    "cmo.lablitteraire7@gmail.com" 
   ];
 
   useEffect(() => {
@@ -38,11 +38,19 @@ export default function AuthorCataloguePage() {
   const getBadges = (currentAuthor, usersList) => {
     const badges = [];
     const mail = currentAuthor.email?.toLowerCase().trim();
+    
     if (mail === "cmo.lablitteraire7@gmail.com") {
       badges.push({ icon: <ShieldCheck size={12} />, label: "Staff Officiel", color: "bg-indigo-600 text-white" });
     }
-    if (usersList.length > 0) {
-      const topEarner = [...usersList].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
+
+    // Un compte admin ne peut pas recevoir la Plume d'Or
+    const isAdmin = ADMIN_EMAILS.includes(mail);
+
+    if (usersList.length > 0 && !isAdmin) {
+      // On filtre les admins de la liste pour trouver la vraie Plume d'Or parmi les utilisateurs
+      const eligibleUsers = usersList.filter(u => !ADMIN_EMAILS.includes(u.email?.toLowerCase().trim()));
+      const topEarner = [...eligibleUsers].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
+      
       if (topEarner && mail === topEarner.email?.toLowerCase().trim()) {
         badges.push({ icon: <Award size={12} />, label: "Plume d'Or", color: "bg-amber-400 text-slate-900" });
       }
