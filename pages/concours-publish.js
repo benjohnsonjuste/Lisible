@@ -65,13 +65,13 @@ export default function ConcoursPublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- PUBLICATION AVEC CLÉS API RÉELLES ---
+      // --- PUBLICATION (DÉCLENCHE LES NOTIFS ABONNÉS VIA API/TEXTS) ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: concurrentId.toUpperCase(),
-          authorEmail: user.email.toLowerCase().trim(), // Clé standard pour l'API
+          authorEmail: user.email.toLowerCase().trim(),
           authorPenName: user.penName || user.name || "Anonyme",
           title: title.trim(),
           content: content.trim(),
@@ -95,7 +95,7 @@ export default function ConcoursPublishPage() {
       
       const data = await res.json();
 
-      // Notification (Optionnel, ne doit pas bloquer le succès)
+      // Notification globale corrigée vers /texte/
       fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,12 +103,12 @@ export default function ConcoursPublishPage() {
           type: "concours", 
           message: `🏆 BATTLE : Un nouveau poème "${title.trim()}" est en ligne !`,
           targetEmail: "all",
-          link: `/texts/${data.id}`
+          link: `/texte/${data.id}`
         })
       }).catch(e => console.error("Notification non envoyée"));
 
       toast.success("Candidature publiée !", { id: loadingToast });
-      router.push(`/texts/${data.id}`);
+      router.push(`/texte/${data.id}`);
       
     } catch (err) {
       console.error(err);
