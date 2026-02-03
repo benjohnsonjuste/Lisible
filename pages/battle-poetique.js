@@ -30,9 +30,17 @@ export default function BattlePoetique() {
         const filtered = data
           .filter(item => item.isConcours === true || item.isConcours === "true")
           .sort((a, b) => {
+            // Tri par Likes en premier pour définir le Leader
+            const likesA = a.totalLikes || 0;
+            const likesB = b.totalLikes || 0;
+            if (likesB !== likesA) return likesB - likesA;
+            
+            // Second critère : Certifications
             const certA = a.totalCertified || 0;
             const certB = b.totalCertified || 0;
             if (certB !== certA) return certB - certA;
+
+            // Troisième critère : Date
             return new Date(b.date) - new Date(a.date);
           });
             
@@ -116,6 +124,7 @@ export default function BattlePoetique() {
       {texts.length > 0 ? (
         <div className="grid gap-10 md:grid-cols-2">
           {texts.map((item, index) => {
+            // Le leader est celui qui a le plus de likes (index 0 après le tri)
             const isLeader = index === 0;
             const certifiedCount = item.totalCertified || 0;
             
