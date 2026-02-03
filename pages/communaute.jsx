@@ -155,10 +155,10 @@ export default function UsersPage() {
                 <div className="aspect-square p-1 bg-gradient-to-tr from-teal-400 via-slate-200 to-amber-400 rounded-full shadow-lg">
                   <div className="p-1 bg-white rounded-full h-full w-full overflow-hidden">
                     <img 
-                      src={a.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}&backgroundColor=f1f5f9`} 
+                      src={a.profilePic || `https://api.dicebear.com/7.x/shapes/svg?seed=${a.email}&backgroundColor=f1f5f9`} 
                       className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover bg-slate-50" 
                       alt={a.penName}
-                      onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}`; }}
+                      onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${a.email}`; }}
                     />
                   </div>
                 </div>
