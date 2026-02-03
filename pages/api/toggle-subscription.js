@@ -8,19 +8,21 @@ export default async function handler(req, res) {
   try {
     const { follower, author } = req.body;
 
-    if (!follower?.uid || !author?.uid) {
-      return res.status(400).json({ error: "Données d'abonnement invalides." });
+    // On s'assure d'avoir l'UID ou l'email pour identifier les parties
+    if (!follower?.email || !author?.email) {
+      return res.status(400).json({ error: "Données d'abonnement incomplètes (email requis)." });
     }
 
     const octokit = new Octokit({
       auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
     });
 
-    const path = `data/users/${author.uid}.json`;
+    // On utilise l'email comme identifiant de fichier si l'UID n'est pas disponible
+    const userIdentifier = author.uid || author.email.replace(/[.@]/g, '_');
+    const path = `data/users/${userIdentifier}.json`;
     let contentData = {};
     let sha = undefined;
 
-    // Vérifier si le fichier utilisateur existe déjà
     try {
       const { data } = await octokit.repos.getContent({
         owner: process.env.GITHUB_OWNER,
@@ -34,36 +36,34 @@ export default async function handler(req, res) {
       sha = data.sha;
     } catch (err) {
       contentData = {
-        uid: author.uid,
-        authorName: author.displayName || author.email || "Auteur inconnu",
-        authorEmail: author.email || "",
+        uid: author.uid || userIdentifier,
+        authorName: author.displayName || author.penName || author.email,
+        authorEmail: author.email,
         subscribers: [],
       };
     }
 
-    // Initialiser la liste d'abonnés
     if (!Array.isArray(contentData.subscribers)) {
       contentData.subscribers = [];
     }
 
+    // Vérification basée sur l'email pour plus de fiabilité
     const alreadyFollowing = contentData.subscribers.some(
-      (sub) => sub.uid === follower.uid
+      (sub) => sub.email.toLowerCase() === follower.email.toLowerCase()
     );
 
     let updatedSubscribers;
     if (alreadyFollowing) {
-      // 🔹 Se désabonner
       updatedSubscribers = contentData.subscribers.filter(
-        (sub) => sub.uid !== follower.uid
+        (sub) => sub.email.toLowerCase() !== follower.email.toLowerCase()
       );
     } else {
-      // 🔹 S’abonner
       updatedSubscribers = [
         ...contentData.subscribers,
         {
-          uid: follower.uid,
-          name: follower.displayName || follower.email,
-          email: follower.email,
+          uid: follower.uid || follower.email.replace(/[.@]/g, '_'),
+          name: follower.displayName || follower.penName || follower.email,
+          email: follower.email.toLowerCase(),
           date: new Date().toISOString(),
         },
       ];
@@ -71,14 +71,11 @@ export default async function handler(req, res) {
 
     contentData.subscribers = updatedSubscribers;
 
-    // Sauvegarde sur GitHub
     await octokit.repos.createOrUpdateFileContents({
       owner: process.env.GITHUB_OWNER,
       repo: process.env.GITHUB_REPO,
       path,
-      message: `${alreadyFollowing ? "Désabonnement" : "Nouvel abonné"} : ${
-        follower.email
-      }`,
+      message: `${alreadyFollowing ? "Unfollow" : "Follow"} : ${follower.email} -> ${author.email}`,
       content: Buffer.from(JSON.stringify(contentData, null, 2)).toString("base64"),
       sha,
     });
@@ -95,4 +92,4 @@ export default async function handler(req, res) {
       details: error.message,
     });
   }
-} 
+}
