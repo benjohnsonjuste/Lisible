@@ -52,6 +52,10 @@ export default function UsersPage() {
     if (email === "cmo.lablitteraire7@gmail.com") {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Staff Admin", color: "bg-teal-700 text-white shadow-md border border-teal-400/20" });
     }
+    // Nouveau Badge Directrice de marketing
+    if (email === "jeanpierreborlhaïniedarha@gmail.com") {
+      badges.push({ icon: <Sparkles size={10} />, label: "Directrice de marketing", color: "bg-pink-600 text-white shadow-lg border border-pink-300/20" });
+    }
 
     const eligible = allUsers.filter(u => ![
       "jb7management@gmail.com", 
