@@ -43,7 +43,7 @@ export default function AuthPage() {
             <p className="text-slate-400 font-medium text-[11px] leading-relaxed">
               Prêt à explorer la nouvelle ère de l'écrit ? <br/>
               <span className="text-slate-900 font-black italic uppercase text-[9px] tracking-widest mt-1 block">
-                Rejoignez l'avant-garde.
+                Rejoignez Lisible.
               </span>
             </p>
           </footer>
@@ -58,7 +58,7 @@ export default function AuthPage() {
             </p>
           </div>
           <p className="text-slate-400 text-[11px] font-medium leading-relaxed italic opacity-70 max-w-[280px] mx-auto">
-            "Le futur de la poésie ne se lit pas seulement, il s'habite."
+            "Vivez la littérature de demain dès aujourd'hui."
           </p>
         </div>
       </div>
