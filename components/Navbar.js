@@ -2,14 +2,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import NotificationBell from "@/components/NotificationBell";
 import Pusher from "pusher-js";
 import { toast } from "sonner";
 
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, FileText, X, Sparkles,
-  ChevronRight, Radio, Coins, Zap, MessageSquare 
+  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell
 } from "lucide-react";
 
 export default function Navbar() {
@@ -18,12 +17,17 @@ export default function Navbar() {
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLiveActive, setIsLiveActive] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     // 1. Récupération immédiate de l'utilisateur pour le filtrage Pusher
     const loggedUser = localStorage.getItem("lisible_user");
     const currentUser = loggedUser ? JSON.parse(loggedUser) : null;
     setUser(currentUser);
+
+    // Initialisation du compteur (optionnel: charger depuis une API ou localStorage)
+    const savedCount = localStorage.getItem("unread_notifs");
+    if (savedCount) setUnreadCount(parseInt(savedCount));
 
     // 2. Configuration Pusher
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
@@ -35,6 +39,13 @@ export default function Navbar() {
                       (currentUser && notif.targetEmail?.toLowerCase() === currentUser.email?.toLowerCase());
 
       if (!isForMe) return;
+
+      // Incrémentation du compteur
+      setUnreadCount(prev => {
+        const next = prev + 1;
+        localStorage.setItem("unread_notifs", next.toString());
+        return next;
+      });
 
       // --- LOGIQUE SONORE ---
       const playNotifSound = () => {
@@ -72,7 +83,11 @@ export default function Navbar() {
         icon: getToastIcon(),
         action: {
           label: "VOIR",
-          onClick: () => router.push(notif.link || "/notifications")
+          onClick: () => {
+            setUnreadCount(0);
+            localStorage.setItem("unread_notifs", "0");
+            router.push(notif.link || "/notifications");
+          }
         },
         duration: 6000,
         className: "rounded-[1.5rem] border-slate-100 shadow-2xl font-sans",
@@ -109,9 +124,16 @@ export default function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem("lisible_user");
+    localStorage.removeItem("unread_notifs");
     setUser(null);
+    setUnreadCount(0);
     setIsMenuOpen(false);
     router.push("/login");
+  };
+
+  const handleNotifClick = () => {
+    setUnreadCount(0);
+    localStorage.setItem("unread_notifs", "0");
   };
 
   const menuItems = [
@@ -159,8 +181,17 @@ export default function Navbar() {
             </nav>
 
             <div className="flex items-center gap-2">
-              <Link href="/notifications">
-                <NotificationBell userEmail={user?.email} />
+              <Link 
+                href="/notifications" 
+                onClick={handleNotifClick}
+                className="p-3 text-slate-400 hover:text-teal-600 transition-all relative"
+              >
+                <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 bg-teal-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-in zoom-in duration-300">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </Link>
               
               {user ? (
