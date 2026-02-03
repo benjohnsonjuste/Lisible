@@ -1,101 +1,93 @@
 import { Octokit } from "@octokit/rest";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
+  if (req.method !== "POST") return res.status(405).end();
 
   try {
-    // Adaptation automatique aux noms de variables envoyés par le frontend
-    const { followerEmail, targetEmail, follower, author } = req.body;
-
-    // On récupère les emails peu importe le format envoyé
-    const fEmail = followerEmail || follower?.email;
-    const tEmail = targetEmail || author?.email;
+    const { followerEmail, targetEmail, subscriberEmail } = req.body;
+    
+    // Unification des variables (compatible avec tous vos composants)
+    const fEmail = (followerEmail || subscriberEmail)?.toLowerCase().trim();
+    const tEmail = targetEmail?.toLowerCase().trim();
 
     if (!fEmail || !tEmail) {
-      return res.status(400).json({ error: "Emails de l'abonné et de la cible requis." });
+      return res.status(400).json({ error: "Emails manquants." });
     }
 
     const octokit = new Octokit({
-      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
+      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN || process.env.GITHUB_TOKEN,
     });
 
-    // Identification du fichier de l'auteur cible
-    const userIdentifier = tEmail.replace(/[.@]/g, '_');
-    const path = `data/users/${userIdentifier}.json`;
+    // --- CORRECTION DU CHEMIN ---
+    // On utilise l'email direct (plus simple et correspond à votre handle-subscription précédent)
+    const path = `data/users/${tEmail}.json`;
     
     let contentData = {};
     let sha = undefined;
 
-    // 1. Récupération des données de l'auteur
     try {
       const { data } = await octokit.repos.getContent({
-        owner: process.env.GITHUB_OWNER,
-        repo: process.env.GITHUB_REPO,
+        owner: process.env.GITHUB_OWNER || "benjohnsonjuste",
+        repo: process.env.GITHUB_REPO || "Lisible",
         path,
       });
 
-      contentData = JSON.parse(
-        Buffer.from(data.content, "base64").toString("utf-8")
-      );
+      contentData = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
       sha = data.sha;
     } catch (err) {
-      // Si l'utilisateur n'existe pas encore en JSON, on l'initialise
       contentData = {
-        email: tEmail.toLowerCase(),
+        email: tEmail,
         subscribers: [],
         wallet: { balance: 0, history: [] }
       };
     }
 
-    // Sécurité : s'assurer que subscribers est un tableau
-    if (!Array.isArray(contentData.subscribers)) {
-      contentData.subscribers = [];
-    }
+    if (!Array.isArray(contentData.subscribers)) contentData.subscribers = [];
 
-    // 2. Logique Toggle (Abonner/Désabonner)
-    // On vérifie si l'email est déjà présent (stocké soit en string soit en objet)
-    const alreadyFollowing = contentData.subscribers.some(sub => {
-      const subEmail = typeof sub === 'string' ? sub : sub.email;
-      return subEmail?.toLowerCase() === fEmail.toLowerCase();
-    });
-
-    let updatedSubscribers;
-    if (alreadyFollowing) {
-      // Désabonnement
-      updatedSubscribers = contentData.subscribers.filter(sub => {
-        const subEmail = typeof sub === 'string' ? sub : sub.email;
-        return subEmail?.toLowerCase() !== fEmail.toLowerCase();
-      });
-    } else {
-      // Abonnement : On stocke l'email (format simple pour la cohérence des listes)
-      updatedSubscribers = [...contentData.subscribers, fEmail.toLowerCase()];
-    }
+    // Logique de bascule (Toggle)
+    const alreadyFollowing = contentData.subscribers.includes(fEmail);
+    const updatedSubscribers = alreadyFollowing
+      ? contentData.subscribers.filter(e => e !== fEmail)
+      : [...contentData.subscribers, fEmail];
 
     contentData.subscribers = updatedSubscribers;
 
-    // 3. Mise à jour sur GitHub
+    // Mise à jour GitHub
     await octokit.repos.createOrUpdateFileContents({
-      owner: process.env.GITHUB_OWNER,
-      repo: process.env.GITHUB_REPO,
+      owner: process.env.GITHUB_OWNER || "benjohnsonjuste",
+      repo: process.env.GITHUB_REPO || "Lisible",
       path,
-      message: `🔄 Action Sociale : ${fEmail} ${alreadyFollowing ? "unfollowed" : "followed"} ${tEmail}`,
+      message: `👥 ${alreadyFollowing ? "Unfollow" : "Follow"} : ${fEmail} -> ${tEmail}`,
       content: Buffer.from(JSON.stringify(contentData, null, 2)).toString("base64"),
       sha,
     });
 
+    // 4. Notification Automatique (Pusher/Internal)
+    if (!alreadyFollowing) {
+      try {
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const baseUrl = `${protocol}://${req.headers.host}`;
+        await fetch(`${baseUrl}/api/create-notif`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "subscription",
+            targetEmail: tEmail,
+            message: `${fEmail} vient de s'abonner à vous !`,
+            link: `/auteur/${encodeURIComponent(fEmail)}`
+          }),
+        });
+      } catch (e) { console.error("Notif error:", e); }
+    }
+
     return res.status(200).json({
       success: true,
-      isSubscribed: !alreadyFollowing, // Retourne l'état final pour le toast
+      isSubscribed: !alreadyFollowing,
       followersCount: updatedSubscribers.length,
     });
 
   } catch (error) {
-    console.error("Erreur API Subscription:", error);
-    return res.status(500).json({
-      error: "Erreur serveur lors de l'abonnement.",
-      details: error.message,
-    });
+    console.error("API Error:", error);
+    return res.status(500).json({ error: "Action impossible" });
   }
 }
