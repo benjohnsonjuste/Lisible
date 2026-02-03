@@ -115,6 +115,7 @@ export default function Navbar() {
   };
 
   const menuItems = [
+    { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/bibliotheque", label: "Bibliothèque", icon: <Library size={20} /> },
     { 
       href: "/lisible-club", 
@@ -158,8 +159,9 @@ export default function Navbar() {
             </nav>
 
             <div className="flex items-center gap-2">
-              {/* On passe l'email à la cloche pour sa propre logique interne si besoin */}
-              <NotificationBell userEmail={user?.email} />
+              <Link href="/notifications">
+                <NotificationBell userEmail={user?.email} />
+              </Link>
               
               {user ? (
                 <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-rose-500 transition-all">
