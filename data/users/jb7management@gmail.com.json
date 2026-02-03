@@ -1,6 +1,8 @@
 {
   "email": "jb7management@gmail.com",
-  "subscribers": [],
+  "subscribers": [
+    "cmo.lablitteraire7@gmail.com"
+  ],
   "wallet": {
     "balance": 0,
     "history": []
