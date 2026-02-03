@@ -43,11 +43,9 @@ export default function AuthorCataloguePage() {
       badges.push({ icon: <ShieldCheck size={12} />, label: "Staff Officiel", color: "bg-indigo-600 text-white" });
     }
 
-    // Un compte admin ne peut pas recevoir la Plume d'Or
     const isAdmin = ADMIN_EMAILS.includes(mail);
 
     if (usersList.length > 0 && !isAdmin) {
-      // On filtre les admins de la liste pour trouver la vraie Plume d'Or parmi les utilisateurs
       const eligibleUsers = usersList.filter(u => !ADMIN_EMAILS.includes(u.email?.toLowerCase().trim()));
       const topEarner = [...eligibleUsers].sort((a, b) => (b.wallet?.balance || 0) - (a.wallet?.balance || 0))[0];
       
@@ -108,10 +106,19 @@ export default function AuthorCataloguePage() {
         })
       });
 
+      const data = await res.json();
+      
       if (res.ok) {
-        const data = await res.json();
         toast.success(data.isSubscribed ? "Abonnement réussi" : "Désabonnement réussi");
-        fetchAuthorData(author.email);
+        
+        // Synchronisation immédiate de l'UI locale (optimiste)
+        setAuthor(prev => {
+            if (!prev) return prev;
+            const newSubs = data.isSubscribed 
+                ? [...(prev.subscribers || []), currentUser.email]
+                : (prev.subscribers || []).filter(e => e !== currentUser.email);
+            return { ...prev, subscribers: newSubs };
+        });
       }
     } catch (err) {
       toast.error("Action impossible");
@@ -186,14 +193,14 @@ export default function AuthorCataloguePage() {
           <button 
             disabled={submitting}
             onClick={handleFollow}
-            className={`px-8 py-4 rounded-2xl flex items-center gap-3 transition-all font-black uppercase text-[10px] tracking-widest shadow-sm border ${
+            className={`px-8 py-4 rounded-2xl flex items-center gap-3 transition-all font-black uppercase text-[10px] tracking-widest shadow-sm border active:scale-95 ${
               isFollowing 
               ? "bg-slate-100 text-slate-500 border-slate-200" 
-              : "bg-teal-50 text-teal-600 border-teal-100 hover:bg-teal-600 hover:text-white"
+              : "bg-teal-600 text-white border-transparent shadow-md"
             }`}
           >
-            {submitting ? <Loader2 size={16} className="animate-spin" /> : (isFollowing ? <UserMinus size={16} /> : <UserPlus size={16} />)}
-            {isFollowing ? "Abonné" : "Suivre"}
+            {submitting ? <Loader2 size={16} className="animate-spin" /> : (isFollowing ? <UserMinus size={16} /> : <UserPlus size={16} className="animate-bounce" />)}
+            {isFollowing ? "Désabonner" : "Suivre la plume"}
           </button>
 
           <Link 
