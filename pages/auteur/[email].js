@@ -4,7 +4,8 @@ import { useRouter } from "next/router";
 import { 
   ArrowLeft, BookOpen, Eye, Heart, 
   User, Loader2, Sparkles, TrendingUp, 
-  ShieldCheck, Award, Gem, Coins, HeartHandshake
+  ShieldCheck, Award, Gem, Coins, HeartHandshake,
+  UserPlus
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -17,6 +18,14 @@ export default function AuthorCataloguePage() {
   const [texts, setTexts] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const ADMIN_EMAILS = [
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhaïniedarha@gmail.com"
+  ];
 
   // LOGIQUE DES BADGES
   const getBadges = (currentAuthor, usersList) => {
@@ -80,6 +89,7 @@ export default function AuthorCataloguePage() {
 
   const totalCertifications = texts.reduce((acc, curr) => acc + (curr.totalCertified || 0), 0);
   const authorBadges = author ? getBadges(author, allUsers) : [];
+  const isStaff = author && ADMIN_EMAILS.includes(author.email?.toLowerCase().trim());
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-16 animate-in fade-in duration-1000">
@@ -116,25 +126,39 @@ export default function AuthorCataloguePage() {
               <BookOpen size={14} className="text-slate-400" />
               <span className="text-[10px] font-black uppercase">{texts.length} Textes</span>
             </div>
-            <div className="bg-teal-50 text-teal-600 px-4 py-2 rounded-xl flex items-center gap-2 border border-teal-100">
-              <ShieldCheck size={14} />
-              <span className="text-[10px] font-black uppercase">{totalCertifications} Certifs</span>
-            </div>
-            <div className="bg-amber-50 text-amber-600 px-4 py-2 rounded-xl flex items-center gap-2 border border-amber-100">
-              <Coins size={14} />
-              <span className="text-[10px] font-black uppercase">{author?.wallet?.balance || 0} Li</span>
-            </div>
+            {!isStaff && (
+              <>
+                <div className="bg-teal-50 text-teal-600 px-4 py-2 rounded-xl flex items-center gap-2 border border-teal-100">
+                  <ShieldCheck size={14} />
+                  <span className="text-[10px] font-black uppercase">{totalCertifications} Certifs</span>
+                </div>
+                <div className="bg-amber-50 text-amber-600 px-4 py-2 rounded-xl flex items-center gap-2 border border-amber-100">
+                  <Coins size={14} />
+                  <span className="text-[10px] font-black uppercase">{author?.wallet?.balance || 0} Li</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* BOUTON SOUTENIR (Achat de Li pour l'auteur) */}
-        <Link 
-          href={`/shop?for=${encodeURIComponent(author?.email)}`}
-          className="bg-slate-900 text-white px-8 py-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-teal-600 transition-all group shadow-xl"
-        >
-          <HeartHandshake className="group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Soutenir l'auteur</span>
-        </Link>
+        <div className="flex flex-col gap-3">
+          {/* BOUTON SUIVRE */}
+          <button 
+            onClick={() => toast.success(`Vous suivez maintenant ${author?.penName}`)}
+            className="bg-teal-50 text-teal-600 px-8 py-4 rounded-2xl flex items-center gap-3 hover:bg-teal-600 hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm border border-teal-100"
+          >
+            <UserPlus size={16} /> Suivre
+          </button>
+
+          {/* BOUTON SOUTENIR (Achat de Li pour l'auteur) */}
+          <Link 
+            href={`/shop?for=${encodeURIComponent(author?.email)}`}
+            className="bg-slate-900 text-white px-8 py-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-teal-600 transition-all group shadow-xl"
+          >
+            <HeartHandshake className="group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Soutenir l'auteur</span>
+          </Link>
+        </div>
       </header>
 
       {/* CATALOGUE */}
@@ -154,7 +178,7 @@ export default function AuthorCataloguePage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[8px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase">{txt.category || "Œuvre"}</span>
-                  {txt.totalCertified > 0 && <span className="text-[8px] font-black bg-teal-500 text-white px-2 py-0.5 rounded uppercase">Certifié</span>}
+                  {!isStaff && txt.totalCertified > 0 && <span className="text-[8px] font-black bg-teal-500 text-white px-2 py-0.5 rounded uppercase">Certifié</span>}
                 </div>
                 <h3 className="text-3xl font-black text-slate-900 group-hover:text-teal-600 transition-colors italic tracking-tight">
                   {txt.title}
@@ -162,14 +186,18 @@ export default function AuthorCataloguePage() {
               </div>
 
               <div className="flex items-center gap-8 mt-6 md:mt-0">
-                <div className="text-center">
-                  <p className="text-xl font-black text-slate-900">{txt.views || 0}</p>
-                  <p className="text-[8px] font-black text-slate-400 uppercase">Lectures</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-black text-teal-500">{txt.totalCertified || 0}</p>
-                  <p className="text-[8px] font-black text-slate-400 uppercase">Sceaux</p>
-                </div>
+                {!isStaff && (
+                  <>
+                    <div className="text-center">
+                      <p className="text-xl font-black text-slate-900">{txt.views || 0}</p>
+                      <p className="text-[8px] font-black text-slate-400 uppercase">Lectures</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl font-black text-teal-500">{txt.totalCertified || 0}</p>
+                      <p className="text-[8px] font-black text-slate-400 uppercase">Sceaux</p>
+                    </div>
+                  </>
+                )}
                 <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-all">
                   <ArrowLeft size={18} className="rotate-180" />
                 </div>
