@@ -5,7 +5,7 @@ import {
   Loader2, Coins, ShieldCheck, Send, LogOut, TrendingUp, 
   ArrowUpRight, FileText, UserCircle, Download, Award, 
   Instagram, Twitter, Facebook, MessageCircle 
-} from "lucide-react";
+} from "lucide-center";
 import { toast } from "sonner";
 import { formatLi } from "@/lib/utils";
 
@@ -15,6 +15,14 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
+
+  const ADMIN_EMAILS = [
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhaïniedarha@gmail.com"
+  ];
 
   const fetchLatestData = useCallback(async (email) => {
     try {
@@ -99,7 +107,6 @@ export default function AuthorDashboard() {
     } catch (e) { toast.error("Erreur de connexion", { id: tid }); }
   };
 
-  // Logique pour séparer le nom en deux lignes si trop long (> 15 chars)
   const getFormattedName = () => {
     const name = user?.penName || "Plume";
     if (name.length > 15 && name.includes(" ")) {
@@ -113,6 +120,8 @@ export default function AuthorDashboard() {
   const [line1, line2] = getFormattedName();
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-teal-600" /></div>;
+
+  const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
@@ -157,9 +166,9 @@ export default function AuthorDashboard() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className={`grid grid-cols-1 ${isStaff ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-8`}>
         {/* MODULE TRANSFERT */}
-        <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6 lg:col-span-1">
+        <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6">
           <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2"><Send size={18}/> Envoyer des Li</h3>
           <div className="space-y-4">
             <input 
@@ -178,23 +187,25 @@ export default function AuthorDashboard() {
           </div>
         </div>
 
-        {/* STATS RAPIDES */}
-        <div className="bg-teal-50 p-8 rounded-[3rem] border border-teal-100 flex flex-col justify-between lg:col-span-1">
-           <div className="flex justify-between items-start">
-              <TrendingUp className="text-teal-600" size={30} />
-              <span className="text-[10px] font-black bg-white px-3 py-1 rounded-full text-teal-600 uppercase">Valeur : ${(user?.wallet?.balance * 0.0002).toFixed(2)}</span>
-           </div>
-           <div>
-              <p className="text-3xl font-black italic text-slate-900">Vers le retrait</p>
-              <div className="w-full bg-slate-200 h-2 rounded-full mt-4 overflow-hidden">
-                <div className="bg-teal-500 h-full" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }}></div>
-              </div>
-              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Objectif : 25 000 Li</p>
-           </div>
-        </div>
+        {/* STATS RAPIDES - Masquées pour le staff */}
+        {!isStaff && (
+          <div className="bg-teal-50 p-8 rounded-[3rem] border border-teal-100 flex flex-col justify-between">
+             <div className="flex justify-between items-start">
+                <TrendingUp className="text-teal-600" size={30} />
+                <span className="text-[10px] font-black bg-white px-3 py-1 rounded-full text-teal-600 uppercase">Valeur : ${(user?.wallet?.balance * 0.0002).toFixed(2)}</span>
+             </div>
+             <div>
+                <p className="text-3xl font-black italic text-slate-900">Vers le retrait</p>
+                <div className="w-full bg-slate-200 h-2 rounded-full mt-4 overflow-hidden">
+                  <div className="bg-teal-500 h-full" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }}></div>
+                </div>
+                <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Objectif : 25 000 Li</p>
+             </div>
+          </div>
+        )}
 
-        {/* BADGE DE BIENVENUE & PARTAGE - FORMAT 1024x1024 */}
-        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-5 shadow-sm lg:col-span-1">
+        {/* BADGE DE BIENVENUE & PARTAGE */}
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-5 shadow-sm">
           <div className="hidden">
             <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -207,7 +218,6 @@ export default function AuthorDashboard() {
               <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
               <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
               
-              {/* Logique deux lignes */}
               {line2 ? (
                 <>
                   <text x="512" y="520" fontFamily="serif" fontSize="90" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{line1}</text>
