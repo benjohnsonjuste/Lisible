@@ -16,12 +16,19 @@
     "rank": "Novice"
   },
   "wallet": {
-    "balance": 0,
+    "balance": 4000,
     "totalEarned": 0,
     "currency": "Li",
     "isMonetized": false,
     "canWithdraw": false,
     "history": [
+      {
+        "id": "credit-1770143569606",
+        "date": "2026-02-03T18:32:49.606Z",
+        "amount": 4000,
+        "reason": "Achat de Pack Curieux",
+        "type": "purchase"
+      },
       {
         "date": "2026-02-02T14:06:07.550Z",
         "type": "system",
