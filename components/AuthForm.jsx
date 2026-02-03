@@ -27,7 +27,7 @@ export default function AuthForm() {
         body: JSON.stringify({
           type: "anniversaire",
           targetEmail: userData.email,
-          message: `🎂 Joyeux anniversaire ${userData.penName || userData.name} !`,
+          message: `Joyeux anniversaire ${userData.penName || userData.name} !`,
           link: "/account"
         })
       });
@@ -89,7 +89,7 @@ export default function AuthForm() {
       await checkAndNotifyBirthday(userData);
       
       localStorage.setItem("lisible_user", JSON.stringify(userData));
-      toast.success(`Heureux de vous revoir, ${userData.penName || userData.name}`);
+      toast.success(`Heureux de vous voir, ${userData.penName || userData.name}`);
       router.push("/dashboard");
 
     } catch (err) {
@@ -106,8 +106,8 @@ export default function AuthForm() {
           <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={18} />
           <input
             type="text"
-            placeholder="Nom complet ou Pseudo"
-            required
+            placeholder="Nom complet"
+             required
             className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -148,7 +148,7 @@ export default function AuthForm() {
             onClick={() => setMode("forgot")}
             className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors"
           >
-            Secret oublié ?
+            Mot de passe oublié ?
           </button>
         </div>
       )}
@@ -162,7 +162,7 @@ export default function AuthForm() {
           <Loader2 className="animate-spin" size={18} />
         ) : (
           <>
-            {mode === "login" ? "Entrer dans l'Arène" : mode === "register" ? "Créer mon Profil" : "Retrouver l'accès"}
+            {mode === "login" ? "Connecter" : mode === "register" ? "Créer mon compte" : "Retrouver l'accès"}
             <ArrowRight size={16} />
           </>
         )}
@@ -183,7 +183,7 @@ export default function AuthForm() {
             onClick={() => setMode(mode === "login" ? "register" : "login")}
             className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all"
           >
-            {mode === "login" ? "Pas encore de plume ? Créer un compte" : "Déjà membre ? Se connecter"}
+            {mode === "login" ? "Pas encore de compte ? Créer le vôtre" : "Déjà membre ? Se connecter"}
           </button>
         )}
       </div>
