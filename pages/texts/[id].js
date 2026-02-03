@@ -21,7 +21,6 @@ function BadgeConcours() {
 
 // --- COMPOSANT : SCEAU DE CERTIFICATION ---
 function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount }) {
-  // Calcul du temps de lecture : environ 1 seconde par 5 mots (ajustable)
   const waitTime = Math.max(8, Math.floor((wordCount || 50) / 5));
   const [seconds, setSeconds] = useState(waitTime);
   const [isValidated, setIsValidated] = useState(false);
@@ -146,7 +145,6 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
         <MessageCircle size={16} /> Flux des Pensées
       </h3>
 
-      {/* Affichage chronologique des commentaires */}
       <div className="space-y-4 mb-10">
         {comments.length === 0 ? (
           <p className="text-xs text-slate-300 italic uppercase tracking-widest text-center py-4">Soyez le premier à répondre...</p>
@@ -163,7 +161,6 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
         )}
       </div>
 
-      {/* Champ de saisie fixe en bas sur mobile ou flottant */}
       <div className="sticky bottom-6 flex gap-2 bg-white/80 backdrop-blur-xl p-2 rounded-3xl border border-slate-200 shadow-2xl">
         <input 
           value={msg} onChange={e => setMsg(e.target.value)} 
@@ -187,13 +184,20 @@ export default function TextPage() {
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
 
+  const ADMIN_EMAILS = [
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhaïniedarha@gmail.com"
+  ];
+
   const fetchData = useCallback(async (textId) => {
     if (!textId) return;
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        // Décodage UTF-8 robuste
         const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
         setText(content);
         return content;
@@ -245,29 +249,33 @@ export default function TextPage() {
     </div>
   );
 
+  const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
+
   return (
     <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 pb-32 overflow-x-hidden">
-      {/* HEADER : Navigation et Compteurs */}
       <header className="flex justify-between items-center mb-12">
         <button onClick={() => router.back()} className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
           <ArrowLeft size={20} className="text-slate-600" />
         </button>
         <div className="flex gap-2">
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-slate-500 border border-slate-100">
-               <Eye size={14} /> <span className="text-[10px] font-black">{Number(text.views) || 0}</span>
-            </div>
-            {/* Bouton Like Harmonisé */}
-            <button 
-              onClick={handleLike} 
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all active:scale-90 ${
-                localStorage.getItem(`like_${id}`) 
-                ? 'bg-rose-50 border-rose-100 text-rose-500' 
-                : 'bg-slate-50 border-slate-100 text-slate-400'
-              }`}
-            >
-               <Heart size={14} className={localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
-               <span className="text-[10px] font-black">{Number(text.totalLikes || text.likes || 0)}</span>
-            </button>
+            {!isStaffText && (
+              <>
+                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-slate-500 border border-slate-100">
+                   <Eye size={14} /> <span className="text-[10px] font-black">{Number(text.views) || 0}</span>
+                </div>
+                <button 
+                  onClick={handleLike} 
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all active:scale-90 ${
+                    localStorage.getItem(`like_${id}`) 
+                    ? 'bg-rose-50 border-rose-100 text-rose-500' 
+                    : 'bg-slate-50 border-slate-100 text-slate-400'
+                  }`}
+                >
+                   <Heart size={14} className={localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
+                   <span className="text-[10px] font-black">{Number(text.totalLikes || text.likes || 0)}</span>
+                </button>
+              </>
+            )}
             <button 
               onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} 
               className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200 active:scale-95 transition-all"
@@ -277,7 +285,6 @@ export default function TextPage() {
         </div>
       </header>
 
-      {/* ARTICLE : Contenu du texte */}
       <article className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
         {(text.isConcours === true || text.isConcours === "true") && <BadgeConcours />}
         <h1 className="text-5xl sm:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9] text-slate-900">
@@ -288,27 +295,25 @@ export default function TextPage() {
             {text.isConcours ? `Candidat : ${text.concurrentId || 'Poète'}` : `Par ${text.authorName || 'Anonyme'}`}
         </p>
         
-        {/* Corps du texte - Police Serif pour le confort de lecture */}
         <div className="prose-xl font-serif text-slate-800 leading-relaxed mb-24 whitespace-pre-wrap select-none sm:select-text">
           {text.content}
         </div>
       </article>
 
-      {/* PUBLICITÉ INTEGRÉE */}
       <div className="my-12">
         <InTextAd />
       </div>
 
-      {/* SECTION CERTIFICATION */}
-      <SceauCertification 
-        wordCount={text.content?.length || 100} 
-        fileName={id} 
-        userEmail={user?.email} 
-        onValidated={() => fetchData(id)} 
-        certifiedCount={text.totalCertified || 0}
-      />
+      {!isStaffText && (
+        <SceauCertification 
+          wordCount={text.content?.length || 100} 
+          fileName={id} 
+          userEmail={user?.email} 
+          onValidated={() => fetchData(id)} 
+          certifiedCount={text.totalCertified || 0}
+        />
+      )}
 
-      {/* SECTION COMMENTAIRES */}
       <CommentSection 
         textId={id} 
         comments={text.comments || []} 
