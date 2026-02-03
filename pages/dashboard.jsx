@@ -228,8 +228,8 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="space-y-1">
-            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Lisible HQ</h3>
-            <p className="text-[9px] text-slate-400 font-bold uppercase italic">Format 1024x1024 Certifié</p>
+            <h3 className="font-black text-slate-900 uppercase text-xs tracking-[0.2em]">Badge Lisible</h3>
+            <p className="text-[9px] text-slate-400 font-bold uppercase italic">Compte Officiel</p>
             <div className="flex flex-wrap justify-center gap-2 mt-2">
                <button onClick={() => shareOnSocial('whatsapp')} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all">
                   <MessageCircle size={16} />
