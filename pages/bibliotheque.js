@@ -36,7 +36,8 @@ export default function Bibliotheque() {
   const handleShare = async (e, item) => {
     e.preventDefault(); 
     e.stopPropagation();
-    const url = `${window.location.origin}/text/${item.id}`;
+    // Correction du chemin de partage : /texts/ au lieu de /text/
+    const url = `${window.location.origin}/texts/${item.id}`;
     try {
       if (navigator.share) { 
         await navigator.share({ title: item.title, url }); 
@@ -86,7 +87,8 @@ export default function Bibliotheque() {
           const totalLikes = Number(item.totalLikes || item.likes) || 0;
 
           return (
-            <Link href={`/text/${item.id}`} key={item.id} className="group flex">
+            // Correction du lien : /texts/ au lieu de /text/
+            <Link href={`/texts/${item.id}`} key={item.id} className="group flex">
               <div className={`bg-white rounded-[2.5rem] sm:rounded-[3rem] overflow-hidden border transition-all duration-500 w-full flex flex-col relative ${
                 isConcours 
                   ? 'border-teal-200 shadow-2xl shadow-teal-900/5' 
