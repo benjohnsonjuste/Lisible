@@ -20,7 +20,8 @@ export default function UsersPage() {
     "robergeaurodley97@gmail.com",
     "jb7management@gmail.com",
     "woolsleypierre01@gmail.com",
-    "jeanpierreborlhaïniedarha@gmail.com"
+    "jeanpierreborlhaïniedarha@gmail.com",
+    "cmo.lablitteraire7@gmail.com" // Ajouté ici pour masquer les statistiques
   ];
 
   useEffect(() => {
@@ -52,14 +53,15 @@ export default function UsersPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          followerEmail: currentUser.email,
+          followerEmail: currentUser.email, // Correction du payload pour l'API
           targetEmail: targetEmail
         })
       });
 
-      if (!res.ok) throw new Error();
-      
       const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || "Erreur");
+      
       toast.success(data.isSubscribed ? "Abonnement réussi" : "Désabonnement réussi");
       loadUsers(); 
     } catch (err) {
@@ -194,6 +196,7 @@ export default function UsersPage() {
                     {a.penName || "Plume"}
                   </h2>
                   
+                  {/* Les statistiques ne s'affichent pas si isStaff est true */}
                   {!isStaff && (
                     <div className="flex flex-wrap justify-center sm:justify-start gap-3">
                       <div className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase">
