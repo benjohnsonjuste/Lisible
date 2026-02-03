@@ -9,7 +9,6 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
       const textData = req.body;
-      // Génération d'un ID unique basé sur le titre et le timestamp
       const slug = textData.title
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "-")
@@ -31,6 +30,41 @@ export default async function handler(req, res) {
 
       if (!response.ok) throw new Error("Erreur lors de l'écriture sur GitHub");
 
+      // --- LOGIQUE DE NOTIFICATION DES ABONNÉS ---
+      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const authorIdentifier = textData.authorEmail.replace(/[.@]/g, '_');
+      const authorProfilePath = `data/users/${authorIdentifier}.json`;
+
+      try {
+        const userRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${authorProfilePath}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (userRes.ok) {
+          const userDataFile = await userRes.json();
+          const userData = JSON.parse(Buffer.from(userDataFile.content, "base64").toString("utf-8"));
+          
+          if (userData.subscribers && Array.isArray(userData.subscribers)) {
+            // Envoyer une notification à chaque abonné
+            const notifPromises = userData.subscribers.map(sub => 
+              fetch(`${origin}/api/create-notif`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  targetEmail: sub.email,
+                  type: "new_publication",
+                  message: `${textData.authorPenName || "Une plume que vous suivez"} a publié : "${textData.title}"`,
+                  link: `/texte/${id}`
+                })
+              }).catch(e => console.error(`Notif failed for ${sub.email}`, e))
+            );
+            await Promise.all(notifPromises);
+          }
+        }
+      } catch (notifErr) {
+        console.warn("Échec de l'envoi des notifications aux abonnés:", notifErr);
+      }
+
       return res.status(200).json({ success: true, id });
     } catch (error) {
       console.error("POST Error:", error);
@@ -38,7 +72,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // --- LOGIQUE PATCH : MISE À JOUR (EXISTANTE) ---
+  // --- LOGIQUE PATCH : MISE À JOUR ---
   if (req.method === "PATCH") {
     const { id, action, payload } = req.body;
     if (!id) return res.status(400).json({ error: "ID du texte manquant" });
@@ -58,10 +92,8 @@ export default async function handler(req, res) {
       const origin = req.headers.origin || `https://${req.headers.host}`;
 
       if (action === "certify") {
-        const readerEmail = payload?.readerEmail;
         textData.totalCertified = (textData.totalCertified || 0) + 1;
 
-        // Créditer l'AUTEUR
         await fetch(`${origin}/api/wallet`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -74,7 +106,6 @@ export default async function handler(req, res) {
           })
         });
 
-        // Notifier l'auteur
         await fetch(`${origin}/api/create-notif`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
