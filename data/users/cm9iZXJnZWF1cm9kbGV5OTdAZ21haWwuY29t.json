@@ -1,0 +1,41 @@
+{
+  "name": "Rodley Robergeau Fontaine",
+  "penName": "Rodley Robergeau Fontaine",
+  "email": "robergeaurodley97@gmail.com",
+  "password": "b7deef781baa8560e5ae55ca17ad96f84002775690c2a7a874f6517a95d6585c",
+  "birthday": "",
+  "joinedAt": "2026-02-03T12:44:46.611Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-03T12:44:46.611Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": false,
+      "isMecene": false
+    }
+  }
+}
