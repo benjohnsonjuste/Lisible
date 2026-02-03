@@ -1,8 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebaseConfig"; // fonctionne toujours
 
 const AuthContext = createContext({
   user: null,
@@ -16,22 +14,36 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    try {
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        setUser(firebaseUser);
+    const loadUser = () => {
+      try {
+        // On récupère l'utilisateur depuis le localStorage (système Lisible)
+        const savedUser = localStorage.getItem("lisible_user");
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
+      } catch (err) {
+        console.error("Erreur AuthContext:", err);
+        setError("Impossible de charger la session");
+      } finally {
         setLoading(false);
-      });
+      }
+    };
 
-      return () => unsubscribe();
-    } catch (err) {
-      setError(err.message);
-      setLoading(false);
-    }
+    loadUser();
+
+    // Écouter les changements de session (connexion/déconnexion)
+    const handleStorageChange = () => {
+      const updatedUser = localStorage.getItem("lisible_user");
+      setUser(updatedUser ? JSON.parse(updatedUser) : null);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, error }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
