@@ -36,6 +36,14 @@ export default function AccountPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingPass, setIsUpdatingPass] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const ADMIN_EMAILS = [
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhaïniedarha@gmail.com"
+  ];
   
   // --- ÉTAT DU FORMULAIRE ---
   const [formData, setFormData] = useState({
@@ -171,6 +179,8 @@ export default function AccountPage() {
     </div>
   );
 
+  const isStaff = ADMIN_EMAILS.includes(user.email?.toLowerCase().trim());
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 pb-20 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row gap-6 items-center justify-between bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
@@ -190,12 +200,14 @@ export default function AccountPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <AccountStatCard label="Lectures Li" value={user?.stats?.totalCertified || 0} icon={<Sparkles />} color="text-teal-600" />
-        <AccountStatCard label="Manuscrits" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-blue-600" />
-        <AccountStatCard label="Influence" value={user?.stats?.subscribers || 0} icon={<Star />} color="text-amber-500" />
-        <AccountStatCard label="Visibilité" value={user?.stats?.totalViews || 0} icon={<TrendingUp />} color="text-slate-900" />
-      </div>
+      {!isStaff && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <AccountStatCard label="Lectures Li" value={user?.stats?.totalCertified || 0} icon={<Sparkles />} color="text-teal-600" />
+          <AccountStatCard label="Manuscrits" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-blue-600" />
+          <AccountStatCard label="Influence" value={user?.stats?.subscribers || 0} icon={<Star />} color="text-amber-500" />
+          <AccountStatCard label="Visibilité" value={user?.stats?.totalViews || 0} icon={<TrendingUp />} color="text-slate-900" />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 space-y-8">
