@@ -1,0 +1,41 @@
+{
+  "name": "Scritchmonov Jean Baptiste",
+  "penName": "Scritchmonov Jean Baptiste",
+  "email": "scritchmonov2023@gmail.com",
+  "password": "708626132d28979f613c8268d3215421cd040618e1727050443155c91a4ff619",
+  "birthday": "",
+  "joinedAt": "2026-02-03T01:08:27.053Z",
+  "profilePic": "",
+  "role": "author",
+  "stats": {
+    "totalTexts": 0,
+    "totalViews": 0,
+    "subscribers": 0,
+    "subscribersList": [],
+    "totalCertified": 0,
+    "rank": "Novice"
+  },
+  "wallet": {
+    "balance": 0,
+    "totalEarned": 0,
+    "currency": "Li",
+    "isMonetized": false,
+    "canWithdraw": false,
+    "history": [
+      {
+        "date": "2026-02-03T01:08:27.053Z",
+        "type": "system",
+        "amount": 0,
+        "label": "Initialisation du compte"
+      }
+    ]
+  },
+  "prestige": {
+    "badges": [],
+    "achievements": {
+      "hasPublished": false,
+      "isPartner": false,
+      "isMecene": false
+    }
+  }
+}
