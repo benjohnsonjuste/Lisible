@@ -4,10 +4,11 @@ import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Loader2, Share2, Eye, Heart, Trophy, 
-  ShieldCheck, Sparkles, Send, MessageCircle 
+  ShieldCheck, Sparkles, Send, MessageCircle, AlertTriangle 
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
+import ReportModal from "@/components/ReportModal"; // Import de la nouvelle modale
 
 // --- COMPOSANT : BADGE CONCOURS ---
 function BadgeConcours() {
@@ -52,20 +53,21 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
     const t = toast.loading("Protocole de scellage...");
     
     try {
-      const res = await fetch('/api/texts', {
-        method: 'PATCH',
+      // Utilisation de l'API sécurisée certify
+      const res = await fetch('/api/certify', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          id: fileName, 
-          action: "certify", 
-          payload: { readerEmail: userEmail || "anonymous@lisible.biz" } 
+          textId: fileName, 
+          readerEmail: userEmail || "anonymous@lisible.biz",
+          authorEmail: "" // Sera récupéré côté serveur ou passé ici
         })
       });
 
       if (res.ok) {
         localStorage.setItem(`cert_${fileName}`, "true");
         setIsValidated(true);
-        toast.success("Sceau apposé ! +1 Li envoyé.", { id: t });
+        toast.success("Sceau apposé ! Certification réussie.", { id: t });
         onValidated(); 
       }
     } catch (e) { 
@@ -183,7 +185,8 @@ export default function TextPage() {
   const [text, setText] = useState(null);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
-  const viewLogged = useRef(false); // Utilisation d'un Ref pour empêcher le double-trigger strict en React 18+
+  const [isReportOpen, setIsReportOpen] = useState(false); // État pour la modale
+  const viewLogged = useRef(false);
 
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com",
@@ -232,27 +235,25 @@ export default function TextPage() {
       const stored = localStorage.getItem("lisible_user");
       if (stored) setUser(JSON.parse(stored));
       
-      // Chargement initial du texte
       fetchData(id).then(loaded => {
         if (!loaded) return;
 
-        // LOGIQUE DES VUES UNIQUES ET AUTOMATIQUES
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
-          viewLogged.current = true; // Marque comme traité pour cette session
+          viewLogged.current = true;
           
-          fetch('/api/texts', {
-            method: 'PATCH',
+          // Appel à la nouvelle API de tracking sécurisée
+          fetch('/api/track-view', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, action: "view" })
+            body: JSON.stringify({ textId: id })
           }).then(res => {
             if (res.ok) {
               localStorage.setItem(viewKey, "true");
-              // Mise à jour immédiate des stats affichées sans recharger toute la page
               setText(prev => ({ ...prev, views: (Number(prev.views) || 0) + 1 }));
             }
-          }).catch(err => {
-            viewLogged.current = false; // Réessaye au prochain rendu si échec réseau
+          }).catch(() => {
+            viewLogged.current = false;
           });
         }
       });
@@ -315,6 +316,15 @@ export default function TextPage() {
         <div className="prose-xl font-serif text-slate-800 leading-relaxed mb-24 whitespace-pre-wrap select-none sm:select-text">
           {text.content}
         </div>
+
+        {/* Bouton de signalement intégré en fin d'article */}
+        <button 
+          onClick={() => setIsReportOpen(true)}
+          className="flex items-center gap-2 text-slate-300 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em] mt-10 group"
+        >
+          <AlertTriangle size={14} className="group-hover:animate-bounce" />
+          Signaler un problème avec ce texte
+        </button>
       </article>
 
       <div className="my-12">
@@ -341,6 +351,15 @@ export default function TextPage() {
       <footer className="mt-20 text-center opacity-20">
         <p className="text-[8px] font-black uppercase tracking-[0.5em]">Lisible.biz • Expérience de lecture certifiée</p>
       </footer>
+
+      {/* Rendu de la modale */}
+      <ReportModal 
+        isOpen={isReportOpen} 
+        onClose={() => setIsReportOpen(false)}
+        textId={id}
+        textTitle={text.title}
+        userEmail={user?.email}
+      />
     </div>
   );
 }
