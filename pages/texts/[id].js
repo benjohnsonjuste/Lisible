@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { 
@@ -183,6 +183,7 @@ export default function TextPage() {
   const [text, setText] = useState(null);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
+  const viewLogged = useRef(false); // Utilisation d'un Ref pour empêcher le double-trigger strict en React 18+
 
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com",
@@ -231,18 +232,27 @@ export default function TextPage() {
       const stored = localStorage.getItem("lisible_user");
       if (stored) setUser(JSON.parse(stored));
       
+      // Chargement initial du texte
       fetchData(id).then(loaded => {
-        // Logique d'unicité pour les vues par appareil
+        if (!loaded) return;
+
+        // LOGIQUE DES VUES UNIQUES ET AUTOMATIQUES
         const viewKey = `view_${id}`;
-        if (loaded && !localStorage.getItem(viewKey)) {
+        if (!localStorage.getItem(viewKey) && !viewLogged.current) {
+          viewLogged.current = true; // Marque comme traité pour cette session
+          
           fetch('/api/texts', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, action: "view" })
-          }).then(() => {
-            localStorage.setItem(viewKey, "true");
-            // Optionnel : rafraîchir pour voir la vue s'incrémenter
-            fetchData(id);
+          }).then(res => {
+            if (res.ok) {
+              localStorage.setItem(viewKey, "true");
+              // Mise à jour immédiate des stats affichées sans recharger toute la page
+              setText(prev => ({ ...prev, views: (Number(prev.views) || 0) + 1 }));
+            }
+          }).catch(err => {
+            viewLogged.current = false; // Réessaye au prochain rendu si échec réseau
           });
         }
       });
