@@ -5,7 +5,7 @@ import {
   Loader2, Coins, ShieldCheck, Send, LogOut, TrendingUp, 
   ArrowUpRight, FileText, UserCircle, Download, Award, 
   Instagram, Twitter, Facebook, MessageCircle 
-} from "lucide-center";
+} from "lucide-react"; // Corrigé ici
 import { toast } from "sonner";
 import { formatLi } from "@/lib/utils";
 
