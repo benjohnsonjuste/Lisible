@@ -40,6 +40,7 @@ export default function AccountPage() {
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com",
     "robergeaurodley97@gmail.com",
+    "cmo.lablitteraire7@gmail.com",
     "jb7management@gmail.com",
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhaïniedarha@gmail.com"
@@ -209,8 +210,8 @@ export default function AccountPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <section className="lg:col-span-2 space-y-8">
+      <div className={`grid grid-cols-1 ${isStaff ? "" : "lg:grid-cols-3"} gap-8`}>
+        <section className={`${isStaff ? "lg:col-span-3" : "lg:col-span-2"} space-y-8`}>
           
           {/* SECTION : ÉDITION PROFIL */}
           <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-50 space-y-10">
@@ -234,7 +235,9 @@ export default function AccountPage() {
                </div>
                <div className="text-center sm:text-left">
                   <p className="text-3xl font-black text-slate-900 italic tracking-tighter mb-1">{formData.penName || "Auteur"}</p>
-                  <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">Membre Certifié Lisible</span>
+                  <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">
+                    {isStaff ? "Administrateur Lisible" : "Membre Certifié Lisible"}
+                  </span>
                </div>
             </div>
             
@@ -245,29 +248,34 @@ export default function AccountPage() {
 
             <hr className="border-slate-100" />
 
-            <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 mt-10">
-               <CreditCard size={16} /> Configuration des Retraits
-            </h2>
+            {/* SECTION RETRAIT MASQUÉE POUR LE STAFF */}
+            {!isStaff && (
+              <>
+                <h2 className="text-[10px] font-black italic text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2 mt-10">
+                   <CreditCard size={16} /> Configuration des Retraits
+                </h2>
 
-            <div className="grid grid-cols-2 gap-4">
-               <button onClick={() => setFormData({...formData, paymentMethod: "PayPal"})} className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${formData.paymentMethod === "PayPal" ? "border-teal-500 bg-teal-50" : "border-slate-50 bg-slate-50 opacity-40"}`}>
-                  <Mail className="text-blue-600" />
-                  <span className="text-[10px] font-black uppercase">PayPal</span>
-               </button>
-               <button onClick={() => setFormData({...formData, paymentMethod: "Western Union"})} className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${formData.paymentMethod === "Western Union" ? "border-teal-500 bg-teal-50" : "border-slate-50 bg-slate-50 opacity-40"}`}>
-                  <Landmark className="text-amber-600" />
-                  <span className="text-[10px] font-black uppercase tracking-tighter">W. Union / MG</span>
-               </button>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                   <button onClick={() => setFormData({...formData, paymentMethod: "PayPal"})} className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${formData.paymentMethod === "PayPal" ? "border-teal-500 bg-teal-50" : "border-slate-50 bg-slate-50 opacity-40"}`}>
+                      <Mail className="text-blue-600" />
+                      <span className="text-[10px] font-black uppercase">PayPal</span>
+                   </button>
+                   <button onClick={() => setFormData({...formData, paymentMethod: "Western Union"})} className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${formData.paymentMethod === "Western Union" ? "border-teal-500 bg-teal-50" : "border-slate-50 bg-slate-50 opacity-40"}`}>
+                      <Landmark className="text-amber-600" />
+                      <span className="text-[10px] font-black uppercase tracking-tighter">W. Union / MG</span>
+                   </button>
+                </div>
 
-            {formData.paymentMethod === "PayPal" ? (
-               <InputBlock label="Email PayPal" value={formData.paypalEmail} onChange={v => setFormData({...formData, paypalEmail: v})} />
-            ) : (
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <InputBlock label="Prénom" value={formData.wuFirstName} onChange={v => setFormData({...formData, wuFirstName: v})} />
-                  <InputBlock label="Nom" value={formData.wuLastName} onChange={v => setFormData({...formData, wuLastName: v})} />
-                  <div className="sm:col-span-2"><InputBlock label="Pays" value={formData.wuCountry} onChange={v => setFormData({...formData, wuCountry: v})} /></div>
-               </div>
+                {formData.paymentMethod === "PayPal" ? (
+                   <InputBlock label="Email PayPal" value={formData.paypalEmail} onChange={v => setFormData({...formData, paypalEmail: v})} />
+                ) : (
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <InputBlock label="Prénom" value={formData.wuFirstName} onChange={v => setFormData({...formData, wuFirstName: v})} />
+                      <InputBlock label="Nom" value={formData.wuLastName} onChange={v => setFormData({...formData, wuLastName: v})} />
+                      <div className="sm:col-span-2"><InputBlock label="Pays" value={formData.wuCountry} onChange={v => setFormData({...formData, wuCountry: v})} /></div>
+                   </div>
+                )}
+              </>
             )}
 
             <button disabled={isSaving} onClick={saveProfile} className="w-full py-6 bg-slate-950 text-white rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-teal-600 transition-all flex justify-center items-center gap-3 shadow-xl">
@@ -302,31 +310,34 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <aside className="space-y-6">
-          <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24 border border-white/5">
-            <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-10">
-              <CreditCard size={24} /> Trésorerie
-            </h2>
-            <div className="space-y-8">
-              <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
-                 <div className="flex justify-between items-end mb-4">
-                    <div>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Solde Actuel</p>
-                      <p className="text-2xl font-black italic">{balance.toLocaleString()} Li</p>
-                      <p className="text-[10px] text-teal-400 font-black mt-1 uppercase tracking-widest">${(balance * 0.0002).toFixed(2)} USD</p>
-                    </div>
-                    <Wallet className="text-teal-500 opacity-20" size={32} />
-                 </div>
-                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400" style={{ width: `${Math.min((balance / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} />
-                 </div>
+        {/* SECTION TRÉSORERIE MASQUÉE POUR LE STAFF */}
+        {!isStaff && (
+          <aside className="space-y-6">
+            <section className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24 border border-white/5">
+              <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-10">
+                <CreditCard size={24} /> Trésorerie
+              </h2>
+              <div className="space-y-8">
+                <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
+                   <div className="flex justify-between items-end mb-4">
+                      <div>
+                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Solde Actuel</p>
+                        <p className="text-2xl font-black italic">{balance.toLocaleString()} Li</p>
+                        <p className="text-[10px] text-teal-400 font-black mt-1 uppercase tracking-widest">${(balance * 0.0002).toFixed(2)} USD</p>
+                      </div>
+                      <Wallet className="text-teal-500 opacity-20" size={32} />
+                   </div>
+                   <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400" style={{ width: `${Math.min((balance / WITHDRAWAL_THRESHOLD) * 100, 100)}%` }} />
+                   </div>
+                </div>
+                <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${canWithdraw ? "bg-teal-500 text-slate-950" : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"}`}>
+                  Aller au retrait
+                </button>
               </div>
-              <button onClick={handleWithdraw} disabled={!canWithdraw} className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${canWithdraw ? "bg-teal-500 text-slate-950" : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-50"}`}>
-                Aller au retrait
-              </button>
-            </div>
-          </section>
-        </aside>
+            </section>
+          </aside>
+        )}
       </div>
     </div>
   );
