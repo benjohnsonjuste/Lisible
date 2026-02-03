@@ -1,64 +1,43 @@
-import { Buffer } from "buffer";
+// pages/api/withdraw.js
+import { getFile, updateFile, getEmailId } from "@/lib/github";
 import nodemailer from "nodemailer";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Méthode non autorisée" });
+  if (req.method !== "POST") return res.status(405).end();
 
   const { email, amountLi } = req.body;
-  const token = process.env.GITHUB_TOKEN;
-  
-  const LI_VALUATION = 0.0002; // 1000 Li = 0.20$
-  const MIN_WITHDRAW_LI = 25000; // Seuil 5$
-
-  const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
-  const path = `data/users/${fileName}.json`;
+  const LI_VALUATION = 0.0002;
+  const MIN_WITHDRAW_LI = 25000;
 
   try {
-    const getFile = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store'
-    });
+    const path = `data/users/${getEmailId(email)}.json`;
+    const userRes = await getFile(path);
+    if (!userRes) return res.status(404).json({ error: "Profil introuvable" });
 
-    if (!getFile.ok) return res.status(404).json({ error: "Profil introuvable" });
-
-    const fileInfo = await getFile.json();
-    let user = JSON.parse(Buffer.from(fileInfo.content, "base64").toString("utf-8"));
-
-    // Vérifications de sécurité
+    let user = userRes.content;
     const currentBalance = user.wallet?.balance || 0;
-    const subscribersCount = user.stats?.subscribers || 0;
+    const subscribersCount = user.subscribers?.length || 0; // Corrigé : utilise la longueur du tableau
     const amountUSD = (amountLi * LI_VALUATION).toFixed(2);
 
     if (subscribersCount < 250) {
-       return res.status(400).json({ error: "Monétisation désactivée (minimum 250 abonnés)." });
+       return res.status(400).json({ error: "Minimum 250 abonnés requis." });
     }
 
     if (currentBalance < amountLi || amountLi < MIN_WITHDRAW_LI) {
-       return res.status(400).json({ error: "Solde insuffisant ou inférieur au seuil de 5$." });
+       return res.status(400).json({ error: "Solde insuffisant ou seuil non atteint." });
     }
 
-    // Débit du portefeuille
+    // Débit
     user.wallet.balance -= amountLi;
     user.wallet.history.unshift({
       id: `withdraw-${Date.now()}`,
       date: new Date().toISOString(),
       amount: -amountLi,
-      reason: `Demande de retrait de ${amountUSD}$`,
+      reason: `Retrait : ${amountUSD}$`,
       status: "pending"
     });
 
-    // Mise à jour GitHub
-    await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${path}`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: `💸 Demande de retrait : ${user.penName} (${amountUSD}$)`,
-        content: Buffer.from(JSON.stringify(user, null, 2)).toString("base64"),
-        sha: fileInfo.sha
-      }),
-    });
-
-    // Envoi de l'email au staff
+    await updateFile(path, user, userRes.sha, `💸 Demande retrait ${email}`);
     await sendPaymentOrderEmail(user, amountUSD, amountLi);
 
     return res.status(200).json({ success: true, newBalance: user.wallet.balance });
@@ -82,18 +61,12 @@ async function sendPaymentOrderEmail(user, amountUSD, amountLi) {
     from: '"Lisible Finance" <finance@lisible.biz>',
     to: 'cmo.lablitteraire7@gmail.com',
     subject: `🚨 ORDRE DE PAIEMENT : ${user.penName} (${amountUSD}$)`,
-    html: `
-      <div style="font-family: sans-serif; border: 2px solid #14b8a6; padding: 25px; border-radius: 20px;">
-        <h2 style="color: #14b8a6;">Nouvelle demande de retrait</h2>
-        <p>L'auteur <b>${user.penName}</b> (${user.email}) vient de valider un retrait.</p>
-        <div style="background: #f1f5f9; padding: 15px; border-radius: 10px; margin: 20px 0;">
-          <p><b>Montant à verser :</b> ${amountUSD} USD</p>
-          <p><b>Li débités :</b> ${amountLi.toLocaleString()}</p>
-          <p><b>Méthode choisie :</b> ${method}</p>
-          <p><b>Infos paiement :</b> ${details}</p>
-        </div>
-        <p style="font-size: 11px; color: #64748b;">Veuillez traiter ce paiement sous 48h ouvrées.</p>
-      </div>
-    `
+    html: `<div style="padding:20px; border:2px solid #14b8a6; border-radius:15px;">
+             <h2>Demande de retrait</h2>
+             <p>Auteur : <b>${user.penName}</b></p>
+             <p>Montant : <b>${amountUSD} USD</b> (${amountLi} Li)</p>
+             <p>Méthode : ${method}</p>
+             <p>Détails : ${details}</p>
+           </div>`
   });
 }
