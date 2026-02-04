@@ -1,5 +1,8 @@
 // pages/api/track-view.js
-import { getFile, updateFile } from "@/lib/github";
+import { Redis } from "@upstash/redis";
+
+// Initialisation automatique via les variables d'environnement Vercel
+const redis = Redis.fromEnv();
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -8,21 +11,20 @@ export default async function handler(req, res) {
   if (!textId) return res.status(400).json({ error: "textId requis" });
 
   try {
-    const path = `data/publications/${textId}.json`;
-    const textRes = await getFile(path);
+    // INCRÉMENTATION INSTANTANÉE
+    // On utilise une clé structurée "views:ID_DU_TEXTE"
+    const newViewCount = await redis.incr(`views:${textId}`);
 
-    if (!textRes) return res.status(404).json({ error: "Publication introuvable" });
-    
-    let text = textRes.content;
+    // Optionnel : On peut aussi incrémenter un compteur global pour tes stats d'admin
+    await redis.incr("stats:total_views_global");
 
-    // Logique simple : on incrémente la vue
-    // (Note: Pour plus de sécurité, on pourrait vérifier l'IP ou un cookie ici)
-    text.views = (text.views || 0) + 1;
-
-    await updateFile(path, text, textRes.sha, `👁️ Vue incrémentée : ${textId}`);
-
-    return res.status(200).json({ success: true, views: text.views });
+    return res.status(200).json({ 
+      success: true, 
+      views: newViewCount,
+      source: "cache_redis_ultra_fast"
+    });
   } catch (e) {
-    return res.status(500).json({ error: "Erreur lors du tracking" });
+    console.error("Redis Tracking Error:", e);
+    return res.status(500).json({ error: "Erreur lors du tracking via Redis" });
   }
 }
