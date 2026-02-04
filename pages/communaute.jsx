@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
+import Image from "next/image"; // Importation ajoutée
 import { 
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
@@ -34,7 +35,6 @@ export default function UsersPage({ initialAuthors = [] }) {
       allUsers.forEach(user => {
         const emailKey = user.email?.toLowerCase().trim();
         if (emailKey && !uniqueUsersMap.has(emailKey)) {
-          // On ne garde que l'essentiel pour la performance
           uniqueUsersMap.set(emailKey, {
             email: user.email,
             penName: user.penName || user.name,
@@ -126,8 +126,15 @@ export default function UsersPage({ initialAuthors = [] }) {
               <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8 mt-6 text-center sm:text-left">
                 <div className="relative flex-shrink-0">
                   <div className="aspect-square p-1 bg-gradient-to-tr from-teal-400 to-amber-400 rounded-full">
-                    <div className="p-1 bg-white rounded-full h-full w-full overflow-hidden">
-                      <img src={a.profilePic || `https://api.dicebear.com/7.x/shapes/svg?seed=${a.email}`} className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover" alt={a.penName} />
+                    <div className="p-1 bg-white rounded-full h-full w-full overflow-hidden relative">
+                      {/* Utilisation de Next.js Image */}
+                      <Image 
+                        src={a.profilePic || `https://api.dicebear.com/7.x/shapes/svg?seed=${a.email}`} 
+                        alt={a.penName || "Avatar"} 
+                        width={112} 
+                        height={112} 
+                        className="w-24 h-24 md:w-28 md:h-28 rounded-full object-cover" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -179,7 +186,6 @@ export async function getStaticProps() {
       allUsers.forEach(user => {
         const emailKey = user.email?.toLowerCase().trim();
         if (emailKey && !uniqueUsersMap.has(emailKey)) {
-          // OPTIMISATION : On ne renvoie que les champs strictement nécessaires
           uniqueUsersMap.set(emailKey, {
             email: user.email,
             penName: user.penName || user.name || "Plume",
@@ -187,7 +193,6 @@ export async function getStaticProps() {
             subscribers: user.subscribers || [],
             wallet: { 
               balance: user.wallet?.balance || 0,
-              // On garde une version simplifiée de l'historique pour le badge concours
               history: (user.wallet?.history || []).map(h => ({ isConcours: h.isConcours === true }))
             }
           });
