@@ -17,17 +17,12 @@ export default function BattlePoetique({ initialTexts = [] }) {
     else setIsRefreshing(true);
 
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
-      const files = await res.json();
+      // On utilise désormais l'index global pour plus de rapidité
+      const res = await fetch(`/api/texts?limit=1000`); // On récupère une large part de l'index
+      const json = await res.json();
       
-      if (Array.isArray(files)) {
-        const promises = files
-          .filter(f => f.name.endsWith('.json'))
-          .map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
-        
-        const data = await Promise.all(promises);
-        
-        const filtered = data
+      if (json.data && Array.isArray(json.data)) {
+        const filtered = json.data
           .filter(item => item.isConcours === true || item.isConcours === "true")
           .sort((a, b) => {
             const likesA = a.totalLikes || 0;
@@ -50,7 +45,6 @@ export default function BattlePoetique({ initialTexts = [] }) {
   }, [texts.length]);
 
   useEffect(() => {
-    // Si on a déjà des textes via ISR, on ne montre pas le loader initial
     if (initialTexts.length === 0) {
       loadConcoursTexts();
     }
@@ -140,7 +134,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
                   )}
 
                   <div className="h-64 bg-slate-100 relative overflow-hidden">
-                    {item.imageBase64 ? (
+                    {item.imageBase64 && item.imageBase64 !== "exists" ? (
                       <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                     ) : (
                       <div className={`w-full h-full flex items-center justify-center ${
@@ -173,7 +167,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
                     </h2>
                     
                     <p className="text-slate-500 line-clamp-3 font-serif italic mb-8 flex-grow leading-relaxed">
-                      {item.excerpt || item.content?.replace(/<[^>]*>/g, '')}
+                      {item.content?.replace(/<[^>]*>/g, '')}
                     </p>
                     
                     <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
@@ -234,19 +228,14 @@ export default function BattlePoetique({ initialTexts = [] }) {
   );
 }
 
-// LOGIQUE SERVEUR : ISR
 export async function getStaticProps() {
   try {
-    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications`);
-    const files = await res.json();
-    
-    if (Array.isArray(files)) {
-      const promises = files
-        .filter(f => f.name.endsWith('.json'))
-        .map(f => fetch(f.download_url).then(r => r.json()));
+    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`);
+    if (res.ok) {
+      const file = await res.json();
+      const allTexts = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
       
-      const data = await Promise.all(promises);
-      const filtered = data
+      const filtered = allTexts
         .filter(item => item.isConcours === true || item.isConcours === "true")
         .sort((a, b) => {
           const likesA = a.totalLikes || 0;
