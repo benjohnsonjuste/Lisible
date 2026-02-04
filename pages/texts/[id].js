@@ -201,7 +201,6 @@ export default function TextPage() {
   const fetchData = useCallback(async (textId, skipCache = false) => {
     if (!textId) return;
 
-    // 1. Tenter de charger depuis le cache local pour un affichage instantané
     const cacheKey = `cache_text_${textId}`;
     if (!skipCache) {
       const cached = localStorage.getItem(cacheKey);
@@ -215,8 +214,6 @@ export default function TextPage() {
       if (res.ok) {
         const data = await res.json();
         const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-        
-        // 2. Mettre à jour le cache et l'état
         localStorage.setItem(cacheKey, JSON.stringify(content));
         setText(content);
         return content;
@@ -226,13 +223,11 @@ export default function TextPage() {
     }
   }, []);
 
-  // OPTIMISATION : Like Optimiste
   const handleLike = async () => {
     const likeKey = `like_${id}`;
     if (localStorage.getItem(likeKey)) return toast.info("Vous appréciez déjà ce texte.");
     if (isLiking) return;
 
-    // UI Optimiste : On simule le like immédiatement
     const previousLikes = Number(text.totalLikes || text.likes || 0);
     setText(prev => ({ ...prev, totalLikes: previousLikes + 1 }));
     localStorage.setItem(likeKey, "true");
@@ -247,7 +242,6 @@ export default function TextPage() {
       if (!res.ok) throw new Error();
       toast.success("Aimé !");
     } catch (e) { 
-      // Rollback si erreur
       setText(prev => ({ ...prev, totalLikes: previousLikes }));
       localStorage.removeItem(likeKey);
       toast.error("Action impossible."); 
@@ -262,7 +256,7 @@ export default function TextPage() {
       if (stored) setUser(JSON.parse(stored));
       
       fetchData(id).then(loaded => {
-        if (!loaded && !text) return; // Si rien en cache et rien chargé
+        if (!loaded && !text) return;
 
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
@@ -292,16 +286,29 @@ export default function TextPage() {
   );
 
   const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
+  const seoDescription = text.content ? text.content.replace(/<[^>]*>/g, '').substring(0, 155) + "..." : "Découvrez ce manuscrit certifié sur Lisible.";
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-slate-950">
       <Head>
-        <title>{text.title} | Lisible</title>
-        <meta name="description" content={`Découvrez "${text.title}", une oeuvre de ${text.authorName || 'Anonyme'} sur Lisible.`} />
-        <meta property="og:title" content={`${text.title} - Lisible`} />
-        <meta property="og:description" content="Lisez ce manuscrit certifié sur la plateforme Lisible." />
+        {/* SEO DYNAMIQUE AMÉLIORÉ */}
+        <title>{`${text.title} | par ${text.authorName || 'Anonyme'} | Lisible`}</title>
+        <meta name="description" content={seoDescription} />
+        
+        {/* Open Graph / Facebook / WhatsApp */}
         <meta property="og:type" content="article" />
+        <meta property="og:url" content={`https://lisible.biz/texte/${id}`} />
+        <meta property="og:title" content={`${text.title} — Une œuvre de ${text.authorName || 'Anonyme'}`} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:image" content={text.coverImage || "https://lisible.biz/og-card.png"} />
+        <meta property="og:site_name" content="Lisible" />
+
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={text.title} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content={text.coverImage || "https://lisible.biz/og-card.png"} />
+        <link rel="canonical" href={`https://lisible.biz/texte/${id}`} />
       </Head>
 
       <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 pb-32 overflow-x-hidden">
