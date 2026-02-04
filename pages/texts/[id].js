@@ -186,6 +186,7 @@ export default function TextPage() {
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
+  const [liveViews, setLiveViews] = useState(0); // Nouveau : État pour les vues Redis
   const viewLogged = useRef(false);
 
   const ADMIN_EMAILS = [
@@ -197,16 +198,13 @@ export default function TextPage() {
     "jeanpierreborlhaïniedarha@gmail.com"
   ];
 
-  // OPTIMISATION : Système de Cache Local SWR
   const fetchData = useCallback(async (textId, skipCache = false) => {
     if (!textId) return;
 
     const cacheKey = `cache_text_${textId}`;
     if (!skipCache) {
       const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        setText(JSON.parse(cached));
-      }
+      if (cached) setText(JSON.parse(cached));
     }
 
     try {
@@ -258,6 +256,7 @@ export default function TextPage() {
       fetchData(id).then(loaded => {
         if (!loaded && !text) return;
 
+        // TRACKING REDIS (Remplace la méthode GitHub lente)
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
           viewLogged.current = true;
@@ -265,10 +264,11 @@ export default function TextPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ textId: id })
-          }).then(res => {
+          }).then(async (res) => {
             if (res.ok) {
+              const data = await res.json();
               localStorage.setItem(viewKey, "true");
-              setText(prev => ({ ...prev, views: (Number(prev.views) || 0) + 1 }));
+              setLiveViews(data.views); // On met à jour avec le chiffre Redis
             }
           }).catch(() => {
             viewLogged.current = false;
@@ -291,19 +291,14 @@ export default function TextPage() {
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-slate-950">
       <Head>
-        {/* SEO DYNAMIQUE AMÉLIORÉ */}
         <title>{`${text.title} | par ${text.authorName || 'Anonyme'} | Lisible`}</title>
         <meta name="description" content={seoDescription} />
-        
-        {/* Open Graph / Facebook / WhatsApp */}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={`https://lisible.biz/texte/${id}`} />
         <meta property="og:title" content={`${text.title} — Une œuvre de ${text.authorName || 'Anonyme'}`} />
         <meta property="og:description" content={seoDescription} />
         <meta property="og:image" content={text.coverImage || "https://lisible.biz/og-card.png"} />
         <meta property="og:site_name" content="Lisible" />
-
-        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={text.title} />
         <meta name="twitter:description" content={seoDescription} />
@@ -320,7 +315,11 @@ export default function TextPage() {
               {!isStaffText && (
                 <>
                   <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
-                     <Eye size={14} /> <span className="text-[10px] font-black">{Number(text.views) || 0}</span>
+                     <Eye size={14} /> 
+                     <span className="text-[10px] font-black">
+                        {/* On affiche en priorité le compteur Redis, sinon celui du JSON */}
+                        {liveViews || Number(text.views) || 0}
+                     </span>
                   </div>
                   <button 
                     onClick={handleLike} 
