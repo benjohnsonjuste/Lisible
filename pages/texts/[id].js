@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head"; // Ajout pour le SEO
 import { toast } from "sonner";
 import { 
   ArrowLeft, Loader2, Share2, Eye, Heart, Trophy, 
@@ -8,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
-import ReportModal from "@/components/ReportModal"; // Import de la nouvelle modale
+import ReportModal from "@/components/ReportModal";
 
 // --- COMPOSANT : BADGE CONCOURS ---
 function BadgeConcours() {
@@ -53,14 +54,13 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
     const t = toast.loading("Protocole de scellage...");
     
     try {
-      // Utilisation de l'API sécurisée certify
       const res = await fetch('/api/certify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           textId: fileName, 
           readerEmail: userEmail || "anonymous@lisible.biz",
-          authorEmail: "" // Sera récupéré côté serveur ou passé ici
+          authorEmail: "" 
         })
       });
 
@@ -185,7 +185,7 @@ export default function TextPage() {
   const [text, setText] = useState(null);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
-  const [isReportOpen, setIsReportOpen] = useState(false); // État pour la modale
+  const [isReportOpen, setIsReportOpen] = useState(false); 
   const viewLogged = useRef(false);
 
   const ADMIN_EMAILS = [
@@ -241,8 +241,6 @@ export default function TextPage() {
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
           viewLogged.current = true;
-          
-          // Appel à la nouvelle API de tracking sécurisée
           fetch('/api/track-view', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -270,96 +268,106 @@ export default function TextPage() {
   const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
 
   return (
-    <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 pb-32 overflow-x-hidden">
-      <header className="flex justify-between items-center mb-12">
-        <button onClick={() => router.back()} className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
-          <ArrowLeft size={20} className="text-slate-600" />
-        </button>
-        <div className="flex gap-2">
-            {!isStaffText && (
-              <>
-                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-slate-500 border border-slate-100">
-                   <Eye size={14} /> <span className="text-[10px] font-black">{Number(text.views) || 0}</span>
-                </div>
-                <button 
-                  onClick={handleLike} 
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all active:scale-90 ${
-                    typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) 
-                    ? 'bg-rose-50 border-rose-100 text-rose-500' 
-                    : 'bg-slate-50 border-slate-100 text-slate-400'
-                  }`}
-                >
-                   <Heart size={14} className={typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
-                   <span className="text-[10px] font-black">{Number(text.totalLikes || text.likes || 0)}</span>
-                </button>
-              </>
-            )}
-            <button 
-              onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} 
-              className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200 active:scale-95 transition-all"
-            >
-              <Share2 size={20} />
-            </button>
+    <>
+      {/* SECTION SEO DYNAMIQUE */}
+      <Head>
+        <title>{text.title} | Lisible</title>
+        <meta name="description" content={`Découvrez "${text.title}", une oeuvre de ${text.authorName || 'Anonyme'} sur Lisible.`} />
+        <meta property="og:title" content={`${text.title} - Lisible`} />
+        <meta property="og:description" content="Lisez ce manuscrit certifié sur la plateforme Lisible." />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Head>
+
+      <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 pb-32 overflow-x-hidden">
+        <header className="flex justify-between items-center mb-12">
+          <button onClick={() => router.back()} className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
+            <ArrowLeft size={20} className="text-slate-600" />
+          </button>
+          <div className="flex gap-2">
+              {!isStaffText && (
+                <>
+                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-slate-500 border border-slate-100">
+                     <Eye size={14} /> <span className="text-[10px] font-black">{Number(text.views) || 0}</span>
+                  </div>
+                  <button 
+                    onClick={handleLike} 
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all active:scale-90 ${
+                      typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) 
+                      ? 'bg-rose-50 border-rose-100 text-rose-500' 
+                      : 'bg-slate-50 border-slate-100 text-slate-400'
+                    }`}
+                  >
+                     <Heart size={14} className={typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
+                     <span className="text-[10px] font-black">{Number(text.totalLikes || text.likes || 0)}</span>
+                  </button>
+                </>
+              )}
+              <button 
+                onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} 
+                className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200 active:scale-95 transition-all"
+              >
+                <Share2 size={20} />
+              </button>
+          </div>
+        </header>
+
+        <article className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          {(text.isConcours === true || text.isConcours === "true") && <BadgeConcours />}
+          <h1 className="text-5xl sm:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9] text-slate-900">
+            {text.title}
+          </h1>
+          <p className="text-[11px] font-black text-teal-600 uppercase tracking-[0.4em] mb-16 flex items-center gap-3">
+              <span className="w-10 h-[2px] bg-teal-600"></span> 
+              {text.isConcours ? `Candidat : ${text.concurrentId || 'Poète'}` : `Par ${text.authorName || 'Anonyme'}`}
+          </p>
+          
+          <div className="prose-xl font-serif text-slate-800 leading-relaxed mb-24 whitespace-pre-wrap select-none sm:select-text">
+            {text.content}
+          </div>
+
+          <button 
+            onClick={() => setIsReportOpen(true)}
+            className="flex items-center gap-2 text-slate-300 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em] mt-10 group"
+          >
+            <AlertTriangle size={14} className="group-hover:animate-bounce" />
+            Signaler un problème avec ce texte
+          </button>
+        </article>
+
+        <div className="my-12">
+          <InTextAd />
         </div>
-      </header>
 
-      <article className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
-        {(text.isConcours === true || text.isConcours === "true") && <BadgeConcours />}
-        <h1 className="text-5xl sm:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9] text-slate-900">
-          {text.title}
-        </h1>
-        <p className="text-[11px] font-black text-teal-600 uppercase tracking-[0.4em] mb-16 flex items-center gap-3">
-            <span className="w-10 h-[2px] bg-teal-600"></span> 
-            {text.isConcours ? `Candidat : ${text.concurrentId || 'Poète'}` : `Par ${text.authorName || 'Anonyme'}`}
-        </p>
-        
-        <div className="prose-xl font-serif text-slate-800 leading-relaxed mb-24 whitespace-pre-wrap select-none sm:select-text">
-          {text.content}
-        </div>
+        {!isStaffText && (
+          <SceauCertification 
+            wordCount={text.content?.length || 100} 
+            fileName={id} 
+            userEmail={user?.email} 
+            onValidated={() => fetchData(id)} 
+            certifiedCount={text.totalCertified || 0}
+          />
+        )}
 
-        {/* Bouton de signalement intégré en fin d'article */}
-        <button 
-          onClick={() => setIsReportOpen(true)}
-          className="flex items-center gap-2 text-slate-300 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em] mt-10 group"
-        >
-          <AlertTriangle size={14} className="group-hover:animate-bounce" />
-          Signaler un problème avec ce texte
-        </button>
-      </article>
-
-      <div className="my-12">
-        <InTextAd />
-      </div>
-
-      {!isStaffText && (
-        <SceauCertification 
-          wordCount={text.content?.length || 100} 
-          fileName={id} 
-          userEmail={user?.email} 
-          onValidated={() => fetchData(id)} 
-          certifiedCount={text.totalCertified || 0}
+        <CommentSection 
+          textId={id} 
+          comments={text.comments || []} 
+          user={user} 
+          onCommented={() => fetchData(id)} 
         />
-      )}
 
-      <CommentSection 
-        textId={id} 
-        comments={text.comments || []} 
-        user={user} 
-        onCommented={() => fetchData(id)} 
-      />
+        <footer className="mt-20 text-center opacity-20">
+          <p className="text-[8px] font-black uppercase tracking-[0.5em]">Lisible.biz • Expérience de lecture certifiée</p>
+        </footer>
 
-      <footer className="mt-20 text-center opacity-20">
-        <p className="text-[8px] font-black uppercase tracking-[0.5em]">Lisible.biz • Expérience de lecture certifiée</p>
-      </footer>
-
-      {/* Rendu de la modale */}
-      <ReportModal 
-        isOpen={isReportOpen} 
-        onClose={() => setIsReportOpen(false)}
-        textId={id}
-        textTitle={text.title}
-        userEmail={user?.email}
-      />
-    </div>
+        <ReportModal 
+          isOpen={isReportOpen} 
+          onClose={() => setIsReportOpen(false)}
+          textId={id}
+          textTitle={text.title}
+          userEmail={user?.email}
+        />
+      </div>
+    </>
   );
 }
