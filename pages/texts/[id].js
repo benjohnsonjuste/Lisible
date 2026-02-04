@@ -3,7 +3,8 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { toast } from "sonner";
-import jsPDF from "jspdf"; // Assure-toi d'avoir ajouté "jspdf" dans ton package.json
+import jsPDF from "jspdf";
+import confetti from "canvas-confetti"; // Ajouté pour l'effet "Whaou"
 import { 
   ArrowLeft, Loader2, Share2, Eye, Heart, Trophy, 
   ShieldCheck, Sparkles, Send, MessageCircle, AlertTriangle, Download
@@ -48,6 +49,14 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
   }, [seconds, isValidated, waitTime]);
 
   const generateCertificate = () => {
+    // Explosion de confettis aux couleurs de Lisible
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#0d9488', '#1e293b', '#ffffff']
+    });
+
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     doc.setFillColor(253, 251, 247); doc.rect(0, 0, 297, 210, "F");
     doc.setLineWidth(2); doc.setDrawColor(13, 148, 136); doc.rect(10, 10, 277, 190);
@@ -65,7 +74,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
     doc.setFontSize(10); doc.setTextColor(100);
     doc.text(`Délivré le ${new Date().toLocaleDateString()} par Lisible.biz`, 148.5, 185, { align: "center" });
     doc.save(`Certificat_Lisible_${textTitle}.pdf`);
-    toast.success("Certificat généré !");
+    toast.success("Félicitations pour votre plume !");
   };
 
   const validate = async () => {
@@ -137,7 +146,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
         {Number(certifiedCount) >= 10 && (
           <button 
             onClick={generateCertificate}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl animate-in fade-in zoom-in"
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-110 transition-all shadow-xl animate-in fade-in zoom-in"
           >
             <Download size={14} /> Télécharger le Certificat
           </button>
@@ -220,6 +229,7 @@ export default function TextPage() {
   const [isLiking, setIsLiking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
   const [liveViews, setLiveViews] = useState(0); 
+  const [liveLikes, setLiveLikes] = useState(0); // État pour les likes Redis
   const viewLogged = useRef(false);
 
   const ADMIN_EMAILS = [
@@ -259,10 +269,6 @@ export default function TextPage() {
     if (localStorage.getItem(likeKey)) return toast.info("Vous appréciez déjà ce texte.");
     if (isLiking) return;
 
-    const previousLikes = Number(text.totalLikes || text.likes || 0);
-    setText(prev => ({ ...prev, totalLikes: previousLikes + 1 }));
-    localStorage.setItem(likeKey, "true");
-
     setIsLiking(true);
     try {
       const res = await fetch('/api/texts', {
@@ -270,11 +276,14 @@ export default function TextPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action: "like" })
       });
-      if (!res.ok) throw new Error();
-      toast.success("Aimé !");
+      
+      if (res.ok) {
+        const data = await res.json();
+        setLiveLikes(data.count);
+        localStorage.setItem(likeKey, "true");
+        toast.success("Aimé !");
+      }
     } catch (e) { 
-      setText(prev => ({ ...prev, totalLikes: previousLikes }));
-      localStorage.removeItem(likeKey);
       toast.error("Action impossible."); 
     } finally { 
       setIsLiking(false); 
@@ -289,6 +298,7 @@ export default function TextPage() {
       fetchData(id).then(loaded => {
         if (!loaded && !text) return;
 
+        // Récupération initiale des vues ET likes via Redis
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
           viewLogged.current = true;
@@ -301,9 +311,8 @@ export default function TextPage() {
               const data = await res.json();
               localStorage.setItem(viewKey, "true");
               setLiveViews(data.views);
+              setLiveLikes(data.likes || 0);
             }
-          }).catch(() => {
-            viewLogged.current = false;
           });
         }
       });
@@ -318,24 +327,31 @@ export default function TextPage() {
   );
 
   const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
-  const seoDescription = text.content ? text.content.replace(/<[^>]*>/g, '').substring(0, 155) + "..." : "Découvrez ce manuscrit certifié sur Lisible.";
+  const seoDescription = text.content 
+    ? text.content.replace(/<[^>]*>/g, '').substring(0, 155).trim() + "..." 
+    : "Découvrez ce manuscrit certifié sur Lisible.";
 
   return (
     <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-slate-950">
       <Head>
         <title>{`${text.title} | par ${text.authorName || 'Anonyme'} | Lisible`}</title>
         <meta name="description" content={seoDescription} />
+        <meta name="author" content={text.authorName || 'Anonyme'} />
+        <link rel="canonical" href={`https://lisible.biz/texte/${id}`} />
+
+        {/* Facebook / WhatsApp SEO */}
         <meta property="og:type" content="article" />
         <meta property="og:url" content={`https://lisible.biz/texte/${id}`} />
-        <meta property="og:title" content={`${text.title} — Une œuvre de ${text.authorName || 'Anonyme'}`} />
+        <meta property="og:title" content={`${text.title} — Par ${text.authorName || 'Anonyme'}`} />
         <meta property="og:description" content={seoDescription} />
         <meta property="og:image" content={text.coverImage || "https://lisible.biz/og-card.png"} />
         <meta property="og:site_name" content="Lisible" />
+
+        {/* Twitter SEO */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={text.title} />
         <meta name="twitter:description" content={seoDescription} />
         <meta name="twitter:image" content={text.coverImage || "https://lisible.biz/og-card.png"} />
-        <link rel="canonical" href={`https://lisible.biz/texte/${id}`} />
       </Head>
 
       <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 pb-32 overflow-x-hidden">
@@ -361,7 +377,7 @@ export default function TextPage() {
                     }`}
                   >
                      <Heart size={14} className={typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
-                     <span className="text-[10px] font-black">{Number(text.totalLikes || text.likes || 0)}</span>
+                     <span className="text-[10px] font-black">{liveLikes || Number(text.totalLikes || text.likes || 0)}</span>
                   </button>
                 </>
               )}
