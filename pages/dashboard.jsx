@@ -1,16 +1,19 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Loader2, Send, TrendingUp, ArrowUpRight, FileText, UserCircle, 
-  Download, Award, MessageCircle, Facebook, Instagram, Twitter, Copy, UserPlus, Share2 
+  Download, Award, MessageCircle, Facebook, Instagram, Twitter, 
+  Copy, UserPlus, Share2, Trash2, Edit3, BookOpen
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AuthorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTexts, setLoadingTexts] = useState(true);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
   const [copied, setCopied] = useState(false);
 
@@ -21,6 +24,18 @@ export default function AuthorDashboard() {
     return { name: "Plume de Plomb", color: "text-slate-500", bg: "bg-white/5", icon: "🖋️" };
   };
 
+  const fetchMyTexts = useCallback(async (email) => {
+    setLoadingTexts(true);
+    try {
+      const res = await fetch(`/api/texts?authorEmail=${email.toLowerCase().trim()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTexts(data);
+      }
+    } catch (e) { console.error("Erreur textes:", e); }
+    finally { setLoadingTexts(false); }
+  }, []);
+
   const fetchLatestData = useCallback(async (email, pass) => {
     try {
       const res = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pass }) });
@@ -28,9 +43,10 @@ export default function AuthorDashboard() {
         const data = await res.json();
         setUser(data.user);
         localStorage.setItem("lisible_user", JSON.stringify(data.user));
+        fetchMyTexts(data.user.email);
       }
     } catch (e) { console.error(e); } finally { setLoading(false); }
-  }, []);
+  }, [fetchMyTexts]);
 
   useEffect(() => {
     const logged = localStorage.getItem("lisible_user");
@@ -39,6 +55,18 @@ export default function AuthorDashboard() {
       fetchLatestData(u.email, u.password);
     } else { router.push("/login"); }
   }, [router, fetchLatestData]);
+
+  const handleDeleteText = async (id) => {
+    if (!confirm("Voulez-vous vraiment supprimer définitivement cette œuvre ?")) return;
+    const tid = toast.loading("Suppression...");
+    try {
+      const res = await fetch(`/api/texts/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Œuvre retirée de la bibliothèque", { id: tid });
+        setTexts(texts.filter(t => t.id !== id));
+      } else { toast.error("Erreur lors de la suppression", { id: tid }); }
+    } catch (e) { toast.error("Échec de la connexion", { id: tid }); }
+  };
 
   const copyRefLink = () => {
     const link = `${window.location.origin}/login?ref=${btoa(user.email)}`;
@@ -60,14 +88,14 @@ export default function AuthorDashboard() {
         toast.success(`Transfert de ${amount} Li réussi !`, { id: tid }); 
         fetchLatestData(user.email, user.password); 
       }
-      else { toast.error("Destinataire introuvable ou erreur de transaction", { id: tid }); }
+      else { toast.error("Destinataire introuvable", { id: tid }); }
     } catch (e) { toast.error("Erreur de connexion", { id: tid }); }
   };
 
   const handleUniversalShare = async () => {
     const shareData = {
       title: 'Lisible - La Belle Littéraire',
-      text: `Découvrez mon profil d'auteur sur Lisible ! Je suis au rang ${getRank(user?.wallet?.balance || 0).name}.`,
+      text: `Découvrez mes écrits sur Lisible !`,
       url: `${window.location.origin}/auteur/${encodeURIComponent(user.email)}`
     };
     try {
@@ -77,10 +105,9 @@ export default function AuthorDashboard() {
   };
 
   const downloadBadge = () => {
-    toast.info("Génération de votre badge de certification...");
-    // Logique simplifiée : on redirige vers l'image générée ou on simule un téléchargement
+    toast.info("Génération du badge...");
     const link = document.createElement("a");
-    link.href = `https://api.dicebear.com/7.x/shapes/svg?seed=${user?.email}`; // Exemple d'identifiant visuel
+    link.href = `https://api.dicebear.com/7.x/shapes/svg?seed=${user?.email}`;
     link.download = `badge_lisible_${user?.penName}.svg`;
     link.click();
   };
@@ -90,8 +117,8 @@ export default function AuthorDashboard() {
   const rank = getRank(user?.wallet?.balance || 0);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8 pb-20 font-sans">
-      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8 border border-white/5 animate-in fade-in duration-700">
+    <div className="max-w-6xl mx-auto p-6 space-y-10 pb-20 font-sans animate-in fade-in duration-700">
+      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8 border border-white/5">
         <div className="text-center md:text-left">
           <div className={`inline-flex items-center gap-2 ${rank.color} ${rank.bg} px-4 py-2 rounded-2xl mb-4 border border-current/10`}>
              <span className="text-xl">{rank.icon}</span>
@@ -107,47 +134,60 @@ export default function AuthorDashboard() {
         </div>
       </header>
 
-      {/* SECTION PARRAINAGE DYNAMIQUE */}
-      <div className="bg-teal-600 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-teal-900/10">
-        <div className="flex items-center gap-5">
-          <div className="p-4 bg-white/20 rounded-2xl"><UserPlus size={24}/></div>
-          <div>
-            <h3 className="text-lg font-black italic leading-none">Programme Ambassadeur</h3>
-            <p className="text-[10px] font-bold uppercase opacity-80 mt-2">Gagnez 500 Li par nouvelle plume recrutée</p>
-          </div>
+      {/* GESTION DES TEXTES */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-4">
+          <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
+            <BookOpen size={16} /> Mes Œuvres ({texts.length})
+          </h2>
+          <button onClick={() => router.push("/publish")} className="text-[10px] font-black uppercase bg-teal-50 text-teal-600 px-4 py-2 rounded-xl hover:bg-teal-600 hover:text-white transition-all">
+            Nouveau Manuscrit
+          </button>
         </div>
-        <button onClick={copyRefLink} className="w-full md:w-auto px-8 py-4 bg-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white hover:text-slate-900 transition-all shadow-lg active:scale-95">
-          {copied ? "Lien copié !" : <><Copy size={16}/> Copier mon lien</>}
-        </button>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button onClick={() => router.push("/publish")} className="group flex items-center justify-between p-8 bg-white border-2 border-slate-50 rounded-[2.5rem] hover:border-teal-500 transition-all shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-teal-50 text-teal-600 rounded-2xl group-hover:bg-teal-600 group-hover:text-white transition-colors"><FileText size={24} /></div>
-            <span className="text-xs font-black uppercase tracking-widest text-slate-900">Publier une œuvre</span>
+        {loadingTexts ? (
+          <div className="flex justify-center p-12 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+            <Loader2 className="animate-spin text-slate-300" />
           </div>
-          <ArrowUpRight size={20} className="text-slate-300" />
-        </button>
-        <button onClick={() => router.push("/account")} className="group flex items-center justify-between p-8 bg-white border-2 border-slate-50 rounded-[2.5rem] hover:border-slate-900 transition-all shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-slate-50 text-slate-400 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-colors"><UserCircle size={24} /></div>
-            <span className="text-xs font-black uppercase tracking-widest text-slate-900">Gérer mon compte</span>
+        ) : texts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {texts.map((text) => (
+              <div key={text.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+                <div className="space-y-4">
+                  <div className="h-40 bg-slate-50 rounded-[2rem] overflow-hidden relative">
+                    {text.imageBase64 ? (
+                      <img src={text.imageBase64} alt="" className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-200"><FileText size={40} /></div>
+                    )}
+                    <div className="absolute top-4 right-4 flex gap-2">
+                       <button onClick={() => router.push(`/edit/${text.id}`)} className="p-2.5 bg-white/90 backdrop-blur shadow-sm rounded-xl text-slate-600 hover:text-teal-600 transition-colors"><Edit3 size={16}/></button>
+                       <button onClick={() => handleDeleteText(text.id)} className="p-2.5 bg-white/90 backdrop-blur shadow-sm rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={16}/></button>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="font-black italic text-slate-900 line-clamp-1">{text.title}</h3>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(text.date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <ArrowUpRight size={20} className="text-slate-300" />
-        </button>
-      </div>
+        ) : (
+          <div className="text-center p-16 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+            <p className="text-slate-400 font-medium italic text-sm">Votre plume n'a pas encore laissé de trace...</p>
+          </div>
+        )}
+      </section>
 
+      {/* RESTE DU DASHBOARD */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm space-y-6">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900"><Send size={18} className="text-teal-600"/> Envoyer des Li</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900"><Send size={18} className="text-teal-600"/> Transférer des Li</h3>
           <div className="space-y-4">
-            <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-sm font-bold focus:ring-2 ring-teal-500/10 transition-all" onChange={(e) => setTransfer({...transfer, email: e.target.value})} />
-            <div className="relative">
-                <input type="number" min="1000" placeholder="Montant (Min. 1000)" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-sm font-bold focus:ring-2 ring-teal-500/10 transition-all" onChange={(e) => setTransfer({...transfer, amount: e.target.value})} />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-teal-600">Li</span>
-            </div>
-            <button onClick={handleTransfer} className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all text-[10px] shadow-lg active:scale-95">Confirmer l'envoi</button>
+            <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-slate-50 rounded-2xl outline-none text-sm font-bold" onChange={(e) => setTransfer({...transfer, email: e.target.value})} />
+            <input type="number" min="1000" placeholder="Montant (Min. 1000)" className="w-full p-4 bg-slate-50 rounded-2xl outline-none text-sm font-bold" onChange={(e) => setTransfer({...transfer, amount: e.target.value})} />
+            <button onClick={handleTransfer} className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all text-[10px]">Confirmer l'envoi</button>
           </div>
         </div>
 
@@ -155,34 +195,22 @@ export default function AuthorDashboard() {
            <TrendingUp className="text-teal-600 mb-6" size={30} />
            <div>
               <p className="text-3xl font-black italic text-slate-900 leading-none">Objectif Retrait</p>
-              <div className="w-full bg-white h-2 rounded-full mt-4 overflow-hidden shadow-inner">
+              <div className="w-full bg-white h-2 rounded-full mt-4 overflow-hidden">
                 <div className="bg-teal-500 h-full transition-all duration-1000" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 25000) * 100, 100)}%` }}></div>
               </div>
-              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Progression : {Math.floor(((user?.wallet?.balance || 0) / 25000) * 100)}% (Seuil : 25k)</p>
+              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Seuil : 25 000 Li</p>
            </div>
         </div>
 
         <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-6 shadow-sm">
            <div className="relative">
               <Award size={50} className="text-amber-500 animate-pulse" />
-              <button 
-                onClick={downloadBadge}
-                className="absolute -bottom-2 -right-2 p-2 bg-slate-950 text-white rounded-full hover:bg-teal-600 transition-all shadow-lg border-2 border-white"
-                title="Télécharger mon badge"
-              >
-                <Download size={14}/>
-              </button>
-           </div>
-           <div>
-              <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Prestige Social</h3>
-              <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Exportez votre renommée</p>
+              <button onClick={downloadBadge} className="absolute -bottom-2 -right-2 p-2 bg-slate-950 text-white rounded-full border-2 border-white hover:bg-teal-600 transition-all"><Download size={14}/></button>
            </div>
            <div className="flex flex-wrap justify-center gap-2">
-              <button onClick={() => window.open(`https://wa.me/?text=Découvrez mon profil d'auteur sur Lisible !`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#25D366] hover:text-white transition-all shadow-sm"><MessageCircle size={18}/></button>
-              <button onClick={() => window.open(`https://facebook.com/sharer/sharer.php?u=${window.location.origin}`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#1877F2] hover:text-white transition-all shadow-sm"><Facebook size={18}/></button>
-              <button onClick={() => window.open(`https://instagram.com`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#E4405F] hover:text-white transition-all shadow-sm"><Instagram size={18}/></button>
-              <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=Découvrez Lisible !`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#1DA1F2] hover:text-white transition-all shadow-sm"><Twitter size={18}/></button>
-              <button onClick={handleUniversalShare} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-all shadow-md"><Share2 size={18}/></button>
+              <button onClick={() => window.open(`https://wa.me/?text=Lisez moi sur Lisible !`)} className="p-3 bg-slate-50 rounded-xl hover:bg-[#25D366] hover:text-white transition-all"><MessageCircle size={18}/></button>
+              <button onClick={() => window.open(`https://facebook.com/sharer/sharer.php?u=${window.location.origin}`)} className="p-3 bg-slate-50 rounded-xl hover:bg-[#1877F2] hover:text-white transition-all"><Facebook size={18}/></button>
+              <button onClick={handleUniversalShare} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-all"><Share2 size={18}/></button>
            </div>
         </div>
       </div>
