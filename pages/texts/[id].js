@@ -101,10 +101,35 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
 
   const toggleSpeech = () => {
-    if (isSpeaking) { window.speechSynthesis.cancel(); setIsSpeaking(false); return; }
-    const utterance = new SpeechSynthesisUtterance(text.content.replace(/<[^>]*>/g, ''));
-    utterance.lang = "fr-FR"; utterance.onend = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance); setIsSpeaking(true);
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      toast.error("La lecture vocale n'est pas supportée par votre navigateur.");
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    // Nettoyage du texte pour la lecture (retrait des tags si présents et normalisation)
+    const cleanText = text.content.replace(/<[^>]*>/g, '').trim();
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = "fr-FR";
+    utterance.rate = 1.0; // Vitesse normale
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast.error("Erreur lors de la lecture audio.");
+    };
+
+    // Pour forcer le démarrage sur certains navigateurs mobiles
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
   };
 
   if (router.isFallback || !text) return <div className="min-h-screen bg-[#FCFBF9] dark:bg-slate-950 p-20 animate-pulse" />;
