@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { 
   ArrowLeft, Share2, Eye, Heart, Trophy, 
-  Maximize2, Minimize2, Clock, Play, Square, AlertTriangle,
+  Maximize2, Minimize2, Clock, AlertTriangle,
   Ghost, Sun, Zap, Coffee, Loader2
 } from "lucide-react";
 
@@ -39,11 +39,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
   const viewLogged = useRef(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
-  
-  // États de lecture vocale
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const audioPlayer = useRef(null);
 
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
@@ -81,10 +76,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
     window.addEventListener("scroll", handleScroll);
     return () => {
         window.removeEventListener("scroll", handleScroll);
-        if(audioPlayer.current) {
-            audioPlayer.current.pause();
-            audioPlayer.current = null;
-        }
     };
   }, []);
 
@@ -109,69 +100,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
   }, [id, initialText.totalLikes]);
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
-
-  // LOGIQUE DE LECTURE VOCALE OPTIMISÉE
-  const toggleSpeech = async () => {
-    if (isSpeaking) {
-      audioPlayer.current?.pause();
-      setIsSpeaking(false);
-      return;
-    }
-
-    // Initialisation immédiate de l'objet Audio pour débloquer les navigateurs mobiles
-    if (!audioPlayer.current) {
-      audioPlayer.current = new Audio();
-    }
-
-    // Si l'URL existe déjà, on relance juste
-    if (audioPlayer.current.src) {
-      audioPlayer.current.play();
-      setIsSpeaking(true);
-      return;
-    }
-
-    setIsLoadingAudio(true);
-    try {
-      const cleanText = text.content.replace(/<[^>]*>/g, '').trim().substring(0, 1500);
-      
-      const res = await fetch('/api/speech', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: cleanText })
-      });
-
-      const data = await res.json();
-      
-      if (data.audioUrl) {
-        audioPlayer.current.src = data.audioUrl;
-        audioPlayer.current.load(); // Prépare le flux
-        
-        const playPromise = audioPlayer.current.play();
-        
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              setIsSpeaking(true);
-              setIsLoadingAudio(false);
-            })
-            .catch(error => {
-              console.error("Audio Playback Error:", error);
-              setIsLoadingAudio(false);
-              toast.error("Cliquez à nouveau pour activer le son");
-            });
-        }
-        
-        audioPlayer.current.onended = () => setIsSpeaking(false);
-        audioPlayer.current.onerror = () => {
-          toast.error("Erreur de flux audio");
-          setIsSpeaking(false);
-        };
-      }
-    } catch (e) {
-      toast.error("Service de voix indisponible");
-      setIsLoadingAudio(false);
-    }
-  };
 
   if (router.isFallback || !text) return <div className="min-h-screen bg-[#FCFBF9] dark:bg-slate-950 p-20 animate-pulse" />;
 
@@ -220,17 +148,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
             {text.isConcours && <BadgeConcours />}
             <div className="flex items-center gap-2 text-[10px] font-black text-teal-600 bg-teal-50 dark:bg-teal-900/20 px-3 py-1.5 rounded-lg border border-teal-100"><Clock size={12} /> {readingTime} MIN</div>
             {mood && <div className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border ${mood.color}`}>{mood.icon} {mood.label}</div>}
-            
-            <button onClick={toggleSpeech} disabled={isLoadingAudio} className="flex items-center gap-2 text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg hover:bg-teal-600 hover:text-white transition-all disabled:opacity-50">
-              {isLoadingAudio ? (
-                <Loader2 size={12} className="animate-spin" />
-              ) : isSpeaking ? (
-                <Square size={12} fill="currentColor" />
-              ) : (
-                <Play size={12} fill="currentColor" />
-              )} 
-              {isLoadingAudio ? "CHARGEMENT..." : isSpeaking ? "ARRÊTER" : "ÉCOUTER"}
-            </button>
           </div>
 
           <h1 className={`font-serif font-black italic transition-all duration-1000 ${isFocusMode ? 'text-6xl sm:text-8xl mb-20' : 'text-5xl sm:text-7xl mb-10'}`}>{text.title}</h1>
