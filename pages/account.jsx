@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image"; // Importation ajoutée
 import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
@@ -41,7 +42,7 @@ export default function AccountPage() {
       setUser(parsed);
       setFormData({ ...parsed, penName: parsed.penName || parsed.name || "" });
       setLoading(false);
-      refreshUserData(parsed.email); // Sync automatique en arrière-plan
+      refreshUserData(parsed.email);
     } else { router.push("/login"); }
   }, []);
 
@@ -156,8 +157,17 @@ export default function AccountPage() {
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2"><Edit3 size={16} /> Profil Public</h2>
             <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                <div className="relative group">
-                  <img src={formData.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} className="w-32 h-32 rounded-[2.5rem] object-cover border-4 border-white shadow-xl transition-all" />
-                  <label className="absolute -bottom-2 -right-2 p-3 bg-slate-900 text-white rounded-xl cursor-pointer hover:bg-teal-600 shadow-lg transition-all active:scale-90">
+                  {/* Utilisation de Next.js Image */}
+                  <div className="relative w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl">
+                    <Image 
+                      src={formData.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
+                      alt={formData.penName || "Avatar"} 
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                  <label className="absolute -bottom-2 -right-2 p-3 bg-slate-900 text-white rounded-xl cursor-pointer hover:bg-teal-600 shadow-lg transition-all active:scale-90 z-10">
                     <Camera size={18} /><input type="file" className="hidden" accept="image/*" onChange={(e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setFormData({ ...formData, profilePic: reader.result }); reader.readAsDataURL(file); } }} />
                   </label>
                </div>
