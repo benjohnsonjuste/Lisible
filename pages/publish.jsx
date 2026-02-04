@@ -69,7 +69,7 @@ export default function PublishPage() {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- ENVOI VERS L'API (DÉCLENCHE AUSSI LES NOTIFS ABONNÉS CÔTÉ SERVEUR) ---
+      // --- ENVOI VERS L'API ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,7 +98,15 @@ export default function PublishPage() {
 
       const data = await res.json();
 
-      // Notification communautaire globale (Email "all")
+      // --- VALIDATION DU PARRAINAGE (NOUVEAU) ---
+      // Cette étape vérifie si l'auteur est un filleul et crédite son parrain
+      fetch("/api/process-referral-reward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorEmail: user.email.toLowerCase().trim() })
+      }).catch(err => console.error("Erreur referral:", err));
+
+      // Notification communautaire globale
       fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
