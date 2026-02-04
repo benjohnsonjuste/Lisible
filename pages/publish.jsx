@@ -2,7 +2,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, Sparkles, Image as ImageIcon, Coins, X } from "lucide-react"; 
+import { 
+  FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, 
+  Sparkles, Image as ImageIcon, Coins, X, Feather
+} from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -41,6 +44,7 @@ export default function PublishPage() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 4 * 1024 * 1024) return toast.error("Image trop lourde (max 4Mo)");
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result);
@@ -60,16 +64,15 @@ export default function PublishPage() {
     e.preventDefault();
     const words = countWords(content);
     if (words > MAX_WORDS) return toast.error(`Trop de mots (${words}/${MAX_WORDS})`);
-    if (words < 10) return toast.error("Texte trop court.");
+    if (words < 10) return toast.error("Le manuscrit est trop court pour être publié.");
 
     setLoading(true);
-    const loadingToast = toast.loading("Impression du manuscrit...");
+    const loadingToast = toast.loading("Impression et certification du manuscrit...");
 
     try {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- ENVOI VERS L'API ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,15 +101,14 @@ export default function PublishPage() {
 
       const data = await res.json();
 
-      // --- VALIDATION DU PARRAINAGE (NOUVEAU) ---
-      // Cette étape vérifie si l'auteur est un filleul et crédite son parrain
+      // Logique de récompense parrainage
       fetch("/api/process-referral-reward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authorEmail: user.email.toLowerCase().trim() })
-      }).catch(err => console.error("Erreur referral:", err));
+      }).catch(err => console.error("Referral Error:", err));
 
-      // Notification communautaire globale
+      // Notification globale
       fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,15 +116,15 @@ export default function PublishPage() {
           type: "new_text", 
           message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
           targetEmail: "all",
-          link: `/texte/${data.id}`
+          link: `/texts/${data.id}`
         })
       }).catch(() => {});
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
-      toast.success("Œuvre diffusée avec succès !", { id: loadingToast });
-      router.push(`/texte/${data.id}`);
+      toast.success("Votre œuvre est désormais en ligne !", { id: loadingToast });
+      router.push(`/texts/${data.id}`);
       
     } catch (err) {
       toast.error(err.message || "Échec de la publication.", { id: loadingToast });
@@ -131,17 +133,22 @@ export default function PublishPage() {
     }
   };
 
-  if (isChecking) return null;
+  if (isChecking) return (
+    <div className="flex h-screen items-center justify-center bg-white gap-4 font-sans">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Préparation de l'encrier...</p>
+    </div>
+  );
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-20 px-4 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="max-w-3xl mx-auto space-y-10 pb-20 px-5 pt-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 font-sans">
       
       <div className="flex items-center justify-between">
         <Link href="/bibliotheque" className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all">
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Bibliothèque
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Retour Bibliothèque
         </Link>
         <button 
-          onClick={() => { if(confirm("Effacer le brouillon ?")) { setTitle(""); setContent(""); setImageFile(null); setImagePreview(null); localStorage.removeItem("draft_title"); localStorage.removeItem("draft_content"); } }} 
+          onClick={() => { if(confirm("Voulez-vous vraiment effacer votre brouillon ?")) { setTitle(""); setContent(""); setImageFile(null); setImagePreview(null); localStorage.removeItem("draft_title"); localStorage.removeItem("draft_content"); toast.info("Brouillon effacé"); } }} 
           className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl"
         >
           <Trash2 size={14} /> Corbeille
@@ -149,59 +156,62 @@ export default function PublishPage() {
       </div>
 
       <Link href="/concours-publish" className="block group">
-        <div className="bg-slate-900 p-1 rounded-[2.5rem] shadow-2xl shadow-slate-900/20 group-hover:scale-[1.01] transition-all duration-500">
-          <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-[2.4rem] p-6 flex items-center justify-between border border-white/5">
-            <div className="flex items-center gap-5 text-white">
-              <div className="p-4 bg-teal-600 rounded-2xl text-white shadow-lg group-hover:rotate-12 transition-transform">
+        <div className="bg-slate-950 p-1.5 rounded-[2.5rem] shadow-2xl shadow-slate-900/30 group-hover:scale-[1.02] transition-all duration-700 transform-gpu">
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-[2.3rem] p-6 flex items-center justify-between border border-white/10">
+            <div className="flex items-center gap-6 text-white">
+              <div className="p-4 bg-teal-500 rounded-2xl text-white shadow-xl shadow-teal-500/20 group-hover:rotate-[15deg] transition-transform duration-500">
                 <Trophy size={24} />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-teal-400 mb-1">Passer en mode Battle</p>
-                <h3 className="text-xl font-black italic tracking-tighter leading-none">Concourir pour le Titre</h3>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-teal-400 mb-1">Défiez les plumes</p>
+                <h3 className="text-xl md:text-2xl font-black italic tracking-tighter leading-none">Entrer dans la Battle</h3>
               </div>
             </div>
-            <Sparkles size={20} className="text-amber-400 animate-pulse mr-4" />
+            <Sparkles size={24} className="text-amber-400 animate-pulse mr-4 hidden sm:block" />
           </div>
         </div>
       </Link>
 
-      <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] space-y-8 border border-slate-100 shadow-2xl relative overflow-hidden">
-        <header className="space-y-2 relative">
-          <div className="flex items-center gap-4 text-slate-900">
-            <div className="p-3 bg-teal-50 rounded-2xl text-teal-600">
-                <FileText size={24} />
+      <form onSubmit={handleSubmit} className="bg-white p-8 md:p-14 rounded-[4rem] space-y-10 border border-slate-100 shadow-2xl relative">
+        <header className="space-y-3 relative">
+          <div className="flex items-center gap-5 text-slate-900">
+            <div className="p-4 bg-slate-950 rounded-2xl text-white shadow-lg">
+                <Feather size={26} />
             </div>
-            <h1 className="text-3xl font-black italic tracking-tighter leading-none">Manuscrit</h1>
+            <div>
+                <h1 className="text-4xl font-black italic tracking-tighter leading-none">Manuscrit</h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 mt-2 flex items-center gap-2">
+                    <Coins size={12} className="animate-bounce" /> Monétisation Li activée
+                </p>
+            </div>
           </div>
-          <p className="text-[10px] font-black uppercase tracking-widest pl-16 flex items-center gap-2 text-teal-600">
-            <Coins size={12} /> Monétisation Li activée
-          </p>
         </header>
 
-        <div className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-300 ml-5">Titre</label>
+        <div className="space-y-8">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 ml-6">Titre de l'œuvre</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic font-bold outline-none focus:border-teal-100 focus:bg-white transition-all text-slate-900"
-                placeholder="Titre de l'œuvre..."
+                className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2rem] px-8 py-7 text-2xl italic font-black outline-none focus:border-teal-500/10 focus:bg-white transition-all text-slate-900 placeholder:text-slate-200"
+                placeholder="Quel est le titre ?"
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-300 ml-5">Corps du texte</label>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 ml-6">L'histoire / Le poème</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[400px] outline-none focus:border-teal-100 focus:bg-white resize-none transition-all text-slate-800"
-                placeholder="Exprimez-vous..."
+                className="w-full bg-slate-50 border-2 border-slate-50 rounded-[3rem] p-10 font-serif text-xl leading-relaxed min-h-[500px] outline-none focus:border-teal-500/10 focus:bg-white resize-none transition-all text-slate-800 placeholder:text-slate-200"
+                placeholder="Écrivez ici vos plus belles lignes..."
                 required
               />
-              <div className="flex justify-end pr-5">
-                <span className={`text-[10px] font-black uppercase ${countWords(content) > MAX_WORDS ? 'text-rose-500' : 'text-slate-300'}`}>
+              <div className="flex justify-between items-center px-6">
+                <p className="text-[9px] font-bold text-slate-300 italic italic">Conseil : Relisez-vous avant de publier.</p>
+                <span className={`text-[10px] font-black px-4 py-1.5 rounded-full ${countWords(content) > MAX_WORDS ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
                   {countWords(content)} / {MAX_WORDS} MOTS
                 </span>
               </div>
@@ -217,38 +227,43 @@ export default function PublishPage() {
             className="hidden" 
           />
           {imagePreview ? (
-            <div className="relative rounded-[2.5rem] overflow-hidden group h-64 border-2 border-teal-100 animate-in zoom-in duration-300">
+            <div className="relative rounded-[3rem] overflow-hidden group h-80 border-4 border-white shadow-xl animate-in zoom-in-95 duration-500">
               <img src={imagePreview} className="w-full h-full object-cover" alt="Prévisualisation" />
-              <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                <label htmlFor="cover-upload" className="bg-white p-3 rounded-xl cursor-pointer hover:scale-110 transition-transform">
-                  <ImageIcon size={20} className="text-teal-600" />
+              <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                <label htmlFor="cover-upload" className="bg-white p-4 rounded-2xl cursor-pointer hover:scale-110 active:scale-95 transition-all shadow-xl">
+                  <ImageIcon size={22} className="text-teal-600" />
                 </label>
-                <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="bg-white p-3 rounded-xl hover:scale-110 transition-transform">
-                  <X size={20} className="text-rose-500" />
+                <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="bg-rose-500 p-4 rounded-2xl hover:scale-110 active:scale-95 transition-all shadow-xl">
+                  <X size={22} className="text-white" />
                 </button>
               </div>
             </div>
           ) : (
             <label 
               htmlFor="cover-upload"
-              className="flex flex-col items-center justify-center p-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] cursor-pointer hover:bg-teal-50 hover:border-teal-200 transition-all group-hover/img:shadow-inner"
+              className="flex flex-col items-center justify-center p-14 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[3rem] cursor-pointer hover:bg-teal-50 hover:border-teal-200 hover:text-teal-600 transition-all group-hover/img:shadow-inner"
             >
-              <ImageIcon size={30} className="text-slate-300 mb-2" />
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
-                 Couverture <span className="text-[8px] font-bold opacity-60">(Optionnel)</span>
+              <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4">
+                <ImageIcon size={30} className="text-slate-300 group-hover/img:text-teal-500 transition-colors" />
+              </div>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] text-center">
+                 Ajouter une couverture <br/> <span className="text-[8px] font-bold opacity-60 mt-1 block">(Facultatif)</span>
               </p>
             </label>
           )}
         </div>
 
-        <div className="pt-4">
+        <div className="pt-8">
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full bg-slate-950 text-white py-7 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 transition-all flex justify-center items-center gap-3 active:scale-95 disabled:opacity-50"
+            className="w-full bg-slate-950 text-white py-8 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.4em] shadow-2xl shadow-slate-900/40 hover:bg-teal-600 transition-all flex justify-center items-center gap-4 active:scale-95 disabled:opacity-50 transform-gpu"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} /> Publier maintenant</>}
+            {loading ? <Loader2 className="animate-spin" size={24} /> : <><Send size={20} className="-rotate-12" /> Diffuser l'œuvre</>}
           </button>
+          <p className="text-center mt-6 text-[8px] font-black uppercase tracking-widest text-slate-300">
+            En publiant, vous acceptez les droits d'auteur de la plateforme Lisible.
+          </p>
         </div>
       </form>
     </div>
