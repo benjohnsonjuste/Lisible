@@ -15,7 +15,7 @@ export default function AuthorDashboard() {
   const [loadingTexts, setLoadingTexts] = useState(true);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
 
-  const getRank = (sc) => {
+  const getRank = (sc = 0) => {
     if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-400", bg: "bg-purple-500/10", icon: "👑" };
     if (sc >= 200) return { name: "Plume d'Argent", color: "text-slate-300", bg: "bg-slate-500/10", icon: "✨" };
     if (sc >= 50) return { name: "Plume de Bronze", color: "text-orange-400", bg: "bg-orange-500/10", icon: "📜" };
@@ -23,12 +23,13 @@ export default function AuthorDashboard() {
   };
 
   const fetchMyTexts = useCallback(async (email) => {
+    if (!email) return;
     setLoadingTexts(true);
     try {
       const res = await fetch(`/api/texts?authorEmail=${email.toLowerCase().trim()}`);
       if (res.ok) {
         const data = await res.json();
-        setTexts(data);
+        setTexts(Array.isArray(data) ? data : []);
       }
     } catch (e) { console.error("Erreur textes:", e); }
     finally { setLoadingTexts(false); }
@@ -36,59 +37,81 @@ export default function AuthorDashboard() {
 
   const fetchLatestData = useCallback(async (email, pass) => {
     try {
-      const res = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pass }) });
+      const res = await fetch("/api/login", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ email, password: pass }) 
+      });
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
         localStorage.setItem("lisible_user", JSON.stringify(data.user));
         fetchMyTexts(data.user.email);
       }
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { console.error(e); } 
+    finally { setLoading(false); }
   }, [fetchMyTexts]);
 
   useEffect(() => {
     const logged = localStorage.getItem("lisible_user");
     if (logged) {
-      const u = JSON.parse(logged);
-      fetchLatestData(u.email, u.password);
+      try {
+        const u = JSON.parse(logged);
+        fetchLatestData(u.email, u.password);
+      } catch (e) { router.push("/login"); }
     } else { router.push("/login"); }
   }, [router, fetchLatestData]);
 
   const handleDeleteText = async (id) => {
-    if (!confirm("Voulez-vous vraiment supprimer définitivement cette œuvre ?")) return;
+    if (!confirm("Supprimer définitivement ?")) return;
     const tid = toast.loading("Suppression...");
     try {
       const res = await fetch(`/api/texts/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Œuvre retirée", { id: tid });
+        toast.success("Retiré", { id: tid });
         setTexts(texts.filter(t => t.id !== id));
-      } else { toast.error("Erreur", { id: tid }); }
-    } catch (e) { toast.error("Échec", { id: tid }); }
+      }
+    } catch (e) { toast.error("Échec"); }
   };
 
   const handleTransfer = async () => {
     const amount = Number(transfer.amount);
+    if (!user?.wallet) return;
     if (amount < 1000) return toast.error("Minimum 1000 Li");
     if (user.wallet.balance < amount) return toast.error("Solde insuffisant");
     const tid = toast.loading("Transfert...");
     try {
-      const res = await fetch("/api/wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: amount, type: "transfer" }) });
+      const res = await fetch("/api/wallet", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount, type: "transfer" }) 
+      });
       if (res.ok) { 
-        toast.success(`Transfert réussi !`, { id: tid }); 
+        toast.success(`Réussi !`, { id: tid }); 
         fetchLatestData(user.email, user.password); 
-      } else { toast.error("Erreur", { id: tid }); }
-    } catch (e) { toast.error("Erreur connexion", { id: tid }); }
+      }
+    } catch (e) { toast.error("Erreur"); }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9]"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
+  // Empêche le crash si user est null
+  if (loading || !user) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+        <Loader2 className="animate-spin text-teal-600" size={40} />
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Initialisation du Dashboard...</p>
+      </div>
+    );
+  }
 
-  const rank = getRank(user?.wallet?.balance || 0);
+  const rank = getRank(user?.wallet?.balance);
+  const balance = user?.wallet?.balance || 0;
+  const progressPercent = Math.min((balance / 25000) * 100, 100);
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-12 pb-20 font-sans animate-in fade-in duration-1000">
       
-      {/* HEADER : Supprimé les bordures blanches inutiles */}
-      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8">
+      {/* HEADER SANS FOND BLANC BLOQUANT */}
+      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8 border border-white/5">
         <div className="text-center md:text-left">
           <div className={`inline-flex items-center gap-2 ${rank.color} ${rank.bg} px-4 py-2 rounded-2xl mb-4 border border-white/10`}>
              <span className="text-xl">{rank.icon}</span>
@@ -99,12 +122,12 @@ export default function AuthorDashboard() {
         </div>
         
         <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 text-right min-w-[200px]">
-          <p className="text-5xl font-black text-amber-400 tracking-tighter">{user?.wallet?.balance || 0} <span className="text-sm">Li</span></p>
+          <p className="text-5xl font-black text-amber-400 tracking-tighter">{balance} <span className="text-sm">Li</span></p>
           <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1">Solde Disponible</p>
         </div>
       </header>
 
-      {/* SECTION ŒUVRES */}
+      {/* MES ŒUVRES */}
       <section className="space-y-6">
         <div className="flex items-center justify-between px-4">
           <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
@@ -145,16 +168,17 @@ export default function AuthorDashboard() {
           </div>
         ) : (
           <div className="text-center p-20 bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
-            <p className="text-slate-400 font-medium italic text-sm">Aucune œuvre publiée pour le moment.</p>
+            <p className="text-slate-400 font-medium italic text-sm">Aucune œuvre publiée.</p>
           </div>
         )}
       </section>
 
-      {/* FOOTER : Sections corrigées sans bloc blanc gênant */}
+      {/* GRID DU BAS : Plus de box blanches gênantes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
         {/* TRANSFERT */}
         <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900 dark:text-white"><Send size={18} className="text-teal-600"/> Transférer des Li</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900 dark:text-white"><Send size={18} className="text-teal-600"/> Envoyer des Li</h3>
           <div className="space-y-4">
             <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm font-bold dark:text-white" onChange={(e) => setTransfer({...transfer, email: e.target.value})} />
             <input type="number" min="1000" placeholder="Montant" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm font-bold dark:text-white" onChange={(e) => setTransfer({...transfer, amount: e.target.value})} />
@@ -162,33 +186,37 @@ export default function AuthorDashboard() {
           </div>
         </div>
 
-        {/* PROGRESSION : Fond transparent teal pour ne pas bloquer le visuel */}
-        <div className="bg-teal-600 dark:bg-teal-900/40 p-8 rounded-[3rem] text-white flex flex-col justify-between shadow-xl">
+        {/* PROGRESSION : Utilisation du style "Verre" (Glassmorphism) pour la lisibilité */}
+        <div className="bg-teal-600 dark:bg-teal-900/40 p-8 rounded-[3rem] text-white flex flex-col justify-between shadow-xl border border-white/10">
            <TrendingUp size={32} className="mb-6 opacity-50" />
            <div>
               <p className="text-3xl font-black italic leading-none mb-4">Objectif Retrait</p>
-              <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden backdrop-blur-md">
-                <div className="bg-white h-full transition-all duration-1000 shadow-[0_0_15px_rgba(255,255,255,0.5)]" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 25000) * 100, 100)}%` }}></div>
+              <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden backdrop-blur-md border border-white/5">
+                <div className="bg-white h-full transition-all duration-1000" style={{ width: `${progressPercent}%` }}></div>
               </div>
               <div className="flex justify-between mt-3">
                 <p className="text-[9px] font-black uppercase opacity-60">Seuil : 25 000 Li</p>
-                <p className="text-[9px] font-black uppercase">{Math.floor((user?.wallet?.balance / 25000) * 100)}%</p>
+                <p className="text-[9px] font-black uppercase">{Math.floor(progressPercent)}%</p>
               </div>
            </div>
         </div>
 
-        {/* RÉSEAUX & BADGE : Plus de fond blanc bloquant */}
-        <div className="flex flex-col items-center justify-center p-8 bg-slate-900 rounded-[3rem] border border-white/5 space-y-8 shadow-2xl">
-           <div className="relative group">
+        {/* RÉSEAUX & BADGE : Fond Noir Profond pour le contraste */}
+        <div className="flex flex-col items-center justify-center p-8 bg-slate-900 rounded-[3rem] border border-white/5 space-y-8 shadow-2xl relative overflow-hidden">
+           <div className="relative z-10">
               <Award size={60} className="text-amber-500 animate-pulse" />
-              <button onClick={downloadBadge} className="absolute -bottom-2 -right-2 p-2.5 bg-teal-600 text-white rounded-full border-4 border-slate-900 hover:scale-110 transition-all"><Download size={14}/></button>
+              <button onClick={() => window.open(`https://api.dicebear.com/7.x/shapes/svg?seed=${user?.email}`)} className="absolute -bottom-2 -right-2 p-2.5 bg-teal-600 text-white rounded-full border-4 border-slate-900 hover:scale-110 transition-all shadow-xl">
+                <Download size={14}/>
+              </button>
            </div>
            
-           <div className="flex gap-4">
-              <button onClick={() => window.open(`https://wa.me/?text=Lisez mes œuvres sur Lisible !`)} className="p-4 bg-white/5 text-white rounded-2xl hover:bg-[#25D366] transition-all"><MessageCircle size={20}/></button>
-              <button onClick={() => window.open(`https://facebook.com/sharer/sharer.php?u=${window.location.origin}`)} className="p-4 bg-white/5 text-white rounded-2xl hover:bg-[#1877F2] transition-all"><Facebook size={20}/></button>
-              <button onClick={() => {navigator.clipboard.writeText(window.location.origin); toast.success("Lien copié !");}} className="p-4 bg-teal-600 text-white rounded-2xl hover:scale-110 transition-all shadow-lg shadow-teal-600/20"><Share2 size={20}/></button>
+           <div className="flex gap-4 z-10">
+              <button onClick={() => window.open(`https://wa.me/?text=Découvrez mes écrits sur Lisible !`)} className="p-4 bg-white/5 text-white rounded-2xl hover:bg-[#25D366] transition-all border border-white/5"><MessageCircle size={20}/></button>
+              <button onClick={() => window.open(`https://facebook.com/sharer/sharer.php?u=${window.location.origin}`)} className="p-4 bg-white/5 text-white rounded-2xl hover:bg-[#1877F2] transition-all border border-white/5"><Facebook size={20}/></button>
+              <button onClick={() => {navigator.clipboard.writeText(`${window.location.origin}/auteur/${user.id}`); toast.success("Lien copié !");}} className="p-4 bg-teal-600 text-white rounded-2xl hover:scale-110 transition-all shadow-lg shadow-teal-600/20"><Share2 size={20}/></button>
            </div>
+           {/* Décoration abstraite en fond */}
+           <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl"></div>
         </div>
 
       </div>
