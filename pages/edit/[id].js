@@ -1,13 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/router"; // Changé de 'next/navigation' à 'next/router'
 import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, AlignLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EditWorkPage() {
   const router = useRouter();
-  const params = useParams();
-  const { id } = params; // L'ID du texte (nom du fichier)
+  const { id } = router.query; // Récupéré via router.query au lieu de useParams
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -19,8 +18,10 @@ export default function EditWorkPage() {
     summary: ""
   });
 
-  // 1. Charger l'utilisateur et les données du texte
   useEffect(() => {
+    // Dans Pages Router, router.query peut être vide au premier rendu
+    if (!router.isReady) return; 
+
     const logged = localStorage.getItem("lisible_user");
     if (!logged) {
       router.push("/login");
@@ -37,7 +38,6 @@ export default function EditWorkPage() {
         const fileData = await res.json();
         const content = JSON.parse(atob(fileData.content));
 
-        // Vérification de sécurité côté client (immédiate)
         if (content.authorEmail?.toLowerCase() !== currentUser.email.toLowerCase()) {
           toast.error("Accès non autorisé");
           router.push("/dashboard");
@@ -59,9 +59,8 @@ export default function EditWorkPage() {
     };
 
     if (id) fetchWork();
-  }, [id, router]);
+  }, [id, router.isReady]); // Ajout de router.isReady dans les dépendances
 
-  // 2. Gestion de la sauvegarde
   const handleSave = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -78,12 +77,11 @@ export default function EditWorkPage() {
         })
       });
 
-      const data = await res.json();
-
       if (res.ok) {
         toast.success("Modifications enregistrées !", { id: tid });
         router.push("/dashboard");
       } else {
+        const data = await res.json();
         throw new Error(data.error || "Erreur lors de la sauvegarde");
       }
     } catch (err) {
@@ -93,7 +91,7 @@ export default function EditWorkPage() {
     }
   };
 
-  if (loading) return (
+  if (loading || !router.isReady) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9]">
       <Loader2 className="animate-spin text-teal-600 mb-4" size={40} />
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Récupération du manuscrit...</p>
@@ -104,7 +102,7 @@ export default function EditWorkPage() {
     <div className="min-h-screen bg-[#FCFBF9] py-12 px-6 font-sans">
       <div className="max-w-3xl mx-auto">
         
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors mb-8">
+        <button onClick={() => router.push("/dashboard")} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors mb-8">
           <ArrowLeft size={14} /> Retour au tableau de bord
         </button>
 
@@ -117,7 +115,6 @@ export default function EditWorkPage() {
         </header>
 
         <form onSubmit={handleSave} className="space-y-8">
-          {/* Titre */}
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <Type size={14}/> Titre de l'œuvre
@@ -131,7 +128,6 @@ export default function EditWorkPage() {
             />
           </div>
 
-          {/* Catégorie */}
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <Tag size={14}/> Catégorie
@@ -149,7 +145,6 @@ export default function EditWorkPage() {
             </select>
           </div>
 
-          {/* Corps du texte */}
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <AlignLeft size={14}/> Contenu du texte
@@ -160,11 +155,9 @@ export default function EditWorkPage() {
               value={formData.content}
               onChange={(e) => setFormData({...formData, content: e.target.value})}
               className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] font-serif text-lg leading-relaxed focus:ring-2 ring-teal-500/20 outline-none transition-all shadow-sm"
-              placeholder="Écrivez votre texte ici..."
             />
           </div>
 
-          {/* Bouton de sauvegarde */}
           <button 
             type="submit" 
             disabled={submitting}
