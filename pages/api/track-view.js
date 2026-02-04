@@ -1,30 +1,48 @@
 // pages/api/track-view.js
 import { Redis } from "@upstash/redis";
 
-// Initialisation automatique via les variables d'environnement Vercel
+export const config = {
+  runtime: "edge", // <-- C'est ici que tu gagnes les dernières millisecondes
+};
+
 const redis = Redis.fromEnv();
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { textId } = req.body;
-  if (!textId) return res.status(400).json({ error: "textId requis" });
+export default async function handler(req) {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
 
   try {
-    // INCRÉMENTATION INSTANTANÉE
-    // On utilise une clé structurée "views:ID_DU_TEXTE"
-    const newViewCount = await redis.incr(`views:${textId}`);
+    const { textId } = await req.json();
+    if (!textId) {
+      return new Response(JSON.stringify({ error: "textId requis" }), { 
+        status: 400, 
+        headers: { "Content-Type": "application/json" } 
+      });
+    }
 
-    // Optionnel : On peut aussi incrémenter un compteur global pour tes stats d'admin
-    await redis.incr("stats:total_views_global");
+    // Pipeline Redis : on incrémente la vue ET le total global en un seul voyage réseau
+    const [newViewCount, totalGlobal] = await redis
+      .pipeline()
+      .incr(`views:${textId}`)
+      .incr("stats:total_views_global")
+      .exec();
 
-    return res.status(200).json({ 
-      success: true, 
-      views: newViewCount,
-      source: "cache_redis_ultra_fast"
-    });
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        views: newViewCount,
+        global: totalGlobal,
+        source: "edge_redis_fast" 
+      }), 
+      { 
+        status: 200, 
+        headers: { "Content-Type": "application/json" } 
+      }
+    );
   } catch (e) {
-    console.error("Redis Tracking Error:", e);
-    return res.status(500).json({ error: "Erreur lors du tracking via Redis" });
+    return new Response(JSON.stringify({ error: "Redis Tracking Error" }), { 
+      status: 500 
+    });
   }
 }
