@@ -118,6 +118,9 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
         <meta name="description" content={text.content?.substring(0, 155)} />
         <meta property="og:title" content={text.title} />
         <meta property="og:description" content={`Une œuvre de ${text.authorName || 'Anonyme'} sur Lisible.`} />
+        <meta property="og:image" content="https://lisible.biz/og-default.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="https://lisible.biz/og-default.jpg" />
       </Head>
 
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-teal-600 transition-all duration-200" style={{ width: `${readingProgress}%` }} />
