@@ -1,6 +1,5 @@
 import { getFile, updateFile } from "@/lib/github";
 import { Buffer } from "buffer";
-// On utilise l'API crypto native de Node.js pour masquer le mot de passe
 import crypto from "crypto";
 
 export default async function handler(req, res) {
@@ -8,7 +7,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }
 
-  const { name, email, password, joinedAt } = req.body;
+  // On récupère le referralCode envoyé par le formulaire
+  const { name, email, password, joinedAt, referralCode } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Données manquantes" });
@@ -24,19 +24,24 @@ export default async function handler(req, res) {
       return res.status(409).json({ error: "Un compte avec cet email existe déjà." });
     }
 
-    // --- SÉCURISATION DU MOT DE PASSE ---
-    // On crée un "hash" SHA-256 du mot de passe pour qu'il ne soit plus lisible en clair
     const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
+
+    // Décodage du parrain si présent
+    let referrerEmail = null;
+    if (referralCode) {
+      try { referrerEmail = Buffer.from(referralCode, 'base64').toString('utf-8'); } catch (e) { referrerEmail = null; }
+    }
 
     const newUserProfile = {
       name,
       penName: name,
       email: cleanEmail,
-      password: hashedPassword, // Le mot de passe est maintenant masqué (ex: 5e884898...)
+      password: hashedPassword,
       birthday: "",
       joinedAt: joinedAt || new Date().toISOString(),
       profilePic: "",
       role: "author",
+      referredBy: referrerEmail, // Enregistre l'email du parrain
 
       stats: {
         totalTexts: 0,
@@ -48,8 +53,8 @@ export default async function handler(req, res) {
       },
 
       wallet: {
-        balance: 0,
-        totalEarned: 0,
+        balance: referralCode ? 200 : 0, // Bonus de 200 Li si parrainé
+        totalEarned: referralCode ? 200 : 0,
         currency: "Li",
         isMonetized: false,
         canWithdraw: false,
@@ -57,8 +62,8 @@ export default async function handler(req, res) {
           {
             date: new Date().toISOString(),
             type: "system",
-            amount: 0,
-            label: "Initialisation du compte"
+            amount: referralCode ? 200 : 0,
+            label: referralCode ? "Bonus de parrainage (Bienvenue)" : "Initialisation du compte"
           }
         ]
       },
@@ -77,18 +82,13 @@ export default async function handler(req, res) {
       path, 
       newUserProfile, 
       null, 
-      `✨ Nouveau membre : ${name}`
+      `✨ Nouveau membre ${referralCode ? '(Parrainé)' : ''} : ${name}`
     );
 
-    if (!success) {
-      throw new Error("Erreur lors de la sauvegarde.");
-    }
+    if (!success) throw new Error("Erreur lors de la sauvegarde.");
 
     const { password: _, ...safeUser } = newUserProfile;
-    return res.status(200).json({ 
-      success: true, 
-      user: safeUser 
-    });
+    return res.status(200).json({ success: true, user: safeUser });
 
   } catch (error) {
     console.error("Register API Error:", error);
