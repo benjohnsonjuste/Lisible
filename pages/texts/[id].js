@@ -104,9 +104,9 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
           )}
         </div>
       </div>
-      <div className="px-6 py-2 bg-slate-50 border border-slate-100 rounded-full flex items-center gap-3">
+      <div className="px-6 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full flex items-center gap-3">
         <Sparkles size={14} className="text-teal-500" />
-        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+        <span className="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">
            {Number(certifiedCount) || 0} CERTIFICATIONS
         </span>
       </div>
@@ -152,25 +152,25 @@ function CommentSection({ textId, comments = [], user, onCommented }) {
           <p className="text-xs text-slate-300 italic uppercase tracking-widest text-center py-4">Soyez le premier à répondre...</p>
         ) : (
           comments.map((c, i) => (
-            <div key={i} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm animate-in slide-in-from-bottom-2">
+            <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm animate-in slide-in-from-bottom-2">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-[10px] font-black text-teal-600 uppercase">{c.userName}</span>
                 <span className="text-[8px] text-slate-300 font-bold">{new Date(c.date).toLocaleDateString()}</span>
               </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">{c.text}</p>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">{c.text}</p>
             </div>
           ))
         )}
       </div>
 
-      <div className="sticky bottom-6 flex gap-2 bg-white/80 backdrop-blur-xl p-2 rounded-3xl border border-slate-200 shadow-2xl">
+      <div className="sticky bottom-6 flex gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-2 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl">
         <input 
           value={msg} onChange={e => setMsg(e.target.value)} 
           placeholder="Écrire une réponse..." 
           disabled={!user || sending}
-          className="flex-1 bg-transparent px-4 py-3 text-sm font-bold outline-none text-slate-900" 
+          className="flex-1 bg-transparent px-4 py-3 text-sm font-bold outline-none text-slate-900 dark:text-slate-100" 
         />
-        <button onClick={postComment} disabled={sending || !user} className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-all active:scale-95 disabled:opacity-20">
+        <button onClick={postComment} disabled={sending || !user} className="p-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl hover:bg-teal-600 transition-all active:scale-95 disabled:opacity-20">
           {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
         </button>
       </div>
@@ -190,6 +190,7 @@ export default function TextPage() {
 
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com",
+    "cmo.lablitteraire7@gmail.com",
     "robergeaurodley97@gmail.com",
     "jb7management@gmail.com",
     "woolsleypierre01@gmail.com",
@@ -259,7 +260,7 @@ export default function TextPage() {
   }, [router.isReady, id, fetchData]);
 
   if (!text) return (
-    <div className="flex flex-col h-screen items-center justify-center gap-4 bg-white">
+    <div className="flex flex-col h-screen items-center justify-center gap-4 bg-white dark:bg-slate-950">
       <Loader2 className="animate-spin text-teal-600" size={30} />
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture du manuscrit...</p>
     </div>
@@ -268,8 +269,7 @@ export default function TextPage() {
   const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
 
   return (
-    <>
-      {/* SECTION SEO DYNAMIQUE */}
+    <div className="min-h-screen transition-colors duration-500 bg-white dark:bg-slate-950">
       <Head>
         <title>{text.title} | Lisible</title>
         <meta name="description" content={`Découvrez "${text.title}", une oeuvre de ${text.authorName || 'Anonyme'} sur Lisible.`} />
@@ -281,21 +281,21 @@ export default function TextPage() {
 
       <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 pb-32 overflow-x-hidden">
         <header className="flex justify-between items-center mb-12">
-          <button onClick={() => router.back()} className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all">
-            <ArrowLeft size={20} className="text-slate-600" />
+          <button onClick={() => router.back()} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
           </button>
           <div className="flex gap-2">
               {!isStaffText && (
                 <>
-                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl text-slate-500 border border-slate-100">
+                  <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
                      <Eye size={14} /> <span className="text-[10px] font-black">{Number(text.views) || 0}</span>
                   </div>
                   <button 
                     onClick={handleLike} 
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all active:scale-90 ${
                       typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) 
-                      ? 'bg-rose-50 border-rose-100 text-rose-500' 
-                      : 'bg-slate-50 border-slate-100 text-slate-400'
+                      ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-900/30 text-rose-500' 
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'
                     }`}
                   >
                      <Heart size={14} className={typeof window !== 'undefined' && localStorage.getItem(`like_${id}`) ? "fill-rose-500" : ""} />
@@ -305,7 +305,7 @@ export default function TextPage() {
               )}
               <button 
                 onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} 
-                className="p-3 bg-slate-900 text-white rounded-2xl shadow-lg shadow-slate-200 active:scale-95 transition-all"
+                className="p-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl shadow-lg shadow-slate-200 active:scale-95 transition-all"
               >
                 <Share2 size={20} />
               </button>
@@ -314,7 +314,7 @@ export default function TextPage() {
 
         <article className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
           {(text.isConcours === true || text.isConcours === "true") && <BadgeConcours />}
-          <h1 className="text-5xl sm:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9] text-slate-900">
+          <h1 className="text-5xl sm:text-8xl font-black italic tracking-tighter mb-6 leading-[0.9] text-slate-900 dark:text-slate-50">
             {text.title}
           </h1>
           <p className="text-[11px] font-black text-teal-600 uppercase tracking-[0.4em] mb-16 flex items-center gap-3">
@@ -322,13 +322,13 @@ export default function TextPage() {
               {text.isConcours ? `Candidat : ${text.concurrentId || 'Poète'}` : `Par ${text.authorName || 'Anonyme'}`}
           </p>
           
-          <div className="prose-xl font-serif text-slate-800 leading-relaxed mb-24 whitespace-pre-wrap select-none sm:select-text">
+          <div className="prose-xl font-serif text-slate-800 dark:text-slate-300 leading-relaxed mb-24 whitespace-pre-wrap select-none sm:select-text text-justify tracking-tight">
             {text.content}
           </div>
 
           <button 
             onClick={() => setIsReportOpen(true)}
-            className="flex items-center gap-2 text-slate-300 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em] mt-10 group"
+            className="flex items-center gap-2 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em] mt-10 group"
           >
             <AlertTriangle size={14} className="group-hover:animate-bounce" />
             Signaler un problème avec ce texte
@@ -357,7 +357,7 @@ export default function TextPage() {
         />
 
         <footer className="mt-20 text-center opacity-20">
-          <p className="text-[8px] font-black uppercase tracking-[0.5em]">Lisible.biz • Expérience de lecture certifiée</p>
+          <p className="text-[8px] font-black uppercase tracking-[0.5em] dark:text-slate-100">Lisible.biz • Expérience de lecture certifiée</p>
         </footer>
 
         <ReportModal 
@@ -368,6 +368,6 @@ export default function TextPage() {
           userEmail={user?.email}
         />
       </div>
-    </>
+    </div>
   );
 }
