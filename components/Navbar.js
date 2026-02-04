@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import Pusher from "pusher-js";
 import { toast } from "sonner";
+import ThemeToggle from "./ThemeToggle"; // Importation du bouton de thème
 
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
@@ -20,34 +21,28 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // 1. Récupération immédiate de l'utilisateur pour le filtrage Pusher
     const loggedUser = localStorage.getItem("lisible_user");
     const currentUser = loggedUser ? JSON.parse(loggedUser) : null;
     setUser(currentUser);
 
-    // Initialisation du compteur (optionnel: charger depuis une API ou localStorage)
     const savedCount = localStorage.getItem("unread_notifs");
     if (savedCount) setUnreadCount(parseInt(savedCount));
 
-    // 2. Configuration Pusher
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
     const channel = pusher.subscribe('global-notifications');
     
     channel.bind('new-alert', (notif) => {
-      // FILTRAGE : On vérifie si la notif est pour tout le monde ou l'utilisateur actuel
       const isForMe = notif.targetEmail === "all" || 
                       (currentUser && notif.targetEmail?.toLowerCase() === currentUser.email?.toLowerCase());
 
       if (!isForMe) return;
 
-      // Incrémentation du compteur
       setUnreadCount(prev => {
         const next = prev + 1;
         localStorage.setItem("unread_notifs", next.toString());
         return next;
       });
 
-      // --- LOGIQUE SONORE ---
       const playNotifSound = () => {
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -64,10 +59,8 @@ export default function Navbar() {
       };
       playNotifSound();
 
-      // --- MISE À JOUR LIVE ---
       if (notif.type === 'live') setIsLiveActive(true);
       
-      // --- AFFICHAGE TOAST DYNAMIQUE ---
       const getToastIcon = () => {
         switch(notif.type) {
           case 'li_received': return <Coins size={18} className="text-amber-500 animate-bounce" />;
@@ -90,11 +83,10 @@ export default function Navbar() {
           }
         },
         duration: 6000,
-        className: "rounded-[1.5rem] border-slate-100 shadow-2xl font-sans",
+        className: "rounded-[1.5rem] border-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-white shadow-2xl font-sans",
       });
     });
 
-    // 3. Statut du Live (Polling)
     const checkLiveStatus = async () => {
       try {
         const res = await fetch("https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/live_status.json?t=" + Date.now());
@@ -108,7 +100,6 @@ export default function Navbar() {
     checkLiveStatus();
     const liveTimer = setInterval(checkLiveStatus, 45000); 
 
-    // 4. Écouteur de changement de session
     const handleStorageChange = () => {
       const updatedUser = localStorage.getItem("lisible_user");
       setUser(updatedUser ? JSON.parse(updatedUser) : null);
@@ -152,23 +143,23 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="bg-white/80 backdrop-blur-md fixed top-0 left-0 w-full z-50 h-20 border-b border-slate-100 shadow-sm">
+      <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-md fixed top-0 left-0 w-full z-50 h-20 border-b border-slate-100 dark:border-white/5 shadow-sm transition-colors duration-300">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
           
           <div className="flex items-center gap-6">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className="p-3 bg-slate-50 text-slate-600 hover:bg-teal-50 hover:text-teal-600 rounded-2xl transition-all shadow-sm border border-slate-100"
+              className="p-3 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600 rounded-2xl transition-all shadow-sm border border-slate-100 dark:border-white/10"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <Link href="/" className="group flex items-center gap-2">
-              <span className="font-black text-2xl tracking-tighter text-slate-900 italic">Lisible.</span>
+              <span className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white italic">Lisible.</span>
             </Link>
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <nav className="hidden md:flex items-center gap-1 bg-slate-50 p-1.5 rounded-[1.5rem] border border-slate-100">
+            <nav className="hidden md:flex items-center gap-1 bg-slate-50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
               <NavLink 
@@ -181,21 +172,23 @@ export default function Navbar() {
             </nav>
 
             <div className="flex items-center gap-2">
+              <ThemeToggle /> {/* Switch Dark Mode ajouté ici */}
+              
               <Link 
                 href="/notifications" 
                 onClick={handleNotifClick}
-                className="p-3 text-slate-400 hover:text-teal-600 transition-all relative"
+                className="p-3 text-slate-400 dark:text-slate-500 hover:text-teal-600 transition-all relative"
               >
                 <Bell size={22} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 bg-teal-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-in zoom-in duration-300">
+                  <span className="absolute top-1 right-1 bg-teal-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-in zoom-in duration-300">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </Link>
               
               {user ? (
-                <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-rose-500 transition-all">
+                <button onClick={handleLogout} className="p-3 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all">
                   <LogOut size={22} />
                 </button>
               ) : (
@@ -209,7 +202,7 @@ export default function Navbar() {
       </header>
 
       {/* SIDEBAR */}
-      <aside className={`fixed top-0 left-0 h-full w-80 bg-white shadow-2xl transform transition-transform duration-500 ease-in-out z-[60] border-r border-slate-50 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-500 ease-in-out z-[60] border-r border-slate-50 dark:border-white/5 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="p-8 flex flex-col h-full">
           <div className="flex items-center justify-between mb-10">
             <span className="font-black italic text-xl tracking-tighter text-teal-600">Lisible.</span>
@@ -217,24 +210,24 @@ export default function Navbar() {
           </div>
 
           {user && (
-            <Link href="/account" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 hover:bg-teal-50 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 transition-all group">
+            <Link href="/account" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
               <div className="flex items-center gap-4 overflow-hidden">
-                <div className="shrink-0 w-12 h-12 bg-slate-200 rounded-2xl overflow-hidden border-2 border-white shadow-lg">
+                <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-900 shadow-lg">
                   {user.profilePic ? <img src={user.profilePic} className="w-full h-full object-cover" alt="P" /> : <div className="w-full h-full bg-teal-600 text-white flex items-center justify-center font-black">{user.name?.charAt(0)}</div>}
                 </div>
                 <div className="text-left overflow-hidden">
-                  <p className="text-sm font-black text-slate-900 truncate">{user.penName || user.name}</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user.penName || user.name}</p>
                   <p className="text-[9px] uppercase font-black text-teal-600">Mon Profil</p>
                 </div>
               </div>
-              <ChevronRight size={18} className="text-slate-300" />
+              <ChevronRight size={18} className="text-slate-300 dark:text-slate-600" />
             </Link>
           )}
 
           <nav className="space-y-1">
             {menuItems.map((item) => (item.authRequired && !user ? null : (
-              <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === item.href ? "bg-slate-900 text-white shadow-lg" : "text-slate-500 hover:bg-teal-50 hover:text-teal-600"}`}>
-                <span className={pathname === item.href ? "text-teal-400" : "text-slate-400"}>{item.icon}</span>
+              <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === item.href ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" : "text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"}`}>
+                <span className={pathname === item.href ? (pathname === item.href && pathname !== "/" ? "text-teal-400 dark:text-teal-600" : "text-teal-400") : "text-slate-400 dark:text-slate-600"}>{item.icon}</span>
                 <span className="flex-grow">{item.label}</span>
                 {item.href === "/lisible-club" && isLiveActive && <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />}
               </Link>
@@ -243,7 +236,7 @@ export default function Navbar() {
         </div>
       </aside>
 
-      {isMenuOpen && <div onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 animate-in fade-in" />}
+      {isMenuOpen && <div onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />}
       <div className="h-20" />
     </>
   );
@@ -251,7 +244,7 @@ export default function Navbar() {
 
 function NavLink({ href, icon, active, title }) {
   return (
-    <Link href={href} title={title} className={`p-3 rounded-2xl transition-all relative ${active ? "bg-white text-teal-600 shadow-sm" : "text-slate-400 hover:text-slate-900 hover:bg-white"}`}>
+    <Link href={href} title={title} className={`p-3 rounded-2xl transition-all relative ${active ? "bg-white dark:bg-slate-800 text-teal-600 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"}`}>
       {icon}
       {active && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-teal-600 rounded-full" />}
     </Link>
