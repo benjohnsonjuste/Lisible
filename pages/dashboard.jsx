@@ -7,7 +7,7 @@ import {
   Download, Award, Twitter, Facebook, 
   MessageCircle, Maximize2, Minimize2, Wallet, 
   TrendingUp, ShieldCheck, Sparkles, Share2,
-  Bell, Users, BarChart3
+  Bell, Users, BarChart3, CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatLi } from "@/lib/utils";
@@ -31,13 +31,6 @@ export default function AuthorDashboard() {
     "jeanpierreborlhaïniedarha@gmail.com"
   ];
 
-  const getRank = (sc = 0) => {
-    if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-500", bg: "bg-purple-500/10", icon: "👑" };
-    if (sc >= 200) return { name: "Plume d'Argent", color: "text-slate-400", bg: "bg-slate-500/10", icon: "✨" };
-    if (sc >= 50) return { name: "Plume de Bronze", color: "text-orange-500", bg: "bg-orange-500/10", icon: "📜" };
-    return { name: "Plume de Plomb", color: "text-slate-500", bg: "bg-slate-500/10", icon: "🖋️" };
-  };
-
   const fetchLatestData = useCallback(async (email) => {
     try {
       const stored = localStorage.getItem("lisible_user");
@@ -55,7 +48,6 @@ export default function AuthorDashboard() {
         setUser(data.user);
         localStorage.setItem("lisible_user", JSON.stringify(data.user));
 
-        // Intégration des nouvelles API détectées : Metrics & Followers
         const [mRes, fRes] = await Promise.all([
           fetch(`/api/author/${data.user.id}/metrics`),
           fetch(`/api/get-followers-count?userId=${data.user.id}`)
@@ -88,7 +80,6 @@ export default function AuthorDashboard() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [router, fetchLatestData]);
 
-  // (Fonctions handleDownloadBadge, shareOnSocial, handleTransfer conservées telles quelles)
   const handleDownloadBadge = () => {
     const svg = badgeRef.current;
     if (!svg) return;
@@ -108,6 +99,25 @@ export default function AuthorDashboard() {
       toast.success("Badge certifié téléchargé !");
     };
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const handleUniversalShare = async () => {
+    const shareData = {
+      title: "Lisible - Profil d'Auteur",
+      text: `Découvrez les œuvres de ${user?.penName} sur Lisible !`,
+      url: `https://lisible.biz/author/${user?.id || ''}`
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success("Lien copié ! Partagez-le partout.");
+      }
+    } catch (err) {
+      console.log("Erreur de partage");
+    }
   };
 
   const handleTransfer = async () => {
@@ -139,7 +149,6 @@ export default function AuthorDashboard() {
   if (loading || !user) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9] dark:bg-slate-950"><Loader2 className="animate-spin text-teal-600" /></div>;
 
   const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
-  const rank = getRank(user?.wallet?.balance || 0);
 
   return (
     <div className={`min-h-screen selection:bg-teal-100 font-sans transition-all duration-1000 ${isFocusMode ? 'bg-[#F9F7F2] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
@@ -159,10 +168,10 @@ export default function AuthorDashboard() {
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-4">
               <div className={`w-16 h-16 rounded-[1.5rem] ${isStaff ? 'bg-slate-900' : 'bg-teal-600'} flex items-center justify-center text-white shadow-xl text-2xl rotate-3`}>
-                {rank.icon}
+                {isStaff ? <ShieldCheck /> : <Sparkles />}
               </div>
               <div>
-                <p className={`text-[10px] font-black uppercase tracking-widest ${rank.color}`}>{rank.name}</p>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${isStaff ? 'text-slate-500' : 'text-teal-600'}`}>{isStaff ? 'Administration' : 'Auteur Certifié'}</p>
                 <h1 className="text-3xl font-serif font-black italic dark:text-white">{user?.penName}</h1>
               </div>
             </div>
@@ -172,21 +181,18 @@ export default function AuthorDashboard() {
             </button>
           </div>
 
-          {/* New Stats Bar (Basé sur les nouvelles APIs) */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center">
-              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Lectures</p>
-              <p className="text-lg font-serif font-bold dark:text-white">{metrics.views}</p>
+          {!isStaff && (
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center">
+                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Lectures</p>
+                <p className="text-lg font-serif font-bold dark:text-white">{metrics.views}</p>
+              </div>
+              <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center">
+                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Abonnés</p>
+                <p className="text-lg font-serif font-bold dark:text-white">{metrics.followers}</p>
+              </div>
             </div>
-            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center">
-              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Abonnés</p>
-              <p className="text-lg font-serif font-bold dark:text-white">{metrics.followers}</p>
-            </div>
-            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center">
-              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Rang</p>
-              <p className="text-lg font-serif font-bold dark:text-white">#{Math.floor(Math.random() * 10) + 1}</p>
-            </div>
-          </div>
+          )}
 
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex justify-between items-end">
             <div>
@@ -222,7 +228,6 @@ export default function AuthorDashboard() {
             </button>
           </div>
 
-          {/* Transfert Section */}
           <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl border border-white/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Send size={80} /></div>
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-8 flex items-center gap-2 text-teal-400">
@@ -235,7 +240,6 @@ export default function AuthorDashboard() {
             </div>
           </div>
 
-          {/* Progression Retrait (Dynamique) */}
           {!isStaff && (
             <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 transition-all duration-700 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
               <div className="flex justify-between items-end mb-4">
@@ -249,7 +253,6 @@ export default function AuthorDashboard() {
             </div>
           )}
 
-          {/* Badge & Certification */}
           <div className={`flex flex-col items-center text-center p-8 transition-all duration-700 ${isFocusMode ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
             <div className="hidden">
               <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
@@ -276,8 +279,12 @@ export default function AuthorDashboard() {
               </svg>
             </div>
 
-            <div className="flex gap-4 mb-8">
-               <button onClick={() => {navigator.clipboard.writeText("https://lisible.biz"); toast.success("Lien copié !");}} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:text-teal-600 transition-colors shadow-sm"><Share2 size={20} /></button>
+            <div className="mb-6">
+               <CheckCircle2 size={48} className="text-teal-600 animate-pulse" />
+            </div>
+
+            <div className="flex gap-4">
+               <button onClick={handleUniversalShare} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:text-teal-600 transition-colors shadow-sm"><Share2 size={20} /></button>
                <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
                  <Download size={16} /> Télécharger
                </button>
