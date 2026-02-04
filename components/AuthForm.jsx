@@ -1,13 +1,25 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles } from "lucide-react";
 
 export default function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState("login");
   const [loading, setLoading] = useState(false);
+  const [refCode, setRefCode] = useState(null);
+
+  // Détection du parrainage dans l'URL (?ref=...)
+  useEffect(() => {
+    const code = searchParams.get("ref");
+    if (code) {
+      setRefCode(code);
+      setMode("register"); // On bascule directement sur l'inscription
+      toast.info("Lien de parrainage activé ! Profitez de votre bonus de bienvenue.");
+    }
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -48,10 +60,7 @@ export default function AuthForm() {
           body: JSON.stringify({ email: emailClean })
         });
         const result = await res.json();
-        
         if (!res.ok) throw new Error(result.error || "Compte inconnu");
-        
-        // Affichage de l'indice de sécurité récupéré
         toast.success(`Indice : ${result.hint}. Alerte de sécurité envoyée.`);
         setMode("login");
         return;
@@ -64,7 +73,8 @@ export default function AuthForm() {
           body: JSON.stringify({
             name: formData.name,
             email: emailClean,
-            password: formData.password
+            password: formData.password,
+            referralCode: refCode // On envoie le code de parrainage s'il existe
           })
         });
         if (!regRes.ok) {
@@ -101,6 +111,14 @@ export default function AuthForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Affichage d'un badge de bienvenue si parrainé */}
+      {mode === "register" && refCode && (
+        <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top duration-500">
+           <Sparkles className="text-teal-600" size={18}/>
+           <p className="text-[10px] font-black text-teal-700 uppercase">Bonus de +200 Li activé !</p>
+        </div>
+      )}
+
       {mode === "register" && (
         <div className="relative group">
           <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={18} />
