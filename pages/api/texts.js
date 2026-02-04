@@ -5,14 +5,14 @@ export default async function handler(req, res) {
   const token = process.env.GITHUB_TOKEN;
   const owner = "benjohnsonjuste";
   const repo = "Lisible";
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   // --- LOGIQUE POST : CRÉATION D'UNE NOUVELLE PUBLICATION ---
   if (req.method === "POST") {
     try {
       const textData = req.body;
 
-      // --- SÉCURISATION DES ENTRÉES (Blindage XSS) ---
-      // On retire tout HTML du titre et on n'autorise que le formatage de base pour le contenu
       const cleanTitle = DOMPurify.sanitize(textData.title, { ALLOWED_TAGS: [] }).trim();
       const cleanContent = DOMPurify.sanitize(textData.content, {
         ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'u'],
@@ -25,7 +25,6 @@ export default async function handler(req, res) {
       const id = `${slug}-${Date.now()}`;
       const path = `data/publications/${id}.json`;
 
-      // On reconstruit l'objet avec les données nettoyées
       const securedData = { 
         ...textData, 
         id, 
@@ -47,7 +46,6 @@ export default async function handler(req, res) {
 
       if (!response.ok) throw new Error("Erreur lors de l'écriture sur GitHub");
 
-      // --- LOGIQUE DE NOTIFICATION DES ABONNÉS ---
       const origin = req.headers.origin || `https://${req.headers.host}`;
       const authorIdentifier = textData.authorEmail.replace(/[.@]/g, '_');
       const authorProfilePath = `data/users/${authorIdentifier}.json`;
@@ -93,6 +91,21 @@ export default async function handler(req, res) {
     const { id, action, payload } = req.body;
     if (!id) return res.status(400).json({ error: "ID du texte manquant" });
 
+    // --- OPTIMISATION : LIKES ET VUES VIA REDIS (INSTANTANÉ) ---
+    if (action === "like" || action === "view") {
+      try {
+        const key = action === "like" ? `likes:${id}` : `views:${id}`;
+        const redisRes = await fetch(`${redisUrl}/incr/${key}`, {
+          headers: { Authorization: `Bearer ${redisToken}` }
+        });
+        const data = await redisRes.json();
+        return res.status(200).json({ success: true, count: data.result });
+      } catch (e) {
+        return res.status(500).json({ error: "Erreur Redis" });
+      }
+    }
+
+    // --- ACTIONS RESTANTES VIA GITHUB (CERTIFY / COMMENT) ---
     const textPath = `data/publications/${id}.json`;
 
     try {
@@ -134,17 +147,8 @@ export default async function handler(req, res) {
         });
       }
 
-      if (action === "like") {
-        textData.totalLikes = (textData.totalLikes || 0) + 1;
-      }
-
-      if (action === "view") {
-        textData.views = (textData.views || 0) + 1;
-      }
-
       if (action === "comment") {
         if (!textData.comments) textData.comments = [];
-        // Nettoyage du commentaire également
         const cleanComment = DOMPurify.sanitize(payload.text, { ALLOWED_TAGS: [] }).trim();
         
         textData.comments.push({
