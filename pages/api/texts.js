@@ -8,44 +8,102 @@ export default async function handler(req, res) {
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  // --- LOGIQUE POST : CRÉATION D'UNE NOUVELLE PUBLICATION ---
+  // --- LOGIQUE GET : PAGINATION PAR SEGMENTS ---
+  if (req.method === "GET") {
+    try {
+      const { limit = 10, lastId } = req.query;
+      
+      const indexRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/data/publications/index.json`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      
+      if (!indexRes.ok) return res.status(200).json({ data: [], nextCursor: null });
+      
+      const indexFile = await indexRes.json();
+      const allTexts = JSON.parse(Buffer.from(indexFile.content, "base64").toString("utf-8"));
+
+      // Tri par date décroissante
+      allTexts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      let startIndex = 0;
+      if (lastId) {
+        startIndex = allTexts.findIndex(t => t.id === lastId) + 1;
+        if (startIndex === 0) startIndex = 0; // Si lastId non trouvé
+      }
+
+      const paginatedData = allTexts.slice(startIndex, startIndex + parseInt(limit));
+      const nextCursor = paginatedData.length === parseInt(limit) ? paginatedData[paginatedData.length - 1].id : null;
+
+      return res.status(200).json({ data: paginatedData, nextCursor, total: allTexts.length });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // --- LOGIQUE POST : CRÉATION ET MISE À JOUR DE L'INDEX ---
   if (req.method === "POST") {
     try {
       const textData = req.body;
-
       const cleanTitle = DOMPurify.sanitize(textData.title, { ALLOWED_TAGS: [] }).trim();
       const cleanContent = DOMPurify.sanitize(textData.content, {
         ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'u'],
       }).trim();
 
-      const slug = cleanTitle
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "-")
-        .slice(0, 30);
+      const slug = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30);
       const id = `${slug}-${Date.now()}`;
       const path = `data/publications/${id}.json`;
+      const creationDate = new Date().toISOString();
 
-      const securedData = { 
-        ...textData, 
-        id, 
-        title: cleanTitle, 
-        content: cleanContent 
-      };
+      const securedData = { ...textData, id, title: cleanTitle, content: cleanContent, date: creationDate };
 
+      // 1. Sauvegarde du texte complet
       const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           message: `📖 Publication : ${cleanTitle}`,
           content: Buffer.from(JSON.stringify(securedData, null, 2)).toString("base64"),
         }),
       });
 
-      if (!response.ok) throw new Error("Erreur lors de l'écriture sur GitHub");
+      if (!response.ok) throw new Error("Erreur GitHub");
 
+      // 2. Mise à jour de l'INDEX global (pour la bibliothèque)
+      const indexUrl = `https://api.github.com/repos/${owner}/${repo}/contents/data/publications/index.json`;
+      const indexFetch = await fetch(indexUrl, { headers: { Authorization: `Bearer ${token}` } });
+      let indexContent = [];
+      let indexSha = null;
+
+      if (indexFetch.ok) {
+        const indexData = await indexFetch.json();
+        indexSha = indexData.sha;
+        indexContent = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
+      }
+
+      // Ajout de la version allégée à l'index
+      indexContent.unshift({
+        id,
+        title: cleanTitle,
+        authorName: textData.authorName,
+        authorEmail: textData.authorEmail,
+        date: creationDate,
+        isConcours: textData.isConcours,
+        genre: textData.genre,
+        imageBase64: textData.imageBase64 ? "exists" : null // Flag léger
+      });
+
+      await fetch(indexUrl, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "🗂 Index Update",
+          content: Buffer.from(JSON.stringify(indexContent.slice(0, 10000), null, 2)).toString("base64"),
+          sha: indexSha
+        }),
+      });
+
+      // 3. Notifications (logique existante)
       const origin = req.headers.origin || `https://${req.headers.host}`;
       const authorIdentifier = textData.authorEmail.replace(/[.@]/g, '_');
       const authorProfilePath = `data/users/${authorIdentifier}.json`;
@@ -54,44 +112,37 @@ export default async function handler(req, res) {
         const userRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${authorProfilePath}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-
         if (userRes.ok) {
           const userDataFile = await userRes.json();
           const userData = JSON.parse(Buffer.from(userDataFile.content, "base64").toString("utf-8"));
-          
-          if (userData.subscribers && Array.isArray(userData.subscribers)) {
-            const notifPromises = userData.subscribers.map(sub => 
+          if (userData.subscribers?.length > 0) {
+            await Promise.all(userData.subscribers.map(sub => 
               fetch(`${origin}/api/create-notif`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   targetEmail: sub.email,
                   type: "new_publication",
-                  message: `${textData.authorPenName || "Une plume que vous suivez"} a publié : "${cleanTitle}"`,
+                  message: `${textData.authorPenName || "Une plume"} a publié : "${cleanTitle}"`,
                   link: `/texte/${id}`
                 })
-              }).catch(e => console.error(`Notif failed for ${sub.email}`, e))
-            );
-            await Promise.all(notifPromises);
+              }).catch(() => null)
+            ));
           }
         }
-      } catch (notifErr) {
-        console.warn("Échec de l'envoi des notifications aux abonnés:", notifErr);
-      }
+      } catch (e) { console.warn("Notif failed"); }
 
       return res.status(200).json({ success: true, id });
     } catch (error) {
-      console.error("POST Error:", error);
-      return res.status(500).json({ error: "Échec de la publication sur le serveur." });
+      return res.status(500).json({ error: "Échec de publication" });
     }
   }
 
-  // --- LOGIQUE PATCH : MISE À JOUR ---
+  // --- LOGIQUE PATCH : MISE À JOUR (Likes/Views/Comments) ---
   if (req.method === "PATCH") {
     const { id, action, payload } = req.body;
-    if (!id) return res.status(400).json({ error: "ID du texte manquant" });
+    if (!id) return res.status(400).json({ error: "ID manquant" });
 
-    // --- OPTIMISATION : LIKES ET VUES VIA REDIS (INSTANTANÉ) ---
     if (action === "like" || action === "view") {
       try {
         const key = action === "like" ? `likes:${id}` : `views:${id}`;
@@ -101,75 +152,55 @@ export default async function handler(req, res) {
         const data = await redisRes.json();
         return res.status(200).json({ success: true, count: data.result });
       } catch (e) {
-        return res.status(500).json({ error: "Erreur Redis" });
+        return res.status(500).json({ error: "Redis Error" });
       }
     }
 
-    // --- ACTIONS RESTANTES VIA GITHUB (CERTIFY / COMMENT) ---
     const textPath = `data/publications/${id}.json`;
-
     try {
       const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
-
       if (!getRes.ok) throw new Error("Texte introuvable.");
-
       const fileData = await getRes.json();
       let textData = JSON.parse(Buffer.from(fileData.content, "base64").toString("utf-8"));
       const origin = req.headers.origin || `https://${req.headers.host}`;
 
       if (action === "certify") {
         textData.totalCertified = (textData.totalCertified || 0) + 1;
-
         await fetch(`${origin}/api/wallet`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: textData.authorEmail,
-            amount: 1,
-            reason: `Certification : ${textData.title}`,
-            type: "reward",
-            isConcours: textData.isConcours || false
-          })
+          body: JSON.stringify({ email: textData.authorEmail, amount: 1, reason: `Certification : ${textData.title}`, type: "reward", isConcours: textData.isConcours || false })
         });
-
         await fetch(`${origin}/api/create-notif`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            targetEmail: textData.authorEmail,
-            type: "certified_read",
-            message: `Nouveau sceau apposé sur "${textData.title}" !`,
-            amountLi: 1
-          })
+          body: JSON.stringify({ targetEmail: textData.authorEmail, type: "certified_read", message: `Nouveau sceau sur "${textData.title}" !`, amountLi: 1 })
         });
       }
 
       if (action === "comment") {
         if (!textData.comments) textData.comments = [];
-        const cleanComment = DOMPurify.sanitize(payload.text, { ALLOWED_TAGS: [] }).trim();
-        
         textData.comments.push({
           userName: payload.userName || "Une plume",
-          text: cleanComment,
+          text: DOMPurify.sanitize(payload.text, { ALLOWED_TAGS: [] }).trim(),
           date: new Date().toISOString()
         });
       }
 
-      const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `📊 Stats update [${action}] : ${textData.title}`,
+          message: `📊 Update [${action}] : ${textData.title}`,
           content: Buffer.from(JSON.stringify(textData, null, 2)).toString("base64"),
           sha: fileData.sha
         })
       });
 
       return res.status(200).json({ success: true, totalCertified: textData.totalCertified });
-
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
