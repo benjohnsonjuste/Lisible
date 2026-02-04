@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
-import Head from "next/head"; // Ajout pour le SEO
+import Head from "next/head";
 import { toast } from "sonner";
 import { 
   ArrowLeft, Loader2, Share2, Eye, Heart, Trophy, 
@@ -197,23 +197,45 @@ export default function TextPage() {
     "jeanpierreborlhaïniedarha@gmail.com"
   ];
 
-  const fetchData = useCallback(async (textId) => {
+  // OPTIMISATION : Système de Cache Local SWR
+  const fetchData = useCallback(async (textId, skipCache = false) => {
     if (!textId) return;
+
+    // 1. Tenter de charger depuis le cache local pour un affichage instantané
+    const cacheKey = `cache_text_${textId}`;
+    if (!skipCache) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setText(JSON.parse(cached));
+      }
+    }
+
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${textId}.json?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+        
+        // 2. Mettre à jour le cache et l'état
+        localStorage.setItem(cacheKey, JSON.stringify(content));
         setText(content);
         return content;
       }
-    } catch (e) { console.error("Erreur de chargement", e); }
+    } catch (e) { 
+      console.error("Erreur de rafraîchissement", e); 
+    }
   }, []);
 
+  // OPTIMISATION : Like Optimiste
   const handleLike = async () => {
     const likeKey = `like_${id}`;
     if (localStorage.getItem(likeKey)) return toast.info("Vous appréciez déjà ce texte.");
     if (isLiking) return;
+
+    // UI Optimiste : On simule le like immédiatement
+    const previousLikes = Number(text.totalLikes || text.likes || 0);
+    setText(prev => ({ ...prev, totalLikes: previousLikes + 1 }));
+    localStorage.setItem(likeKey, "true");
 
     setIsLiking(true);
     try {
@@ -222,13 +244,16 @@ export default function TextPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action: "like" })
       });
-      if (res.ok) {
-        localStorage.setItem(likeKey, "true");
-        await fetchData(id); 
-        toast.success("Aimé !");
-      }
-    } catch (e) { toast.error("Action impossible."); }
-    finally { setIsLiking(false); }
+      if (!res.ok) throw new Error();
+      toast.success("Aimé !");
+    } catch (e) { 
+      // Rollback si erreur
+      setText(prev => ({ ...prev, totalLikes: previousLikes }));
+      localStorage.removeItem(likeKey);
+      toast.error("Action impossible."); 
+    } finally { 
+      setIsLiking(false); 
+    }
   };
 
   useEffect(() => {
@@ -237,7 +262,7 @@ export default function TextPage() {
       if (stored) setUser(JSON.parse(stored));
       
       fetchData(id).then(loaded => {
-        if (!loaded) return;
+        if (!loaded && !text) return; // Si rien en cache et rien chargé
 
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
@@ -344,7 +369,7 @@ export default function TextPage() {
             wordCount={text.content?.length || 100} 
             fileName={id} 
             userEmail={user?.email} 
-            onValidated={() => fetchData(id)} 
+            onValidated={() => fetchData(id, true)} 
             certifiedCount={text.totalCertified || 0}
           />
         )}
@@ -353,7 +378,7 @@ export default function TextPage() {
           textId={id} 
           comments={text.comments || []} 
           user={user} 
-          onCommented={() => fetchData(id)} 
+          onCommented={() => fetchData(id, true)} 
         />
 
         <footer className="mt-20 text-center opacity-20">
