@@ -23,6 +23,7 @@
     "@upstash/redis": "latest",
     "isomorphic-dompurify": "latest",
     "canvas-confetti": "latest",
+    "jspdf": "latest",
     "react": "18.2.0",
     "react-onesignal": "latest",
     "nodemailer": "^6.9.13",
