@@ -31,6 +31,8 @@ export default function AccountPage() {
   const [formData, setFormData] = useState({ firstName: "", lastName: "", penName: "", birthday: "", profilePic: "", paymentMethod: "PayPal", paypalEmail: "", wuFirstName: "", wuLastName: "", wuCountry: "" });
   const [passData, setPassData] = useState({ current: "", new: "" });
 
+  const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
+
   const getRank = (sc) => {
     if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-600", bg: "bg-purple-50", icon: "👑" };
     if (sc >= 200) return { name: "Plume d'Argent", color: "text-slate-500", bg: "bg-slate-50", icon: "✨" };
@@ -72,9 +74,23 @@ export default function AccountPage() {
     } catch (e) { toast.error("Erreur", { id: t }); } finally { setIsSaving(false); }
   };
 
+  const handleWithdrawRequest = () => {
+    const balance = user?.wallet?.balance || 0;
+    if (balance < 25000) {
+      toast.error(`Retrait impossible : Votre coffre contient ${balance} Li. Un minimum de 25 000 Li est requis pour débloquer les retraits.`, {
+        icon: <AlertTriangle className="text-rose-500" size={20} />,
+        duration: 5000
+      });
+      return;
+    }
+    router.push("/withdraw");
+  };
+
   if (loading || !user) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
 
+  const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase().trim());
   const rank = getRank(user?.wallet?.balance || 0);
+  const isWithdrawDisabled = (user?.wallet?.balance || 0) < 25000;
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10 pb-20 animate-in fade-in duration-700">
@@ -91,18 +107,20 @@ export default function AccountPage() {
         <button onClick={() => router.back()} className="p-4 bg-slate-50 rounded-2xl text-slate-400 hover:text-slate-900 transition-colors"><ArrowLeft size={20} /></button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl shadow-slate-200 group transition-all hover:scale-105">
-           <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Revenus Li</p>
-           <div className="flex items-baseline gap-1">
-             <span className="text-3xl font-black italic">{user?.wallet?.balance || 0}</span>
-             <span className="text-xs font-bold text-teal-400">Li</span>
-           </div>
+      {!isAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl shadow-slate-200 group transition-all hover:scale-105">
+             <p className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Revenus Li</p>
+             <div className="flex items-baseline gap-1">
+               <span className="text-3xl font-black italic">{user?.wallet?.balance || 0}</span>
+               <span className="text-xs font-bold text-teal-400">Li</span>
+             </div>
+          </div>
+          <AccountStatCard label="Certifications" value={user?.stats?.totalCertified || 0} icon={<Sparkles />} color="text-teal-600" />
+          <AccountStatCard label="Influence" value={user?.stats?.subscribers || 0} icon={<Star />} color="text-amber-500" />
+          <AccountStatCard label="Textes" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-blue-600" />
         </div>
-        <AccountStatCard label="Certifications" value={user?.stats?.totalCertified || 0} icon={<Sparkles />} color="text-teal-600" />
-        <AccountStatCard label="Influence" value={user?.stats?.subscribers || 0} icon={<Star />} color="text-amber-500" />
-        <AccountStatCard label="Textes" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-blue-600" />
-      </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <section className="lg:col-span-2 space-y-8">
@@ -131,18 +149,32 @@ export default function AccountPage() {
         </section>
 
         <aside className="space-y-6">
-          <div className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24 border border-white/5">
-            <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-10"><Wallet size={24} /> Coffre-fort</h2>
-            <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 mb-6">
-               <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Capacité de retrait</p>
-               <p className="text-2xl font-black italic">{user?.wallet?.balance || 0} Li</p>
-               <div className="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
-                  <div className="h-full bg-teal-500" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }} />
-               </div>
-               <p className="text-[8px] font-black text-slate-500 mt-2">MINIMUM : 25 000 Li</p>
+          {!isAdmin ? (
+            <div className="bg-slate-950 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24 border border-white/5">
+              <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-10"><Wallet size={24} /> Coffre-fort</h2>
+              <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5 mb-6">
+                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Capacité de retrait</p>
+                <p className="text-2xl font-black italic">{user?.wallet?.balance || 0} Li</p>
+                <div className="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
+                    <div className="h-full bg-teal-500" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }} />
+                </div>
+                <p className="text-[8px] font-black text-slate-500 mt-2">MINIMUM : 25 000 Li</p>
+              </div>
+              <button 
+                onClick={handleWithdrawRequest} 
+                className={`w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${isWithdrawDisabled ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60' : 'bg-teal-500 text-slate-950 hover:bg-white'}`}
+              >
+                Gérer mes retraits
+              </button>
             </div>
-            <button onClick={() => router.push("/withdraw")} className="w-full py-4 bg-teal-500 text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all">Gérer mes retraits</button>
-          </div>
+          ) : (
+            <div className="bg-teal-600 rounded-[3rem] p-8 text-white shadow-2xl sticky top-24 border border-white/5">
+              <h2 className="text-xl font-black flex items-center gap-3 text-white italic mb-4"><ShieldCheck size={24} /> Mode Admin</h2>
+              <p className="text-[10px] font-bold opacity-80 leading-relaxed uppercase tracking-wider">
+                Vous êtes connecté avec un compte d'administration Lisible. Les outils de gestion sont accessibles via le panneau principal.
+              </p>
+            </div>
+          )}
         </aside>
       </div>
     </div>
@@ -157,3 +189,4 @@ function InputBlock({ label, value, onChange, type = "text" }) {
     </div>
   );
 }
+
