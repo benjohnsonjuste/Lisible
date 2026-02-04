@@ -15,7 +15,6 @@ export default function UsersPage({ initialAuthors = [] }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [submitting, setSubmitting] = useState(null);
   
-  // PAGINATION : On commence par 10 auteurs
   const [visibleCount, setVisibleCount] = useState(10);
 
   const ADMIN_EMAILS = [
@@ -40,7 +39,19 @@ export default function UsersPage({ initialAuthors = [] }) {
       if (!Array.isArray(files)) return;
       const dataPromises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
       const allUsers = await Promise.all(dataPromises);
-      setAuthors(allUsers.sort((a, b) => (Number(b.wallet?.balance) || 0) - (Number(a.wallet?.balance) || 0)));
+      
+      // BLOQUER LES DOUBLONS D'EMAIL : 
+      // On utilise une Map pour ne garder qu'une seule instance par email unique
+      const uniqueUsersMap = new Map();
+      allUsers.forEach(user => {
+        const emailKey = user.email?.toLowerCase().trim();
+        if (emailKey && !uniqueUsersMap.has(emailKey)) {
+          uniqueUsersMap.set(emailKey, user);
+        }
+      });
+      const uniqueAuthors = Array.from(uniqueUsersMap.values());
+
+      setAuthors(uniqueAuthors.sort((a, b) => (Number(b.wallet?.balance) || 0) - (Number(a.wallet?.balance) || 0)));
     } catch (e) { 
       toast.error("Erreur de synchronisation"); 
     } finally { setLoading(false); }
@@ -77,7 +88,6 @@ export default function UsersPage({ initialAuthors = [] }) {
     return badges;
   };
 
-  // Filtrage intelligent
   const filteredAuthors = useMemo(() => {
     return authors.filter(a => 
       (a.penName || a.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,7 +95,6 @@ export default function UsersPage({ initialAuthors = [] }) {
     );
   }, [authors, searchTerm]);
 
-  // Découpage pour la pagination
   const paginatedAuthors = filteredAuthors.slice(0, visibleCount);
 
   if (loading) return (
@@ -152,7 +161,6 @@ export default function UsersPage({ initialAuthors = [] }) {
         })}
       </div>
 
-      {/* BOUTON CHARGER PLUS (Pérennise la performance) */}
       {visibleCount < filteredAuthors.length && (
         <div className="mt-16 flex justify-center">
           <button 
@@ -177,8 +185,17 @@ export async function getStaticProps() {
     if (Array.isArray(files)) {
       const promises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()));
       const allUsers = await Promise.all(promises);
-      const sorted = allUsers.sort((a, b) => (Number(b.wallet?.balance) || 0) - (Number(a.wallet?.balance) || 0));
-      // On peut limiter les données initiales ici aussi pour alléger le JSON du build
+      
+      // LOGIQUE D'UNICITÉ ÉGALEMENT DANS LE GÉNÉRATEUR STATIQUE
+      const uniqueUsersMap = new Map();
+      allUsers.forEach(user => {
+        const emailKey = user.email?.toLowerCase().trim();
+        if (emailKey && !uniqueUsersMap.has(emailKey)) {
+          uniqueUsersMap.set(emailKey, user);
+        }
+      });
+      const sorted = Array.from(uniqueUsersMap.values()).sort((a, b) => (Number(b.wallet?.balance) || 0) - (Number(a.wallet?.balance) || 0));
+      
       return { props: { initialAuthors: sorted }, revalidate: 60 };
     }
   } catch (e) { console.error(e); }
