@@ -1,19 +1,20 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import confetti from "canvas-confetti";
+import dynamic from "next/dynamic";
 import { 
   ArrowLeft, Loader2, Share2, Eye, Heart, Trophy, 
-  ShieldCheck, Sparkles, Send, MessageCircle, AlertTriangle, Download
+  ShieldCheck, Sparkles, Send, MessageCircle, AlertTriangle, Download,
+  Maximize2, Minimize2, Clock
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
-import ReportModal from "@/components/ReportModal";
 
-// --- COMPOSANTS INTERNES (BadgeConcours, SceauCertification, CommentSection restent identiques) ---
+const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
+
+// --- COMPOSANTS INTERNES ---
 function BadgeConcours() {
   return (
     <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-2xl shadow-lg mb-6 animate-in zoom-in">
@@ -47,7 +48,9 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
     return () => clearInterval(timer);
   }, [seconds, isValidated, waitTime]);
 
-  const generateCertificate = () => {
+  const generateCertificate = async () => {
+    const { default: confetti } = await import("canvas-confetti");
+    const { default: jsPDF } = await import("jspdf");
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#0d9488', '#1e293b', '#ffffff'] });
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     doc.setFillColor(253, 251, 247); doc.rect(0, 0, 297, 210, "F");
@@ -83,7 +86,7 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
       if (res.ok) {
         localStorage.setItem(`cert_${fileName}`, "true");
         setIsValidated(true);
-        toast.success("Sceau apposé ! Certification réussie.", { id: t });
+        toast.success("Sceau apposé !", { id: t });
         onValidated(); 
       }
     } catch (e) { toast.error("Échec de connexion."); }
@@ -167,9 +170,13 @@ export default function TextPage({ initialText, id: textId }) {
   const [liveLikes, setLiveLikes] = useState(0);
   const viewLogged = useRef(false);
 
+  // ÉTATS PRESTIGE (Pilier 4)
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [readingProgress, setReadingProgress] = useState(0);
+
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
-  const fetchData = useCallback(async (tid, skipCache = false) => {
+  const fetchData = useCallback(async (tid) => {
     if (!tid) return;
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${tid}.json?t=${Date.now()}`);
@@ -180,6 +187,16 @@ export default function TextPage({ initialText, id: textId }) {
         return content;
       }
     } catch (e) { console.error(e); }
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (window.scrollY / totalHeight) * 100;
+      setReadingProgress(progress);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -203,10 +220,28 @@ export default function TextPage({ initialText, id: textId }) {
     }
   }, [id]);
 
+  const readingTime = useMemo(() => {
+    const words = text?.content?.split(/\s+/).length || 0;
+    return Math.max(1, Math.ceil(words / 200));
+  }, [text?.content]);
+
   if (router.isFallback || !text) return (
-    <div className="flex flex-col h-screen items-center justify-center gap-4 bg-[#FCFBF9] dark:bg-slate-950">
-      <Loader2 className="animate-spin text-teal-600" size={30} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-sans">Ouverture du manuscrit...</p>
+    <div className="max-w-2xl mx-auto px-6 py-20 animate-pulse bg-[#FCFBF9] dark:bg-slate-950 min-h-screen">
+      <div className="h-12 w-12 bg-slate-200 rounded-2xl mb-20" />
+      <div className="h-16 w-full bg-slate-200 rounded-3xl mb-6" />
+      <div className="h-16 w-3/4 bg-slate-200 rounded-3xl mb-12" />
+      <div className="flex items-center gap-4 mb-20">
+        <div className="h-12 w-12 rounded-full bg-slate-200" />
+        <div className="space-y-2">
+          <div className="h-3 w-20 bg-slate-200 rounded" />
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+        </div>
+      </div>
+      <div className="space-y-6">
+        <div className="h-4 w-full bg-slate-100 rounded" />
+        <div className="h-4 w-full bg-slate-100 rounded" />
+        <div className="h-4 w-5/6 bg-slate-100 rounded" />
+      </div>
     </div>
   );
 
@@ -214,14 +249,27 @@ export default function TextPage({ initialText, id: textId }) {
   const seoDescription = text.content ? text.content.replace(/<[^>]*>/g, '').substring(0, 155).trim() + "..." : "Lisible";
 
   return (
-    <div className="min-h-screen bg-[#FCFBF9] dark:bg-slate-950 selection:bg-teal-100 font-sans">
+    <div className={`min-h-screen transition-colors duration-1000 selection:bg-teal-100 font-sans ${isFocusMode ? 'bg-[#F5F2ED] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
       <Head>
         <title>{`${text.title} | Lisible`}</title>
         <meta name="description" content={seoDescription} />
       </Head>
 
+      {/* BARRE DE LECTURE (Pilier 4) */}
+      <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-transparent">
+        <div className="h-full bg-teal-600 transition-all duration-200 ease-out" style={{ width: `${readingProgress}%` }} />
+      </div>
+
+      {/* BOUTON FOCUS (Pilier 4) */}
+      <button 
+        onClick={() => setIsFocusMode(!isFocusMode)}
+        className={`fixed bottom-8 right-8 z-[90] p-4 rounded-full shadow-2xl transition-all duration-500 hover:scale-110 active:scale-90 ${isFocusMode ? 'bg-teal-600 text-white' : 'bg-slate-900 text-white'}`}
+      >
+        {isFocusMode ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+      </button>
+
       <div className="max-w-2xl mx-auto px-6 py-8 sm:py-20 pb-32">
-        <header className="flex justify-between items-center mb-16 sm:mb-24">
+        <header className={`flex justify-between items-center mb-16 sm:mb-24 transition-all duration-700 ${isFocusMode ? 'opacity-0 -translate-y-10 pointer-events-none' : 'opacity-100'}`}>
           <button onClick={() => router.back()} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm"><ArrowLeft size={20} /></button>
           <div className="flex gap-2">
             {!isStaffText && (
@@ -237,44 +285,48 @@ export default function TextPage({ initialText, id: textId }) {
                 }} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black shadow-sm"><Heart size={14} /> {liveLikes || text.totalLikes || 0}</button>
               </>
             )}
-            <button onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Copié");}} className="p-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl shadow-xl"><Share2 size={20} /></button>
+            <button onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} className="p-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl shadow-xl"><Share2 size={20} /></button>
           </div>
         </header>
 
         <article className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-          {text.isConcours && <BadgeConcours />}
-          <h1 className="text-5xl sm:text-7xl font-serif font-black italic tracking-tight mb-10 leading-[1.1] text-slate-900 dark:text-slate-50">
+          <div className={`mb-10 flex items-center gap-4 transition-all duration-700 ${isFocusMode ? 'opacity-40' : 'opacity-100'}`}>
+            {text.isConcours && <BadgeConcours />}
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-teal-600 bg-teal-50 dark:bg-teal-900/20 px-3 py-1.5 rounded-lg">
+              <Clock size={12} /> {readingTime} MIN
+            </div>
+          </div>
+
+          <h1 className={`font-serif font-black italic tracking-tight leading-[1.1] transition-all duration-1000 ${isFocusMode ? 'text-6xl sm:text-8xl text-slate-950 dark:text-white mb-20' : 'text-5xl sm:text-7xl text-slate-900 dark:text-slate-50 mb-10'}`}>
             {text.title}
           </h1>
 
-          <div className="flex items-center gap-4 mb-16">
+          <div className={`flex items-center gap-4 mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-0 translate-x-10 pointer-events-none' : 'opacity-100'}`}>
             <div className="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-700 dark:text-teal-400 font-bold text-xl border border-teal-200 dark:border-teal-800">{text.authorName?.[0].toUpperCase()}</div>
             <div><p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1">{text.isConcours ? "Candidat" : "Plume certifiée"}</p><p className="text-sm font-bold">{text.authorName || 'Anonyme'}</p></div>
           </div>
           
-          <div className="prose prose-slate dark:prose-invert max-w-none font-serif text-[1.2rem] sm:text-[1.35rem] leading-[1.8] text-slate-800 dark:text-slate-200 whitespace-pre-wrap text-justify tracking-tight mb-24 first-letter:text-7xl first-letter:font-black first-letter:float-left first-letter:mr-3 first-letter:mt-2 first-letter:text-teal-600">
+          <div className={`prose prose-slate dark:prose-invert max-w-none font-serif leading-[1.8] text-justify tracking-tight mb-24 transition-all duration-1000 first-letter:text-7xl first-letter:font-black first-letter:float-left first-letter:mr-3 first-letter:mt-2 first-letter:text-teal-600 ${isFocusMode ? 'text-2xl text-slate-900 dark:text-slate-100' : 'text-[1.2rem] sm:text-[1.35rem] text-slate-800 dark:text-slate-200 whitespace-pre-wrap'}`}>
             {text.content}
           </div>
 
-          <button onClick={() => setIsReportOpen(true)} className="flex items-center gap-2 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em]"><AlertTriangle size={14} /> Signaler</button>
+          <button onClick={() => setIsReportOpen(true)} className={`flex items-center gap-2 text-slate-300 dark:text-slate-600 hover:text-rose-500 transition-all text-[9px] font-black uppercase tracking-[0.2em] ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}><AlertTriangle size={14} /> Signaler</button>
         </article>
 
-        <div className="my-12"><InTextAd /></div>
-
-        {!isStaffText && <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => fetchData(id)} certifiedCount={text.totalCertified} authorName={text.authorName} textTitle={text.title} />}
-
-        <CommentSection textId={id} comments={text.comments} user={user} onCommented={() => fetchData(id)} />
-        <footer className="mt-24 text-center opacity-30 text-[8px] font-black uppercase tracking-[0.5em]">Lisible.biz • Expérience d'élite</footer>
-        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} userEmail={user?.email} />
+        <div className={`transition-all duration-700 ${isFocusMode ? 'opacity-0 translate-y-20 pointer-events-none' : 'opacity-100'}`}>
+          <div className="my-12"><InTextAd /></div>
+          {!isStaffText && <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => fetchData(id)} certifiedCount={text.totalCertified} authorName={text.authorName} textTitle={text.title} />}
+          <CommentSection textId={id} comments={text.comments} user={user} onCommented={() => fetchData(id)} />
+          <footer className="mt-24 text-center opacity-30 text-[8px] font-black uppercase tracking-[0.5em]">Lisible.biz • Expérience d'élite</footer>
+        </div>
+        
+        {isReportOpen && <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} userEmail={user?.email} />}
       </div>
     </div>
   );
 }
 
-// ACTIVATION DE L'ISR (Vitesse Instantanée)
-export async function getStaticPaths() {
-  return { paths: [], fallback: 'blocking' };
-}
+export async function getStaticPaths() { return { paths: [], fallback: 'blocking' }; }
 
 export async function getStaticProps({ params }) {
   try {
@@ -282,7 +334,5 @@ export async function getStaticProps({ params }) {
     const data = await res.json();
     const initialText = JSON.parse(decodeURIComponent(escape(atob(data.content))));
     return { props: { initialText, id: params.id }, revalidate: 60 };
-  } catch (e) {
-    return { notFound: true };
-  }
+  } catch (e) { return { notFound: true }; }
 }
