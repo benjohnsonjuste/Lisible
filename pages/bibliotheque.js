@@ -3,35 +3,34 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, MessageCircle, Loader2, Share2, 
-  Trophy, Megaphone, ShieldCheck, Sparkles, Search 
+  Trophy, Megaphone, ShieldCheck, Sparkles, Search, ChevronDown 
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Ajout de initialTexts pour l'ISR
-export default function Bibliotheque({ initialTexts = [] }) {
+export default function Bibliotheque({ initialTexts = [], initialCursor = null }) {
   const [texts, setTexts] = useState(initialTexts);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // On garde le useEffect uniquement pour rafraîchir les données si nécessaire, 
-  // mais l'utilisateur voit déjà initialTexts immédiatement.
-  useEffect(() => {
-    if (initialTexts.length === 0) {
-      async function load() {
-        try {
-          const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications?t=${Date.now()}`);
-          const files = await res.json();
-          if (Array.isArray(files)) {
-            const promises = files
-              .filter(f => f.name.endsWith('.json'))
-              .map(f => fetch(`${f.download_url}?t=${Date.now()}`).then(r => r.json()));
-            const data = await Promise.all(promises);
-            setTexts(data.sort((a, b) => new Date(b.date) - new Date(a.date)));
-          }
-        } catch (e) { console.error(e); }
+  // Fonction de chargement de la page suivante
+  const loadMore = async () => {
+    if (!cursor || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/texts?limit=10&lastId=${cursor}`);
+      const json = await res.json();
+      if (json.data) {
+        setTexts((prev) => [...prev, ...json.data]);
+        setCursor(json.nextCursor);
       }
-      load();
+    } catch (e) {
+      toast.error("Erreur lors du chargement des textes supplémentaires");
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-  }, [initialTexts]);
+  };
 
   const handleShare = async (e, item) => {
     e.preventDefault(); 
@@ -82,7 +81,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                 isConcours ? 'border-teal-200 shadow-2xl shadow-teal-900/5' : isAnnonce ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl'
               }`}>
                 <div className="h-48 sm:h-60 bg-slate-100 relative overflow-hidden">
-                  {item.imageBase64 ? (
+                  {item.imageBase64 && item.imageBase64 !== "exists" ? (
                     <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   ) : (
                     <div className={`w-full h-full flex items-center justify-center font-black italic text-2xl sm:text-4xl ${isConcours ? 'bg-gradient-to-br from-teal-500 to-teal-800 text-white/20' : 'bg-slate-50 text-slate-200'}`}>
@@ -145,7 +144,20 @@ export default function Bibliotheque({ initialTexts = [] }) {
         })}
       </div>
       
-      {filteredTexts.length === 0 && (
+      {cursor && searchTerm === "" && (
+        <div className="mt-16 flex justify-center">
+          <button 
+            onClick={loadMore} 
+            disabled={loading}
+            className="flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin" size={16} /> : <ChevronDown size={16} />}
+            {loading ? "Chargement..." : "Charger plus d'œuvres"}
+          </button>
+        </div>
+      )}
+
+      {filteredTexts.length === 0 && !loading && (
         <div className="text-center py-20">
           <p className="text-slate-300 font-black uppercase tracking-widest">Aucun résultat trouvé</p>
         </div>
@@ -154,27 +166,26 @@ export default function Bibliotheque({ initialTexts = [] }) {
   );
 }
 
-// LOGIQUE SERVEUR : Génération Statique Incrémentale (ISR)
 export async function getStaticProps() {
   try {
-    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications`);
-    const files = await res.json();
-    
-    if (Array.isArray(files)) {
-      const promises = files
-        .filter(f => f.name.endsWith('.json'))
-        .map(f => fetch(f.download_url).then(r => r.json()));
+    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`);
+    if (res.ok) {
+      const file = await res.json();
+      const allTexts = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
       
-      const data = await Promise.all(promises);
-      const sortedData = data.sort((a, b) => new Date(b.date) - new Date(a.date));
-
+      // On prend les 10 premiers pour l'affichage initial
+      const initial = allTexts.slice(0, 10);
+      
       return {
-        props: { initialTexts: sortedData },
-        revalidate: 60 // Mise à jour auto toutes les 60 secondes sans redeployer
+        props: { 
+          initialTexts: initial,
+          initialCursor: allTexts.length > 10 ? initial[9].id : null
+        },
+        revalidate: 60 
       };
     }
   } catch (e) {
     console.error("ISR Error:", e);
   }
-  return { props: { initialTexts: [] }, revalidate: 10 };
+  return { props: { initialTexts: [], initialCursor: null }, revalidate: 10 };
 }
