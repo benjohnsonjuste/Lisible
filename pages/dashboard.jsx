@@ -1,241 +1,271 @@
 "use client";
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Head from "next/head";
 import { 
-  Loader2, Send, TrendingUp, FileText, 
-  Download, Award, MessageCircle, Facebook, Share2, Trash2, Edit3, BookOpen
+  Loader2, Send, ArrowUpRight, FileText, UserCircle, 
+  Download, Award, Instagram, Twitter, Facebook, 
+  MessageCircle, Maximize2, Minimize2, Wallet, 
+  TrendingUp, ShieldCheck
 } from "lucide-react";
 import { toast } from "sonner";
-import * as htmlToImage from 'html-to-image';
+import { formatLi } from "@/lib/utils";
 
 export default function AuthorDashboard() {
   const router = useRouter();
-  const badgeRef = useRef(null); // Référence pour la capture d'image
+  const badgeRef = useRef(null);
   const [user, setUser] = useState(null);
-  const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingTexts, setLoadingTexts] = useState(true);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
+  const ADMIN_EMAILS = [
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
+    "cmo.lablitteraire7@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhaïniedarha@gmail.com"
+  ];
+
+  // SYSTÈME DE RANG DES MEILLEURES PLUMES
   const getRank = (sc = 0) => {
-    if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-400", bg: "bg-purple-500/10", icon: "👑" };
-    if (sc >= 200) return { name: "Plume d'Argent", color: "text-slate-300", bg: "bg-slate-500/10", icon: "✨" };
-    if (sc >= 50) return { name: "Plume de Bronze", color: "text-orange-400", bg: "bg-orange-500/10", icon: "📜" };
+    if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-500", bg: "bg-purple-500/10", icon: "👑" };
+    if (sc >= 200) return { name: "Plume d'Argent", color: "text-slate-400", bg: "bg-slate-500/10", icon: "✨" };
+    if (sc >= 50) return { name: "Plume de Bronze", color: "text-orange-500", bg: "bg-orange-500/10", icon: "📜" };
     return { name: "Plume de Plomb", color: "text-slate-500", bg: "bg-slate-500/10", icon: "🖋️" };
   };
 
-  // FONCTION DE TÉLÉCHARGEMENT DU BADGE EN IMAGE
-  const downloadBadgeImage = async () => {
-    if (!badgeRef.current) return;
-    const tid = toast.loading("Génération de l'image...");
+  const fetchLatestData = useCallback(async (email) => {
     try {
-      const dataUrl = await htmlToImage.toPng(badgeRef.current, { quality: 1.0, pixelRatio: 2 });
-      const link = document.createElement('a');
-      link.download = `Badge-Officiel-${user?.penName || 'Lisible'}.png`;
-      link.href = dataUrl;
-      link.click();
-      toast.success("Badge téléchargé !", { id: tid });
-    } catch (err) {
-      toast.error("Erreur lors du téléchargement", { id: tid });
-    }
-  };
-
-  const fetchMyTexts = useCallback(async (email) => {
-    if (!email) return;
-    setLoadingTexts(true);
-    try {
-      const res = await fetch(`/api/texts?authorEmail=${email.toLowerCase().trim()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTexts(Array.isArray(data) ? data : []);
-      }
-    } catch (e) { console.error("Erreur textes:", e); }
-    finally { setLoadingTexts(false); }
-  }, []);
-
-  const fetchLatestData = useCallback(async (email, pass) => {
-    try {
-      const res = await fetch("/api/login", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ email, password: pass }) 
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: JSON.parse(localStorage.getItem("lisible_user")).password })
       });
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
         localStorage.setItem("lisible_user", JSON.stringify(data.user));
-        fetchMyTexts(data.user.email);
       }
-    } catch (e) { console.error(e); } 
-    finally { setLoading(false); }
-  }, [fetchMyTexts]);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
+    };
+    window.addEventListener("scroll", handleScroll);
     const logged = localStorage.getItem("lisible_user");
     if (logged) {
-      try {
-        const u = JSON.parse(logged);
-        fetchLatestData(u.email, u.password);
-      } catch (e) { router.push("/login"); }
+      const u = JSON.parse(logged);
+      setUser(u);
+      fetchLatestData(u.email);
     } else { router.push("/login"); }
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [router, fetchLatestData]);
 
-  const handleDeleteText = async (id) => {
-    if (!confirm("Supprimer définitivement ?")) return;
-    const tid = toast.loading("Suppression...");
-    try {
-      const res = await fetch(`/api/texts/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success("Retiré", { id: tid });
-        setTexts(texts.filter(t => t.id !== id));
-      }
-    } catch (e) { toast.error("Échec"); }
+  const handleDownloadBadge = () => {
+    const svg = badgeRef.current;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = 1024;
+      canvas.height = 1024;
+      ctx.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = `Lisible_Badge_${user?.penName}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+      toast.success("Badge certifié 1024px téléchargé !");
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const shareOnSocial = (platform) => {
+    const text = encodeURIComponent(`J'ai mon compte officiel sur Lisible ! Visitez-moi. ✨`);
+    const url = encodeURIComponent("https://lisible.biz");
+    const links = {
+      twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+      whatsapp: `https://api.whatsapp.com/send?text=${text}%20${url}`,
+      instagram: `https://www.instagram.com/`
+    };
+    window.open(links[platform], "_blank");
   };
 
   const handleTransfer = async () => {
-    const amount = Number(transfer.amount);
-    if (!user?.wallet) return;
-    if (amount < 1000) return toast.error("Minimum 1000 Li");
-    if (user.wallet.balance < amount) return toast.error("Solde insuffisant");
-    const tid = toast.loading("Transfert...");
+    if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
+    const tid = toast.loading("Transfert en cours...");
     try {
-      const res = await fetch("/api/wallet", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount, type: "transfer" }) 
+      const res = await fetch("/api/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: transfer.amount, type: "transfer" })
       });
-      if (res.ok) { 
-        toast.success(`Réussi !`, { id: tid }); 
-        fetchLatestData(user.email, user.password); 
-      }
-    } catch (e) { toast.error("Erreur"); }
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Transfert effectué !", { id: tid });
+        fetchLatestData(user.email);
+      } else { toast.error(data.error, { id: tid }); }
+    } catch (e) { toast.error("Erreur de connexion", { id: tid }); }
   };
 
-  if (loading || !user) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9] gap-4">
-        <Loader2 className="animate-spin text-teal-600" size={40} />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Initialisation du Dashboard...</p>
-      </div>
-    );
-  }
+  const nameParts = useMemo(() => {
+    const name = user?.penName || "Plume";
+    if (name.length > 15 && name.includes(" ")) {
+      const parts = name.split(" ");
+      const mid = Math.ceil(parts.length / 2);
+      return [parts.slice(0, mid).join(" "), parts.slice(mid).join(" ")];
+    }
+    return [name, ""];
+  }, [user?.penName]);
 
-  const rank = getRank(user?.wallet?.balance);
-  const balance = user?.wallet?.balance || 0;
-  const progressPercent = Math.min((balance / 25000) * 100, 100);
+  if (loading || !user) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9] dark:bg-slate-950"><Loader2 className="animate-spin text-teal-600" /></div>;
+
+  const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
+  const rank = getRank(user?.wallet?.balance || 0);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-12 pb-20 font-sans animate-in fade-in duration-1000">
-      
-      {/* HEADER */}
-      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8 border border-white/5">
-        <div className="text-center md:text-left">
-          <div className={`inline-flex items-center gap-2 ${rank.color} ${rank.bg} px-4 py-2 rounded-2xl mb-4 border border-white/10`}>
-             <span className="text-xl">{rank.icon}</span>
-             <span className="text-[10px] font-black uppercase tracking-widest">{rank.name}</span>
-          </div>
-          <h1 className="text-5xl font-black italic tracking-tighter leading-none">{user?.penName}</h1>
-          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-500 mt-2 italic">Auteur Certifié Lisible</p>
-        </div>
-        <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 text-right min-w-[200px]">
-          <p className="text-5xl font-black text-amber-400 tracking-tighter">{balance} <span className="text-sm">Li</span></p>
-          <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1">Solde Disponible</p>
-        </div>
-      </header>
+    <div className={`min-h-screen selection:bg-teal-100 font-sans transition-colors duration-1000 ${isFocusMode ? 'bg-[#F5F2ED] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
+      <Head>
+        <title>Tableau de bord | Lisible</title>
+      </Head>
 
-      {/* MES ŒUVRES */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-4">
-          <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-2">
-            <BookOpen size={16} /> Mes Œuvres ({texts.length})
-          </h2>
-          <button onClick={() => router.push("/publish")} className="text-[10px] font-black uppercase bg-teal-600 text-white px-6 py-3 rounded-2xl hover:scale-105 transition-all shadow-lg shadow-teal-600/20">
-            Nouveau Manuscrit
-          </button>
-        </div>
-        {loadingTexts ? (
-          <div className="flex justify-center p-20 bg-slate-50/50 rounded-[3rem] border border-dashed border-slate-200"><Loader2 className="animate-spin text-teal-600" /></div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {texts.map((text) => (
-              <div key={text.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group">
-                <div className="space-y-4">
-                  <div className="h-48 bg-slate-100 dark:bg-slate-800 rounded-[2rem] overflow-hidden relative">
-                    {text.imageBase64 ? <img src={text.imageBase64} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" /> : <div className="w-full h-full flex items-center justify-center text-slate-300"><FileText size={40} /></div>}
-                    <div className="absolute top-4 right-4 flex gap-2">
-                       <button onClick={() => router.push(`/edit/${text.id}`)} className="p-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-xl text-slate-600 shadow-xl"><Edit3 size={16}/></button>
-                       <button onClick={() => handleDeleteText(text.id)} className="p-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur rounded-xl text-rose-500 shadow-xl"><Trash2 size={16}/></button>
-                    </div>
-                  </div>
-                  <div className="px-2">
-                    <h3 className="font-black italic text-slate-900 dark:text-white text-lg line-clamp-1">{text.title}</h3>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(text.date).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-teal-600 transition-all duration-200" style={{ width: `${scrollProgress}%` }} />
 
-      {/* GRID DU BAS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[90] p-4 bg-slate-900 text-white rounded-full shadow-2xl transition-transform hover:scale-110">
+        {isFocusMode ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+      </button>
+
+      <div className="max-w-2xl mx-auto px-6 py-8 sm:py-20">
         
-        {/* TRANSFERT */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900 dark:text-white"><Send size={18} className="text-teal-600"/> Envoyer des Li</h3>
-          <div className="space-y-4">
-            <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm font-bold dark:text-white" onChange={(e) => setTransfer({...transfer, email: e.target.value})} />
-            <input type="number" placeholder="Montant" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm font-bold dark:text-white" onChange={(e) => setTransfer({...transfer, amount: e.target.value})} />
-            <button onClick={handleTransfer} className="w-full bg-slate-950 dark:bg-teal-600 text-white py-5 rounded-2xl font-black uppercase text-[10px]">Confirmer</button>
-          </div>
-        </div>
-
-        {/* PROGRESSION */}
-        <div className="bg-teal-600 p-8 rounded-[3rem] text-white flex flex-col justify-between shadow-xl">
-           <TrendingUp size={32} className="mb-6 opacity-50" />
-           <div>
-              <p className="text-3xl font-black italic mb-4">Objectif Retrait</p>
-              <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden">
-                <div className="bg-white h-full transition-all duration-1000" style={{ width: `${progressPercent}%` }}></div>
-              </div>
-              <p className="text-[9px] font-black uppercase opacity-60 mt-3">Seuil : 25 000 Li</p>
-           </div>
-        </div>
-
-        {/* LE BADGE OFFICIEL (VERSION EXACTE DE L'IMAGE) */}
-        <div className="flex flex-col items-center justify-center space-y-6">
-          <div 
-            ref={badgeRef} 
-            className="w-[400px] h-[400px] bg-[#121E2C] border-[12px] border-[#00A38E] flex flex-col items-center justify-center p-8 relative shadow-2xl"
-          >
-            <p className="text-[#00A38E] text-[14px] font-black uppercase tracking-[0.5em] mb-8">
-              Compte Officiel
-            </p>
-
-            <h2 className="text-white text-4xl font-serif italic font-medium text-center leading-tight mb-8 px-4">
-              {user?.penName}
-            </h2>
-
-            <p className="text-[#EAB308] text-[18px] font-bold tracking-widest mb-10">
-              lisible.biz
-            </p>
-
-            <div className="w-14 h-14 bg-[#00A38E] rounded-full flex items-center justify-center shadow-lg">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
+        <header className={`mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-0 -translate-y-10' : 'opacity-100'}`}>
+          <div className="flex items-center gap-4 mb-8">
+            <div className={`w-16 h-16 rounded-3xl ${isStaff ? 'bg-slate-900' : 'bg-teal-600'} flex items-center justify-center text-white shadow-xl text-2xl`}>
+              {rank.icon}
+            </div>
+            <div>
+              <p className={`text-[10px] font-black uppercase tracking-widest ${rank.color}`}>{rank.name}</p>
+              <h1 className="text-3xl font-serif font-black italic">{user?.penName}</h1>
             </div>
           </div>
 
-          <button 
-            onClick={downloadBadgeImage}
-            className="w-full max-w-[400px] bg-slate-900 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-teal-600 transition-all"
-          >
-            <Download size={16} /> Télécharger le Badge
-          </button>
-        </div>
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex justify-between items-end">
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Solde Actuel</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance)}</span>
+                <span className="text-teal-600 font-black text-xs uppercase">Li</span>
+              </div>
+            </div>
+            {!isStaff && (
+               <div className="text-right">
+                 <p className="text-[10px] font-black uppercase text-teal-600 mb-1 flex items-center gap-1 justify-end"><TrendingUp size={12}/> Valeur</p>
+                 <p className="font-bold text-slate-900 dark:text-slate-300">{(user?.wallet?.balance * 0.0002).toFixed(2)} USD</p>
+               </div>
+            )}
+          </div>
+        </header>
 
+        <section className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          
+          <div className={`grid grid-cols-2 gap-4 transition-all duration-700 ${isFocusMode ? 'opacity-0' : ''}`}>
+            <button onClick={() => router.push("/publish")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] hover:border-teal-500 transition-all group">
+              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 w-fit rounded-2xl group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                <FileText size={20} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest">Nouvelle Œuvre</span>
+            </button>
+            <button onClick={() => router.push("/account")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] hover:border-slate-900 dark:hover:border-white transition-all group">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 w-fit rounded-2xl group-hover:bg-slate-900 dark:group-hover:bg-white dark:group-hover:text-slate-900 transition-colors">
+                <Wallet size={20} />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest">Mon Compte</span>
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+              <Send size={14} className="text-teal-600" /> Transfert de fonds
+            </h3>
+            <div className="space-y-3">
+              <input type="email" placeholder="Email du destinataire" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none text-sm focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, email: e.target.value})}/>
+              <input type="number" placeholder="Montant (Li)" className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-none text-sm focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, amount: e.target.value})}/>
+              <button onClick={handleTransfer} className="w-full bg-slate-900 dark:bg-teal-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px]">Confirmer l'envoi</button>
+            </div>
+          </div>
+
+          {/* MODULE DE PROGRESSION DES RANGS */}
+          {!isStaff && (
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-8 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-800">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Progression vers le retrait</p>
+              <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="bg-teal-600 h-full transition-all duration-1000" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }}></div>
+              </div>
+              <div className="flex justify-between mt-3">
+                <span className="text-[9px] font-black uppercase text-slate-500">Objectif : 25 000 Li</span>
+                <span className="text-[9px] font-black uppercase text-teal-600">{Math.floor(Math.min((user?.wallet?.balance / 25000) * 100, 100))}%</span>
+              </div>
+            </div>
+          )}
+
+          <div className={`flex flex-col items-center text-center p-8 transition-all duration-700 ${isFocusMode ? 'opacity-0' : ''}`}>
+            {/* BADGE SVG OFFICIEL (INECHANGÉ) */}
+            <div className="hidden">
+              <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{stopColor:'#0f172a', stopOpacity:1}} />
+                    <stop offset="100%" style={{stopColor:'#1e293b', stopOpacity:1}} />
+                  </linearGradient>
+                </defs>
+                <rect width="1024" height="1024" fill="url(#grad)"/>
+                <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
+                <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
+                {nameParts[1] ? (
+                  <>
+                    <text x="512" y="520" fontFamily="serif" fontSize="90" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{nameParts[0]}</text>
+                    <text x="512" y="620" fontFamily="serif" fontSize="90" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{nameParts[1]}</text>
+                  </>
+                ) : (
+                  <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{nameParts[0]}</text>
+                )}
+                <text x="512" y="750" fontFamily="sans-serif" fontSize="35" fontWeight="bold" fill="#fbbf24" textAnchor="middle" style={{letterSpacing: '6px'}}>lisible.biz</text>
+                <circle cx="512" cy="850" r="40" fill="#14b8a6" />
+                <text x="512" y="865" fontFamily="sans-serif" fontSize="40" fill="white" textAnchor="middle">✓</text>
+              </svg>
+            </div>
+
+            <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl mb-6">
+              <Award size={18} className="text-teal-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Badge Certifié</span>
+            </div>
+
+            <div className="flex gap-3 mb-8">
+               <button onClick={() => shareOnSocial('whatsapp')} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:text-emerald-500 transition-colors"><MessageCircle size={20} /></button>
+               <button onClick={() => shareOnSocial('twitter')} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:text-sky-500 transition-colors"><Twitter size={20} /></button>
+               <button onClick={() => shareOnSocial('facebook')} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:text-blue-600 transition-colors"><Facebook size={20} /></button>
+            </div>
+
+            <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-white dark:bg-slate-800 border-2 border-slate-900 dark:border-teal-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white dark:hover:bg-teal-600 transition-all">
+              <Download size={16} /> Télécharger
+            </button>
+          </div>
+        </section>
+
+        <footer className={`mt-24 border-t border-slate-100 dark:border-slate-900 pt-8 flex items-center justify-between transition-all duration-700 ${isFocusMode ? 'opacity-0' : ''}`}>
+           <div className="flex items-center gap-2 text-slate-300 text-[9px] font-black uppercase tracking-widest">
+             <ShieldCheck size={14} /> Sécurisé
+           </div>
+           <p className="text-[9px] font-black text-slate-400 uppercase italic">v2.1 Rank System</p>
+        </footer>
       </div>
     </div>
   );
