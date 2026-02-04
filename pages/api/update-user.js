@@ -7,6 +7,9 @@ export default async function handler(req, res) {
   const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
   const path = `data/users/${fileName}.json`;
 
+  // Fonction de nettoyage pour sécuriser les entrées contre les injections XSS
+  const sanitize = (str) => (typeof str === "string" ? str.replace(/[<>]/g, "") : str);
+
   try {
     const userFile = await getFile(path);
     if (!userFile) return res.status(404).json({ error: "Profil introuvable" });
@@ -14,8 +17,13 @@ export default async function handler(req, res) {
     const updatedProfile = {
       ...userFile.content,
       ...userData,
-      wallet: userFile.content.wallet, // PROTECTION
-      stats: userFile.content.stats,   // PROTECTION
+      // Nettoyage des champs textuels sensibles
+      firstName: sanitize(userData.firstName),
+      lastName: sanitize(userData.lastName),
+      penName: sanitize(userData.penName),
+      // Protections critiques
+      wallet: userFile.content.wallet, 
+      stats: userFile.content.stats,   
       updatedAt: new Date().toISOString()
     };
 
