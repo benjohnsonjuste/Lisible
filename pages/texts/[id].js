@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { 
   ArrowLeft, Share2, Eye, Heart, Trophy, 
   Maximize2, Minimize2, Clock, Play, Square, AlertTriangle,
-  Ghost, Sun, Zap, Coffee 
+  Ghost, Sun, Zap, Coffee, Loader2
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -39,7 +39,11 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
   const viewLogged = useRef(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  
+  // États de lecture vocale
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const audioPlayer = useRef(null);
 
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
@@ -75,7 +79,13 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
       setReadingProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+        window.removeEventListener("scroll", handleScroll);
+        if(audioPlayer.current) {
+            audioPlayer.current.pause();
+            audioPlayer.current = null;
+        }
+    };
   }, []);
 
   useEffect(() => {
@@ -100,42 +110,49 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
 
-  const toggleSpeech = () => {
-    if (typeof window === "undefined" || !window.speechSynthesis) {
-      toast.error("Non supporté");
-      return;
-    }
-
+  // NOUVELLE LOGIQUE DE LECTURE VOCALE VIA API
+  const toggleSpeech = async () => {
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      audioPlayer.current?.pause();
       setIsSpeaking(false);
       return;
     }
 
-    // Récupération et nettoyage strict du texte
-    const cleanText = text.content.replace(/<[^>]*>/g, '').trim();
-    if (!cleanText) return;
+    if (audioPlayer.current && audioPlayer.current.src) {
+      audioPlayer.current.play();
+      setIsSpeaking(true);
+      return;
+    }
 
-    // IMPORTANT : On annule toute lecture en cours pour éviter les erreurs de file d'attente
-    window.speechSynthesis.cancel();
-
-    // Petit délai pour laisser le temps au navigateur de réinitialiser le moteur audio
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = "fr-FR";
-      utterance.rate = 0.95; // Légèrement plus lent pour la qualité littéraire
+    setIsLoadingAudio(true);
+    try {
+      const cleanText = text.content.replace(/<[^>]*>/g, '').trim().substring(0, 2000);
       
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = (event) => {
-        console.error("Speech Error:", event);
-        setIsSpeaking(false);
-        // Si l'erreur est "interrupted", c'est souvent normal car on a cancel.
-        if (event.error !== 'interrupted') toast.error("Erreur lecture audio");
-      };
+      const res = await fetch('/api/speech', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText })
+      });
 
-      window.speechSynthesis.speak(utterance);
-    }, 50);
+      const data = await res.json();
+      
+      if (data.audioUrl) {
+        if (!audioPlayer.current) audioPlayer.current = new Audio();
+        audioPlayer.current.src = data.audioUrl;
+        audioPlayer.current.play();
+        setIsSpeaking(true);
+        
+        audioPlayer.current.onended = () => setIsSpeaking(false);
+        audioPlayer.current.onerror = () => {
+          toast.error("Erreur de lecture audio");
+          setIsSpeaking(false);
+        };
+      }
+    } catch (e) {
+      toast.error("Le service vocal est indisponible");
+    } finally {
+      setIsLoadingAudio(false);
+    }
   };
 
   if (router.isFallback || !text) return <div className="min-h-screen bg-[#FCFBF9] dark:bg-slate-950 p-20 animate-pulse" />;
@@ -185,8 +202,16 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
             {text.isConcours && <BadgeConcours />}
             <div className="flex items-center gap-2 text-[10px] font-black text-teal-600 bg-teal-50 dark:bg-teal-900/20 px-3 py-1.5 rounded-lg border border-teal-100"><Clock size={12} /> {readingTime} MIN</div>
             {mood && <div className={`flex items-center gap-2 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border ${mood.color}`}>{mood.icon} {mood.label}</div>}
-            <button onClick={toggleSpeech} className="flex items-center gap-2 text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg">
-              {isSpeaking ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />} {isSpeaking ? "ARRÊTER" : "ÉCOUTER"}
+            
+            <button onClick={toggleSpeech} disabled={isLoadingAudio} className="flex items-center gap-2 text-[10px] font-black bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg hover:bg-teal-600 hover:text-white transition-all disabled:opacity-50">
+              {isLoadingAudio ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : isSpeaking ? (
+                <Square size={12} fill="currentColor" />
+              ) : (
+                <Play size={12} fill="currentColor" />
+              )} 
+              {isLoadingAudio ? "CHARGEMENT..." : isSpeaking ? "ARRÊTER" : "ÉCOUTER"}
             </button>
           </div>
 
