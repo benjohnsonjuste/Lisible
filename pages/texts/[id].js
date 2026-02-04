@@ -3,9 +3,10 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { toast } from "sonner";
+import jsPDF from "jspdf"; // Assure-toi d'avoir ajouté "jspdf" dans ton package.json
 import { 
   ArrowLeft, Loader2, Share2, Eye, Heart, Trophy, 
-  ShieldCheck, Sparkles, Send, MessageCircle, AlertTriangle 
+  ShieldCheck, Sparkles, Send, MessageCircle, AlertTriangle, Download
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -22,7 +23,7 @@ function BadgeConcours() {
 }
 
 // --- COMPOSANT : SCEAU DE CERTIFICATION ---
-function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount }) {
+function SceauCertification({ wordCount, fileName, userEmail, onValidated, certifiedCount, authorName, textTitle }) {
   const waitTime = Math.max(8, Math.floor((wordCount || 50) / 5));
   const [seconds, setSeconds] = useState(waitTime);
   const [isValidated, setIsValidated] = useState(false);
@@ -45,6 +46,27 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
     }, 1000);
     return () => clearInterval(timer);
   }, [seconds, isValidated, waitTime]);
+
+  const generateCertificate = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    doc.setFillColor(253, 251, 247); doc.rect(0, 0, 297, 210, "F");
+    doc.setLineWidth(2); doc.setDrawColor(13, 148, 136); doc.rect(10, 10, 277, 190);
+    doc.setTextColor(15, 23, 42); doc.setFont("times", "bold"); doc.setFontSize(40);
+    doc.text("CERTIFICAT DE PUBLICATION", 148.5, 60, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(16);
+    doc.text("La plateforme LISIBLE certifie que l'œuvre intitulée", 148.5, 85, { align: "center" });
+    doc.setFont("times", "italic"); doc.setFontSize(28);
+    doc.text(`"${textTitle}"`, 148.5, 105, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(16);
+    doc.text("a été officiellement publiée et reconnue avec", 148.5, 125, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.text(`${certifiedCount} CERTIFICATIONS DE LECTURE`, 148.5, 140, { align: "center" });
+    doc.setFontSize(14); doc.text(`Auteur : ${authorName || "Anonyme"}`, 148.5, 160, { align: "center" });
+    doc.setFontSize(10); doc.setTextColor(100);
+    doc.text(`Délivré le ${new Date().toLocaleDateString()} par Lisible.biz`, 148.5, 185, { align: "center" });
+    doc.save(`Certificat_Lisible_${textTitle}.pdf`);
+    toast.success("Certificat généré !");
+  };
 
   const validate = async () => {
     if (seconds > 0) return toast.info(`Attendez ${seconds}s pour certifier votre lecture.`);
@@ -104,11 +126,22 @@ function SceauCertification({ wordCount, fileName, userEmail, onValidated, certi
           )}
         </div>
       </div>
-      <div className="px-6 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full flex items-center gap-3">
-        <Sparkles size={14} className="text-teal-500" />
-        <span className="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">
-           {Number(certifiedCount) || 0} CERTIFICATIONS
-        </span>
+      <div className="flex flex-col items-center gap-4">
+        <div className="px-6 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-full flex items-center gap-3">
+          <Sparkles size={14} className="text-teal-500" />
+          <span className="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">
+             {Number(certifiedCount) || 0} CERTIFICATIONS
+          </span>
+        </div>
+
+        {Number(certifiedCount) >= 10 && (
+          <button 
+            onClick={generateCertificate}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-xl animate-in fade-in zoom-in"
+          >
+            <Download size={14} /> Télécharger le Certificat
+          </button>
+        )}
       </div>
     </div>
   );
@@ -186,7 +219,7 @@ export default function TextPage() {
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
-  const [liveViews, setLiveViews] = useState(0); // Nouveau : État pour les vues Redis
+  const [liveViews, setLiveViews] = useState(0); 
   const viewLogged = useRef(false);
 
   const ADMIN_EMAILS = [
@@ -256,7 +289,6 @@ export default function TextPage() {
       fetchData(id).then(loaded => {
         if (!loaded && !text) return;
 
-        // TRACKING REDIS (Remplace la méthode GitHub lente)
         const viewKey = `view_${id}`;
         if (!localStorage.getItem(viewKey) && !viewLogged.current) {
           viewLogged.current = true;
@@ -268,7 +300,7 @@ export default function TextPage() {
             if (res.ok) {
               const data = await res.json();
               localStorage.setItem(viewKey, "true");
-              setLiveViews(data.views); // On met à jour avec le chiffre Redis
+              setLiveViews(data.views);
             }
           }).catch(() => {
             viewLogged.current = false;
@@ -317,7 +349,6 @@ export default function TextPage() {
                   <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-xl text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
                      <Eye size={14} /> 
                      <span className="text-[10px] font-black">
-                        {/* On affiche en priorité le compteur Redis, sinon celui du JSON */}
                         {liveViews || Number(text.views) || 0}
                      </span>
                   </div>
@@ -377,6 +408,8 @@ export default function TextPage() {
             userEmail={user?.email} 
             onValidated={() => fetchData(id, true)} 
             certifiedCount={text.totalCertified || 0}
+            authorName={text.authorName}
+            textTitle={text.title}
           />
         )}
 
