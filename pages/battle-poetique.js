@@ -7,13 +7,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function BattlePoetique() {
-  const [texts, setTexts] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function BattlePoetique({ initialTexts = [] }) {
+  const [texts, setTexts] = useState(initialTexts);
+  const [loading, setLoading] = useState(initialTexts.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadConcoursTexts = useCallback(async (showSilent = false) => {
-    if (!showSilent) setLoading(true);
+    if (!showSilent && texts.length === 0) setLoading(true);
     else setIsRefreshing(true);
 
     try {
@@ -30,17 +30,12 @@ export default function BattlePoetique() {
         const filtered = data
           .filter(item => item.isConcours === true || item.isConcours === "true")
           .sort((a, b) => {
-            // Tri par Likes en premier pour définir le Leader
             const likesA = a.totalLikes || 0;
             const likesB = b.totalLikes || 0;
             if (likesB !== likesA) return likesB - likesA;
-            
-            // Second critère : Certifications
             const certA = a.totalCertified || 0;
             const certB = b.totalCertified || 0;
             if (certB !== certA) return certB - certA;
-
-            // Troisième critère : Date
             return new Date(b.date) - new Date(a.date);
           });
             
@@ -52,11 +47,14 @@ export default function BattlePoetique() {
       setLoading(false); 
       setIsRefreshing(false);
     }
-  }, []);
+  }, [texts.length]);
 
   useEffect(() => {
-    loadConcoursTexts();
-  }, [loadConcoursTexts]);
+    // Si on a déjà des textes via ISR, on ne montre pas le loader initial
+    if (initialTexts.length === 0) {
+      loadConcoursTexts();
+    }
+  }, [loadConcoursTexts, initialTexts.length]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -82,7 +80,7 @@ export default function BattlePoetique() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
+    <div className="flex flex-col items-center justify-center py-40 gap-4 font-sans">
       <Loader2 className="animate-spin text-teal-600" size={40}/>
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
         Synchronisation de l'Arène...
@@ -91,8 +89,7 @@ export default function BattlePoetique() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-700">
-      
+    <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-700 font-sans">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-100 pb-12">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -106,7 +103,7 @@ export default function BattlePoetique() {
               </div>
             )}
           </div>
-          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-slate-900 leading-none">
+          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-slate-900 leading-none font-sans">
             L'Arène des <br /><span className="text-teal-600">Mots</span>
           </h1>
         </div>
@@ -124,7 +121,6 @@ export default function BattlePoetique() {
       {texts.length > 0 ? (
         <div className="grid gap-10 md:grid-cols-2">
           {texts.map((item, index) => {
-            // Le leader est celui qui a le plus de likes (index 0 après le tri)
             const isLeader = index === 0;
             const certifiedCount = item.totalCertified || 0;
             
@@ -177,7 +173,7 @@ export default function BattlePoetique() {
                     </h2>
                     
                     <p className="text-slate-500 line-clamp-3 font-serif italic mb-8 flex-grow leading-relaxed">
-                      {item.excerpt || item.content}
+                      {item.excerpt || item.content?.replace(/<[^>]*>/g, '')}
                     </p>
                     
                     <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
@@ -215,7 +211,7 @@ export default function BattlePoetique() {
           })}
         </div>
       ) : (
-        <div className="py-32 text-center space-y-8 bg-slate-50 rounded-[4rem] border-2 border-dashed border-slate-200">
+        <div className="py-32 text-center space-y-8 bg-slate-50 rounded-[4rem] border-2 border-dashed border-slate-200 font-sans">
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto shadow-sm">
              <Trophy size={40} className="text-slate-200" />
           </div>
@@ -236,4 +232,39 @@ export default function BattlePoetique() {
       </footer>
     </div>
   );
+}
+
+// LOGIQUE SERVEUR : ISR
+export async function getStaticProps() {
+  try {
+    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications`);
+    const files = await res.json();
+    
+    if (Array.isArray(files)) {
+      const promises = files
+        .filter(f => f.name.endsWith('.json'))
+        .map(f => fetch(f.download_url).then(r => r.json()));
+      
+      const data = await Promise.all(promises);
+      const filtered = data
+        .filter(item => item.isConcours === true || item.isConcours === "true")
+        .sort((a, b) => {
+          const likesA = a.totalLikes || 0;
+          const likesB = b.totalLikes || 0;
+          if (likesB !== likesA) return likesB - likesA;
+          const certA = a.totalCertified || 0;
+          const certB = b.totalCertified || 0;
+          if (certB !== certA) return certB - certA;
+          return new Date(b.date) - new Date(a.date);
+        });
+
+      return {
+        props: { initialTexts: filtered },
+        revalidate: 60
+      };
+    }
+  } catch (e) {
+    console.error("ISR Battle Error:", e);
+  }
+  return { props: { initialTexts: [] }, revalidate: 10 };
 }
