@@ -7,7 +7,6 @@ export default async function handler(req, res) {
   const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
   const path = `data/users/${fileName}.json`;
 
-  // Fonction de nettoyage pour sécuriser les entrées contre les injections XSS
   const sanitize = (str) => (typeof str === "string" ? str.replace(/[<>]/g, "") : str);
 
   try {
@@ -17,17 +16,23 @@ export default async function handler(req, res) {
     const updatedProfile = {
       ...userFile.content,
       ...userData,
-      // Nettoyage des champs textuels sensibles
       firstName: sanitize(userData.firstName),
       lastName: sanitize(userData.lastName),
       penName: sanitize(userData.penName),
-      // Protections critiques
       wallet: userFile.content.wallet, 
       stats: userFile.content.stats,   
       updatedAt: new Date().toISOString()
     };
 
     await updateFile(path, updatedProfile, userFile.sha, `👤 Profil MAJ: ${email}`);
+
+    // AUTOMATISME : Mise à jour instantanée du cache Vercel
+    try {
+      await res.revalidate('/communaute');
+    } catch (err) {
+      console.error("Revalidation error", err);
+    }
+
     return res.status(200).json({ success: true, user: updatedProfile });
   } catch (e) {
     return res.status(500).json({ error: e.message });
