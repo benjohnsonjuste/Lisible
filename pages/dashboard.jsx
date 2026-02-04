@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Send, TrendingUp, ArrowUpRight, FileText, UserCircle, Download, Award, MessageCircle, Facebook, Instagram, Twitter } from "lucide-react";
+import { 
+  Loader2, Send, TrendingUp, ArrowUpRight, FileText, UserCircle, 
+  Download, Award, MessageCircle, Facebook, Instagram, Twitter, Copy, UserPlus 
+} from "lucide-react";
 import { toast } from "sonner";
 
 export default function AuthorDashboard() {
@@ -9,6 +12,7 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
+  const [copied, setCopied] = useState(false);
 
   const getRank = (sc) => {
     if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-400", bg: "bg-white/5", icon: "👑" };
@@ -35,6 +39,14 @@ export default function AuthorDashboard() {
       fetchLatestData(u.email, u.password);
     } else { router.push("/login"); }
   }, [router, fetchLatestData]);
+
+  const copyRefLink = () => {
+    const link = `${window.location.origin}/login?ref=${btoa(user.email)}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    toast.success("Lien de parrainage copié !");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleTransfer = async () => {
     if (transfer.amount < 1000) return toast.error("Minimum 1000 Li");
@@ -67,6 +79,20 @@ export default function AuthorDashboard() {
           <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1">Solde Disponible</p>
         </div>
       </header>
+
+      {/* SECTION PARRAINAGE DYNAMIQUE */}
+      <div className="bg-teal-600 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-teal-900/10">
+        <div className="flex items-center gap-5">
+          <div className="p-4 bg-white/20 rounded-2xl"><UserPlus size={24}/></div>
+          <div>
+            <h3 className="text-lg font-black italic leading-none">Programme Ambassadeur</h3>
+            <p className="text-[10px] font-bold uppercase opacity-80 mt-2">Gagnez 500 Li par nouvelle plume recrutée</p>
+          </div>
+        </div>
+        <button onClick={copyRefLink} className="w-full md:w-auto px-8 py-4 bg-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white hover:text-slate-900 transition-all">
+          {copied ? "Lien copié !" : <><Copy size={16}/> Copier mon lien</>}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button onClick={() => router.push("/publish")} className="group flex items-center justify-between p-8 bg-white border-2 border-slate-50 rounded-[2.5rem] hover:border-teal-500 transition-all shadow-sm">
