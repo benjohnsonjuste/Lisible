@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import Image from "next/image"; // Importation ajoutée
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { 
@@ -12,7 +13,7 @@ import {
 
 import { InTextAd } from "@/components/InTextAd";
 
-// --- IMPORTS DYNAMIQUES (Lazy Loading) ---
+// --- IMPORTS DYNAMIQUES ---
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
@@ -74,9 +75,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
       setReadingProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
-    return () => {
-        window.removeEventListener("scroll", handleScroll);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -92,12 +91,12 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
             const data = await res.json();
             localStorage.setItem(viewKey, "true");
             setLiveViews(data.views);
-            setLiveLikes(data.likes || initialText.totalLikes || 0);
+            setLiveLikes(data.likes || (text ? text.totalLikes : 0) || 0);
           }
         });
       }
     }
-  }, [id, initialText.totalLikes]);
+  }, [id, text]);
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
 
@@ -113,13 +112,11 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
         <meta property="og:title" content={text.title} />
         <meta property="og:description" content={`Une œuvre de ${text.authorName || 'Anonyme'} sur Lisible.`} />
         <meta property="og:image" content="https://lisible.biz/og-default.jpg" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://lisible.biz/og-default.jpg" />
       </Head>
 
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-teal-600 transition-all duration-200" style={{ width: `${readingProgress}%` }} />
 
-      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[90] p-4 bg-slate-900 text-white rounded-full shadow-2xl">
+      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[90] p-4 bg-slate-900 text-white rounded-full shadow-2xl transition-transform active:scale-90">
         {isFocusMode ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
       </button>
 
@@ -136,10 +133,10 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
                    const res = await fetch('/api/texts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action: "like" }) });
                    if (res.ok) { const d = await res.json(); setLiveLikes(d.count); localStorage.setItem(lKey, "true"); toast.success("Aimé !"); }
                    setIsLiking(false);
-                }} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black"><Heart size={14} /> {liveLikes || text.totalLikes || 0}</button>
+                }} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black hover:bg-rose-50 transition-colors"><Heart size={14} className={liveLikes > 0 ? "fill-rose-500 text-rose-500" : ""} /> {liveLikes || text.totalLikes || 0}</button>
               </>
             )}
-            <button onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} className="p-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl shadow-xl"><Share2 size={20} /></button>
+            <button onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} className="p-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl shadow-xl hover:scale-105 transition-transform"><Share2 size={20} /></button>
           </div>
         </header>
 
@@ -153,13 +150,24 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
           <h1 className={`font-serif font-black italic transition-all duration-1000 ${isFocusMode ? 'text-6xl sm:text-8xl mb-20' : 'text-5xl sm:text-7xl mb-10'}`}>{text.title}</h1>
 
           <div className={`flex items-center gap-4 mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-0' : ''}`}>
-            <div className="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-700 font-bold border border-teal-200">{text.authorName?.[0].toUpperCase()}</div>
-            <div><p className="text-[10px] font-black text-teal-600 uppercase mb-1">Plume certifiée</p><p className="text-sm font-bold">{text.authorName || 'Anonyme'}</p></div>
+            {/* Optimisation d'image ici */}
+            <div className="relative w-12 h-12 rounded-full overflow-hidden bg-teal-100 border border-teal-200">
+              <Image 
+                src={text.authorPic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${text.authorEmail}`} 
+                alt={text.authorName || "Avatar"} 
+                fill 
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-teal-600 uppercase mb-1">Plume certifiée</p>
+              <p className="text-sm font-bold">{text.authorName || 'Anonyme'}</p>
+            </div>
           </div>
           
           <div className={`prose dark:prose-invert max-w-none font-serif leading-[1.8] text-justify mb-24 first-letter:text-7xl first-letter:font-black first-letter:float-left first-letter:mr-3 first-letter:text-teal-600 ${isFocusMode ? 'text-2xl' : 'text-slate-800 dark:text-slate-200 whitespace-pre-wrap'}`}>{text.content}</div>
 
-          <button onClick={() => setIsReportOpen(true)} className="flex items-center gap-2 text-slate-300 text-[9px] font-black uppercase"><AlertTriangle size={14} /> Signaler</button>
+          <button onClick={() => setIsReportOpen(true)} className="flex items-center gap-2 text-slate-300 text-[9px] font-black uppercase hover:text-rose-500 transition-colors"><AlertTriangle size={14} /> Signaler</button>
         </article>
 
         <div className={isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100 transition-all duration-700'}>
@@ -176,17 +184,26 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 }
 
 export async function getStaticPaths() { return { paths: [], fallback: 'blocking' }; }
+
 export async function getStaticProps({ params }) {
   try {
     const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${params.id}.json`);
     const data = await res.json();
     const initialText = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+    
+    // Récupération de l'index pour les recommandations
     const indexRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`);
     let allTexts = [];
     if (indexRes.ok) {
       const indexData = await indexRes.json();
       allTexts = JSON.parse(decodeURIComponent(escape(atob(indexData.content))));
     }
-    return { props: { initialText, id: params.id, allTexts }, revalidate: 60 };
-  } catch (e) { return { notFound: true }; }
+    
+    return { 
+      props: { initialText, id: params.id, allTexts }, 
+      revalidate: 60 // On-demand ISR prendra le relais via res.revalidate()
+    };
+  } catch (e) { 
+    return { notFound: true }; 
+  }
 }
