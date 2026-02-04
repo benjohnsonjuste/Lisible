@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Send, ArrowLeft, Loader2, CheckCircle2, Hash, Sparkles, Wand2, Coins } from "lucide-react"; 
+import { Trophy, Send, ArrowLeft, Loader2, CheckCircle2, Hash, Sparkles, Wand2, Coins, Flame } from "lucide-react"; 
 import Link from "next/link";
 
 export default function ConcoursPublishPage() {
@@ -18,7 +18,7 @@ export default function ConcoursPublishPage() {
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
     if (!loggedUser) {
-      toast.error("Veuillez vous connecter pour participer.");
+      toast.error("Veuillez vous connecter pour entrer dans l'arène.");
       router.push("/login"); 
     } else {
       const parsed = JSON.parse(loggedUser);
@@ -38,7 +38,7 @@ export default function ConcoursPublishPage() {
     const n = Math.floor(1000 + Math.random() * 9000);
     const newId = l + n;
     setConcurrentId(newId);
-    toast.info(`ID généré : ${newId}`);
+    toast.info(`ID Concurrent généré : ${newId}`);
   };
 
   const toBase64 = (file) =>
@@ -52,27 +52,26 @@ export default function ConcoursPublishPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return router.push("/login");
-    if (!isBattlePoetic) return toast.error("Certifiez votre participation.");
-    if (!validateConcurrentId(concurrentId)) return toast.error("Format ID requis : ABCD0123");
+    if (!isBattlePoetic) return toast.error("Vous devez certifier votre participation au règlement.");
+    if (!validateConcurrentId(concurrentId)) return toast.error("Format ID requis : 4 lettres + 4 chiffres (ex: PLUM1234)");
     
     const wordCount = content.trim().split(/\s+/).length;
-    if (wordCount < 10) return toast.error("Texte trop court.");
+    if (wordCount < 10) return toast.error("Le texte est trop court pour un duel.");
 
     setLoading(true);
-    const loadingToast = toast.loading("Publication en cours...");
+    const loadingToast = toast.loading("Transmission de votre candidature à l'Arène...");
 
     try {
       let imageBase64 = null;
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
-      // --- PUBLICATION (DÉCLENCHE LES NOTIFS ABONNÉS VIA API/TEXTS) ---
       const res = await fetch("/api/texts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: concurrentId.toUpperCase(),
           authorEmail: user.email.toLowerCase().trim(),
-          authorPenName: user.penName || user.name || "Anonyme",
+          authorPenName: user.penName || user.name || "Concurrent Anonyme",
           title: title.trim(),
           content: content.trim(),
           imageBase64,
@@ -90,128 +89,129 @@ export default function ConcoursPublishPage() {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Erreur serveur");
+        throw new Error(errorData.error || "Erreur serveur lors de la publication");
       }
       
       const data = await res.json();
 
-      // Notification globale corrigée vers /texte/
       fetch("/api/create-notif", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "concours", 
-          message: `🏆 BATTLE : Un nouveau poème "${title.trim()}" est en ligne !`,
+          message: `🏆 BATTLE : Le gladiateur ${concurrentId} vient de publier "${title.trim()}" !`,
           targetEmail: "all",
-          link: `/texte/${data.id}`
+          link: `/texts/${data.id}`
         })
-      }).catch(e => console.error("Notification non envoyée"));
+      }).catch(() => {});
 
-      toast.success("Candidature publiée !", { id: loadingToast });
-      router.push(`/texte/${data.id}`);
+      toast.success("Duel engagé ! Votre poème est dans l'arène.", { id: loadingToast });
+      router.push(`/texts/${data.id}`);
       
     } catch (err) {
-      console.error(err);
-      toast.error(err.message || "Échec de l'envoi. Réessayez.", { id: loadingToast });
+      toast.error(err.message || "Échec de l'envoi.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-20 px-4 pt-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-4xl mx-auto space-y-8 pb-20 px-5 pt-10 animate-in fade-in slide-in-from-bottom-10 duration-1000 font-sans">
       <Link href="/bibliotheque" className="group inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all">
         <ArrowLeft size={16} /> Retour Bibliothèque
       </Link>
 
-      <form onSubmit={handleSubmit} className="bg-white p-6 md:p-12 rounded-[3.5rem] border-4 border-teal-500/10 shadow-2xl relative overflow-hidden">
-        <Sparkles size={180} className="absolute -right-10 -top-10 text-teal-500/5 rotate-12 pointer-events-none" />
+      <div className="relative bg-slate-950 p-8 md:p-14 rounded-[4rem] border border-white/10 shadow-3xl overflow-hidden">
+        <div className="absolute top-0 right-0 p-10 opacity-10 rotate-12">
+            <Flame size={200} className="text-teal-500" />
+        </div>
 
-        <header className="flex items-center gap-5 mb-10">
-          <div className="p-5 bg-slate-900 rounded-[2rem] text-white shadow-xl">
-            <Trophy size={32} className="text-amber-400" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black italic tracking-tighter uppercase leading-none text-slate-900">Arène Poétique</h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 mt-2 flex items-center gap-2">
-              <Coins size={12}/> Chaque certification rapporte des Li
-            </p>
-          </div>
-        </header>
+        <form onSubmit={handleSubmit} className="relative z-10 space-y-10">
+          <header className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+            <div className="p-6 bg-teal-500 rounded-[2.5rem] text-white shadow-2xl shadow-teal-500/30 animate-pulse">
+              <Trophy size={40} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-white font-sans">Arène Poétique</h1>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-400 mt-3 flex items-center justify-center md:justify-start gap-2">
+                <Sparkles size={12}/> Gloire & Certification Li active
+              </p>
+            </div>
+          </header>
 
-        <div className="space-y-6">
-          <div 
-            onClick={() => setIsBattlePoetic(!isBattlePoetic)}
-            className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between ${isBattlePoetic ? 'border-teal-500 bg-teal-50' : 'border-slate-100 bg-slate-50 opacity-60'}`}
-          >
-            <div className="flex gap-4 items-center">
-              <CheckCircle2 className={isBattlePoetic ? "text-teal-600" : "text-slate-300"} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div 
+              onClick={() => setIsBattlePoetic(!isBattlePoetic)}
+              className={`p-8 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col justify-between gap-4 ${isBattlePoetic ? 'border-teal-500 bg-teal-500/10 shadow-lg' : 'border-white/5 bg-white/5 opacity-50'}`}
+            >
+              <CheckCircle2 className={isBattlePoetic ? "text-teal-400" : "text-slate-600"} size={28} />
               <div>
-                <p className="text-xs font-black uppercase tracking-widest text-slate-900">Règlement Battle</p>
-                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tight">Certification Li activée</p>
+                <p className="text-xs font-black uppercase tracking-widest text-white">Règlement de Duel</p>
+                <p className="text-[9px] text-slate-400 uppercase font-bold tracking-tight mt-1">J'accepte les conditions de la Battle</p>
               </div>
             </div>
-          </div>
 
-          {isBattlePoetic && (
-            <div className="animate-in zoom-in-95 duration-300 space-y-3">
-              <div className="flex justify-between items-center px-5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-teal-600">ID Concurrent Unique</label>
-                <button type="button" onClick={generateId} className="text-[9px] font-black uppercase text-slate-400 hover:text-teal-600 flex items-center gap-1 transition-colors">
-                   <Wand2 size={12}/> ID Aléatoire
+            <div className={`p-8 rounded-[2.5rem] border-2 transition-all ${isBattlePoetic ? 'border-white/10 bg-white/5' : 'border-white/5 bg-white/5 opacity-20 pointer-events-none'}`}>
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-teal-400">Identifiant Unique</label>
+                <button type="button" onClick={generateId} className="text-[9px] font-black uppercase text-slate-500 hover:text-white flex items-center gap-1 transition-colors">
+                   <Wand2 size={12}/> Aléatoire
                 </button>
               </div>
               <div className="relative">
-                <Hash className={`absolute left-6 top-1/2 -translate-y-1/2 ${validateConcurrentId(concurrentId) ? 'text-teal-600' : 'text-slate-300'}`} size={20} />
+                <Hash className="absolute left-0 top-1/2 -translate-y-1/2 text-teal-500" size={20} />
                 <input
                   type="text"
                   maxLength={8}
                   value={concurrentId}
                   onChange={(e) => setConcurrentId(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-6 pl-16 pr-6 text-xl font-black outline-none focus:border-teal-500 transition-all text-slate-900"
+                  className="w-full bg-transparent border-b-2 border-white/10 py-2 pl-8 text-2xl font-black outline-none focus:border-teal-500 transition-all text-white placeholder:text-white/5"
                   placeholder="ABCD0123"
                   required
                 />
               </div>
             </div>
-          )}
-        </div>
-
-        <div className="space-y-6 mt-10">
-          <div className="space-y-2">
-             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-5">Titre du manuscrit</label>
-             <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl p-6 text-xl italic font-bold outline-none focus:border-teal-200 transition-all shadow-inner"
-              placeholder="Nom de l'œuvre..."
-              required
-            />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-5">Contenu Poétique</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-50 rounded-[2.5rem] p-8 font-serif text-lg leading-relaxed min-h-[350px] outline-none focus:border-teal-200 transition-all text-slate-800 shadow-inner"
-              placeholder="Écrivez votre texte..."
-              required
-            />
-          </div>
-        </div>
+          <div className="space-y-8 bg-white/5 p-8 md:p-12 rounded-[3.5rem] border border-white/5 shadow-inner">
+            <div className="space-y-3">
+               <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Titre du manuscrit de guerre</label>
+               <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full bg-transparent border-b-2 border-white/10 py-4 text-3xl italic font-black outline-none focus:border-teal-500 transition-all text-white placeholder:text-white/5"
+                placeholder="Le Cri du Silence..."
+                required
+              />
+            </div>
 
-        <div className="pt-10">
-          <button 
-            type="submit" 
-            disabled={loading || !isBattlePoetic} 
-            className="w-full bg-slate-950 text-white py-7 rounded-[1.8rem] font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-teal-600 disabled:opacity-20 transition-all flex justify-center items-center gap-3 active:scale-95"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} /> Lancer la publication</>}
-          </button>
-        </div>
-      </form>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-2">Vers Poétiques</label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full bg-white/5 border-2 border-white/5 rounded-[2.5rem] p-8 font-serif text-xl leading-relaxed min-h-[400px] outline-none focus:border-teal-500/30 transition-all text-slate-200 shadow-inner resize-none"
+                placeholder="Laissez votre plume terrasser l'adversaire..."
+                required
+              />
+            </div>
+          </div>
+
+          <div className="pt-6">
+            <button 
+              type="submit" 
+              disabled={loading || !isBattlePoetic} 
+              className="w-full bg-teal-500 text-slate-950 py-8 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.5em] shadow-2xl shadow-teal-500/20 hover:bg-white transition-all disabled:opacity-10 flex justify-center items-center gap-4 active:scale-95 transform-gpu"
+            >
+              {loading ? <Loader2 className="animate-spin" size={24} /> : <><Send size={22} className="-rotate-12" /> Entrer dans l'Arène</>}
+            </button>
+            <p className="text-center mt-6 text-[8px] font-black uppercase tracking-[0.4em] text-slate-600">
+              Chaque mot compte. La victoire se mérite par le sang de l'encre.
+            </p>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
