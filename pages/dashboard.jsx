@@ -102,10 +102,12 @@ export default function AuthorDashboard() {
   };
 
   const handleUniversalShare = async () => {
+    // Construction du lien vers pages/auteur/[email].js
+    const authorEmail = user?.email?.toLowerCase().trim() || "";
     const shareData = {
-      title: "Lisible - Profil d'Auteur",
-      text: `Découvrez les œuvres de ${user?.penName} sur Lisible !`,
-      url: `https://lisible.biz/author/${user?.id || ''}`
+      title: "Lisible - Catalogue d'Auteur",
+      text: `Découvrez le catalogue d'œuvres de ${user?.penName} sur Lisible !`,
+      url: `https://lisible.biz/auteur/${authorEmail}`
     };
 
     try {
@@ -113,7 +115,7 @@ export default function AuthorDashboard() {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(shareData.url);
-        toast.success("Lien copié ! Partagez-le partout.");
+        toast.success("Lien du catalogue copié !");
       }
     } catch (err) {
       console.log("Erreur de partage");
