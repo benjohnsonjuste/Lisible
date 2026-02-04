@@ -110,7 +110,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
 
-  // NOUVELLE LOGIQUE DE LECTURE VOCALE VIA API
+  // LOGIQUE DE LECTURE VOCALE OPTIMISÉE
   const toggleSpeech = async () => {
     if (isSpeaking) {
       audioPlayer.current?.pause();
@@ -118,7 +118,13 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
       return;
     }
 
-    if (audioPlayer.current && audioPlayer.current.src) {
+    // Initialisation immédiate de l'objet Audio pour débloquer les navigateurs mobiles
+    if (!audioPlayer.current) {
+      audioPlayer.current = new Audio();
+    }
+
+    // Si l'URL existe déjà, on relance juste
+    if (audioPlayer.current.src) {
       audioPlayer.current.play();
       setIsSpeaking(true);
       return;
@@ -126,7 +132,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
     setIsLoadingAudio(true);
     try {
-      const cleanText = text.content.replace(/<[^>]*>/g, '').trim().substring(0, 2000);
+      const cleanText = text.content.replace(/<[^>]*>/g, '').trim().substring(0, 1500);
       
       const res = await fetch('/api/speech', {
         method: 'POST',
@@ -137,20 +143,32 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
       const data = await res.json();
       
       if (data.audioUrl) {
-        if (!audioPlayer.current) audioPlayer.current = new Audio();
         audioPlayer.current.src = data.audioUrl;
-        audioPlayer.current.play();
-        setIsSpeaking(true);
+        audioPlayer.current.load(); // Prépare le flux
+        
+        const playPromise = audioPlayer.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsSpeaking(true);
+              setIsLoadingAudio(false);
+            })
+            .catch(error => {
+              console.error("Audio Playback Error:", error);
+              setIsLoadingAudio(false);
+              toast.error("Cliquez à nouveau pour activer le son");
+            });
+        }
         
         audioPlayer.current.onended = () => setIsSpeaking(false);
         audioPlayer.current.onerror = () => {
-          toast.error("Erreur de lecture audio");
+          toast.error("Erreur de flux audio");
           setIsSpeaking(false);
         };
       }
     } catch (e) {
-      toast.error("Le service vocal est indisponible");
-    } finally {
+      toast.error("Service de voix indisponible");
       setIsLoadingAudio(false);
     }
   };
