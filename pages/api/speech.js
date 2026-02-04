@@ -2,18 +2,25 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { text, lang = 'fr-FR' } = req.body;
+  const { text, lang = 'fr' } = req.body;
 
   if (!text) return res.status(400).json({ error: 'Texte manquant' });
 
   try {
-    // Note: Pour une version gratuite et illimitée, on utilise l'URL de synthèse Google Translate
-    // qui est très robuste pour Lisible.
+    // Nettoyage strict : max 200 caractères (limite Google TTS gratuit)
+    const safeText = text.replace(/\n/g, ' ').substring(0, 200);
+    
+    // Construction de l'URL avec les paramètres de contournement
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
-      text.substring(0, 1000) // On limite à 1000 caractères par segment pour la stabilité
-    )}&tl=${lang}&client=tw-ob`;
+      safeText
+    )}&tl=${lang}&client=tw-ob&ttsspeed=1`;
 
-    return res.status(200).json({ audioUrl: url });
+    // On pourrait simplement renvoyer l'URL, mais certains navigateurs bloquent le referer.
+    // En renvoyant cette URL, on s'assure que le client l'appelle avec son propre User-Agent.
+    return res.status(200).json({ 
+      audioUrl: url,
+      userAgentTarget: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    });
   } catch (error) {
     return res.status(500).json({ error: 'Erreur lors de la génération vocale' });
   }
