@@ -5,9 +5,9 @@ import Head from "next/head";
 import { 
   Loader2, Send, ArrowUpRight, FileText, UserCircle, 
   Download, Award, Twitter, Facebook, 
-  MessageCircle, Maximize2, Minimize2, Wallet, 
-  TrendingUp, ShieldCheck, Sparkles, Share2,
-  Bell, Users, BarChart3, CheckCircle2
+  MessageCircle, Wallet, TrendingUp, ShieldCheck, 
+  Sparkles, Share2, Bell, Users, BarChart3, 
+  CheckCircle2, Settings, Edit3, Trash2, BookOpen, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatLi } from "@/lib/utils";
@@ -17,8 +17,8 @@ export default function AuthorDashboard() {
   const badgeRef = useRef(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [works, setWorks] = useState([]);
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
-  const [isFocusMode, setIsFocusMode] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [metrics, setMetrics] = useState({ followers: 0, views: 0 });
 
@@ -48,15 +48,23 @@ export default function AuthorDashboard() {
         setUser(data.user);
         localStorage.setItem("lisible_user", JSON.stringify(data.user));
 
-        const [mRes, fRes] = await Promise.all([
+        const [mRes, fRes, wRes] = await Promise.all([
           fetch(`/api/author/${data.user.id}/metrics`),
-          fetch(`/api/get-followers-count?userId=${data.user.id}`)
+          fetch(`/api/get-followers-count?userId=${data.user.id}`),
+          fetch(`/api/author/${data.user.id}/works`)
         ]);
         
-        if (mRes.ok && fRes.ok) {
+        if (mRes.ok) {
           const mData = await mRes.json();
+          setMetrics(prev => ({ ...prev, views: mData.totalViews || 0 }));
+        }
+        if (fRes.ok) {
           const fData = await fRes.json();
-          setMetrics({ views: mData.totalViews || 0, followers: fData.count || 0 });
+          setMetrics(prev => ({ ...prev, followers: fData.count || 0 }));
+        }
+        if (wRes.ok) {
+          const wData = await wRes.json();
+          setWorks(wData.works || []);
         }
       }
     } catch (e) { console.error("Erreur sync:", e); }
@@ -80,6 +88,24 @@ export default function AuthorDashboard() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [router, fetchLatestData]);
 
+  const handleDeleteWork = async (workId) => {
+    if(!confirm("Supprimer définitivement cette œuvre ?")) return;
+    const tid = toast.loading("Vérification et suppression...");
+    try {
+      const res = await fetch(`/api/works/${workId}`, { 
+        method: "DELETE",
+        headers: { "x-user-email": user.email }
+      });
+      if (res.ok) {
+        setWorks(works.filter(w => w.id !== workId));
+        toast.success("Œuvre supprimée", { id: tid });
+      } else { 
+        const err = await res.json();
+        toast.error(err.error || "Erreur lors de la suppression", { id: tid }); 
+      }
+    } catch (e) { toast.error("Serveur indisponible", { id: tid }); }
+  };
+
   const handleDownloadBadge = () => {
     const svg = badgeRef.current;
     if (!svg) return;
@@ -102,40 +128,23 @@ export default function AuthorDashboard() {
   };
 
   const handleUniversalShare = async () => {
-    // Construction du lien vers pages/auteur/[email].js
     const authorEmail = user?.email?.toLowerCase().trim() || "";
     const shareData = {
       title: "Lisible - Catalogue d'Auteur",
       text: `Découvrez le catalogue d'œuvres de ${user?.penName} sur Lisible !`,
       url: `https://lisible.biz/auteur/${authorEmail}`
     };
-
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
+      if (navigator.share) { await navigator.share(shareData); } 
+      else {
         await navigator.clipboard.writeText(shareData.url);
         toast.success("Lien du catalogue copié !");
       }
-    } catch (err) {
-      console.log("Erreur de partage");
-    }
+    } catch (err) { console.log("Erreur de partage"); }
   };
 
   const handleTransfer = async () => {
-    if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
-    const tid = toast.loading("Sécurisation...");
-    try {
-      const res = await fetch("/api/wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: transfer.amount, type: "transfer" })
-      });
-      if (res.ok) {
-        toast.success("Li envoyés !", { id: tid });
-        fetchLatestData(user.email);
-      } else { toast.error("Erreur de transfert", { id: tid }); }
-    } catch (e) { toast.error("Serveur indisponible", { id: tid }); }
+    toast.error("Le service de transfert est momentanément indisponible.");
   };
 
   const nameParts = useMemo(() => {
@@ -153,20 +162,16 @@ export default function AuthorDashboard() {
   const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
 
   return (
-    <div className={`min-h-screen selection:bg-teal-100 font-sans transition-all duration-1000 ${isFocusMode ? 'bg-[#F9F7F2] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
+    <div className="min-h-screen selection:bg-teal-100 font-sans bg-[#FCFBF9] dark:bg-slate-950">
       <Head><title>Tableau de bord | {user.penName}</title></Head>
 
       <div className="fixed top-0 left-0 w-full h-[2px] z-[100] bg-teal-600/20">
         <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
       </div>
 
-      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[110] p-4 bg-slate-900 text-white dark:bg-teal-600 rounded-full shadow-2xl transition-all hover:scale-110">
-        {isFocusMode ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-      </button>
-
       <div className="max-w-2xl mx-auto px-6 py-12 sm:py-20">
         
-        <header className={`mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-20 blur-sm scale-95' : 'opacity-100'}`}>
+        <header className="mb-16">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-4">
               <div className={`w-16 h-16 rounded-[1.5rem] ${isStaff ? 'bg-slate-900' : 'bg-teal-600'} flex items-center justify-center text-white shadow-xl text-2xl rotate-3`}>
@@ -177,10 +182,15 @@ export default function AuthorDashboard() {
                 <h1 className="text-3xl font-serif font-black italic dark:text-white">{user?.penName}</h1>
               </div>
             </div>
-            <button onClick={() => router.push("/notifications")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 relative group">
-              <Bell size={20} className="text-slate-400 group-hover:text-teal-600 transition-colors" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-teal-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => router.push("/account")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 group transition-all hover:border-teal-500">
+                <Settings size={20} className="text-slate-400 group-hover:text-teal-600" />
+              </button>
+              <button onClick={() => router.push("/notifications")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 relative group">
+                <Bell size={20} className="text-slate-400 group-hover:text-teal-600" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-teal-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+              </button>
+            </div>
           </div>
 
           {!isStaff && (
@@ -196,26 +206,26 @@ export default function AuthorDashboard() {
             </div>
           )}
 
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex justify-between items-end">
-            <div>
-              <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Solde de Plume</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance)}</span>
-                <span className="text-teal-600 font-black text-xs uppercase">Li</span>
+          {!isStaff && (
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex justify-between items-end">
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Solde de Plume</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance)}</span>
+                  <span className="text-teal-600 font-black text-xs uppercase">Li</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase text-teal-600 mb-1 flex items-center gap-1 justify-end"><TrendingUp size={12}/> Valeur</p>
+                <p className="font-bold text-slate-900 dark:text-slate-300">{(user?.wallet?.balance * 0.0002).toFixed(2)} USD</p>
               </div>
             </div>
-            {!isStaff && (
-               <div className="text-right">
-                 <p className="text-[10px] font-black uppercase text-teal-600 mb-1 flex items-center gap-1 justify-end"><TrendingUp size={12}/> Valeur</p>
-                 <p className="font-bold text-slate-900 dark:text-slate-300">{(user?.wallet?.balance * 0.0002).toFixed(2)} USD</p>
-               </div>
-            )}
-          </div>
+          )}
         </header>
 
         <section className="space-y-12">
           
-          <div className={`grid grid-cols-2 gap-4 transition-all duration-700 ${isFocusMode ? 'opacity-0 translate-y-10' : ''}`}>
+          <div className="grid grid-cols-2 gap-4">
             <button onClick={() => router.push("/publish")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2rem] hover:border-teal-500 transition-all group shadow-sm">
               <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 w-fit rounded-2xl group-hover:bg-teal-600 group-hover:text-white transition-all">
                 <Sparkles size={20} />
@@ -230,20 +240,52 @@ export default function AuthorDashboard() {
             </button>
           </div>
 
-          <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl border border-white/5 relative overflow-hidden">
+          <div className="space-y-6">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
+              <BookOpen size={14} /> Mes publications ({works.length})
+            </h3>
+            <div className="grid gap-3">
+              {works.length > 0 ? works.map((work) => (
+                <div key={work.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
+                  <div className="flex flex-col">
+                    <span className="font-serif font-bold text-lg dark:text-white line-clamp-1">{work.title}</span>
+                    <span className="text-[9px] font-black uppercase text-slate-400">{work.category} {!isStaff && `• ${work.views || 0} vues`}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => router.push(`/edit/${work.id}`)} className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl hover:text-teal-600 transition-all">
+                      <Edit3 size={18} />
+                    </button>
+                    <button onClick={() => handleDeleteWork(work.id)} className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl hover:text-red-500 transition-all">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              )) : (
+                <div className="text-center py-10 border-2 border-dashed border-slate-100 dark:border-slate-900 rounded-[2rem]">
+                  <p className="text-[10px] font-black uppercase text-slate-300">Aucun texte publié pour le moment</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl border border-white/5 relative overflow-hidden opacity-60 grayscale-[0.5]">
+            <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center backdrop-blur-[2px]">
+               <Lock className="text-teal-500 mb-2" size={32} />
+               <p className="text-[10px] font-black uppercase tracking-widest text-white">Service en maintenance</p>
+            </div>
             <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Send size={80} /></div>
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-8 flex items-center gap-2 text-teal-400">
               <Wallet size={14} /> Transfert de jetons Li
             </h3>
-            <div className="space-y-4 relative z-10">
-              <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, email: e.target.value})}/>
-              <input type="number" placeholder="Montant" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, amount: e.target.value})}/>
-              <button onClick={handleTransfer} className="w-full bg-teal-500 text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-colors">Envoyer les Li</button>
+            <div className="space-y-4 relative z-10 pointer-events-none">
+              <input type="email" disabled placeholder="Email destinataire" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 outline-none" />
+              <input type="number" disabled placeholder="Montant (Min. 1000)" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 outline-none" />
+              <button disabled className="w-full bg-slate-700 text-slate-400 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px]">Indisponible</button>
             </div>
           </div>
 
           {!isStaff && (
-            <div className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 transition-all duration-700 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
               <div className="flex justify-between items-end mb-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Objectif Retrait</p>
                 <p className="text-[10px] font-black text-teal-600">25 000 Li</p>
@@ -255,7 +297,7 @@ export default function AuthorDashboard() {
             </div>
           )}
 
-          <div className={`flex flex-col items-center text-center p-8 transition-all duration-700 ${isFocusMode ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
+          <div className="flex flex-col items-center text-center p-8">
             <div className="hidden">
               <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -294,7 +336,7 @@ export default function AuthorDashboard() {
           </div>
         </section>
 
-        <footer className={`mt-24 border-t border-slate-100 dark:border-slate-900 pt-8 flex items-center justify-between transition-all duration-700 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
+        <footer className="mt-24 border-t border-slate-100 dark:border-slate-900 pt-8 flex items-center justify-between">
            <div className="flex items-center gap-2 text-slate-300 text-[9px] font-black uppercase tracking-widest">
              <ShieldCheck size={14} /> Compte sécurisé
            </div>
