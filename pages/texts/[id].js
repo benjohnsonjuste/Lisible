@@ -102,7 +102,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
   const toggleSpeech = () => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
-      toast.error("La lecture vocale n'est pas supportée par votre navigateur.");
+      toast.error("Non supporté");
       return;
     }
 
@@ -112,24 +112,30 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
       return;
     }
 
-    // Nettoyage du texte pour la lecture (retrait des tags si présents et normalisation)
+    // Récupération et nettoyage strict du texte
     const cleanText = text.content.replace(/<[^>]*>/g, '').trim();
     if (!cleanText) return;
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = "fr-FR";
-    utterance.rate = 1.0; // Vitesse normale
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      toast.error("Erreur lors de la lecture audio.");
-    };
-
-    // Pour forcer le démarrage sur certains navigateurs mobiles
+    // IMPORTANT : On annule toute lecture en cours pour éviter les erreurs de file d'attente
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+
+    // Petit délai pour laisser le temps au navigateur de réinitialiser le moteur audio
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = "fr-FR";
+      utterance.rate = 0.95; // Légèrement plus lent pour la qualité littéraire
+      
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = (event) => {
+        console.error("Speech Error:", event);
+        setIsSpeaking(false);
+        // Si l'erreur est "interrupted", c'est souvent normal car on a cancel.
+        if (event.error !== 'interrupted') toast.error("Erreur lecture audio");
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   };
 
   if (router.isFallback || !text) return <div className="min-h-screen bg-[#FCFBF9] dark:bg-slate-950 p-20 animate-pulse" />;
