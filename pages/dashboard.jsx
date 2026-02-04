@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Loader2, Send, TrendingUp, ArrowUpRight, FileText, UserCircle, 
-  Download, Award, MessageCircle, Facebook, Instagram, Twitter, Copy, UserPlus 
+  Download, Award, MessageCircle, Facebook, Instagram, Twitter, Copy, UserPlus, Share2 
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,24 +49,51 @@ export default function AuthorDashboard() {
   };
 
   const handleTransfer = async () => {
-    if (transfer.amount < 1000) return toast.error("Minimum 1000 Li");
-    const tid = toast.loading("Transfert...");
+    const amount = Number(transfer.amount);
+    if (amount < 1000) return toast.error("Le montant minimum d'envoi est de 1000 Li");
+    if (user.wallet.balance < amount) return toast.error("Solde insuffisant");
+
+    const tid = toast.loading("Transfert de Li en cours...");
     try {
-      const res = await fetch("/api/wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: transfer.amount, type: "transfer" }) });
-      if (res.ok) { toast.success("Succès !", { id: tid }); fetchLatestData(user.email, user.password); }
-      else { toast.error("Échec", { id: tid }); }
+      const res = await fetch("/api/wallet", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: amount, type: "transfer" }) });
+      if (res.ok) { 
+        toast.success(`Transfert de ${amount} Li réussi !`, { id: tid }); 
+        fetchLatestData(user.email, user.password); 
+      }
+      else { toast.error("Destinataire introuvable ou erreur de transaction", { id: tid }); }
     } catch (e) { toast.error("Erreur de connexion", { id: tid }); }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+  const handleUniversalShare = async () => {
+    const shareData = {
+      title: 'Lisible - La Belle Littéraire',
+      text: `Découvrez mon profil d'auteur sur Lisible ! Je suis au rang ${getRank(user?.wallet?.balance || 0).name}.`,
+      url: `${window.location.origin}/auteur/${encodeURIComponent(user.email)}`
+    };
+    try {
+      if (navigator.share) { await navigator.share(shareData); } 
+      else { copyRefLink(); }
+    } catch (err) { console.log(err); }
+  };
+
+  const downloadBadge = () => {
+    toast.info("Génération de votre badge de certification...");
+    // Logique simplifiée : on redirige vers l'image générée ou on simule un téléchargement
+    const link = document.createElement("a");
+    link.href = `https://api.dicebear.com/7.x/shapes/svg?seed=${user?.email}`; // Exemple d'identifiant visuel
+    link.download = `badge_lisible_${user?.penName}.svg`;
+    link.click();
+  };
+
+  if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-teal-600" size={40} /></div>;
 
   const rank = getRank(user?.wallet?.balance || 0);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8 pb-20">
-      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8 border border-white/5">
+    <div className="max-w-6xl mx-auto p-6 space-y-8 pb-20 font-sans">
+      <header className="bg-slate-900 rounded-[3rem] p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-2xl gap-8 border border-white/5 animate-in fade-in duration-700">
         <div className="text-center md:text-left">
-          <div className={`inline-flex items-center gap-2 ${rank.color} ${rank.bg} px-4 py-2 rounded-2xl mb-4 border border-current/10 animate-in zoom-in`}>
+          <div className={`inline-flex items-center gap-2 ${rank.color} ${rank.bg} px-4 py-2 rounded-2xl mb-4 border border-current/10`}>
              <span className="text-xl">{rank.icon}</span>
              <span className="text-[10px] font-black uppercase tracking-widest">{rank.name}</span>
           </div>
@@ -74,7 +101,7 @@ export default function AuthorDashboard() {
           <p className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-500 mt-2 italic">Auteur Certifié Lisible</p>
         </div>
         
-        <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 text-right min-w-[200px]">
+        <div className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 text-right min-w-[200px] shadow-inner">
           <p className="text-5xl font-black text-amber-400 tracking-tighter">{user?.wallet?.balance || 0} <span className="text-sm">Li</span></p>
           <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1">Solde Disponible</p>
         </div>
@@ -89,7 +116,7 @@ export default function AuthorDashboard() {
             <p className="text-[10px] font-bold uppercase opacity-80 mt-2">Gagnez 500 Li par nouvelle plume recrutée</p>
           </div>
         </div>
-        <button onClick={copyRefLink} className="w-full md:w-auto px-8 py-4 bg-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white hover:text-slate-900 transition-all">
+        <button onClick={copyRefLink} className="w-full md:w-auto px-8 py-4 bg-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white hover:text-slate-900 transition-all shadow-lg active:scale-95">
           {copied ? "Lien copié !" : <><Copy size={16}/> Copier mon lien</>}
         </button>
       </div>
@@ -112,36 +139,50 @@ export default function AuthorDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6">
-          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Send size={18}/> Envoyer des Li</h3>
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm space-y-6">
+          <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-900"><Send size={18} className="text-teal-600"/> Envoyer des Li</h3>
           <div className="space-y-4">
-            <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-sm font-bold" onChange={(e) => setTransfer({...transfer, email: e.target.value})} />
-            <input type="number" placeholder="Montant (Min. 1000)" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-sm font-bold" onChange={(e) => setTransfer({...transfer, amount: e.target.value})} />
-            <button onClick={handleTransfer} className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all text-[10px]">Confirmer l'envoi</button>
+            <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-sm font-bold focus:ring-2 ring-teal-500/10 transition-all" onChange={(e) => setTransfer({...transfer, email: e.target.value})} />
+            <div className="relative">
+                <input type="number" min="1000" placeholder="Montant (Min. 1000)" className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none text-sm font-bold focus:ring-2 ring-teal-500/10 transition-all" onChange={(e) => setTransfer({...transfer, amount: e.target.value})} />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-teal-600">Li</span>
+            </div>
+            <button onClick={handleTransfer} className="w-full bg-slate-950 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all text-[10px] shadow-lg active:scale-95">Confirmer l'envoi</button>
           </div>
         </div>
 
-        <div className="bg-teal-50 p-8 rounded-[3rem] border border-teal-100 flex flex-col justify-between">
+        <div className="bg-teal-50 p-8 rounded-[3rem] border border-teal-100 flex flex-col justify-between shadow-sm">
            <TrendingUp className="text-teal-600 mb-6" size={30} />
            <div>
               <p className="text-3xl font-black italic text-slate-900 leading-none">Objectif Retrait</p>
               <div className="w-full bg-white h-2 rounded-full mt-4 overflow-hidden shadow-inner">
-                <div className="bg-teal-500 h-full transition-all duration-1000" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }}></div>
+                <div className="bg-teal-500 h-full transition-all duration-1000" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 25000) * 100, 100)}%` }}></div>
               </div>
-              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Progression : {Math.floor((user?.wallet?.balance / 25000) * 100)}%</p>
+              <p className="text-[9px] font-black text-slate-400 mt-2 uppercase">Progression : {Math.floor(((user?.wallet?.balance || 0) / 25000) * 100)}% (Seuil : 25k)</p>
            </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-5 shadow-sm">
-           <Award size={40} className="text-amber-500" />
-           <div>
-              <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Partagez votre profil</h3>
-              <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Augmentez votre influence</p>
+        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex flex-col items-center justify-center text-center space-y-6 shadow-sm">
+           <div className="relative">
+              <Award size={50} className="text-amber-500 animate-pulse" />
+              <button 
+                onClick={downloadBadge}
+                className="absolute -bottom-2 -right-2 p-2 bg-slate-950 text-white rounded-full hover:bg-teal-600 transition-all shadow-lg border-2 border-white"
+                title="Télécharger mon badge"
+              >
+                <Download size={14}/>
+              </button>
            </div>
-           <div className="flex gap-2">
-              <button className="p-3 bg-slate-50 rounded-xl hover:bg-teal-600 hover:text-white transition-all"><Facebook size={18}/></button>
-              <button className="p-3 bg-slate-50 rounded-xl hover:bg-teal-600 hover:text-white transition-all"><Instagram size={18}/></button>
-              <button className="p-3 bg-slate-50 rounded-xl hover:bg-teal-600 hover:text-white transition-all"><Twitter size={18}/></button>
+           <div>
+              <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Prestige Social</h3>
+              <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Exportez votre renommée</p>
+           </div>
+           <div className="flex flex-wrap justify-center gap-2">
+              <button onClick={() => window.open(`https://wa.me/?text=Découvrez mon profil d'auteur sur Lisible !`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#25D366] hover:text-white transition-all shadow-sm"><MessageCircle size={18}/></button>
+              <button onClick={() => window.open(`https://facebook.com/sharer/sharer.php?u=${window.location.origin}`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#1877F2] hover:text-white transition-all shadow-sm"><Facebook size={18}/></button>
+              <button onClick={() => window.open(`https://instagram.com`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#E4405F] hover:text-white transition-all shadow-sm"><Instagram size={18}/></button>
+              <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=Découvrez Lisible !`)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-[#1DA1F2] hover:text-white transition-all shadow-sm"><Twitter size={18}/></button>
+              <button onClick={handleUniversalShare} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-all shadow-md"><Share2 size={18}/></button>
            </div>
         </div>
       </div>
