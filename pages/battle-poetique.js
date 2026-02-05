@@ -17,27 +17,29 @@ export default function BattlePoetique({ initialTexts = [] }) {
     else setIsRefreshing(true);
 
     try {
-      // On utilise désormais l'index global pour plus de rapidité
-      const res = await fetch(`/api/texts?limit=1000`); // On récupère une large part de l'index
+      // Récupération via l'API unifiée (limitée à l'index pour la performance)
+      const res = await fetch(`/api/texts?limit=1000`); 
       const json = await res.json();
       
       if (json.data && Array.isArray(json.data)) {
         const filtered = json.data
           .filter(item => item.isConcours === true || item.isConcours === "true")
           .sort((a, b) => {
-            const likesA = a.totalLikes || 0;
-            const likesB = b.totalLikes || 0;
+            const likesA = Number(a.totalLikes || a.likes || 0);
+            const likesB = Number(b.totalLikes || b.likes || 0);
             if (likesB !== likesA) return likesB - likesA;
-            const certA = a.totalCertified || 0;
-            const certB = b.totalCertified || 0;
+            
+            const certA = Number(a.totalCertified || 0);
+            const certB = Number(b.totalCertified || 0);
             if (certB !== certA) return certB - certA;
+            
             return new Date(b.date) - new Date(a.date);
           });
             
         setTexts(filtered);
       }
     } catch (e) { 
-      console.error("Erreur de mise à jour:", e); 
+      console.error("Erreur de mise à jour de l'arène:", e); 
     } finally { 
       setLoading(false); 
       setIsRefreshing(false);
@@ -50,6 +52,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
     }
   }, [loadConcoursTexts, initialTexts.length]);
 
+  // Auto-refresh toutes les 60 secondes pour le Leaderboard
   useEffect(() => {
     const interval = setInterval(() => {
       loadConcoursTexts(true);
@@ -116,7 +119,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
         <div className="grid gap-10 md:grid-cols-2">
           {texts.map((item, index) => {
             const isLeader = index === 0;
-            const certifiedCount = item.totalCertified || 0;
+            const certifiedCount = Number(item.totalCertified || 0);
             
             return (
               <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -159,7 +162,9 @@ export default function BattlePoetique({ initialTexts = [] }) {
                     <div className="flex items-center gap-2 mb-4">
                        <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest">{item.genre || "Candidat"}</span>
                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(item.date).toLocaleDateString()}</span>
+                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                        {item.date ? new Date(item.date).toLocaleDateString() : "---"}
+                       </span>
                     </div>
 
                     <h2 className="text-3xl font-black italic text-slate-900 group-hover:text-teal-600 transition-colors mb-4 tracking-tighter leading-[0.9]">
@@ -187,7 +192,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
                           <Eye size={16} className="text-slate-300"/> {item.views || 0}
                         </div>
                         <div className="flex items-center gap-1.5 text-rose-500 font-black text-[11px] bg-rose-50 px-4 py-2 rounded-2xl">
-                          <Heart size={16} fill={item.totalLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform"/> {item.totalLikes || 0}
+                          <Heart size={16} fill={Number(item.totalLikes || item.likes) > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform"/> {item.totalLikes || item.likes || 0}
                         </div>
                       </div>
                     </div>
@@ -238,12 +243,14 @@ export async function getStaticProps() {
       const filtered = allTexts
         .filter(item => item.isConcours === true || item.isConcours === "true")
         .sort((a, b) => {
-          const likesA = a.totalLikes || 0;
-          const likesB = b.totalLikes || 0;
+          const likesA = Number(a.totalLikes || a.likes || 0);
+          const likesB = Number(b.totalLikes || b.likes || 0);
           if (likesB !== likesA) return likesB - likesA;
-          const certA = a.totalCertified || 0;
-          const certB = b.totalCertified || 0;
+          
+          const certA = Number(a.totalCertified || 0);
+          const certB = Number(b.totalCertified || 0);
           if (certB !== certA) return certB - certA;
+          
           return new Date(b.date) - new Date(a.date);
         });
 
@@ -253,7 +260,7 @@ export async function getStaticProps() {
       };
     }
   } catch (e) {
-    console.error("ISR Battle Error:", e);
+    console.error("Erreur ISR Battle:", e);
   }
   return { props: { initialTexts: [] }, revalidate: 10 };
 }
