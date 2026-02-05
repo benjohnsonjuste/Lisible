@@ -174,9 +174,14 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
             </div>
           </div>
 
+          {/* CHANGEMENT ICI : Utilisation de img standard pour supporter le Base64 de GitHub sans erreurs de buffer */}
           {(text.image || text.imageBase64) && (
-            <div className="mb-12 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100">
-              <Image src={text.image || text.imageBase64} alt={text.title} width={800} height={450} className="w-full h-auto object-cover" />
+            <div className="mb-12 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100 bg-white">
+              <img 
+                src={text.image || text.imageBase64} 
+                alt={text.title} 
+                className="w-full h-auto object-cover max-h-[500px]" 
+              />
             </div>
           )}
           
