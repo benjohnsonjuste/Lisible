@@ -43,7 +43,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
-  // Analyse du mood basée sur le texte
   const mood = useMemo(() => {
     if (!text?.content) return null;
     const content = text.content.toLowerCase();
@@ -58,7 +57,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
     return winner.score > 0 ? winner : null;
   }, [text?.content]);
 
-  // Récupération mise à jour (Correction du chemin vers /data/texts/)
   const fetchData = useCallback(async (tid) => {
     if (!tid) return;
     try {
@@ -176,9 +174,9 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
             </div>
           </div>
 
-          {text.image && (
+          {(text.image || text.imageBase64) && (
             <div className="mb-12 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100">
-              <Image src={text.image} alt={text.title} width={800} height={450} className="w-full h-auto object-cover" />
+              <Image src={text.image || text.imageBase64} alt={text.title} width={800} height={450} className="w-full h-auto object-cover" />
             </div>
           )}
           
@@ -207,12 +205,10 @@ export async function getStaticPaths() { return { paths: [], fallback: 'blocking
 
 export async function getStaticProps({ params }) {
   try {
-    // CORRECTION DU CHEMIN : data/texts/ au lieu de data/publications/
     const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${params.id}.json`);
     const data = await res.json();
     const initialText = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
     
-    // Récupération de l'index pour les recommandations
     const indexRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`);
     let recommendations = [];
     if (indexRes.ok) {
