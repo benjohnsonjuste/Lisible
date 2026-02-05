@@ -13,13 +13,13 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Correction : Charger les données si initialTexts est vide (ex: premier rendu ou erreur ISR)
+  // Correction : Charger les données si initialTexts est vide ou pour synchroniser les données récentes
   useEffect(() => {
     if (initialTexts.length === 0) {
       const fetchInitial = async () => {
         setLoading(true);
         try {
-          const res = await fetch(`/api/texts?limit=10`);
+          const res = await fetch(`/api/texts?limit=12`);
           const json = await res.json();
           if (json.data) {
             setTexts(json.data);
@@ -123,7 +123,7 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
                       ) : (
                           <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl shadow-sm border border-slate-100">
                               <span className="text-[8px] sm:text-[9px] font-black text-slate-900 uppercase tracking-widest">
-                              {new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
+                              {item.date ? new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : "---"}
                               </span>
                           </div>
                       )}
@@ -193,13 +193,20 @@ export async function getStaticProps() {
     if (res.ok) {
       const file = await res.json();
       const allTexts = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
-      const initial = allTexts.slice(0, 10);
+      
+      // OPTIMISATION : On allège les données envoyées initialement pour éviter le log "Large Page Data" (1.6MB)
+      // On retire le contenu HTML lourd pour les 12 premiers items et on ne garde que l'essentiel
+      const initial = allTexts.slice(0, 12).map(t => ({
+          ...t,
+          content: t.content ? t.content.substring(0, 300).replace(/<[^>]*>/g, '') + "..." : ""
+      }));
+
       return {
         props: { 
           initialTexts: initial,
-          initialCursor: allTexts.length > 10 ? initial[9].id : null
+          initialCursor: allTexts.length > 12 ? allTexts[11].id : null
         },
-        revalidate: 60 
+        revalidate: 10 
       };
     }
   } catch (e) {
