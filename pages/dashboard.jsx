@@ -18,9 +18,8 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [works, setWorks] = useState([]);
-  const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [metrics, setMetrics] = useState({ followers: 0, views: 0 });
+  const [metrics, setMetrics] = useState({ followers: 0, views: 0, totalCertified: 0 });
 
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com",
@@ -33,51 +32,45 @@ export default function AuthorDashboard() {
 
   const fetchLatestData = useCallback(async (email) => {
     try {
-      const stored = localStorage.getItem("lisible_user");
-      if (!stored) return;
-      const userData = JSON.parse(stored);
+      // 1. Récupération des statistiques consolidées via l'API User-Stats
+      const statsRes = await fetch(`/api/user-stats?email=${email}`);
       
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: userData.password })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        const currentUser = data.user;
-        setUser(currentUser);
-        localStorage.setItem("lisible_user", JSON.stringify(currentUser));
-
-        // Récupération globale pour inclure l'historique complet
-        const [mRes, fRes, wRes] = await Promise.all([
-          fetch(`/api/author/${currentUser.id}/metrics`), // Vues agrégées
-          fetch(`/api/get-followers-count?userId=${currentUser.id}`), // Abonnés
-          fetch(`/api/texts?limit=1000`) // On récupère l'index global pour filtrer toutes les œuvres
-        ]);
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
         
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          setMetrics(prev => ({ ...prev, views: mData.totalViews || 0 }));
-        }
-        if (fRes.ok) {
-          const fData = await fRes.json();
-          setMetrics(prev => ({ ...prev, followers: fData.count || 0 }));
-        }
-        if (wRes.ok) {
-          const wData = await wRes.json();
-          // Filtrage par email pour garantir que même les anciens textes sans ID d'auteur lié sont listés
-          const myWorks = (wData.data || []).filter(work => 
-            work.authorEmail?.toLowerCase().trim() === currentUser.email?.toLowerCase().trim()
-          );
-          setWorks(myWorks);
-        }
+        setMetrics({
+          followers: statsData.subscribers || 0,
+          views: statsData.totalViews || 0,
+          totalCertified: statsData.totalCertified || 0
+        });
+
+        // Mise à jour du solde Li dans l'état local et localStorage
+        setUser(prev => {
+          const updated = {
+            ...prev,
+            wallet: { ...prev?.wallet, balance: statsData.liBalance },
+            stats: { ...prev?.stats, subscribers: statsData.subscribers }
+          };
+          localStorage.setItem("lisible_user", JSON.stringify(updated));
+          return updated;
+        });
       }
+
+      // 2. Récupération des œuvres (via l'index global pour assurer l'historique)
+      const indexRes = await fetch(`/api/texts?limit=1000`);
+      if (indexRes.ok) {
+        const indexData = await indexRes.json();
+        const myWorks = (indexData.data || []).filter(work => 
+          work.authorEmail?.toLowerCase().trim() === email.toLowerCase().trim()
+        );
+        setWorks(myWorks);
+      }
+
     } catch (e) { 
         console.error("Erreur sync dashboard:", e); 
-        toast.error("Problème de synchronisation des données.");
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -141,7 +134,7 @@ export default function AuthorDashboard() {
     const shareData = {
       title: "Lisible - Catalogue d'Auteur",
       text: `Découvrez le catalogue d'œuvres de ${user?.penName} sur Lisible !`,
-      url: `https://lisible.biz/auteur/${authorEmail}`
+      url: `${window.location.origin}/auteur/${authorEmail}`
     };
     try {
       if (navigator.share) { await navigator.share(shareData); } 
@@ -150,10 +143,6 @@ export default function AuthorDashboard() {
         toast.success("Lien du catalogue copié !");
       }
     } catch (err) { console.log("Erreur de partage"); }
-  };
-
-  const handleTransfer = async () => {
-    toast.error("Le service de transfert est momentanément indisponible.");
   };
 
   const nameParts = useMemo(() => {
@@ -220,13 +209,13 @@ export default function AuthorDashboard() {
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Solde de Plume</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance)}</span>
+                  <span className="text-5xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance || 0)}</span>
                   <span className="text-teal-600 font-black text-xs uppercase">Li</span>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black uppercase text-teal-600 mb-1 flex items-center gap-1 justify-end"><TrendingUp size={12}/> Valeur</p>
-                <p className="font-bold text-slate-900 dark:text-slate-300">{(user?.wallet?.balance * 0.0002).toFixed(2)} USD</p>
+                <p className="font-bold text-slate-900 dark:text-slate-300">{( (user?.wallet?.balance || 0) * 0.0002).toFixed(2)} USD</p>
               </div>
             </div>
           )}
@@ -258,7 +247,7 @@ export default function AuthorDashboard() {
                 <div key={work.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group">
                   <div className="flex flex-col">
                     <span className="font-serif font-bold text-lg dark:text-white line-clamp-1">{work.title}</span>
-                    <span className="text-[9px] font-black uppercase text-slate-400">{work.category} {!isStaff && `• ${work.views || 0} vues`}</span>
+                    <span className="text-[9px] font-black uppercase text-slate-400">{work.genre || work.category} {!isStaff && `• ${work.views || 0} vues`}</span>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => router.push(`/edit/${work.id}`)} className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl hover:text-teal-600 transition-all">
@@ -300,9 +289,9 @@ export default function AuthorDashboard() {
                 <p className="text-[10px] font-black text-teal-600">25 000 Li</p>
               </div>
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div className="bg-teal-600 h-full transition-all duration-1000" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }}></div>
+                <div className="bg-teal-600 h-full transition-all duration-1000" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 25000) * 100, 100)}%` }}></div>
               </div>
-              <p className="mt-3 text-[9px] font-bold text-slate-400 uppercase text-center">{Math.floor((user?.wallet?.balance / 25000) * 100)}% complété</p>
+              <p className="mt-3 text-[9px] font-bold text-slate-400 uppercase text-center">{Math.floor(((user?.wallet?.balance || 0) / 25000) * 100)}% complété</p>
             </div>
           )}
 
@@ -349,7 +338,7 @@ export default function AuthorDashboard() {
            <div className="flex items-center gap-2 text-slate-300 text-[9px] font-black uppercase tracking-widest">
              <ShieldCheck size={14} /> Compte sécurisé
            </div>
-           <p className="text-[9px] font-black text-slate-400 uppercase italic">v3.0.5 Deployment Stable</p>
+           <p className="text-[9px] font-black text-slate-400 uppercase italic">Compte Officiel Lisible</p>
         </footer>
       </div>
     </div>
