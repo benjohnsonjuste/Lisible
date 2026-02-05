@@ -5,7 +5,7 @@ import {
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
   TrendingUp, Crown, Medal, Briefcase, Star, ChevronDown
-} from "lucide-react";
+} from "lucide-center";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -127,7 +127,6 @@ export default function UsersPage({ initialAuthors = [] }) {
                 <div className="relative flex-shrink-0">
                   <div className="aspect-square p-1 bg-gradient-to-tr from-teal-400 to-amber-400 rounded-full">
                     <div className="p-1 bg-white rounded-full h-full w-full overflow-hidden relative">
-                      {/* Utilisation de Next.js Image */}
                       <Image 
                         src={a.profilePic || `https://api.dicebear.com/7.x/shapes/svg?seed=${a.email}`} 
                         alt={a.penName || "Avatar"} 
@@ -179,7 +178,10 @@ export async function getStaticProps() {
     const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users`);
     const files = await res.json();
     if (Array.isArray(files)) {
-      const promises = files.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()));
+      // Pour éviter le dépassement de quota et le payload trop lourd (1.6MB),
+      // on limite le nombre d'auteurs chargés via SSG à 40 et on simplifie l'historique.
+      const selectedFiles = files.filter(f => f.name.endsWith('.json')).slice(0, 40);
+      const promises = selectedFiles.map(f => fetch(f.download_url).then(r => r.json()));
       const allUsers = await Promise.all(promises);
       
       const uniqueUsersMap = new Map();
@@ -193,7 +195,10 @@ export async function getStaticProps() {
             subscribers: user.subscribers || [],
             wallet: { 
               balance: user.wallet?.balance || 0,
-              history: (user.wallet?.history || []).map(h => ({ isConcours: h.isConcours === true }))
+              // On ne garde que les drapeaux de succès concours pour les badges, on vire tout le reste de l'historique lourd
+              history: (user.wallet?.history || [])
+                .filter(h => h.isConcours === true)
+                .map(h => ({ isConcours: true }))
             }
           });
         }
