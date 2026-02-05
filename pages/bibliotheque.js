@@ -13,7 +13,6 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Correction : Charger les données si initialTexts est vide ou pour synchroniser les données récentes
   useEffect(() => {
     if (initialTexts.length === 0) {
       const fetchInitial = async () => {
@@ -194,8 +193,6 @@ export async function getStaticProps() {
       const file = await res.json();
       const allTexts = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
       
-      // OPTIMISATION : On allège les données envoyées initialement pour éviter le log "Large Page Data" (1.6MB)
-      // On retire le contenu HTML lourd pour les 12 premiers items et on ne garde que l'essentiel
       const initial = allTexts.slice(0, 12).map(t => ({
           ...t,
           content: t.content ? t.content.substring(0, 300).replace(/<[^>]*>/g, '') + "..." : ""
