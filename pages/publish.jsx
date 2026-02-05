@@ -62,6 +62,8 @@ export default function PublishPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user) return toast.error("Session expirée. Veuillez vous reconnecter.");
+
     const words = countWords(content);
     if (words > MAX_WORDS) return toast.error(`Trop de mots (${words}/${MAX_WORDS})`);
     if (words < 10) return toast.error("Le manuscrit est trop court pour être publié.");
@@ -78,39 +80,31 @@ export default function PublishPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: user.penName || user.name || "Auteur Lisible",
-          authorEmail: user.email.toLowerCase().trim(),
+          authorEmail: user.email?.toLowerCase().trim() || "inconnu@lisible.com",
           title: title.trim(),
           content: content.trim(),
           imageBase64,
           isConcours: false, 
-          date: new Date().toISOString(),
-          views: 0,
-          totalLikes: 0,
-          totalCertified: 0, 
-          liEarned: 0,
-          comments: [],
           genre: "Littérature"
         })
       });
 
-      // LECTURE SÉCURISÉE DE LA RÉPONSE POUR ÉVITER "RÉPONSE SERVEUR VIDE"
-      const responseText = await res.text();
+      // Lecture sécurisée du JSON
       let data;
-      
+      const responseText = await res.text();
       try {
         data = responseText ? JSON.parse(responseText) : {};
       } catch (parseError) {
-        throw new Error("Le serveur a renvoyé une réponse invalide.");
+        throw new Error("Réponse serveur illisible.");
       }
 
       if (!res.ok) throw new Error(data.error || "Erreur lors de la publication");
-      if (!data.id) throw new Error("ID de publication manquant.");
 
-      // Actions secondaires (Non-bloquantes)
+      // Appels secondaires (Non-bloquants)
       fetch("/api/process-referral-reward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorEmail: user.email.toLowerCase().trim() })
+        body: JSON.stringify({ authorEmail: user.email?.toLowerCase().trim() })
       }).catch(() => {});
 
       fetch("/api/create-notif", {
@@ -124,6 +118,7 @@ export default function PublishPage() {
         })
       }).catch(() => {});
 
+      // Nettoyage
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
