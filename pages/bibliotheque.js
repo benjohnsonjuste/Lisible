@@ -13,7 +13,28 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fonction de chargement de la page suivante
+  // Correction : Charger les données si initialTexts est vide (ex: premier rendu ou erreur ISR)
+  useEffect(() => {
+    if (initialTexts.length === 0) {
+      const fetchInitial = async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(`/api/texts?limit=10`);
+          const json = await res.json();
+          if (json.data) {
+            setTexts(json.data);
+            setCursor(json.nextCursor);
+          }
+        } catch (e) {
+          console.error("Erreur chargement initial client:", e);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchInitial();
+    }
+  }, [initialTexts]);
+
   const loadMore = async () => {
     if (!cursor || loading) return;
     setLoading(true);
@@ -172,10 +193,7 @@ export async function getStaticProps() {
     if (res.ok) {
       const file = await res.json();
       const allTexts = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
-      
-      // On prend les 10 premiers pour l'affichage initial
       const initial = allTexts.slice(0, 10);
-      
       return {
         props: { 
           initialTexts: initial,
