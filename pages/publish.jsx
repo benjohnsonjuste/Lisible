@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { 
   FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, 
   Sparkles, Image as ImageIcon, Coins, X, Feather
-} from "lucide-center"; 
+} from "lucide-react"; 
 import Link from "next/link";
 
 export default function PublishPage() {
