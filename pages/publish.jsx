@@ -93,32 +93,36 @@ export default function PublishPage() {
         })
       });
 
-      // SECURISATION DE LA REPONSE JSON
+      // LECTURE SÉCURISÉE DE LA RÉPONSE
       const responseText = await res.text();
-      if (!responseText) throw new Error("Réponse serveur vide.");
-      const data = JSON.parse(responseText);
+      let data;
+      
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        throw new Error("Le serveur a renvoyé une réponse illisible.");
+      }
 
       if (!res.ok) throw new Error(data.error || "Erreur lors de la publication");
+      if (!data.id) throw new Error("ID de publication manquant.");
 
-      // Actions secondaires
+      // Actions secondaires (Non-bloquantes)
       fetch("/api/process-referral-reward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authorEmail: user.email.toLowerCase().trim() })
       }).catch(() => {});
 
-      if (data.id) {
-        fetch("/api/create-notif", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "new_text", 
-            message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
-            targetEmail: "all",
-            link: `/texts/${data.id}`
-          })
-        }).catch(() => {});
-      }
+      fetch("/api/create-notif", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "new_text", 
+          message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
+          targetEmail: "all",
+          link: `/texts/${data.id}`
+        })
+      }).catch(() => {});
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
@@ -127,6 +131,7 @@ export default function PublishPage() {
       router.push(`/texts/${data.id}`);
       
     } catch (err) {
+      console.error("Erreur de publication:", err);
       toast.error(err.message || "Échec de la publication.", { id: loadingToast });
     } finally {
       setLoading(false);
