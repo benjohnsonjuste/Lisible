@@ -64,14 +64,14 @@ export default function ConcoursPublishPage() {
         })
       });
 
-      // LECTURE SÉCURISÉE DE LA RÉPONSE POUR ÉVITER "UNEXPECTED END OF JSON"
+      // LECTURE SÉCURISÉE DE LA RÉPONSE
       const responseText = await res.text();
       let data;
       
       try {
         data = responseText ? JSON.parse(responseText) : {};
       } catch (parseError) {
-        throw new Error("Le serveur a renvoyé une réponse illisible ou vide.");
+        throw new Error("Le serveur a renvoyé une réponse illisible.");
       }
 
       if (!res.ok) throw new Error(data.error || "Erreur lors de l'entrée dans l'arène.");
