@@ -45,13 +45,15 @@ export default function AuthorDashboard() {
       
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
-        localStorage.setItem("lisible_user", JSON.stringify(data.user));
+        const currentUser = data.user;
+        setUser(currentUser);
+        localStorage.setItem("lisible_user", JSON.stringify(currentUser));
 
+        // Récupération globale pour inclure l'historique complet
         const [mRes, fRes, wRes] = await Promise.all([
-          fetch(`/api/author/${data.user.id}/metrics`),
-          fetch(`/api/get-followers-count?userId=${data.user.id}`),
-          fetch(`/api/author/${data.user.id}/works`)
+          fetch(`/api/author/${currentUser.id}/metrics`), // Vues agrégées
+          fetch(`/api/get-followers-count?userId=${currentUser.id}`), // Abonnés
+          fetch(`/api/texts?limit=1000`) // On récupère l'index global pour filtrer toutes les œuvres
         ]);
         
         if (mRes.ok) {
@@ -64,10 +66,17 @@ export default function AuthorDashboard() {
         }
         if (wRes.ok) {
           const wData = await wRes.json();
-          setWorks(wData.works || []);
+          // Filtrage par email pour garantir que même les anciens textes sans ID d'auteur lié sont listés
+          const myWorks = (wData.data || []).filter(work => 
+            work.authorEmail?.toLowerCase().trim() === currentUser.email?.toLowerCase().trim()
+          );
+          setWorks(myWorks);
         }
       }
-    } catch (e) { console.error("Erreur sync:", e); }
+    } catch (e) { 
+        console.error("Erreur sync dashboard:", e); 
+        toast.error("Problème de synchronisation des données.");
+    }
     setLoading(false);
   }, []);
 
