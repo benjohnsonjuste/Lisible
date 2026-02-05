@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image"; // Importation ajoutée
+import Image from "next/image";
 import { toast } from "sonner";
 import { 
   User, CreditCard, Camera, Edit3, ArrowLeft, 
@@ -40,19 +40,57 @@ export default function AccountPage() {
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
-      setFormData({ ...parsed, penName: parsed.penName || parsed.name || "" });
+      setFormData({ 
+        firstName: parsed.firstName || "", 
+        lastName: parsed.lastName || "", 
+        penName: parsed.penName || parsed.name || "", 
+        birthday: parsed.birthday || "", 
+        profilePic: parsed.profilePic || "" 
+      });
       setLoading(false);
-      refreshUserData(parsed.email);
+      refreshUserData(parsed.email, parsed.id);
     } else { router.push("/login"); }
   }, []);
 
-  const refreshUserData = async (email) => {
+  const refreshUserData = async (email, userId) => {
     try {
+      // 1. Récupérer les données de base de l'utilisateur
       const res = await fetch(`/api/get-user-github?email=${email}`);
       if (res.ok) {
-        const freshUser = await res.json();
-        setUser(freshUser);
-        localStorage.setItem("lisible_user", JSON.stringify(freshUser));
+        let freshUser = await res.json();
+        
+        // 2. Récupérer les statistiques réelles (abonnés, vues, textes) incluant l'historique
+        const [statsRes, followerRes, indexRes] = await Promise.all([
+            fetch(`/api/author/${userId || freshUser.id}/metrics`),
+            fetch(`/api/get-followers-count?userId=${userId || freshUser.id}`),
+            fetch(`/api/texts?limit=1000`) // Pour compter les textes et certifications réels
+        ]);
+
+        let totalTexts = 0;
+        let totalCertified = 0;
+
+        if (indexRes.ok) {
+            const indexData = await indexRes.json();
+            const myWorks = (indexData.data || []).filter(t => t.authorEmail?.toLowerCase() === email.toLowerCase());
+            totalTexts = myWorks.length;
+            totalCertified = myWorks.reduce((acc, curr) => acc + (Number(curr.totalCertified) || 0), 0);
+        }
+
+        const followers = followerRes.ok ? (await followerRes.json()).count : (freshUser.stats?.subscribers || 0);
+
+        // Fusionner les données pour garantir l'affichage des anciennes stats
+        const updatedUser = {
+            ...freshUser,
+            stats: {
+                ...freshUser.stats,
+                totalTexts: totalTexts || freshUser.stats?.totalTexts || 0,
+                totalCertified: totalCertified || freshUser.stats?.totalCertified || 0,
+                subscribers: followers
+            }
+        };
+
+        setUser(updatedUser);
+        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
       }
     } catch (e) { console.error("Sync error:", e); }
   };
@@ -157,7 +195,6 @@ export default function AccountPage() {
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2"><Edit3 size={16} /> Profil Public</h2>
             <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                <div className="relative group">
-                  {/* Utilisation de Next.js Image */}
                   <div className="relative w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl">
                     <Image 
                       src={formData.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
