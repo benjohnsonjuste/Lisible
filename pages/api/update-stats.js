@@ -1,85 +1,101 @@
-// pages/api/update-stats.js
-import { createOrUpdateFile } from "@/lib/githubClient";
+import { Buffer } from "buffer";
 
 const OWNER = "benjohnsonjuste";
 const REPO = "Lisible";
-const BRANCH = "main";
-const INDEX_PATH = "public/data/texts/index.json";
+const INDEX_PATH = "data/publications/index.json"; // Chemin aligné avec votre API de publication
 
 export default async function handler(req, res) {
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée" });
+  }
+
+  const token = process.env.GITHUB_TOKEN;
 
   try {
-    const { textId, views, likes, comments, certifiedReads, authorEmail, senderName } = req.body;
-    if (!textId) throw new Error("ID du texte requis");
+    const { id, action, authorEmail, senderName } = req.body;
+    if (!id) throw new Error("ID de l'œuvre requis");
 
-    const token = process.env.GITHUB_TOKEN;
-
-    // 1. Récupérer l'index actuel
-    const response = await fetch(
-      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${INDEX_PATH}?ref=${BRANCH}`,
-      { headers: { Authorization: `token ${token}`, Accept: "application/vnd.github+json" } }
+    // 1. RÉCUPÉRATION DE L'INDEX DEPUIS GITHUB
+    const indexFetch = await fetch(
+      `https://api.github.com/repos/${OWNER}/${REPO}/contents/${INDEX_PATH}?t=${Date.now()}`,
+      { headers: { Authorization: `token ${token}` } }
     );
     
-    if (!response.ok) throw new Error("Impossible de récupérer l'index");
+    if (!indexFetch.ok) throw new Error("Impossible de joindre l'index global");
     
-    const json = await response.json();
-    const data = JSON.parse(Buffer.from(json.content, "base64").toString("utf-8"));
+    const indexData = await indexFetch.json();
+    const sha = indexData.sha;
+    const content = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
 
-    // 2. Trouver le texte pour obtenir son titre (pour la notif)
-    const targetText = data.find(t => t.id === textId);
-    const updated = data.map((item) =>
-      item.id === textId
-        ? { 
-            ...item, 
-            views: views ?? item.views, 
-            likes: likes ?? item.likes, 
-            comments: comments ?? item.comments,
-            certifiedReads: certifiedReads ?? item.certifiedReads 
-          }
-        : item
-    );
-
-    // 3. Écrire sur GitHub (Index des textes)
-    await createOrUpdateFile({
-      owner: OWNER, repo: REPO, path: INDEX_PATH,
-      content: JSON.stringify(updated, null, 2),
-      message: `🔁 Stats: ${textId} (Likes/Views/Li)`,
-      branch: BRANCH, token, sha: json.sha,
+    // 2. MISE À JOUR DES STATS DANS LE TABLEAU
+    let targetTitle = "votre texte";
+    const updatedContent = content.map((item) => {
+      if (item.id === id) {
+        targetTitle = item.title;
+        return {
+          ...item,
+          views: action === "view" ? (Number(item.views || 0) + 1) : (item.views || 0),
+          totalLikes: action === "like" ? (Number(item.totalLikes || item.likes || 0) + 1) : (item.totalLikes || item.likes || 0),
+          totalCertified: action === "certify" ? (Number(item.totalCertified || 0) + 1) : (item.totalCertified || 0)
+        };
+      }
+      return item;
     });
 
-    // 4. SYNCHRONISATION TRANSVERSALE (Si c'est une lecture certifiée ou un like)
-    if (authorEmail && (certifiedReads || likes)) {
-      // A. Mise à jour du profil auteur (Incrémentation Li / Abonnés)
-      await fetch(`${req.headers.origin}/api/update-author-stats`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email: authorEmail, 
-          type: certifiedReads ? 'certified_read' : 'like',
-          incrementLi: certifiedReads ? 50 : 0 // On définit 50 Li par lecture
-        })
-      });
+    // 3. RENVOI VERS GITHUB (Commit)
+    const updateRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${INDEX_PATH}`, {
+      method: "PUT",
+      headers: { 
+        Authorization: `token ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: `📊 Stats update: ${action} on ${id}`,
+        content: Buffer.from(JSON.stringify(updatedContent, null, 2), "utf-8").toString("base64"),
+        sha: sha
+      }),
+    });
 
-      // B. Envoi de la Notification instantanée
-      await fetch(`${req.headers.origin}/api/create-notif`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: certifiedReads ? 'certified_read' : 'like',
-          targetEmail: authorEmail,
-          message: certifiedReads 
-            ? `✨ Lecture Certifiée sur "${targetText?.title || 'votre texte'}" (+50 Li)`
-            : `❤️ ${senderName || "Quelqu'un"} a aimé "${targetText?.title}"`,
-          amountLi: certifiedReads ? 50 : 0,
-          link: `/bibliotheque` 
-        })
-      });
+    if (!updateRes.ok) throw new Error("Échec de la sauvegarde des statistiques");
+
+    // 4. LOGIQUE DE RÉCOMPENSE ET NOTIFICATION (Background tasks)
+    // On ne bloque pas la réponse principale pour ces appels secondaires
+    if (authorEmail && (action === "like" || action === "certify")) {
+        const origin = req.headers.origin || `https://${req.headers.host}`;
+        
+        // A. Mise à jour du profil de l'auteur (Li)
+        fetch(`${origin}/api/update-author-stats`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                email: authorEmail, 
+                type: action,
+                incrementLi: action === "certify" ? 50 : 0 
+            })
+        }).catch(e => console.error("Reward error:", e));
+
+        // B. Création de la notification
+        fetch(`${origin}/api/create-notif`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                type: action,
+                targetEmail: authorEmail.toLowerCase().trim(),
+                message: action === "certify" 
+                    ? `✨ Lecture Certifiée sur "${targetTitle}" (+50 Li)`
+                    : `❤️ ${senderName || "Quelqu'un"} a aimé "${targetTitle}"`,
+                link: `/texts/${id}` 
+            })
+        }).catch(e => console.error("Notif error:", e));
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ 
+        success: true, 
+        count: action === "view" ? "updated" : "recorded" 
+    });
+
   } catch (error) {
+    console.error("STATS_ERROR:", error.message);
     return res.status(500).json({ error: error.message });
   }
 }
