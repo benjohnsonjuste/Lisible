@@ -64,18 +64,25 @@ export default function ConcoursPublishPage() {
         })
       });
 
-      // SECURISATION REPONSE
+      // LECTURE SÉCURISÉE DE LA RÉPONSE POUR ÉVITER "UNEXPECTED END OF JSON"
       const responseText = await res.text();
-      if (!responseText) throw new Error("Le serveur n'a pas répondu.");
-      const data = JSON.parse(responseText);
+      let data;
+      
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        throw new Error("Le serveur a renvoyé une réponse illisible ou vide.");
+      }
 
-      if (!res.ok) throw new Error(data.error || "Erreur serveur");
+      if (!res.ok) throw new Error(data.error || "Erreur lors de l'entrée dans l'arène.");
+      if (!data.id) throw new Error("ID de duel manquant dans la réponse.");
 
       toast.success("Duel engagé !", { id: loadingToast });
       router.push(`/texts/${data.id}`);
       
     } catch (err) {
-      toast.error(err.message, { id: loadingToast });
+      console.error("Erreur Concours:", err);
+      toast.error(err.message || "Échec de l'envoi.", { id: loadingToast });
     } finally {
       setLoading(false);
     }
