@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { 
   FileText, Send, ArrowLeft, Loader2, Trash2, Trophy, 
   Sparkles, Image as ImageIcon, Coins, X, Feather
-} from "lucide-react"; 
+} from "lucide-center"; 
 import Link from "next/link";
 
 export default function PublishPage() {
@@ -93,14 +93,14 @@ export default function PublishPage() {
         })
       });
 
-      // LECTURE SÉCURISÉE DE LA RÉPONSE
+      // LECTURE SÉCURISÉE DE LA RÉPONSE POUR ÉVITER "RÉPONSE SERVEUR VIDE"
       const responseText = await res.text();
       let data;
       
       try {
         data = responseText ? JSON.parse(responseText) : {};
       } catch (parseError) {
-        throw new Error("Le serveur a renvoyé une réponse illisible.");
+        throw new Error("Le serveur a renvoyé une réponse invalide.");
       }
 
       if (!res.ok) throw new Error(data.error || "Erreur lors de la publication");
