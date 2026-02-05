@@ -79,7 +79,6 @@ export default function PublishPage() {
         body: JSON.stringify({
           authorName: user.penName || user.name || "Auteur Lisible",
           authorEmail: user.email.toLowerCase().trim(),
-          authorPenName: user.penName || user.name || "Anonyme",
           title: title.trim(),
           content: content.trim(),
           imageBase64,
@@ -94,12 +93,8 @@ export default function PublishPage() {
         })
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Erreur lors de la publication");
-      }
-
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur lors de la publication");
 
       // Logique de récompense parrainage
       fetch("/api/process-referral-reward", {
@@ -109,22 +104,24 @@ export default function PublishPage() {
       }).catch(err => console.error("Referral Error:", err));
 
       // Notification globale
-      fetch("/api/create-notif", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "new_text", 
-          message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
-          targetEmail: "all",
-          link: `/texts/${data.id}`
-        })
-      }).catch(() => {});
+      if (data.id) {
+        fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "new_text", 
+            message: `📖 Nouvelle œuvre : "${title.trim()}" par ${user.penName || user.name}`,
+            targetEmail: "all",
+            link: `/texts/${data.id}`
+          })
+        }).catch(() => {});
+      }
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
       toast.success("Votre œuvre est désormais en ligne !", { id: loadingToast });
-      router.push(`/texts/${data.id}`);
+      router.push(`/texts/${data.id || ""}`);
       
     } catch (err) {
       toast.error(err.message || "Échec de la publication.", { id: loadingToast });
@@ -148,6 +145,7 @@ export default function PublishPage() {
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Retour Bibliothèque
         </Link>
         <button 
+          type="button"
           onClick={() => { if(confirm("Voulez-vous vraiment effacer votre brouillon ?")) { setTitle(""); setContent(""); setImageFile(null); setImagePreview(null); localStorage.removeItem("draft_title"); localStorage.removeItem("draft_content"); toast.info("Brouillon effacé"); } }} 
           className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors px-4 py-2 bg-rose-50 rounded-xl"
         >
@@ -210,7 +208,7 @@ export default function PublishPage() {
                 required
               />
               <div className="flex justify-between items-center px-6">
-                <p className="text-[9px] font-bold text-slate-300 italic italic">Conseil : Relisez-vous avant de publier.</p>
+                <p className="text-[9px] font-bold text-slate-300 italic">Conseil : Relisez-vous avant de publier.</p>
                 <span className={`text-[10px] font-black px-4 py-1.5 rounded-full ${countWords(content) > MAX_WORDS ? 'bg-rose-50 text-rose-500' : 'bg-slate-50 text-slate-400'}`}>
                   {countWords(content)} / {MAX_WORDS} MOTS
                 </span>
