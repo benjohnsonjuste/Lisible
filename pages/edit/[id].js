@@ -1,12 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/router"; // Changé de 'next/navigation' à 'next/router'
+import { useRouter } from "next/router"; 
 import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, AlignLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EditWorkPage() {
   const router = useRouter();
-  const { id } = router.query; // Récupéré via router.query au lieu de useParams
+  const { id } = router.query; 
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +19,6 @@ export default function EditWorkPage() {
   });
 
   useEffect(() => {
-    // Dans Pages Router, router.query peut être vide au premier rendu
     if (!router.isReady) return; 
 
     const logged = localStorage.getItem("lisible_user");
@@ -32,11 +31,12 @@ export default function EditWorkPage() {
 
     const fetchWork = async () => {
       try {
-        const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/posts/${id}.json?t=${Date.now()}`);
+        // CORRECTION : On pointe vers data/texts/ pour récupérer le contenu complet
+        const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${id}.json?t=${Date.now()}`);
         if (!res.ok) throw new Error("Œuvre introuvable");
         
         const fileData = await res.json();
-        const content = JSON.parse(atob(fileData.content));
+        const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
         if (content.authorEmail?.toLowerCase() !== currentUser.email.toLowerCase()) {
           toast.error("Accès non autorisé");
@@ -47,11 +47,12 @@ export default function EditWorkPage() {
         setFormData({
           title: content.title || "",
           content: content.content || "",
-          category: content.category || "",
+          category: content.category || content.genre || "Poésie",
           summary: content.summary || ""
         });
       } catch (err) {
-        toast.error("Erreur lors du chargement");
+        console.error("Fetch error:", err);
+        toast.error("Erreur lors du chargement du manuscrit");
         router.push("/dashboard");
       } finally {
         setLoading(false);
@@ -59,21 +60,28 @@ export default function EditWorkPage() {
     };
 
     if (id) fetchWork();
-  }, [id, router.isReady]); // Ajout de router.isReady dans les dépendances
+  }, [id, router.isReady, router]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const tid = toast.loading("Mise à jour de l'œuvre...");
+    const tid = toast.loading("Mise à jour du manuscrit...");
 
     try {
+      // Appel à votre API de mise à jour (qui doit gérer l'update du JSON et de l'index)
       const res = await fetch("/api/works/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workId: id,
           userEmail: user.email,
-          updatedData: formData
+          updatedData: {
+            ...formData,
+            // On s'assure que les champs techniques restent cohérents
+            authorName: user.name,
+            authorEmail: user.email,
+            date: new Date().toISOString()
+          }
         })
       });
 
@@ -142,6 +150,7 @@ export default function EditWorkPage() {
               <option value="Roman">Roman</option>
               <option value="Essai">Essai</option>
               <option value="Chronique">Chronique</option>
+              <option value="Battle Poétique">Battle Poétique</option>
             </select>
           </div>
 
