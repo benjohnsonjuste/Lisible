@@ -5,7 +5,7 @@ import {
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Award, Coins, Sparkles, Edit3,
   TrendingUp, Crown, Medal, Briefcase, Star, ChevronDown
-} from "lucide-center";
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
