@@ -12,31 +12,38 @@ export default function BattlePoetique({ initialTexts = [] }) {
   const [loading, setLoading] = useState(initialTexts.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Fonction de tri unifiée pour le leaderboard
+  const sortBattleTexts = (data) => {
+    return data
+      .filter(item => item.isConcours === true || item.isConcours === "true")
+      .sort((a, b) => {
+        // Priorité 1 : Les Likes (Engagement social)
+        const likesA = Number(a.totalLikes || a.likes || 0);
+        const likesB = Number(b.totalLikes || b.likes || 0);
+        if (likesB !== likesA) return likesB - likesA;
+        
+        // Priorité 2 : Les Certifications (Valeur monétaire Li)
+        const certA = Number(a.totalCertified || 0);
+        const certB = Number(b.totalCertified || 0);
+        if (certB !== certA) return certB - certA;
+        
+        // Priorité 3 : Date (Le plus récent)
+        return new Date(b.date) - new Date(a.date);
+      });
+  };
+
   const loadConcoursTexts = useCallback(async (showSilent = false) => {
     if (!showSilent && texts.length === 0) setLoading(true);
     else setIsRefreshing(true);
 
     try {
-      // Récupération via l'API unifiée (limitée à l'index pour la performance)
-      const res = await fetch(`/api/texts?limit=1000`); 
+      // On utilise l'index global pour une performance maximale
+      const res = await fetch(`/api/texts?limit=1000&t=${Date.now()}`); 
       const json = await res.json();
       
       if (json.data && Array.isArray(json.data)) {
-        const filtered = json.data
-          .filter(item => item.isConcours === true || item.isConcours === "true")
-          .sort((a, b) => {
-            const likesA = Number(a.totalLikes || a.likes || 0);
-            const likesB = Number(b.totalLikes || b.likes || 0);
-            if (likesB !== likesA) return likesB - likesA;
-            
-            const certA = Number(a.totalCertified || 0);
-            const certB = Number(b.totalCertified || 0);
-            if (certB !== certA) return certB - certA;
-            
-            return new Date(b.date) - new Date(a.date);
-          });
-            
-        setTexts(filtered);
+        const sorted = sortBattleTexts(json.data);
+        setTexts(sorted);
       }
     } catch (e) { 
       console.error("Erreur de mise à jour de l'arène:", e); 
@@ -52,7 +59,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
     }
   }, [loadConcoursTexts, initialTexts.length]);
 
-  // Auto-refresh toutes les 60 secondes pour le Leaderboard
+  // Auto-refresh toutes les 60 secondes pour maintenir le suspense du classement
   useEffect(() => {
     const interval = setInterval(() => {
       loadConcoursTexts(true);
@@ -66,7 +73,10 @@ export default function BattlePoetique({ initialTexts = [] }) {
     const url = `${window.location.origin}/texts/${item.id}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: item.title, url });
+        await navigator.share({ 
+            title: `Votez pour mon texte "${item.title}" dans la Battle Lisible !`, 
+            url 
+        });
       } else {
         await navigator.clipboard.writeText(url);
         toast.success("Lien de la Battle copié !");
@@ -77,7 +87,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4 font-sans">
+    <div className="flex flex-col items-center justify-center py-40 gap-4 font-sans bg-[#FCFBF9]">
       <Loader2 className="animate-spin text-teal-600" size={40}/>
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
         Synchronisation de l'Arène...
@@ -86,7 +96,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-700 font-sans">
+    <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-700 font-sans bg-[#FCFBF9]">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-100 pb-12">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
@@ -96,7 +106,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
             {isRefreshing && (
               <div className="flex items-center gap-2 text-teal-600">
                 <RefreshCcw size={12} className="animate-spin" />
-                <span className="text-[9px] font-black uppercase">Calcul des scores Li...</span>
+                <span className="text-[9px] font-black uppercase tracking-tighter">Calcul des scores...</span>
               </div>
             )}
           </div>
@@ -109,7 +119,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
           <Link href="/bibliotheque" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
             <BookOpen size={16} /> Bibliothèque
           </Link>
-          <Link href="/concours-publish" className="flex items-center gap-2 bg-teal-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-teal-600/20">
+          <Link href="/publish?concours=true" className="flex items-center gap-2 bg-teal-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-teal-600/20">
             <PenTool size={16} /> Entrer dans la Battle
           </Link>
         </div>
@@ -120,6 +130,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
           {texts.map((item, index) => {
             const isLeader = index === 0;
             const certifiedCount = Number(item.totalCertified || 0);
+            const totalLikes = Number(item.totalLikes || item.likes || 0);
             
             return (
               <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -163,7 +174,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
                        <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest">{item.genre || "Candidat"}</span>
                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                        {item.date ? new Date(item.date).toLocaleDateString() : "---"}
+                        {item.date ? new Date(item.date).toLocaleDateString() : "Battle en cours"}
                        </span>
                     </div>
 
@@ -183,25 +194,25 @@ export default function BattlePoetique({ initialTexts = [] }) {
                           : "bg-slate-50 border-slate-100 text-slate-400"
                         }`}>
                           <Coins size={14} className={certifiedCount > 0 ? "animate-pulse" : ""}/> 
-                          {certifiedCount} <span className="text-[8px] opacity-70">LI GÉNÉRÉS</span>
+                          {certifiedCount * 50} <span className="text-[8px] opacity-70 ml-1">LI</span>
                         </div>
                       </div>
 
-                      <div className="flex gap-5">
+                      <div className="flex gap-4">
                         <div className="flex items-center gap-1.5 text-slate-400 font-black text-[11px]">
                           <Eye size={16} className="text-slate-300"/> {item.views || 0}
                         </div>
-                        <div className="flex items-center gap-1.5 text-rose-500 font-black text-[11px] bg-rose-50 px-4 py-2 rounded-2xl">
-                          <Heart size={16} fill={Number(item.totalLikes || item.likes) > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform"/> {item.totalLikes || item.likes || 0}
+                        <div className={`flex items-center gap-1.5 font-black text-[11px] px-4 py-2 rounded-2xl ${totalLikes > 0 ? 'bg-rose-50 text-rose-500' : 'text-slate-300'}`}>
+                          <Heart size={16} fill={totalLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform"/> {totalLikes}
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-6 flex items-center gap-3">
                        <div className="w-6 h-6 rounded-full bg-slate-100 border border-white shadow-sm overflow-hidden">
-                          <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${item.authorName}`} alt="" />
+                          <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${item.authorName || item.authorEmail}`} alt="" />
                        </div>
-                       <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">@{item.authorName}</span>
+                       <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">@{item.authorName || "Poète"}</span>
                     </div>
                   </div>
                 </div>
@@ -218,7 +229,7 @@ export default function BattlePoetique({ initialTexts = [] }) {
             <p className="font-black uppercase text-slate-900 tracking-[0.2em] text-sm">L'arène est vide</p>
             <p className="text-slate-400 text-xs font-medium">Les poètes fourbissent leurs armes.</p>
           </div>
-          <Link href="/concours-publish" className="inline-flex items-center gap-3 bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
+          <Link href="/publish?concours=true" className="inline-flex items-center gap-3 bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
              Lancer le défi <ArrowRight size={16} />
           </Link>
         </div>
@@ -231,36 +242,4 @@ export default function BattlePoetique({ initialTexts = [] }) {
       </footer>
     </div>
   );
-}
-
-export async function getStaticProps() {
-  try {
-    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`);
-    if (res.ok) {
-      const file = await res.json();
-      const allTexts = JSON.parse(Buffer.from(file.content, "base64").toString("utf-8"));
-      
-      const filtered = allTexts
-        .filter(item => item.isConcours === true || item.isConcours === "true")
-        .sort((a, b) => {
-          const likesA = Number(a.totalLikes || a.likes || 0);
-          const likesB = Number(b.totalLikes || b.likes || 0);
-          if (likesB !== likesA) return likesB - likesA;
-          
-          const certA = Number(a.totalCertified || 0);
-          const certB = Number(b.totalCertified || 0);
-          if (certB !== certA) return certB - certA;
-          
-          return new Date(b.date) - new Date(a.date);
-        });
-
-      return {
-        props: { initialTexts: filtered },
-        revalidate: 60
-      };
-    }
-  } catch (e) {
-    console.error("Erreur ISR Battle:", e);
-  }
-  return { props: { initialTexts: [] }, revalidate: 10 };
 }
