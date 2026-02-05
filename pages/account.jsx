@@ -54,43 +54,31 @@ export default function AccountPage() {
 
   const refreshUserData = async (email, userId) => {
     try {
-      // 1. Récupérer les données de base de l'utilisateur
-      const res = await fetch(`/api/get-user-github?email=${email}`);
-      if (res.ok) {
-        let freshUser = await res.json();
+      // 1. Récupérer les données de base et le solde Li via l'API Stats
+      const statsRes = await fetch(`/api/user-stats?email=${email}`);
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
         
-        // 2. Récupérer les statistiques réelles (abonnés, vues, textes) incluant l'historique
-        const [statsRes, followerRes, indexRes] = await Promise.all([
-            fetch(`/api/author/${userId || freshUser.id}/metrics`),
-            fetch(`/api/get-followers-count?userId=${userId || freshUser.id}`),
-            fetch(`/api/texts?limit=1000`) // Pour compter les textes et certifications réels
-        ]);
-
-        let totalTexts = 0;
-        let totalCertified = 0;
-
-        if (indexRes.ok) {
-            const indexData = await indexRes.json();
-            const myWorks = (indexData.data || []).filter(t => t.authorEmail?.toLowerCase() === email.toLowerCase());
-            totalTexts = myWorks.length;
-            totalCertified = myWorks.reduce((acc, curr) => acc + (Number(curr.totalCertified) || 0), 0);
-        }
-
-        const followers = followerRes.ok ? (await followerRes.json()).count : (freshUser.stats?.subscribers || 0);
-
-        // Fusionner les données pour garantir l'affichage des anciennes stats
-        const updatedUser = {
-            ...freshUser,
+        // On met à jour l'utilisateur local avec les données fraîches de GitHub
+        setUser(prev => {
+          const updated = {
+            ...prev,
             stats: {
-                ...freshUser.stats,
-                totalTexts: totalTexts || freshUser.stats?.totalTexts || 0,
-                totalCertified: totalCertified || freshUser.stats?.totalCertified || 0,
-                subscribers: followers
-            }
-        };
-
-        setUser(updatedUser);
-        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+              ...prev?.stats,
+              subscribers: statsData.subscribers,
+              totalTexts: statsData.totalTexts,
+              totalCertified: statsData.totalCertified,
+              totalViews: statsData.totalViews
+            },
+            wallet: {
+              ...prev?.wallet,
+              balance: statsData.liBalance
+            },
+            isMonetized: statsData.isMonetized
+          };
+          localStorage.setItem("lisible_user", JSON.stringify(updated));
+          return updated;
+        });
       }
     } catch (e) { console.error("Sync error:", e); }
   };
@@ -149,8 +137,9 @@ export default function AccountPage() {
 
   const handleWithdrawRequest = () => {
     const balance = user?.wallet?.balance || 0;
+    // Seuil de 25 000 Li pour retrait
     if (balance < 25000) {
-      toast.error(`Minimum de 25 000 Li requis.`, { icon: <AlertTriangle className="text-rose-500" size={20} /> });
+      toast.error(`Minimum de 25 000 Li requis pour un retrait.`, { icon: <AlertTriangle className="text-rose-500" size={20} /> });
       return;
     }
     router.push("/withdraw");
@@ -195,13 +184,13 @@ export default function AccountPage() {
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2"><Edit3 size={16} /> Profil Public</h2>
             <div className="flex flex-col sm:flex-row items-center gap-8 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
                <div className="relative group">
-                  <div className="relative w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl">
+                  <div className="relative w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl bg-teal-50">
                     <Image 
                       src={formData.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
                       alt={formData.penName || "Avatar"} 
                       fill
                       className="object-cover"
-                      priority
+                      unoptimized={formData.profilePic?.startsWith('data:')}
                     />
                   </div>
                   <label className="absolute -bottom-2 -right-2 p-3 bg-slate-900 text-white rounded-xl cursor-pointer hover:bg-teal-600 shadow-lg transition-all active:scale-90 z-10">
@@ -248,9 +237,9 @@ export default function AccountPage() {
                 <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Disponible pour retrait</p>
                 <p className="text-2xl font-black italic">{user?.wallet?.balance || 0} Li</p>
                 <div className="w-full bg-slate-800 h-2 rounded-full mt-4 overflow-hidden">
-                    <div className="h-full bg-teal-500 transition-all duration-1000" style={{ width: `${Math.min((user?.wallet?.balance / 25000) * 100, 100)}%` }} />
+                    <div className="h-full bg-teal-500 transition-all duration-1000" style={{ width: `${Math.min(((user?.wallet?.balance || 0) / 25000) * 100, 100)}%` }} />
                 </div>
-                <p className="text-[8px] font-bold text-slate-500 mt-2">MINIMUM : 25 000 Li</p>
+                <p className="text-[8px] font-bold text-slate-500 mt-2">SEUIL DE RETRAIT : 25 000 Li</p>
               </div>
               <button 
                 onClick={handleWithdrawRequest} 
