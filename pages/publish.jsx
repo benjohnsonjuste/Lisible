@@ -93,17 +93,20 @@ export default function PublishPage() {
         })
       });
 
-      const data = await res.json();
+      // SECURISATION DE LA REPONSE JSON
+      const responseText = await res.text();
+      if (!responseText) throw new Error("Réponse serveur vide.");
+      const data = JSON.parse(responseText);
+
       if (!res.ok) throw new Error(data.error || "Erreur lors de la publication");
 
-      // Logique de récompense parrainage
+      // Actions secondaires
       fetch("/api/process-referral-reward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authorEmail: user.email.toLowerCase().trim() })
-      }).catch(err => console.error("Referral Error:", err));
+      }).catch(() => {});
 
-      // Notification globale
       if (data.id) {
         fetch("/api/create-notif", {
           method: "POST",
@@ -121,7 +124,7 @@ export default function PublishPage() {
       localStorage.removeItem("draft_content");
 
       toast.success("Votre œuvre est désormais en ligne !", { id: loadingToast });
-      router.push(`/texts/${data.id || ""}`);
+      router.push(`/texts/${data.id}`);
       
     } catch (err) {
       toast.error(err.message || "Échec de la publication.", { id: loadingToast });
@@ -259,9 +262,6 @@ export default function PublishPage() {
           >
             {loading ? <Loader2 className="animate-spin" size={24} /> : <><Send size={20} className="-rotate-12" /> Diffuser l'œuvre</>}
           </button>
-          <p className="text-center mt-6 text-[8px] font-black uppercase tracking-widest text-slate-300">
-            En publiant, vous acceptez les droits d'auteur de la plateforme Lisible.
-          </p>
         </div>
       </form>
     </div>
