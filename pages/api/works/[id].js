@@ -1,14 +1,12 @@
 // pages/api/works/[id].js
 export default async function handler(req, res) {
-  const { id } = req.query; // ID de l'œuvre
+  const { id } = req.query; 
   
-  // 1. Vérification de la méthode
   if (req.method !== "DELETE") {
     return res.status(405).json({ error: "Méthode non autorisée" });
   }
 
-  // 2. Récupération de l'email de l'utilisateur depuis les headers (envoyé par le front)
-  // ou via un body. Dans votre dashboard, vous pouvez l'envoyer dans le body.
+  // Récupération sécurisée de l'email via les headers
   const userEmail = req.headers["x-user-email"]; 
 
   if (!userEmail) {
@@ -16,18 +14,19 @@ export default async function handler(req, res) {
   }
 
   const fileName = id.endsWith(".json") ? id : `${id}.json`;
-  const repoPath = `data/posts/${fileName}`;
+  const textPath = `data/texts/${fileName}`;
+  const indexPath = `data/publications/index.json`;
+
+  const headers = {
+    Authorization: `token ${process.env.GITHUB_TOKEN}`,
+    Accept: "application/vnd.github.v3+json",
+  };
 
   try {
-    // 3. Récupérer le fichier pour vérifier l'identité de l'auteur
+    // 1. RÉCUPÉRER LE FICHIER COMPLET POUR VÉRIFIER L'IDENTITÉ
     const getFileRes = await fetch(
-      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${repoPath}?t=${Date.now()}`,
-      {
-        headers: {
-          Authorization: `token ${process.env.GITHUB_TOKEN}`,
-          Accept: "application/vnd.github.v3+json",
-        },
-      }
+      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${textPath}?t=${Date.now()}`,
+      { headers }
     );
 
     if (!getFileRes.ok) {
@@ -35,40 +34,66 @@ export default async function handler(req, res) {
     }
 
     const fileData = await getFileRes.json();
-    const content = JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+    const content = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'));
 
-    // 4. VÉRIFICATION DE SÉCURITÉ
-    // On compare l'email du demandeur avec l'email stocké dans l'œuvre
+    // 2. VÉRIFICATION DE SÉCURITÉ
     const authorEmailInFile = content.authorEmail || content.authorId; 
-    
     if (authorEmailInFile?.toLowerCase() !== userEmail.toLowerCase()) {
-      return res.status(403).json({ error: "Vous n'êtes pas autorisé à supprimer cette œuvre" });
+      return res.status(403).json({ error: "Action interdite : vous n'êtes pas l'auteur." });
     }
 
-    // 5. SUPPRESSION (si la vérification réussit)
-    const deleteRes = await fetch(
-      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${repoPath}`,
+    // 3. SUPPRESSION DU FICHIER COMPLET (/data/texts/)
+    const deleteFileRes = await fetch(
+      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${textPath}`,
       {
         method: "DELETE",
         headers: {
-          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          ...headers,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: `Suppression sécurisée par l'auteur : ${userEmail}`,
+          message: `Delete text: ${id} by author ${userEmail}`,
           sha: fileData.sha,
         }),
       }
     );
 
-    if (deleteRes.ok) {
-      return res.status(200).json({ message: "Suppression réussie" });
-    } else {
-      throw new Error("Échec de la suppression finale");
+    if (!deleteFileRes.ok) throw new Error("Échec de la suppression du fichier source");
+
+    // 4. NETTOYAGE DE L'INDEX GLOBAL (/data/publications/index.json)
+    const getIndexRes = await fetch(
+      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${indexPath}?t=${Date.now()}`,
+      { headers }
+    );
+
+    if (getIndexRes.ok) {
+      const indexFileData = await getIndexRes.json();
+      let indexArray = JSON.parse(Buffer.from(indexFileData.content, 'base64').toString('utf-8'));
+
+      // Filtrer pour retirer l'œuvre de l'index
+      const newIndex = indexArray.filter(item => item.id !== id && item.id !== id.replace('.json', ''));
+
+      await fetch(
+        `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/${indexPath}`,
+        {
+          method: "PUT",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: `Remove from index: ${id}`,
+            content: Buffer.from(JSON.stringify(newIndex, null, 2)).toString('base64'),
+            sha: indexFileData.sha,
+          }),
+        }
+      );
     }
 
+    return res.status(200).json({ message: "Suppression synchronisée réussie" });
+
   } catch (error) {
-    console.error("Erreur Sécurité/GitHub:", error);
-    return res.status(500).json({ error: "Erreur lors de la procédure de suppression" });
+    console.error("Erreur procédure suppression:", error);
+    return res.status(500).json({ error: "Erreur lors de la suppression sur le serveur" });
   }
 }
