@@ -43,6 +43,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
+  // Analyse du mood basée sur le texte
   const mood = useMemo(() => {
     if (!text?.content) return null;
     const content = text.content.toLowerCase();
@@ -57,10 +58,11 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
     return winner.score > 0 ? winner : null;
   }, [text?.content]);
 
+  // Récupération mise à jour (Correction du chemin vers /data/texts/)
   const fetchData = useCallback(async (tid) => {
     if (!tid) return;
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${tid}.json?t=${Date.now()}`);
+      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${tid}.json?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         const content = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
@@ -85,7 +87,6 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
       const viewKey = `view_${id}`;
       if (!localStorage.getItem(viewKey) && !viewLogged.current) {
         viewLogged.current = true;
-        // Utilisation de l'API unifiée des textes pour incrémenter la vue
         fetch('/api/texts', { 
             method: 'PATCH', 
             headers: { 'Content-Type': 'application/json' }, 
@@ -96,7 +97,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
             const data = await res.json();
             localStorage.setItem(viewKey, "true");
             setLiveViews(data.count);
-            setLiveLikes(text ? (text.totalLikes || text.likes) : 0);
+            setLiveLikes(text ? (text.totalLikes || text.likes || 0) : 0);
           }
         });
       }
@@ -105,7 +106,11 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
 
-  if (router.isFallback || !text) return <div className="min-h-screen bg-[#FCFBF9] dark:bg-slate-950 p-20 animate-pulse" />;
+  if (router.isFallback || !text) return (
+    <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+    </div>
+  );
 
   const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
 
@@ -115,8 +120,7 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
         <title>{`${text.title} | Lisible`}</title>
         <meta name="description" content={text.content?.substring(0, 155).replace(/<[^>]*>/g, '')} />
         <meta property="og:title" content={text.title} />
-        <meta property="og:description" content={`Une œuvre de ${text.authorName || 'Anonyme'} sur Lisible.`} />
-        <meta property="og:image" content={text.imageBase64 || "https://lisible.biz/og-default.jpg"} />
+        <meta property="og:image" content={text.image || text.imageBase64 || "https://lisible.biz/og-default.jpg"} />
       </Head>
 
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-teal-600 transition-all duration-200" style={{ width: `${readingProgress}%` }} />
@@ -138,7 +142,10 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
                    const res = await fetch('/api/texts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action: "like" }) });
                    if (res.ok) { const d = await res.json(); setLiveLikes(d.count); localStorage.setItem(lKey, "true"); toast.success("Aimé !"); }
                    setIsLiking(false);
-                }} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black hover:bg-rose-50 transition-colors"><Heart size={14} className={(liveLikes > 0 || (text.totalLikes > 0)) ? "fill-rose-500 text-rose-500" : ""} /> {liveLikes || text.totalLikes || 0}</button>
+                }} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black hover:bg-rose-50 transition-colors">
+                  <Heart size={14} className={(liveLikes > 0 || text.totalLikes > 0 || text.likes > 0) ? "fill-rose-500 text-rose-500" : ""} /> 
+                  {liveLikes || text.totalLikes || text.likes || 0}
+                </button>
               </>
             )}
             <button onClick={() => {navigator.clipboard.writeText(window.location.href); toast.success("Lien copié");}} className="p-3 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl shadow-xl hover:scale-105 transition-transform"><Share2 size={20} /></button>
@@ -168,6 +175,12 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
               <p className="text-sm font-bold">{text.authorName || 'Anonyme'}</p>
             </div>
           </div>
+
+          {text.image && (
+            <div className="mb-12 rounded-[2rem] overflow-hidden shadow-2xl border border-slate-100">
+              <Image src={text.image} alt={text.title} width={800} height={450} className="w-full h-auto object-cover" />
+            </div>
+          )}
           
           <div 
             className={`prose dark:prose-invert max-w-none font-serif leading-[1.8] text-justify mb-24 first-letter:text-7xl first-letter:font-black first-letter:float-left first-letter:mr-3 first-letter:text-teal-600 ${isFocusMode ? 'text-2xl' : 'text-slate-800 dark:text-slate-200 whitespace-pre-wrap'}`}
@@ -179,9 +192,9 @@ export default function TextPage({ initialText, id: textId, allTexts }) {
 
         <div className={isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100 transition-all duration-700'}>
           <div className="my-12"><InTextAd /></div>
-          {!isStaffText && <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => fetchData(id)} certifiedCount={text.totalCertified} authorName={text.authorName} textTitle={text.title} />}
+          {!isStaffText && <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => fetchData(id)} certifiedCount={text.totalCertified || 0} authorName={text.authorName} textTitle={text.title} />}
           <SmartRecommendations currentId={id} allTexts={allTexts} />
-          <CommentSection textId={id} comments={text.comments} user={user} onCommented={() => fetchData(id)} />
+          <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => fetchData(id)} />
         </div>
         
         {isReportOpen && <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} userEmail={user?.email} />}
@@ -194,17 +207,17 @@ export async function getStaticPaths() { return { paths: [], fallback: 'blocking
 
 export async function getStaticProps({ params }) {
   try {
-    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${params.id}.json`);
+    // CORRECTION DU CHEMIN : data/texts/ au lieu de data/publications/
+    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${params.id}.json`);
     const data = await res.json();
     const initialText = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
     
-    // Récupération de l'index allégé pour les recommandations (évite de charger 1000 fichiers)
+    // Récupération de l'index pour les recommandations
     const indexRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`);
     let recommendations = [];
     if (indexRes.ok) {
       const indexData = await indexRes.json();
       const allTexts = JSON.parse(Buffer.from(indexData.content, "base64").toString("utf-8"));
-      // On mélange et on ne garde que 6 textes pour les suggestions
       recommendations = allTexts.filter(t => t.id !== params.id).sort(() => 0.5 - Math.random()).slice(0, 6);
     }
     
