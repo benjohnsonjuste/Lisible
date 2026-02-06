@@ -1,37 +1,42 @@
 import { getFile, updateFile } from "@/lib/github";
-import { Buffer } from "buffer";
+import { NextResponse } from "next/server";
 import crypto from "crypto";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
-
-  // On récupère le referralCode envoyé par le formulaire
-  const { name, email, password, joinedAt, referralCode } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: "Données manquantes" });
-  }
-
-  const cleanEmail = email.toLowerCase().trim();
-  const fileName = Buffer.from(cleanEmail).toString('base64').replace(/=/g, "");
-  const path = `data/users/${fileName}.json`;
-
+export async function POST(req) {
   try {
+    const body = await req.json();
+    
+    // On récupère le referralCode envoyé par le formulaire
+    const { name, email, password, joinedAt, referralCode } = body;
+
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const fileName = Buffer.from(cleanEmail).toString('base64').replace(/=/g, "");
+    const path = `data/users/${fileName}.json`;
+
+    // 1. Vérification de l'existence
     const existingUser = await getFile(path);
     if (existingUser) {
-      return res.status(409).json({ error: "Un compte avec cet email existe déjà." });
+      return NextResponse.json({ error: "Un compte avec cet email existe déjà." }, { status: 409 });
     }
 
+    // 2. Hachage du mot de passe
     const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
 
-    // Décodage du parrain si présent
+    // 3. Décodage du parrain si présent
     let referrerEmail = null;
     if (referralCode) {
-      try { referrerEmail = Buffer.from(referralCode, 'base64').toString('utf-8'); } catch (e) { referrerEmail = null; }
+      try { 
+        referrerEmail = Buffer.from(referralCode, 'base64').toString('utf-8'); 
+      } catch (e) { 
+        referrerEmail = null; 
+      }
     }
 
+    // 4. Construction du profil complet
     const newUserProfile = {
       name,
       penName: name,
@@ -78,6 +83,7 @@ export default async function handler(req, res) {
       }
     };
 
+    // 5. Sauvegarde sur GitHub
     const success = await updateFile(
       path, 
       newUserProfile, 
@@ -87,11 +93,13 @@ export default async function handler(req, res) {
 
     if (!success) throw new Error("Erreur lors de la sauvegarde.");
 
+    // Sécurité : on retire le mot de passe avant de renvoyer l'objet
     const { password: _, ...safeUser } = newUserProfile;
-    return res.status(200).json({ success: true, user: safeUser });
+    
+    return NextResponse.json({ success: true, user: safeUser }, { status: 200 });
 
   } catch (error) {
     console.error("Register API Error:", error);
-    return res.status(500).json({ error: error.message });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
