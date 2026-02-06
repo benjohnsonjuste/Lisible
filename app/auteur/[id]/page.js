@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, BookOpen, Loader2, UserPlus, UserMinus, Coins, ChevronRight, HeartHandshake 
@@ -9,8 +9,10 @@ import { toast } from "sonner";
 
 export default function AuthorCataloguePage({ params }) {
   const router = useRouter();
-  // Utilisation de React.use() ou déballage simple selon la version de Next.js 15+
-  const authorEmail = React.use(params).email; 
+  
+  // Déballage sécurisé des paramètres d'URL (compatible Next.js 14.2+ et 15)
+  const resolvedParams = use(params);
+  const authorEmail = resolvedParams.email; 
 
   const [author, setAuthor] = useState(null);
   const [texts, setTexts] = useState([]);
@@ -36,29 +38,33 @@ export default function AuthorCataloguePage({ params }) {
     try {
       const cleanEmail = decodeURIComponent(targetEmail).toLowerCase().trim();
       
-      const statsRes = await fetch(`/api/user-stats?email=${cleanEmail}`);
+      // 1. Récupération des stats et profil (via ton API sécurisée)
+      const statsRes = await fetch(`/api/user-stats?email=${encodeURIComponent(cleanEmail)}`);
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setAuthor({
           email: cleanEmail,
-          penName: statsData.penName,
+          penName: statsData.penName || statsData.name,
           profilePic: statsData.profilePic,
-          subscribers: statsData.subscribersList || [],
-          wallet: { balance: statsData.liBalance }
+          subscribers: statsData.stats?.subscribersList || [],
+          wallet: { balance: statsData.wallet?.balance || 0 }
         });
+      } else {
+        throw new Error("Profil introuvable");
       }
 
-      const textsRes = await fetch(`/api/texts?limit=1000`);
+      // 2. Récupération des textes de l'auteur
+      const textsRes = await fetch(`/api/publications?limit=1000`);
       if (textsRes.ok) {
         const json = await textsRes.json();
         const filtered = (json.data || [])
           .filter(t => t.authorEmail?.toLowerCase().trim() === cleanEmail)
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setTexts(filtered);
       }
     } catch (e) { 
       console.error(e);
-      toast.error("Profil introuvable"); 
+      toast.error("Erreur lors du chargement du profil"); 
     } finally { 
       setLoading(false); 
     }
@@ -105,14 +111,14 @@ export default function AuthorCataloguePage({ params }) {
 
   const rank = getRank(author?.wallet?.balance || 0);
   const isFollowing = author?.subscribers?.includes(currentUser?.email);
-  const totalLiGained = texts.reduce((acc, curr) => acc + (Number(curr.totalCertified || 0) * 50), 0);
+  const totalLiGained = texts.reduce((acc, curr) => acc + (Number(curr.likes || 0) * 50), 0);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-16 animate-in fade-in duration-1000 font-sans bg-[#FCFBF9]">
       <header className="relative flex flex-col md:flex-row items-center gap-10 bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-2xl">
         <button 
           onClick={() => router.back()} 
-          className="absolute top-8 left-8 p-3 bg-slate-50 rounded-xl text-slate-400 hover:text-teal-600 transition-all"
+          className="absolute top-8 left-8 p-3 bg-slate-50 rounded-xl text-slate-400 hover:text-teal-600 transition-all active:scale-90"
         >
           <ArrowLeft size={20} />
         </button>
@@ -127,7 +133,7 @@ export default function AuthorCataloguePage({ params }) {
 
         <div className="text-center md:text-left grow space-y-4">
           <div>
-            <div className={`inline-flex items-center gap-2 ${rank.bg} ${rank.color} px-3 py-1 rounded-xl mb-2 text-[8px] font-black uppercase tracking-widest`}>
+            <div className={`inline-flex items-center gap-2 ${rank.bg} ${rank.color} px-3 py-1 rounded-xl mb-2 text-[8px] font-black uppercase tracking-widest border border-current/10`}>
               <span>{rank.icon}</span> {rank.name}
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter italic leading-none">
@@ -137,56 +143,56 @@ export default function AuthorCataloguePage({ params }) {
           <div className="flex flex-wrap justify-center md:justify-start gap-3">
             <div className="bg-slate-50 px-4 py-2 rounded-xl flex items-center gap-2 border border-slate-100">
               <BookOpen size={14} className="text-slate-400" /> 
-              <span className="text-[10px] font-black uppercase">{texts.length} Œuvres</span>
+              <span className="text-[10px] font-black uppercase tracking-tighter">{texts.length} Œuvres</span>
             </div>
             <div className="bg-teal-50 text-teal-600 px-4 py-2 rounded-xl flex items-center gap-2 border border-teal-100">
                <Coins size={14} /> 
-               <span className="text-[10px] font-black uppercase">{totalLiGained} Li</span>
+               <span className="text-[10px] font-black uppercase tracking-tighter">{totalLiGained} Li récoltés</span>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 min-w-[200px]">
+        <div className="flex flex-col gap-3 min-w-[200px] w-full md:w-auto">
             <button 
               disabled={submitting} 
               onClick={handleFollow} 
-              className={`px-8 py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-widest transition-all ${
+              className={`px-8 py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-widest transition-all shadow-sm ${
                 isFollowing 
-                ? "bg-slate-100 text-slate-500 border-slate-200" 
-                : "bg-teal-600 text-white border-transparent hover:bg-slate-900"
+                ? "bg-slate-100 text-slate-500 border border-slate-200" 
+                : "bg-teal-600 text-white border-transparent hover:bg-slate-900 hover:scale-105 active:scale-95"
               }`}
             >
               {submitting ? <Loader2 size={16} className="animate-spin" /> : (isFollowing ? <UserMinus size={16} /> : <UserPlus size={16} />)} 
-              {isFollowing ? "Désabonner" : "Suivre"}
+              {isFollowing ? "Désabonner" : "Suivre la plume"}
             </button>
             <Link 
               href={`/shop?for=${encodeURIComponent(author?.email || "")}`} 
-              className="bg-slate-900 text-white px-8 py-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-teal-600 transition-all shadow-xl"
+              className="bg-slate-900 text-white px-8 py-6 rounded-[2rem] flex flex-col items-center gap-2 hover:bg-teal-600 transition-all shadow-xl group"
             >
-              <HeartHandshake /> 
-              <span className="text-[10px] font-black uppercase tracking-widest text-center">Soutenir l'auteur</span>
+              <HeartHandshake className="group-hover:scale-110 transition-transform" /> 
+              <span className="text-[10px] font-black uppercase tracking-widest text-center leading-tight">Soutenir<br/>l'auteur</span>
             </Link>
         </div>
       </header>
 
       <div className="space-y-8">
         <div className="flex items-center gap-4">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 italic">Galerie de l'auteur</h2>
+          <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 italic">Galerie Littéraire</h2>
           <div className="h-px bg-slate-100 grow" />
         </div>
 
         <div className="grid grid-cols-1 gap-6">
           {texts.map((txt) => {
-            const certs = Number(txt.totalCertified || 0);
+            const certs = Number(txt.likes || 0);
             return (
               <Link 
                 href={`/texts/${txt.id}`} 
                 key={txt.id} 
-                className="group flex flex-col md:flex-row items-center justify-between p-8 bg-white rounded-[2.5rem] border border-slate-50 hover:border-teal-500/30 transition-all shadow-sm"
+                className="group flex flex-col md:flex-row items-center justify-between p-8 bg-white rounded-[2.5rem] border border-slate-50 hover:border-teal-500/30 transition-all shadow-sm hover:shadow-md active:scale-[0.99]"
               >
                 <div className="space-y-3">
-                  <span className="text-[8px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase">
-                    {txt.isConcours ? "Battle Poétique" : (txt.genre || "Œuvre")}
+                  <span className="text-[8px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase tracking-widest">
+                    {txt.isConcours ? "Battle Poétique" : (txt.genre || "Œuvre Originale")}
                   </span>
                   <h3 className="text-3xl font-black text-slate-900 group-hover:text-teal-600 transition-colors italic tracking-tight leading-tight">
                     {txt.title}
@@ -208,7 +214,10 @@ export default function AuthorCataloguePage({ params }) {
           })}
 
           {texts.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+            <div className="text-center py-24 bg-white rounded-[4rem] border-4 border-dashed border-slate-50">
+               <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="text-slate-200" />
+               </div>
                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
                  Cette plume n'a pas encore laissé de trace.
                </p>
@@ -218,6 +227,7 @@ export default function AuthorCataloguePage({ params }) {
       </div>
 
       <footer className="pt-20 text-center">
+         <div className="h-px w-20 bg-slate-100 mx-auto mb-6" />
          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">
            Lisible.biz • Profil Certifié • 2026
          </p>
