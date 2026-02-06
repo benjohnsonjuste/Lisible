@@ -1,4 +1,6 @@
-// app/layout.js
+import "./globals.css";
+import { Toaster } from "sonner";
+
 export const metadata = {
   title: 'Lisible - Publication',
 }
@@ -6,7 +8,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster position="top-center" richColors />
+      </body>
     </html>
   )
 }
