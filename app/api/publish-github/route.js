@@ -1,17 +1,15 @@
-import { Buffer } from "buffer";
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Méthode non autorisée" });
-  }
-
-  const { title, content, authorName, authorEmail, imageBase64, imageName } = req.body;
-
-  if (!title || !content) {
-    return res.status(400).json({ error: "Titre et contenu requis" });
-  }
-
+export async function POST(req) {
   try {
+    const body = await req.json();
+    const { title, content, authorName, authorEmail, imageBase64, imageName } = body;
+
+    if (!title || !content) {
+      return NextResponse.json({ error: "Titre et contenu requis" }, { status: 400 });
+    }
+
     const token = process.env.GITHUB_TOKEN;
     const owner = "benjohnsonjuste";
     const repo = "Lisible";
@@ -37,7 +35,7 @@ export default async function handler(req, res) {
     };
 
     // 1. Commit du texte
-    await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
+    const textResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${textPath}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -49,6 +47,11 @@ export default async function handler(req, res) {
         branch,
       }),
     });
+
+    if (!textResponse.ok) {
+      const errorData = await textResponse.json();
+      throw new Error(`GitHub Text Error: ${errorData.message}`);
+    }
 
     // 2. Commit de l’image
     if (imageBase64 && imageName) {
@@ -68,17 +71,18 @@ export default async function handler(req, res) {
       });
     }
 
-    // ⚡ AUTOMATISME : Revalidation ISR
+    // ⚡ AUTOMATISME : Revalidation ISR (App Router Style)
     try {
-      await res.revalidate('/bibliotheque');
-      await res.revalidate('/communaute'); // Pour mettre à jour le compteur de textes de l'auteur
+      revalidatePath('/bibliotheque');
+      revalidatePath('/communaute'); 
     } catch (err) {
       console.warn("ISR Revalidation failed:", err);
     }
 
-    return res.status(201).json({ success: true });
+    return NextResponse.json({ success: true }, { status: 201 });
+
   } catch (error) {
     console.error("GitHub commit error:", error);
-    return res.status(500).json({ error: error.message });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
