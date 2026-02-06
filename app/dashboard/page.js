@@ -1,24 +1,30 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Head from "next/head";
 import { 
-  Loader2, Send, FileText, Wallet, TrendingUp, ShieldCheck, 
-  Sparkles, Share2, Bell, Users, CheckCircle2, Settings, 
-  Edit3, Trash2, BookOpen, Lock, Download 
+  Loader2, Send, FileText, UserCircle, 
+  Download, Bell, Users, Share2, 
+  Maximize2, Minimize2, Wallet, 
+  TrendingUp, ShieldCheck, Sparkles,
+  Radio, StopCircle, Globe, Lock
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Utilitaire de formatage intégré pour éviter les dépendances externes manquantes
-const formatLi = (val) => new Intl.NumberFormat('fr-FR').format(val);
+import { formatLi } from "@/lib/utils";
 
 export default function AuthorDashboard() {
   const router = useRouter();
   const badgeRef = useRef(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [works, setWorks] = useState([]);
+  const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [metrics, setMetrics] = useState({ followers: 0, views: 0, totalCertified: 0 });
+  const [metrics, setMetrics] = useState({ followers: 0, views: 0 });
+  
+  // États pour le Live
+  const [isLiveLoading, setIsLiveLoading] = useState(false);
+  const [liveTitle, setLiveTitle] = useState("");
 
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com",
@@ -31,39 +37,34 @@ export default function AuthorDashboard() {
 
   const fetchLatestData = useCallback(async (email) => {
     try {
-      const statsRes = await fetch(`/api/user-stats?email=${email}`);
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setMetrics({
-          followers: statsData.subscribers || 0,
-          views: statsData.totalViews || 0,
-          totalCertified: statsData.totalCertified || 0
-        });
+      const stored = localStorage.getItem("lisible_user");
+      if (!stored) return;
+      const userData = JSON.parse(stored);
+      
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: userData.password })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        localStorage.setItem("lisible_user", JSON.stringify(data.user));
 
-        setUser(prev => {
-          const updated = {
-            ...prev,
-            wallet: { ...prev?.wallet, balance: statsData.liBalance },
-            stats: { ...prev?.stats, subscribers: statsData.subscribers }
-          };
-          localStorage.setItem("lisible_user", JSON.stringify(updated));
-          return updated;
-        });
+        const [mRes, fRes] = await Promise.all([
+          fetch(`/api/author/${data.user.id}/metrics`),
+          fetch(`/api/get-followers-count?userId=${data.user.id}`)
+        ]);
+        
+        if (mRes.ok && fRes.ok) {
+          const mData = await mRes.json();
+          const fData = await fRes.json();
+          setMetrics({ views: mData.totalViews || 0, followers: fData.count || 0 });
+        }
       }
-
-      const indexRes = await fetch(`/api/texts?limit=1000`);
-      if (indexRes.ok) {
-        const indexData = await indexRes.json();
-        const myWorks = (indexData.data || []).filter(work => 
-          work.authorEmail?.toLowerCase().trim() === email.toLowerCase().trim()
-        );
-        setWorks(myWorks);
-      }
-    } catch (e) { 
-        console.error("Erreur sync dashboard:", e); 
-    } finally {
-        setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -72,34 +73,50 @@ export default function AuthorDashboard() {
       setScrollProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
-    
     const logged = localStorage.getItem("lisible_user");
     if (logged) {
       const u = JSON.parse(logged);
       setUser(u);
       fetchLatestData(u.email);
-    } else { 
-      router.push("/login"); 
-    }
-    
+    } else { router.push("/login"); }
     return () => window.removeEventListener("scroll", handleScroll);
   }, [router, fetchLatestData]);
 
-  const handleDeleteWork = async (workId) => {
-    if(!confirm("Supprimer définitivement cette œuvre ?")) return;
-    const tid = toast.loading("Suppression...");
+  // FONCTION POUR LANCER LE LIVE
+  const handleStartLive = async () => {
+    if (!liveTitle.trim()) return toast.error("Donnez un titre à votre salon");
+    setIsLiveLoading(true);
+    const tid = toast.loading("Initialisation du flux direct...");
+    
     try {
-      const res = await fetch(`/api/works/${workId}`, { 
-        method: "DELETE",
-        headers: { "x-user-email": user.email }
+      const res = await fetch("/api/live/create-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          title: liveTitle,
+          penName: user.penName 
+        })
       });
+
       if (res.ok) {
-        setWorks(works.filter(w => w.id !== workId));
-        toast.success("Œuvre supprimée", { id: tid });
-      } else { 
-        toast.error("Erreur lors de la suppression", { id: tid }); 
+        // Déclencher le broadcast pour les abonnés (vu dans tes logs)
+        await fetch("/api/notifications/broadcast-live", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ penName: user.penName, title: liveTitle })
+        });
+        
+        toast.success("En direct !", { id: tid });
+        router.push(`/live/${user.id}`);
+      } else {
+        toast.error("Échec de la création du salon", { id: tid });
       }
-    } catch (e) { toast.error("Serveur indisponible", { id: tid }); }
+    } catch (e) {
+      toast.error("Erreur de connexion au serveur Live", { id: tid });
+    } finally {
+      setIsLiveLoading(false);
+    }
   };
 
   const handleDownloadBadge = () => {
@@ -118,24 +135,25 @@ export default function AuthorDashboard() {
       downloadLink.download = `Lisible_Badge_${user?.penName}.png`;
       downloadLink.href = pngFile;
       downloadLink.click();
-      toast.success("Badge téléchargé !");
+      toast.success("Badge certifié téléchargé !");
     };
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
 
-  const handleUniversalShare = async () => {
-    const shareData = {
-      title: "Lisible - Catalogue d'Auteur",
-      text: `Découvrez le catalogue de ${user?.penName} !`,
-      url: `${window.location.origin}/auteur/${user?.email}`
-    };
+  const handleTransfer = async () => {
+    if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
+    const tid = toast.loading("Sécurisation...");
     try {
-      if (navigator.share) { await navigator.share(shareData); } 
-      else {
-        await navigator.clipboard.writeText(shareData.url);
-        toast.success("Lien copié !");
-      }
-    } catch (err) { console.log("Erreur partage"); }
+      const res = await fetch("/api/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: transfer.amount, type: "transfer" })
+      });
+      if (res.ok) {
+        toast.success("Li envoyés !", { id: tid });
+        fetchLatestData(user.email);
+      } else { toast.error("Erreur de transfert", { id: tid }); }
+    } catch (e) { toast.error("Serveur indisponible", { id: tid }); }
   };
 
   const nameParts = useMemo(() => {
@@ -148,111 +166,159 @@ export default function AuthorDashboard() {
     return [name, ""];
   }, [user?.penName]);
 
-  if (loading || !user) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9]"><Loader2 className="animate-spin text-teal-600" /></div>;
+  if (loading || !user) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9] dark:bg-slate-950"><Loader2 className="animate-spin text-teal-600" /></div>;
 
   const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
 
   return (
-    <div className="min-h-screen font-sans bg-[#FCFBF9] dark:bg-slate-950">
+    <div className={`min-h-screen font-sans transition-all duration-1000 ${isFocusMode ? 'bg-[#F9F7F2] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
+      <Head><title>Tableau de bord | {user.penName}</title></Head>
+
       <div className="fixed top-0 left-0 w-full h-[2px] z-[100] bg-teal-600/20">
         <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-12">
-        <header className="mb-16">
+      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[110] p-4 bg-slate-900 text-white dark:bg-teal-600 rounded-full shadow-2xl transition-all hover:scale-110">
+        {isFocusMode ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+      </button>
+
+      <div className="max-w-2xl mx-auto px-6 py-12 sm:py-20">
+        
+        {/* HEADER & METRICS */}
+        <header className={`mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-20 blur-sm scale-95' : 'opacity-100'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-4">
-              <div className={`w-16 h-16 rounded-[1.5rem] ${isStaff ? 'bg-slate-900' : 'bg-teal-600'} flex items-center justify-center text-white shadow-xl text-2xl rotate-3`}>
-                {isStaff ? <ShieldCheck /> : <Sparkles />}
+              <div className={`w-16 h-16 rounded-[1.5rem] ${isStaff ? 'bg-slate-900 shadow-slate-900/20' : 'bg-teal-600 shadow-teal-600/20'} flex items-center justify-center text-white shadow-2xl rotate-3`}>
+                <span className="text-2xl italic font-serif font-black">{user.penName.charAt(0)}</span>
               </div>
               <div>
-                <p className={`text-[10px] font-black uppercase tracking-widest ${isStaff ? 'text-slate-500' : 'text-teal-600'}`}>{isStaff ? 'Administration' : 'Auteur Certifié'}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 flex items-center gap-1">
+                  <ShieldCheck size={12} /> Compte Officiel
+                </p>
                 <h1 className="text-3xl font-serif font-black italic dark:text-white">{user?.penName}</h1>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => router.push("/account")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-teal-500 transition-all">
-                <Settings size={20} className="text-slate-400 hover:text-teal-600" />
-              </button>
+            <button onClick={() => router.push("/notifications")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 relative shadow-sm">
+              <Bell size={20} className="text-slate-400" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center shadow-sm">
+              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Lectures</p>
+              <p className="text-lg font-serif font-bold dark:text-white">{metrics.views}</p>
+            </div>
+            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center shadow-sm">
+              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Abonnés</p>
+              <p className="text-lg font-serif font-bold dark:text-white">{metrics.followers}</p>
+            </div>
+            <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center shadow-sm">
+              <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Valeur Li</p>
+              <p className="text-lg font-serif font-bold text-teal-600">{(user?.wallet?.balance * 0.0002).toFixed(2)}$</p>
             </div>
           </div>
 
-          {!isStaff && (
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-end">
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Solde de Plume</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance || 0)}</span>
-                  <span className="text-teal-600 font-black text-xs uppercase">Li</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase text-teal-600 mb-1 flex items-center gap-1 justify-end"><TrendingUp size={12}/> Valeur</p>
-                <p className="font-bold text-slate-900 dark:text-slate-300">{( (user?.wallet?.balance || 0) * 0.0002).toFixed(2)} USD</p>
-              </div>
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center">
+            <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Solde Actuel</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-6xl font-serif font-black italic text-slate-900 dark:text-white">{formatLi(user?.wallet?.balance)}</span>
+              <span className="text-teal-600 font-black text-sm uppercase">Li</span>
             </div>
-          )}
+          </div>
         </header>
 
         <section className="space-y-12">
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => router.push("/publier")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 rounded-[2rem] hover:border-teal-500 transition-all shadow-sm group">
-              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 rounded-2xl group-hover:bg-teal-600 group-hover:text-white transition-all w-fit"><Sparkles size={20} /></div>
+          
+          {/* NOUVEAU MODULE : LISIBLE LIVE */}
+          <div className={`bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/20 dark:to-slate-900 p-8 rounded-[3rem] border border-rose-100 dark:border-rose-900/30 shadow-xl transition-all duration-700 ${isFocusMode ? 'opacity-0 scale-95' : 'opacity-100'}`}>
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-rose-600">
+                <Radio size={16} className="animate-pulse" /> Lisible Direct
+              </h3>
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-rose-100">
+                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
+                <span className="text-[9px] font-black text-rose-600 uppercase italic">Salon Auteur</span>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={liveTitle}
+                  onChange={(e) => setLiveTitle(e.target.value)}
+                  placeholder="Sujet de votre direct (ex: Lecture de poèmes...)" 
+                  className="w-full p-5 bg-white dark:bg-slate-800 rounded-2xl border-none text-sm placeholder:text-slate-300 focus:ring-2 ring-rose-500 outline-none transition-all shadow-inner"
+                />
+                <Globe className="absolute right-5 top-5 text-slate-200" size={18} />
+              </div>
+              
+              <button 
+                onClick={handleStartLive}
+                disabled={isLiveLoading}
+                className="w-full bg-rose-600 hover:bg-rose-700 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 transition-all transform active:scale-95 disabled:opacity-50"
+              >
+                {isLiveLoading ? <Loader2 className="animate-spin" size={18} /> : <><Radio size={18} /> Lancer le Direct</>}
+              </button>
+            </div>
+            <p className="mt-4 text-[9px] text-slate-400 italic text-center uppercase tracking-widest">Une notification sera envoyée à vos {metrics.followers} abonnés</p>
+          </div>
+
+          {/* ACTIONS RAPIDES */}
+          <div className={`grid grid-cols-2 gap-4 transition-all duration-700 ${isFocusMode ? 'opacity-0 translate-y-10' : ''}`}>
+            <button onClick={() => router.push("/publish")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] hover:border-teal-500 transition-all group">
+              <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 w-fit rounded-2xl group-hover:scale-110 transition-all">
+                <Sparkles size={20} />
+              </div>
               <span className="text-[10px] font-black uppercase tracking-widest dark:text-slate-300">Nouvelle Œuvre</span>
             </button>
-            <button onClick={() => router.push("/communaute")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 rounded-[2rem] hover:border-slate-900 transition-all shadow-sm group">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 rounded-2xl group-hover:bg-slate-900 group-hover:text-white transition-all w-fit"><Users size={20} /></div>
+            <button onClick={() => router.push("/communaute")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] hover:border-slate-900 transition-all group">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 w-fit rounded-2xl group-hover:scale-110 transition-all">
+                <Users size={20} />
+              </div>
               <span className="text-[10px] font-black uppercase tracking-widest dark:text-slate-300">Communauté</span>
             </button>
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-2"><BookOpen size={14} /> Mes publications ({works.length})</h3>
-            <div className="grid gap-3">
-              {works.map((work) => (
-                <div key={work.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="font-serif font-bold text-lg dark:text-white line-clamp-1">{work.title}</span>
-                    <span className="text-[9px] font-black uppercase text-slate-400">{work.category} • {work.views || 0} vues</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleDeleteWork(work.id)} className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl hover:text-red-500 transition-all"><Trash2 size={18} /></button>
-                  </div>
-                </div>
-              ))}
+          {/* TRANSFERT SECTION */}
+          <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-8 flex items-center gap-2 text-teal-400">
+              <Wallet size={14} /> Transfert Li Express
+            </h3>
+            <div className="space-y-4 relative z-10">
+              <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, email: e.target.value})}/>
+              <input type="number" placeholder="Montant" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, amount: e.target.value})}/>
+              <button onClick={handleTransfer} className="w-full bg-teal-500 text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-colors">Confirmer l'envoi</button>
             </div>
           </div>
 
-          <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden opacity-60">
-            <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center backdrop-blur-[2px]">
-               <Lock className="text-teal-500 mb-2" size={32} />
-               <p className="text-[10px] font-black uppercase tracking-widest text-white">Maintenance</p>
-            </div>
-            <h3 className="text-[10px] font-black uppercase text-teal-400 mb-8 flex items-center gap-2"><Wallet size={14} /> Transfert Li</h3>
-            <div className="space-y-4 pointer-events-none"><div className="w-full h-12 bg-white/10 rounded-2xl" /><div className="w-full h-12 bg-white/10 rounded-2xl" /></div>
+          {/* BADGE (Caché pour le téléchargement) */}
+          <div className="hidden">
+            <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+              <rect width="1024" height="1024" fill="#0f172a"/>
+              <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
+              <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
+              <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user.penName}</text>
+              <circle cx="512" cy="850" r="40" fill="#14b8a6" />
+              <text x="512" y="865" fontFamily="sans-serif" fontSize="40" fill="white" textAnchor="middle">✓</text>
+            </svg>
           </div>
-        </section>
 
-        {/* Hidden SVG for Badge Generation */}
-        <div className="hidden">
-          <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-            <rect width="1024" height="1024" fill="#0f172a"/>
-            <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
-            <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
-            <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user?.penName}</text>
-            <text x="512" y="750" fontFamily="sans-serif" fontSize="35" fontWeight="bold" fill="#fbbf24" textAnchor="middle">lisible.biz</text>
-            <circle cx="512" cy="850" r="40" fill="#14b8a6" />
-          </svg>
-        </div>
-
-        <div className="mt-20 flex flex-col items-center">
+          {/* FOOTER ACTIONS */}
+          <div className={`flex flex-col items-center gap-6 transition-all duration-700 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
             <div className="flex gap-4">
-               <button onClick={handleUniversalShare} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 hover:text-teal-600 transition-colors shadow-sm"><Share2 size={20} /></button>
-               <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all">
-                 <Download size={16} /> Télécharger mon Badge
+               <button onClick={() => {navigator.clipboard.writeText("https://lisible.biz"); toast.success("Lien copié !");}} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm"><Share2 size={20} /></button>
+               <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
+                 <Download size={16} /> Badge Auteur
                </button>
             </div>
-        </div>
+            <div className="flex items-center gap-2 opacity-40">
+              <ShieldCheck size={14} className="text-teal-600" />
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">v3.1.0 Direct Ready</p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
