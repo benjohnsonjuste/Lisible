@@ -1,17 +1,25 @@
 import { getFile, updateFile } from "@/lib/github";
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
-export default async function handler(req, res) {
-  if (req.method !== "PATCH") return res.status(405).end();
-
-  const { email, userData } = req.body;
-  const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
-  const path = `data/users/${fileName}.json`;
-
-  const sanitize = (str) => (typeof str === "string" ? str.replace(/[<>]/g, "") : str);
-
+export async function PATCH(req) {
   try {
+    const body = await req.json();
+    const { email, userData } = body;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email requis" }, { status: 400 });
+    }
+
+    const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
+    const path = `data/users/${fileName}.json`;
+
+    const sanitize = (str) => (typeof str === "string" ? str.replace(/[<>]/g, "") : str);
+
     const userFile = await getFile(path);
-    if (!userFile) return res.status(404).json({ error: "Profil introuvable" });
+    if (!userFile) {
+      return NextResponse.json({ error: "Profil introuvable" }, { status: 404 });
+    }
 
     const updatedProfile = {
       ...userFile.content,
@@ -28,13 +36,13 @@ export default async function handler(req, res) {
 
     // AUTOMATISME : Mise à jour instantanée du cache Vercel
     try {
-      await res.revalidate('/communaute');
+      revalidatePath('/communaute');
     } catch (err) {
       console.error("Revalidation error", err);
     }
 
-    return res.status(200).json({ success: true, user: updatedProfile });
+    return NextResponse.json({ success: true, user: updatedProfile }, { status: 200 });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
