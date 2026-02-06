@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================
+   VARIABLES ET THÈME
+========================================= */
+:root {
+  --accent: #0ea5a4; /* Turquoise Lisible */
+  --bg-main: #fcfbf9; /* Teinte papier luxueux */
+  --live-red: #e11d48;
+}
+
+/* =========================================
+   STRUCTURE DE BASE
+========================================= */
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  @apply antialiased text-slate-900 transition-colors duration-1000;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* Gestion du mode sombre forcé pour le Focus Mode */
+.dark {
+  --bg-main: #020617; /* Slate 950 */
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
+/* =========================================
+   COMPOSANTS "LISIBLE"
+========================================= */
+@layer components {
+  .card-lisible {
+    @apply bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 
+           shadow-sm rounded-[2.5rem] p-6 md:p-8 transition-all duration-300;
+  }
+
+  .btn-lisible {
+    @apply inline-flex items-center justify-center px-6 py-3 
+           rounded-2xl font-black transition-all duration-200 
+           active:scale-95 cursor-pointer text-white;
+    background-color: var(--accent);
+  }
+
+  .input-lisible {
+    @apply w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl p-4 
+           text-sm font-bold focus:ring-2 focus:ring-[#0ea5a4] 
+           outline-none transition-all dark:text-white;
+  }
+
+  /* Style spécifique pour la prose typographique */
+  .prose-lisible {
+    @apply prose prose-slate dark:prose-invert max-w-none;
+    font-family: 'Lora', 'Georgia', serif;
+  }
+}
+
+/* =========================================
+   ANIMATIONS LISIBLE CLUB & READER
+========================================= */
+
+/**
+ * 1. Animation des commentaires éphémères
+ */
+@keyframes message-fade {
+  0% { transform: translateX(-30px) scale(0.9); opacity: 0; }
+  10% { transform: translateX(0) scale(1); opacity: 1; }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+
+.animate-message-fade {
+  animation: message-fade 6s ease-in-out forwards;
+}
+
+/**
+ * 2. Animation des cœurs qui s'envolent
+ */
+@keyframes float-heart {
+  0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-500px) scale(1.8) rotate(-20deg); opacity: 0; }
+}
+
+.animate-float-heart {
+  animation: float-heart 3s ease-out forwards;
+}
+
+/**
+ * 3. Pulsation du badge LIVE & Scellement
+ */
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+.pulse-live {
+  animation: live-pulse 2s infinite;
+}
+
+/* =========================================
+   UTILITAIRES TYPOGRAPHIQUES (LEVIER 1 & 4)
+========================================= */
+
+/* Lettrine élégante pour le début des textes */
+.first-letter-cap::first-letter {
+  @apply text-7xl font-black float-left mr-3 mt-2 text-teal-600;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Sélection de texte personnalisée */
+::selection {
+  @apply bg-teal-100 text-teal-900;
+}
+
+/* =========================================
+   UTILITAIRES VIDÉO & IMAGES
+========================================= */
+video {
+  @apply rounded-[3rem];
+  object-fit: cover;
+}
+
+video::-webkit-media-controls {
+  display: none !important;
+}
