@@ -1,10 +1,13 @@
 import { Octokit } from "@octokit/rest";
+import { NextResponse } from "next/server";
 
-export default async function handler(req, res) {
-  if (req.method !== "GET") return res.status(405).json({ error: "Méthode non autorisée" });
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const email = searchParams.get("email");
 
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ error: "Email manquant" });
+  if (!email) {
+    return NextResponse.json({ error: "Email manquant" }, { status: 400 });
+  }
 
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const fileName = Buffer.from(email.toLowerCase().trim()).toString("base64").replace(/=/g, "");
@@ -22,9 +25,12 @@ export default async function handler(req, res) {
 
     // Sécurité : Ne jamais renvoyer le mot de passe
     const { password, ...safeUser } = userData;
-    return res.status(200).json(safeUser);
+    
+    return NextResponse.json(safeUser, { status: 200 });
   } catch (err) {
-    if (err.status === 404) return res.status(404).json({ error: "Utilisateur non trouvé" });
-    return res.status(500).json({ error: "Erreur serveur GitHub" });
+    if (err.status === 404) {
+      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+    }
+    return NextResponse.json({ error: "Erreur serveur GitHub" }, { status: 500 });
   }
 }
