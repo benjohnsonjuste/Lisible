@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles } from "lucide-react";
@@ -11,21 +11,21 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [refCode, setRefCode] = useState(null);
 
-  // Détection du parrainage dans l'URL (?ref=...)
-  useEffect(() => {
-    const code = searchParams.get("ref");
-    if (code) {
-      setRefCode(code);
-      setMode("register"); // On bascule directement sur l'inscription
-      toast.info("Lien de parrainage activé ! Profitez de votre bonus de bienvenue.");
-    }
-  }, [searchParams]);
-
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: ""
   });
+
+  // Détection du parrainage dans l'URL (?ref=...)
+  useEffect(() => {
+    const code = searchParams.get("ref");
+    if (code) {
+      setRefCode(code);
+      setMode("register"); 
+      toast.info("Lien de parrainage activé ! Profitez de votre bonus de bienvenue.");
+    }
+  }, [searchParams]);
 
   const checkAndNotifyBirthday = async (userData) => {
     if (!userData.birthday) return;
@@ -33,16 +33,18 @@ export default function AuthForm() {
     const birthDate = new Date(userData.birthday);
 
     if (today.getDate() === birthDate.getDate() && today.getMonth() === birthDate.getMonth()) {
-      await fetch("/api/create-notif", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "anniversaire",
-          targetEmail: userData.email,
-          message: `Joyeux anniversaire ${userData.penName || userData.name} !`,
-          link: "/account"
-        })
-      });
+      try {
+        await fetch("/api/create-notif", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "anniversaire",
+            targetEmail: userData.email,
+            message: `Joyeux anniversaire ${userData.penName || userData.name} !`,
+            link: "/account"
+          })
+        });
+      } catch (e) { console.error("Notif error"); }
     }
   };
 
@@ -74,7 +76,7 @@ export default function AuthForm() {
             name: formData.name,
             email: emailClean,
             password: formData.password,
-            referralCode: refCode // On envoie le code de parrainage s'il existe
+            referralCode: refCode
           })
         });
         if (!regRes.ok) {
@@ -98,7 +100,12 @@ export default function AuthForm() {
       const userData = result.user;
       await checkAndNotifyBirthday(userData);
       
+      // 1. Stockage local pour l'UI
       localStorage.setItem("lisible_user", JSON.stringify(userData));
+      
+      // 2. Création du cookie pour le Middleware (Sécurité Serveur)
+      document.cookie = "lisible_session=true; path=/; max-age=86400; SameSite=Lax";
+      
       toast.success(`Heureux de vous voir, ${userData.penName || userData.name}`);
       router.push("/dashboard");
 
@@ -111,7 +118,6 @@ export default function AuthForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Affichage d'un badge de bienvenue si parrainé */}
       {mode === "register" && refCode && (
         <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top duration-500">
            <Sparkles className="text-teal-600" size={18}/>
@@ -125,7 +131,7 @@ export default function AuthForm() {
           <input
             type="text"
             placeholder="Nom complet"
-             required
+            required
             className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -193,7 +199,7 @@ export default function AuthForm() {
             onClick={() => setMode("login")}
             className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all"
           >
-            <ArrowLeft size={14} /> Retour à la connexion
+            <ArrowLeft size={14} /> Retour
           </button>
         ) : (
           <button
@@ -201,7 +207,7 @@ export default function AuthForm() {
             onClick={() => setMode(mode === "login" ? "register" : "login")}
             className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all"
           >
-            {mode === "login" ? "Pas encore de compte ? Créer le vôtre" : "Déjà membre ? Se connecter"}
+            {mode === "login" ? "Créer un compte" : "Déjà membre ? Se connecter"}
           </button>
         )}
       </div>
