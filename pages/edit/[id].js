@@ -31,7 +31,6 @@ export default function EditWorkPage() {
 
     const fetchWork = async () => {
       try {
-        // CORRECTION : On pointe vers data/texts/ pour récupérer le contenu complet
         const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${id}.json?t=${Date.now()}`);
         if (!res.ok) throw new Error("Œuvre introuvable");
         
@@ -68,7 +67,6 @@ export default function EditWorkPage() {
     const tid = toast.loading("Mise à jour du manuscrit...");
 
     try {
-      // Appel à votre API de mise à jour (qui doit gérer l'update du JSON et de l'index)
       const res = await fetch("/api/works/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +75,6 @@ export default function EditWorkPage() {
           userEmail: user.email,
           updatedData: {
             ...formData,
-            // On s'assure que les champs techniques restent cohérents
             authorName: user.name,
             authorEmail: user.email,
             date: new Date().toISOString()
