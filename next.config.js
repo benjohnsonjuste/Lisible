@@ -1,4 +1,6 @@
-const withPWA = require("next-pwa")({
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
@@ -8,7 +10,6 @@ const withPWA = require("next-pwa")({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Ajout de la compatibilité pour les packages qui posent souvent problème en App Router
   transpilePackages: ["@livepeer/react", "lucide-react"],
   
   images: {
@@ -19,9 +20,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'livepeer.studio' },
       { protocol: 'https', hostname: 'api.dicebear.com' },
       { protocol: 'https', hostname: 'github.com' },
-      { protocol: 'https', hostname: 'avatars.githubusercontent.com' }, // Recommandé pour les profils
     ],
   },
 };
 
-module.exports = withPWA(nextConfig);
+export default withPWA(nextConfig);
