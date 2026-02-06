@@ -46,7 +46,7 @@ export async function POST(req) {
       joinedAt: joinedAt || new Date().toISOString(),
       profilePic: "",
       role: "author",
-      referredBy: referrerEmail, // Enregistre l'email du parrain
+      referredBy: referrerEmail,
 
       stats: {
         totalTexts: 0,
@@ -58,7 +58,7 @@ export async function POST(req) {
       },
 
       wallet: {
-        balance: referralCode ? 200 : 0, // Bonus de 200 Li si parrainé
+        balance: referralCode ? 200 : 0, 
         totalEarned: referralCode ? 200 : 0,
         currency: "Li",
         isMonetized: false,
@@ -83,7 +83,7 @@ export async function POST(req) {
       }
     };
 
-    // 5. Sauvegarde sur GitHub
+    // 5. Sauvegarde sur GitHub via ta lib standardisée
     const success = await updateFile(
       path, 
       newUserProfile, 
