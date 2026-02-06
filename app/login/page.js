@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { Suspense } from "react";
 import AuthForm from "@/components/AuthForm";
 
 export default function AuthPage() {
@@ -37,7 +37,15 @@ export default function AuthPage() {
           <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-slate-50 rounded-full blur-3xl opacity-50" />
           
           <div className="relative z-10">
-            <AuthForm />
+            {/* Suspense requis pour useSearchParams() dans AuthForm */}
+            <Suspense fallback={
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 animate-pulse">Initialisation...</p>
+              </div>
+            }>
+              <AuthForm />
+            </Suspense>
           </div>
 
           <footer className="mt-10 pt-8 border-t border-slate-100 text-center relative z-10">
