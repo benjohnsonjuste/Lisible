@@ -18,7 +18,6 @@ export default function PublishPage() {
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState("Poésie");
   const [imagePreview, setImagePreview] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -102,7 +101,6 @@ export default function PublishPage() {
       const payload = {
         title: title.trim(),
         content: content.trim(),
-        category,
         authorName: user.penName || user.name || "Plume",
         authorEmail: user.email.toLowerCase().trim(),
         imageBase64: imagePreview,
@@ -208,18 +206,6 @@ export default function PublishPage() {
           required
           className="w-full bg-slate-50 border-2 rounded-2xl px-6 py-5 text-xl font-black italic outline-none focus:bg-white focus:border-teal-500/20"
         />
-
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full bg-slate-50 border-2 rounded-xl px-6 py-4 font-bold text-slate-600 outline-none focus:bg-white focus:border-teal-500/20"
-        >
-          {["Poésie", "Nouvelle", "Roman", "Chronique", "Essai"].map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
 
         <textarea
           value={content}
