@@ -24,11 +24,12 @@ export default function UsersPage() {
 
   async function loadUsers() {
     try {
-      // Appel à ton API unifiée
+      // Appel à ton API de récupération de tous les auteurs
       const res = await fetch(`/api/all-authors?t=${Date.now()}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       
+      // Tri par balance (Li) décroissante
       const sortedAuthors = (data.authors || []).sort((a, b) => 
         (Number(b.wallet?.balance) || 0) - (Number(a.wallet?.balance) || 0)
       );
@@ -57,12 +58,16 @@ export default function UsersPage() {
       
       toast.success(data.isSubscribed ? "Abonnement réussi" : "Désabonnement réussi");
       
+      // Mise à jour locale de l'état
       setAuthors(prev => prev.map(a => 
         a.email === targetEmail 
-          ? { ...a, subscribers: data.isSubscribed 
-              ? [...(a.subscribers || []), currentUser.email] 
-              : (a.subscribers || []).filter(e => e !== currentUser.email) 
+          ? { ...a, stats: { 
+              ...a.stats, 
+              subscribersList: data.isSubscribed 
+                ? [...(a.stats?.subscribersList || []), currentUser.email] 
+                : (a.stats?.subscribersList || []).filter(e => e !== currentUser.email) 
             } 
+          } 
           : a
       ));
     } catch (err) { 
@@ -76,14 +81,16 @@ export default function UsersPage() {
     const badges = [];
     const email = author.email?.toLowerCase().trim();
     
+    // Rôles Spécifiques
     if (email === "jb7management@gmail.com") badges.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-950 text-amber-400 border border-amber-500/30" });
     if (email === "robergeaurodley97@gmail.com") badges.push({ icon: <Briefcase size={10} />, label: "Dir. Général", color: "bg-blue-600 text-white" });
     if (email === "jeanpierreborlhaïniedarha@gmail.com") badges.push({ icon: <Briefcase size={10} />, label: "Dir. Marketing", color: "bg-red-600 text-white" });
     if (email === "woolsleypierre01@gmail.com") badges.push({ icon: <ShieldCheck size={10} />, label: "Dir. Éditoriale", color: "bg-purple-700 text-white" });
     if (email === "cmo.lablitteraire7@gmail.com" || email === "adm.lablitteraire7@gmail.com") badges.push({ icon: <ShieldCheck size={10} />, label: "Admin", color: "bg-teal-700 text-white shadow-md" });
     
-    if (author.hasBattleHistory) {
-      badges.push({ icon: <Star size={10} />, label: "Guerrier Battle", color: "bg-indigo-500 text-white" });
+    // Badges de mérite
+    if (author.stats?.totalTexts > 0) {
+      badges.push({ icon: <Star size={10} />, label: "Auteur Actif", color: "bg-indigo-500 text-white" });
     }
     if ((author.wallet?.balance || 0) > 10000) {
       badges.push({ icon: <Gem size={10} />, label: "Plume d'Élite", color: "bg-amber-100 text-amber-700 border border-amber-200" });
@@ -95,7 +102,7 @@ export default function UsersPage() {
   const filteredAuthors = useMemo(() => {
     return authors.filter(a => 
       (a.penName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (a.email || "").toLowerCase().includes(searchTerm.toLowerCase())
+      (a.name || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [authors, searchTerm]);
 
@@ -131,7 +138,7 @@ export default function UsersPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
         {paginatedAuthors.map((a) => {
-          const isFollowing = a.subscribers?.includes(currentUser?.email);
+          const isFollowing = a.stats?.subscribersList?.includes(currentUser?.email);
           const balance = Number(a.wallet?.balance || 0);
           
           return (
@@ -160,11 +167,11 @@ export default function UsersPage() {
 
                 <div className="space-y-2 flex-grow overflow-hidden">
                   <h2 className="text-2xl md:text-3xl font-black italic text-slate-900 tracking-tighter truncate">
-                    {a.penName || "Plume Anonyme"}
+                    {a.penName || a.name || "Plume Anonyme"}
                   </h2>
                   <div className="flex flex-wrap justify-center sm:justify-start gap-3">
-                    <div className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase">
-                      <UsersIcon size={12}/> {a.subscribers?.length || 0} Abonnés
+                    <div className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                      <UsersIcon size={12}/> {a.stats?.subscribersList?.length || 0} Abonnés
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-black text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">
                       <Coins size={12}/> {balance.toLocaleString()} Li
@@ -176,7 +183,7 @@ export default function UsersPage() {
                       onClick={() => handleFollow(a.email)} 
                       disabled={submitting === a.email} 
                       className={`mt-2 flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                        isFollowing ? "bg-slate-100 text-slate-500" : "bg-teal-600 text-white shadow-md hover:bg-slate-900"
+                        isFollowing ? "bg-slate-100 text-slate-500" : "bg-teal-600 text-white shadow-md hover:bg-slate-900 active:scale-95"
                       }`}
                     >
                       {submitting === a.email ? <Loader2 size={12} className="animate-spin" /> : (isFollowing ? <UserMinus size={12} /> : <UserPlus size={12} />)}
@@ -188,7 +195,7 @@ export default function UsersPage() {
 
               <Link 
                 href={`/auteur/${a.email}`} 
-                className="mt-8 md:mt-10 flex items-center justify-center gap-3 w-full py-4 md:py-5 bg-slate-950 text-white rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-lg"
+                className="mt-8 md:mt-10 flex items-center justify-center gap-3 w-full py-4 md:py-5 bg-slate-950 text-white rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-lg active:scale-95"
               >
                 Voir le catalogue <ArrowRight size={16} />
               </Link>
