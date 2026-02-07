@@ -19,21 +19,21 @@ export default function EditWorkPage() {
     summary: ""
   });
 
-  // Récupération sécurisée du manuscrit
+  // Récupération sécurisée du manuscrit depuis GitHub
   const fetchWork = useCallback(async (currentUser, workId) => {
     try {
-      // On interroge directement ton dossier data sur GitHub
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${workId}.json?t=${Date.now()}`);
       
       if (!res.ok) throw new Error("Le manuscrit est introuvable");
       
       const fileData = await res.json();
-      // Décodage Base64 propre pour l'UTF-8
+      
+      // Décodage Base64 robuste pour supporter les accents (UTF-8)
       const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-      // Vérification de sécurité : Seul l'auteur peut éditer
+      // Sécurité : Seul l'auteur peut éditer son œuvre
       if (content.authorEmail?.toLowerCase() !== currentUser.email?.toLowerCase()) {
-        toast.error("Vous n'êtes pas le scribe de cette œuvre");
+        toast.error("Accès refusé : Ce manuscrit ne vous appartient pas");
         router.push("/dashboard");
         return;
       }
@@ -67,11 +67,11 @@ export default function EditWorkPage() {
     }
   }, [id, router, fetchWork]);
 
-  // Sauvegarde des modifications
+  // Sauvegarde des modifications via ton API unifiée
   const handleSave = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const tid = toast.loading("Scellement du manuscrit...");
+    const tid = toast.loading("Scellement des modifications...");
 
     try {
       const res = await fetch("/api/publications", {
@@ -89,11 +89,11 @@ export default function EditWorkPage() {
       });
 
       if (res.ok) {
-        toast.success("Œuvre mise à jour avec succès !", { id: tid });
+        toast.success("Manuscrit mis à jour !", { id: tid });
         router.push("/dashboard");
       } else {
         const data = await res.json();
-        throw new Error(data.error || "Erreur de synchronisation");
+        throw new Error(data.error || "Erreur lors de la synchronisation");
       }
     } catch (err) {
       toast.error(err.message, { id: tid });
@@ -105,13 +105,13 @@ export default function EditWorkPage() {
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Récupération du manuscrit...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Accès au manuscrit...</p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] py-12 px-6 font-sans">
-      <div className="max-w-3xl mx-auto animate-in fade-in duration-700">
+      <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
         
         <button 
           onClick={() => router.push("/dashboard")} 
@@ -123,16 +123,18 @@ export default function EditWorkPage() {
 
         <header className="mb-12">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl">
+            <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl shadow-sm">
               <Edit3 size={24} />
             </div>
             <h1 className="text-3xl font-serif font-black italic text-slate-900">Retoucher l'œuvre</h1>
           </div>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Édition sécurisée • {id}</p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest flex items-center gap-2">
+            ID: <span className="text-teal-600">{id}</span> • Édition sécurisée
+          </p>
         </header>
 
         <form onSubmit={handleSave} className="space-y-8">
-          {/* Titre */}
+          {/* Titre de l'œuvre */}
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <Type size={14}/> Titre de l'œuvre
@@ -143,7 +145,7 @@ export default function EditWorkPage() {
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               className="w-full p-6 bg-white border border-slate-100 rounded-[1.5rem] text-xl font-serif font-bold text-slate-900 focus:ring-4 ring-teal-500/5 outline-none transition-all shadow-sm"
-              placeholder="Ex: Le chant du crépuscule..."
+              placeholder="Modifier le titre..."
             />
           </div>
 
@@ -165,16 +167,14 @@ export default function EditWorkPage() {
                 <option value="Chronique">Chronique</option>
                 <option value="Battle Poétique">Battle Poétique</option>
               </select>
-              <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-30">
-                <Tag size={16} />
-              </div>
+              <Tag className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-20" size={16} />
             </div>
           </div>
 
           {/* Corps du texte */}
           <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <AlignLeft size={14}/> Corps du Manuscrit
+              <AlignLeft size={14}/> Contenu du Manuscrit
             </label>
             <textarea 
               required
@@ -182,11 +182,11 @@ export default function EditWorkPage() {
               value={formData.content}
               onChange={(e) => setFormData({...formData, content: e.target.value})}
               className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] font-serif text-lg leading-relaxed text-slate-800 focus:ring-4 ring-teal-500/5 outline-none transition-all shadow-sm resize-none"
-              placeholder="Laissez courir votre plume..."
+              placeholder="Écrivez ici..."
             />
           </div>
 
-          {/* Bouton d'action */}
+          {/* Bouton de sauvegarde */}
           <button 
             type="submit" 
             disabled={submitting}
@@ -198,8 +198,8 @@ export default function EditWorkPage() {
         </form>
       </div>
 
-      <footer className="mt-20 text-center">
-        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Éditeur Lisible v3.1 • 2026</p>
+      <footer className="mt-20 text-center border-t border-slate-50 pt-10">
+        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Scribe Éditeur v3.1 • 2026</p>
       </footer>
     </div>
   );
