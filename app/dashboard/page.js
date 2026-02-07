@@ -1,16 +1,17 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Head from "next/head";
 import { 
   Loader2, Send, FileText, UserCircle, 
   Download, Bell, Users, Share2, 
   Maximize2, Minimize2, Wallet, 
   TrendingUp, ShieldCheck, Sparkles,
-  Radio, StopCircle, Globe, Lock
+  Radio, Globe
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatLi } from "@/lib/utils";
+
+// Utilitaire de formatage (à adapter selon ton lib/utils)
+const formatLi = (val) => Number(val || 0).toLocaleString();
 
 export default function AuthorDashboard() {
   const router = useRouter();
@@ -20,7 +21,6 @@ export default function AuthorDashboard() {
   const [transfer, setTransfer] = useState({ email: "", amount: 1000 });
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [metrics, setMetrics] = useState({ followers: 0, views: 0 });
   
   // États pour le Live
   const [isLiveLoading, setIsLiveLoading] = useState(false);
@@ -35,36 +35,23 @@ export default function AuthorDashboard() {
     "jeanpierreborlhaïniedarha@gmail.com"
   ];
 
+  // 1. Récupération des données fraîches depuis GitHub via ton API
   const fetchLatestData = useCallback(async (email) => {
     try {
-      const stored = localStorage.getItem("lisible_user");
-      if (!stored) return;
-      const userData = JSON.parse(stored);
-      
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: userData.password })
-      });
+      const res = await fetch(`/api/user-stats?email=${encodeURIComponent(email)}`);
       
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
-        localStorage.setItem("lisible_user", JSON.stringify(data.user));
-
-        const [mRes, fRes] = await Promise.all([
-          fetch(`/api/author/${data.user.id}/metrics`),
-          fetch(`/api/get-followers-count?userId=${data.user.id}`)
-        ]);
-        
-        if (mRes.ok && fRes.ok) {
-          const mData = await mRes.json();
-          const fData = await fRes.json();
-          setMetrics({ views: mData.totalViews || 0, followers: fData.count || 0 });
-        }
+        setUser(data);
+        // On met à jour le localStorage pour garder la session synchro
+        const stored = JSON.parse(localStorage.getItem("lisible_user") || "{}");
+        localStorage.setItem("lisible_user", JSON.stringify({ ...stored, ...data }));
       }
-    } catch (e) { console.error(e); }
-    setLoading(false);
+    } catch (e) { 
+      console.error("Sync Error:", e); 
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -73,42 +60,39 @@ export default function AuthorDashboard() {
       setScrollProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
+
     const logged = localStorage.getItem("lisible_user");
     if (logged) {
       const u = JSON.parse(logged);
-      setUser(u);
       fetchLatestData(u.email);
-    } else { router.push("/login"); }
+    } else { 
+      router.push("/login"); 
+    }
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, [router, fetchLatestData]);
 
-  // FONCTION POUR LANCER LE LIVE
+  // 2. Logique de lancement du Live
   const handleStartLive = async () => {
     if (!liveTitle.trim()) return toast.error("Donnez un titre à votre salon");
     setIsLiveLoading(true);
     const tid = toast.loading("Initialisation du flux direct...");
     
     try {
+      // Simulation ou appel à ta future route live
       const res = await fetch("/api/live/create-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          userId: user.id, 
+          email: user.email, 
           title: liveTitle,
           penName: user.penName 
         })
       });
 
       if (res.ok) {
-        // Déclencher le broadcast pour les abonnés (vu dans tes logs)
-        await fetch("/api/notifications/broadcast-live", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ penName: user.penName, title: liveTitle })
-        });
-        
         toast.success("En direct !", { id: tid });
-        router.push(`/live/${user.id}`);
+        router.push(`/live/${Buffer.from(user.email).toString('base64').replace(/=/g, "")}`);
       } else {
         toast.error("Échec de la création du salon", { id: tid });
       }
@@ -116,6 +100,34 @@ export default function AuthorDashboard() {
       toast.error("Erreur de connexion au serveur Live", { id: tid });
     } finally {
       setIsLiveLoading(false);
+    }
+  };
+
+  // 3. Logique de transfert de Li
+  const handleTransfer = async () => {
+    if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
+    const tid = toast.loading("Sécurisation du transfert...");
+    try {
+      const res = await fetch("/api/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: user.email, 
+          targetEmail: transfer.email, 
+          amount: Number(transfer.amount), 
+          type: "transfer" 
+        })
+      });
+
+      if (res.ok) {
+        toast.success("Li envoyés avec succès !", { id: tid });
+        fetchLatestData(user.email); // Rafraîchir le solde
+      } else { 
+        const err = await res.json();
+        toast.error(err.error || "Erreur de transfert", { id: tid }); 
+      }
+    } catch (e) { 
+      toast.error("Serveur indisponible", { id: tid }); 
     }
   };
 
@@ -140,65 +152,44 @@ export default function AuthorDashboard() {
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
   };
 
-  const handleTransfer = async () => {
-    if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
-    const tid = toast.loading("Sécurisation...");
-    try {
-      const res = await fetch("/api/wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: user.email, targetEmail: transfer.email, amount: transfer.amount, type: "transfer" })
-      });
-      if (res.ok) {
-        toast.success("Li envoyés !", { id: tid });
-        fetchLatestData(user.email);
-      } else { toast.error("Erreur de transfert", { id: tid }); }
-    } catch (e) { toast.error("Serveur indisponible", { id: tid }); }
-  };
-
-  const nameParts = useMemo(() => {
-    const name = user?.penName || "Plume";
-    if (name.length > 15 && name.includes(" ")) {
-      const parts = name.split(" ");
-      const mid = Math.ceil(parts.length / 2);
-      return [parts.slice(0, mid).join(" "), parts.slice(mid).join(" ")];
-    }
-    return [name, ""];
-  }, [user?.penName]);
-
-  if (loading || !user) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9] dark:bg-slate-950"><Loader2 className="animate-spin text-teal-600" /></div>;
+  if (loading || !user) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9] dark:bg-slate-950 gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={32} />
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Synchronisation du compte...</p>
+    </div>
+  );
 
   const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
 
   return (
     <div className={`min-h-screen font-sans transition-all duration-1000 ${isFocusMode ? 'bg-[#F9F7F2] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
-      <Head><title>Tableau de bord | {user.penName}</title></Head>
-
+      
+      {/* Barre de progression de lecture/scroll */}
       <div className="fixed top-0 left-0 w-full h-[2px] z-[100] bg-teal-600/20">
         <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
       </div>
 
-      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[110] p-4 bg-slate-900 text-white dark:bg-teal-600 rounded-full shadow-2xl transition-all hover:scale-110">
+      <button onClick={() => setIsFocusMode(!isFocusMode)} className="fixed bottom-8 right-8 z-[110] p-4 bg-slate-900 text-white dark:bg-teal-600 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-90">
         {isFocusMode ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
       </button>
 
       <div className="max-w-2xl mx-auto px-6 py-12 sm:py-20">
         
-        {/* HEADER & METRICS */}
+        {/* HEADER SECTION */}
         <header className={`mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-20 blur-sm scale-95' : 'opacity-100'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-4">
               <div className={`w-16 h-16 rounded-[1.5rem] ${isStaff ? 'bg-slate-900 shadow-slate-900/20' : 'bg-teal-600 shadow-teal-600/20'} flex items-center justify-center text-white shadow-2xl rotate-3`}>
-                <span className="text-2xl italic font-serif font-black">{user.penName.charAt(0)}</span>
+                <span className="text-2xl italic font-serif font-black">{(user.penName || user.name).charAt(0)}</span>
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 flex items-center gap-1">
                   <ShieldCheck size={12} /> Compte Officiel
                 </p>
-                <h1 className="text-3xl font-serif font-black italic dark:text-white">{user?.penName}</h1>
+                <h1 className="text-3xl font-serif font-black italic dark:text-white">{user?.penName || user.name}</h1>
               </div>
             </div>
-            <button onClick={() => router.push("/notifications")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 relative shadow-sm">
+            <button onClick={() => router.push("/notifications")} className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 relative shadow-sm hover:bg-slate-50 transition-colors">
               <Bell size={20} className="text-slate-400" />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
             </button>
@@ -207,15 +198,15 @@ export default function AuthorDashboard() {
           <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center shadow-sm">
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Lectures</p>
-              <p className="text-lg font-serif font-bold dark:text-white">{metrics.views}</p>
+              <p className="text-lg font-serif font-bold dark:text-white">{user.stats?.totalViews || 0}</p>
             </div>
             <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center shadow-sm">
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Abonnés</p>
-              <p className="text-lg font-serif font-bold dark:text-white">{metrics.followers}</p>
+              <p className="text-lg font-serif font-bold dark:text-white">{user.stats?.subscribersList?.length || 0}</p>
             </div>
             <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-md p-4 rounded-3xl border border-white/20 text-center shadow-sm">
               <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Valeur Li</p>
-              <p className="text-lg font-serif font-bold text-teal-600">{(user?.wallet?.balance * 0.0002).toFixed(2)}$</p>
+              <p className="text-lg font-serif font-bold text-teal-600">{(Number(user?.wallet?.balance || 0) * 0.0002).toFixed(2)}$</p>
             </div>
           </div>
 
@@ -230,7 +221,7 @@ export default function AuthorDashboard() {
 
         <section className="space-y-12">
           
-          {/* NOUVEAU MODULE : LISIBLE LIVE */}
+          {/* LISIBLE LIVE MODULE */}
           <div className={`bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/20 dark:to-slate-900 p-8 rounded-[3rem] border border-rose-100 dark:border-rose-900/30 shadow-xl transition-all duration-700 ${isFocusMode ? 'opacity-0 scale-95' : 'opacity-100'}`}>
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-rose-600">
@@ -262,7 +253,6 @@ export default function AuthorDashboard() {
                 {isLiveLoading ? <Loader2 className="animate-spin" size={18} /> : <><Radio size={18} /> Lancer le Direct</>}
               </button>
             </div>
-            <p className="mt-4 text-[9px] text-slate-400 italic text-center uppercase tracking-widest">Une notification sera envoyée à vos {metrics.followers} abonnés</p>
           </div>
 
           {/* ACTIONS RAPIDES */}
@@ -271,13 +261,13 @@ export default function AuthorDashboard() {
               <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 w-fit rounded-2xl group-hover:scale-110 transition-all">
                 <Sparkles size={20} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest dark:text-slate-300">Nouvelle Œuvre</span>
+              <span className="text-[10px] font-black uppercase tracking-widest dark:text-slate-300 text-left">Nouvelle Œuvre</span>
             </button>
             <button onClick={() => router.push("/communaute")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] hover:border-slate-900 transition-all group">
               <div className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 w-fit rounded-2xl group-hover:scale-110 transition-all">
                 <Users size={20} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest dark:text-slate-300">Communauté</span>
+              <span className="text-[10px] font-black uppercase tracking-widest dark:text-slate-300 text-left">Communauté</span>
             </button>
           </div>
 
@@ -289,17 +279,17 @@ export default function AuthorDashboard() {
             <div className="space-y-4 relative z-10">
               <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, email: e.target.value})}/>
               <input type="number" placeholder="Montant" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, amount: e.target.value})}/>
-              <button onClick={handleTransfer} className="w-full bg-teal-500 text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-colors">Confirmer l'envoi</button>
+              <button onClick={handleTransfer} className="w-full bg-teal-500 text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-colors active:scale-95">Confirmer l'envoi</button>
             </div>
           </div>
 
-          {/* BADGE (Caché pour le téléchargement) */}
+          {/* SVG BADGE HIDDEN */}
           <div className="hidden">
             <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
               <rect width="1024" height="1024" fill="#0f172a"/>
               <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
               <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
-              <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user.penName}</text>
+              <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user.penName || user.name}</text>
               <circle cx="512" cy="850" r="40" fill="#14b8a6" />
               <text x="512" y="865" fontFamily="sans-serif" fontSize="40" fill="white" textAnchor="middle">✓</text>
             </svg>
@@ -308,14 +298,14 @@ export default function AuthorDashboard() {
           {/* FOOTER ACTIONS */}
           <div className={`flex flex-col items-center gap-6 transition-all duration-700 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
             <div className="flex gap-4">
-               <button onClick={() => {navigator.clipboard.writeText("https://lisible.biz"); toast.success("Lien copié !");}} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm"><Share2 size={20} /></button>
-               <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all">
+               <button onClick={() => {navigator.clipboard.writeText("https://lisible.biz"); toast.success("Lien copié !");}} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm active:scale-90 transition-transform"><Share2 size={20} /></button>
+               <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95">
                  <Download size={16} /> Badge Auteur
                </button>
             </div>
             <div className="flex items-center gap-2 opacity-40">
               <ShieldCheck size={14} className="text-teal-600" />
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">v3.1.0 Direct Ready</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">v3.1.0 Direct Ready • 2026</p>
             </div>
           </div>
         </section>
