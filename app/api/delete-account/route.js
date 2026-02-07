@@ -1,6 +1,7 @@
 import { Octokit } from "@octokit/rest";
 import { NextResponse } from "next/server";
 
+// Route: DELETE /api/user/delete (ou le nom de ton fichier)
 export async function DELETE(req) {
   try {
     const body = await req.json();
@@ -15,7 +16,7 @@ export async function DELETE(req) {
     const repo = "Lisible";
     const emailClean = email.toLowerCase().trim();
     
-    // Nom du fichier utilisateur
+    // Nom du fichier utilisateur (Email en Base64 pour le stockage)
     const userFileName = Buffer.from(emailClean).toString('base64').replace(/=/g, "") + ".json";
     const userPath = `data/users/${userFileName}`;
 
@@ -32,23 +33,31 @@ export async function DELETE(req) {
     }
 
     await octokit.repos.deleteFile({
-      owner, repo, path: userPath,
+      owner, 
+      repo, 
+      path: userPath,
       message: `🗑️ Profil supprimé : ${emailClean}`,
       sha: userData.sha,
     });
 
     // 2. NETTOYAGE AUTOMATIQUE DES TEXTES
     try {
-      const { data: posts } = await octokit.repos.getContent({ owner, repo, path: "data/posts" });
+      // On cherche dans publications ou posts selon ta structure actuelle
+      const { data: posts } = await octokit.repos.getContent({ owner, repo, path: "data/publications" });
       
       if (Array.isArray(posts)) {
         const deletePromises = posts.map(async (file) => {
+          // On ignore l'index.json s'il existe
+          if (file.name === "index.json") return;
+
           const { data: fileContent } = await octokit.repos.getContent({ owner, repo, path: file.path });
           const content = JSON.parse(Buffer.from(fileContent.content, 'base64').toString());
           
           if (content.authorEmail?.toLowerCase() === emailClean) {
             return octokit.repos.deleteFile({
-              owner, repo, path: file.path,
+              owner, 
+              repo, 
+              path: file.path,
               message: `🗑️ Texte orphelin supprimé : ${file.name}`,
               sha: fileContent.sha
             });
@@ -59,13 +68,16 @@ export async function DELETE(req) {
       }
     } catch (err) {
       console.error("Erreur lors du nettoyage des textes:", err);
-      // On ne bloque pas la réponse si seuls les textes échouent
+      // On ne bloque pas la réponse globale si seuls les textes échouent
     }
 
-    return NextResponse.json({ success: true, message: "Compte et textes nettoyés avec succès" }, { status: 200 });
+    return NextResponse.json({ 
+      success: true, 
+      message: "Compte et écrits associés effacés du sanctuaire" 
+    }, { status: 200 });
 
   } catch (error) {
     console.error("Erreur suppression globale:", error);
-    return NextResponse.json({ error: "Erreur serveur lors du nettoyage" }, { status: 500 });
+    return NextResponse.json({ error: "Le protocole de suppression a échoué" }, { status: 500 });
   }
 }
