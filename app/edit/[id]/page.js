@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
-// Changement pour le App Router
 import { useParams, useRouter } from "next/navigation"; 
 import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, AlignLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -16,20 +15,25 @@ export default function EditWorkPage() {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    category: "",
+    genre: "Poésie",
     summary: ""
   });
 
+  // Récupération sécurisée du manuscrit
   const fetchWork = useCallback(async (currentUser, workId) => {
     try {
+      // On interroge directement ton dossier data sur GitHub
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/texts/${workId}.json?t=${Date.now()}`);
-      if (!res.ok) throw new Error("Œuvre introuvable");
+      
+      if (!res.ok) throw new Error("Le manuscrit est introuvable");
       
       const fileData = await res.json();
+      // Décodage Base64 propre pour l'UTF-8
       const content = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
 
-      if (content.authorEmail?.toLowerCase() !== currentUser.email.toLowerCase()) {
-        toast.error("Accès non autorisé");
+      // Vérification de sécurité : Seul l'auteur peut éditer
+      if (content.authorEmail?.toLowerCase() !== currentUser.email?.toLowerCase()) {
+        toast.error("Vous n'êtes pas le scribe de cette œuvre");
         router.push("/dashboard");
         return;
       }
@@ -37,12 +41,12 @@ export default function EditWorkPage() {
       setFormData({
         title: content.title || "",
         content: content.content || "",
-        category: content.category || content.genre || "Poésie",
+        genre: content.genre || content.category || "Poésie",
         summary: content.summary || ""
       });
     } catch (err) {
       console.error("Fetch error:", err);
-      toast.error("Erreur lors du chargement du manuscrit");
+      toast.error("Échec lors de l'ouverture du parchemin");
       router.push("/dashboard");
     } finally {
       setLoading(false);
@@ -63,33 +67,33 @@ export default function EditWorkPage() {
     }
   }, [id, router, fetchWork]);
 
+  // Sauvegarde des modifications
   const handleSave = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const tid = toast.loading("Mise à jour du manuscrit...");
+    const tid = toast.loading("Scellement du manuscrit...");
 
     try {
-      const res = await fetch("/api/works/update", {
+      const res = await fetch("/api/publications", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          workId: id,
+          id: id,
           userEmail: user.email,
-          updatedData: {
+          data: {
             ...formData,
-            authorName: user.name || user.penName,
-            authorEmail: user.email,
-            date: new Date().toISOString()
+            authorName: user.penName || user.name,
+            updatedAt: new Date().toISOString()
           }
         })
       });
 
       if (res.ok) {
-        toast.success("Modifications enregistrées !", { id: tid });
+        toast.success("Œuvre mise à jour avec succès !", { id: tid });
         router.push("/dashboard");
       } else {
         const data = await res.json();
-        throw new Error(data.error || "Erreur lors de la sauvegarde");
+        throw new Error(data.error || "Erreur de synchronisation");
       }
     } catch (err) {
       toast.error(err.message, { id: tid });
@@ -99,30 +103,37 @@ export default function EditWorkPage() {
   };
 
   if (loading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9]">
-      <Loader2 className="animate-spin text-teal-600 mb-4" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Récupération du manuscrit...</p>
+    <div className="h-screen flex flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Récupération du manuscrit...</p>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] py-12 px-6 font-sans">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto animate-in fade-in duration-700">
         
-        <button onClick={() => router.push("/dashboard")} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors mb-8">
-          <ArrowLeft size={14} /> Retour au tableau de bord
+        <button 
+          onClick={() => router.push("/dashboard")} 
+          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all mb-8 group"
+        >
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
+          Retour au sanctuaire
         </button>
 
         <header className="mb-12">
           <div className="flex items-center gap-3 mb-2">
-            <Edit3 className="text-teal-600" size={24} />
-            <h1 className="text-3xl font-serif font-black italic">Modifier l'œuvre</h1>
+            <div className="p-3 bg-teal-50 text-teal-600 rounded-2xl">
+              <Edit3 size={24} />
+            </div>
+            <h1 className="text-3xl font-serif font-black italic text-slate-900">Retoucher l'œuvre</h1>
           </div>
-          <p className="text-slate-500 text-sm">Édition sécurisée de votre création littéraire.</p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest">Édition sécurisée • {id}</p>
         </header>
 
         <form onSubmit={handleSave} className="space-y-8">
-          <div className="space-y-2">
+          {/* Titre */}
+          <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
               <Type size={14}/> Titre de l'œuvre
             </label>
@@ -131,51 +142,65 @@ export default function EditWorkPage() {
               required
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="w-full p-6 bg-white border border-slate-100 rounded-[1.5rem] text-xl font-serif font-bold focus:ring-2 ring-teal-500/20 outline-none transition-all shadow-sm"
+              className="w-full p-6 bg-white border border-slate-100 rounded-[1.5rem] text-xl font-serif font-bold text-slate-900 focus:ring-4 ring-teal-500/5 outline-none transition-all shadow-sm"
+              placeholder="Ex: Le chant du crépuscule..."
             />
           </div>
 
-          <div className="space-y-2">
+          {/* Genre / Catégorie */}
+          <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <Tag size={14}/> Catégorie
+              <Tag size={14}/> Genre Littéraire
             </label>
-            <select 
-              value={formData.category}
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-              className="w-full p-4 bg-white border border-slate-100 rounded-2xl font-bold text-sm focus:ring-2 ring-teal-500/20 outline-none appearance-none cursor-pointer shadow-sm"
-            >
-              <option value="Poésie">Poésie</option>
-              <option value="Nouvelle">Nouvelle</option>
-              <option value="Roman">Roman</option>
-              <option value="Essai">Essai</option>
-              <option value="Chronique">Chronique</option>
-              <option value="Battle Poétique">Battle Poétique</option>
-            </select>
+            <div className="relative">
+              <select 
+                value={formData.genre}
+                onChange={(e) => setFormData({...formData, genre: e.target.value})}
+                className="w-full p-5 bg-white border border-slate-100 rounded-2xl font-bold text-sm text-slate-600 focus:ring-4 ring-teal-500/5 outline-none appearance-none cursor-pointer shadow-sm"
+              >
+                <option value="Poésie">Poésie</option>
+                <option value="Nouvelle">Nouvelle</option>
+                <option value="Roman">Roman</option>
+                <option value="Essai">Essai</option>
+                <option value="Chronique">Chronique</option>
+                <option value="Battle Poétique">Battle Poétique</option>
+              </select>
+              <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-30">
+                <Tag size={16} />
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
+          {/* Corps du texte */}
+          <div className="space-y-3">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <AlignLeft size={14}/> Contenu du texte
+              <AlignLeft size={14}/> Corps du Manuscrit
             </label>
             <textarea 
               required
               rows={15}
               value={formData.content}
               onChange={(e) => setFormData({...formData, content: e.target.value})}
-              className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] font-serif text-lg leading-relaxed focus:ring-2 ring-teal-500/20 outline-none transition-all shadow-sm"
+              className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] font-serif text-lg leading-relaxed text-slate-800 focus:ring-4 ring-teal-500/5 outline-none transition-all shadow-sm resize-none"
+              placeholder="Laissez courir votre plume..."
             />
           </div>
 
+          {/* Bouton d'action */}
           <button 
             type="submit" 
             disabled={submitting}
-            className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 hover:bg-teal-600 transition-all shadow-xl disabled:opacity-50"
+            className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-3 hover:bg-teal-600 transition-all shadow-xl disabled:opacity-50 active:scale-95"
           >
             {submitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Enregistrer les modifications
+            {submitting ? "Scellement..." : "Enregistrer les modifications"}
           </button>
         </form>
       </div>
+
+      <footer className="mt-20 text-center">
+        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Éditeur Lisible v3.1 • 2026</p>
+      </footer>
     </div>
   );
 }
