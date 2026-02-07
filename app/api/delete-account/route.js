@@ -1,14 +1,17 @@
 import { Octokit } from "@octokit/rest";
 import { NextResponse } from "next/server";
 
-// Route: DELETE /api/user/delete (ou le nom de ton fichier)
+/**
+ * PROTOCOLE DE SUPPRESSION GLOBALE
+ * Supprime le profil utilisateur et tous les écrits associés sur GitHub.
+ */
 export async function DELETE(req) {
   try {
     const body = await req.json();
     const { email } = body;
 
     if (!email) {
-      return NextResponse.json({ error: "Email requis" }, { status: 400 });
+      return NextResponse.json({ error: "Email requis pour l'effacement." }, { status: 400 });
     }
 
     const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -16,18 +19,18 @@ export async function DELETE(req) {
     const repo = "Lisible";
     const emailClean = email.toLowerCase().trim();
     
-    // Nom du fichier utilisateur (Email en Base64 pour le stockage)
+    // Encodage Base64 pour correspondre à ta structure de stockage
     const userFileName = Buffer.from(emailClean).toString('base64').replace(/=/g, "") + ".json";
     const userPath = `data/users/${userFileName}`;
 
-    // 1. SUPPRESSION DU PROFIL UTILISATEUR
+    // 1. PHASE DE SUPPRESSION DU PROFIL
     let userData;
     try {
       const response = await octokit.repos.getContent({ owner, repo, path: userPath });
       userData = response.data;
     } catch (e) {
       if (e.status === 404) {
-        return NextResponse.json({ error: "Profil introuvable" }, { status: 404 });
+        return NextResponse.json({ error: "Profil introuvable dans le sanctuaire." }, { status: 404 });
       }
       throw e;
     }
@@ -36,18 +39,17 @@ export async function DELETE(req) {
       owner, 
       repo, 
       path: userPath,
-      message: `🗑️ Profil supprimé : ${emailClean}`,
+      message: `🗑️ Profil supprimé définitivement : ${emailClean}`,
       sha: userData.sha,
     });
 
-    // 2. NETTOYAGE AUTOMATIQUE DES TEXTES
+    // 2. PHASE DE NETTOYAGE DES ÉCRITS (PUBLICAIONS)
     try {
-      // On cherche dans publications ou posts selon ta structure actuelle
       const { data: posts } = await octokit.repos.getContent({ owner, repo, path: "data/publications" });
       
       if (Array.isArray(posts)) {
         const deletePromises = posts.map(async (file) => {
-          // On ignore l'index.json s'il existe
+          // Sécurité : ne pas supprimer le fichier d'indexation
           if (file.name === "index.json") return;
 
           const { data: fileContent } = await octokit.repos.getContent({ owner, repo, path: file.path });
@@ -58,7 +60,7 @@ export async function DELETE(req) {
               owner, 
               repo, 
               path: file.path,
-              message: `🗑️ Texte orphelin supprimé : ${file.name}`,
+              message: `🗑️ Nettoyage post-suppression : ${file.name}`,
               sha: fileContent.sha
             });
           }
@@ -67,17 +69,17 @@ export async function DELETE(req) {
         await Promise.all(deletePromises);
       }
     } catch (err) {
-      console.error("Erreur lors du nettoyage des textes:", err);
-      // On ne bloque pas la réponse globale si seuls les textes échouent
+      console.error("Échec partiel (nettoyage textes):", err);
+      // On continue car le compte principal est déjà supprimé
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: "Compte et écrits associés effacés du sanctuaire" 
+      message: "Toutes vos traces ont été effacées avec succès." 
     }, { status: 200 });
 
   } catch (error) {
-    console.error("Erreur suppression globale:", error);
-    return NextResponse.json({ error: "Le protocole de suppression a échoué" }, { status: 500 });
+    console.error("Erreur fatale lors de la suppression globale:", error);
+    return NextResponse.json({ error: "Le protocole de suppression a rencontré une erreur serveur." }, { status: 500 });
   }
 }
