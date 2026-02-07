@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import Pusher from "pusher-js";
 import { toast } from "sonner";
-import ThemeToggle from "./ThemeToggle"; // Importation du bouton de thème
+import ThemeToggle from "./ThemeToggle"; 
 
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
-  Users, MessageCircle, Calendar, FileText, X, Sparkles,
+  Users, MessageCircle, Calendar, X, Sparkles,
   ChevronRight, Radio, Coins, Zap, MessageSquare, Bell
 } from "lucide-react";
 
@@ -21,6 +21,7 @@ export default function Navbar() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    // 1. Hydratation initiale
     const loggedUser = localStorage.getItem("lisible_user");
     const currentUser = loggedUser ? JSON.parse(loggedUser) : null;
     setUser(currentUser);
@@ -28,6 +29,7 @@ export default function Navbar() {
     const savedCount = localStorage.getItem("unread_notifs");
     if (savedCount) setUnreadCount(parseInt(savedCount));
 
+    // 2. Configuration Pusher
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
     const channel = pusher.subscribe('global-notifications');
     
@@ -43,6 +45,7 @@ export default function Navbar() {
         return next;
       });
 
+      // Feedback Audio
       const playNotifSound = () => {
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -55,7 +58,7 @@ export default function Navbar() {
           gainNode.connect(audioCtx.destination);
           oscillator.start();
           oscillator.stop(audioCtx.currentTime + 0.3);
-        } catch (e) { console.warn("Audio bloqué par le navigateur"); }
+        } catch (e) { console.warn("Audio bloqué"); }
       };
       playNotifSound();
 
@@ -87,6 +90,7 @@ export default function Navbar() {
       });
     });
 
+    // 3. Status Live
     const checkLiveStatus = async () => {
       try {
         const res = await fetch("https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/live_status.json?t=" + Date.now());
@@ -172,7 +176,7 @@ export default function Navbar() {
             </nav>
 
             <div className="flex items-center gap-2">
-              <ThemeToggle /> {/* Switch Dark Mode ajouté ici */}
+              <ThemeToggle />
               
               <Link 
                 href="/notifications" 
@@ -213,7 +217,13 @@ export default function Navbar() {
             <Link href="/account" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
               <div className="flex items-center gap-4 overflow-hidden">
                 <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-900 shadow-lg">
-                  {user.profilePic ? <img src={user.profilePic} className="w-full h-full object-cover" alt="P" /> : <div className="w-full h-full bg-teal-600 text-white flex items-center justify-center font-black">{user.name?.charAt(0)}</div>}
+                  {user.profilePic ? (
+                    <img src={user.profilePic} className="w-full h-full object-cover" alt="Avatar" />
+                  ) : (
+                    <div className="w-full h-full bg-teal-600 text-white flex items-center justify-center font-black">
+                      {user.name?.charAt(0)}
+                    </div>
+                  )}
                 </div>
                 <div className="text-left overflow-hidden">
                   <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user.penName || user.name}</p>
@@ -226,8 +236,13 @@ export default function Navbar() {
 
           <nav className="space-y-1">
             {menuItems.map((item) => (item.authRequired && !user ? null : (
-              <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === item.href ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" : "text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"}`}>
-                <span className={pathname === item.href ? (pathname === item.href && pathname !== "/" ? "text-teal-400 dark:text-teal-600" : "text-teal-400") : "text-slate-400 dark:text-slate-600"}>{item.icon}</span>
+              <Link 
+                key={item.href} 
+                href={item.href} 
+                onClick={() => setIsMenuOpen(false)} 
+                className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === item.href ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" : "text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"}`}
+              >
+                <span className={pathname === item.href ? "text-teal-400" : "text-slate-400 dark:text-slate-600"}>{item.icon}</span>
                 <span className="flex-grow">{item.label}</span>
                 {item.href === "/lisible-club" && isLiveActive && <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />}
               </Link>
@@ -244,7 +259,11 @@ export default function Navbar() {
 
 function NavLink({ href, icon, active, title }) {
   return (
-    <Link href={href} title={title} className={`p-3 rounded-2xl transition-all relative ${active ? "bg-white dark:bg-slate-800 text-teal-600 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"}`}>
+    <Link 
+      href={href} 
+      title={title} 
+      className={`p-3 rounded-2xl transition-all relative ${active ? "bg-white dark:bg-slate-800 text-teal-600 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"}`}
+    >
       {icon}
       {active && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-teal-600 rounded-full" />}
     </Link>
