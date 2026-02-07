@@ -4,27 +4,29 @@ import path from "path";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
-// ⚡ Configuration Firebase (remplace par la tienne)
+// ⚡ Configuration Firebase (Variables d'environnement recommandées)
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
   authDomain: process.env.FIREBASE_AUTH_DOMAIN,
   projectId: process.env.FIREBASE_PROJECT_ID,
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Chemins
-const indexPath = path.join(process.cwd(), "public/data/texts/index.json");
-const textsDir = path.join(process.cwd(), "public/data/texts");
+// Chemins absolus
+const textsDir = path.resolve(process.cwd(), "data/publications");
+const indexPath = path.resolve(textsDir, "index.json");
 const placeholderImage = "/default-placeholder.png";
 
 // Crée le dossier s'il n'existe pas
-if (!fs.existsSync(textsDir)) fs.mkdirSync(textsDir, { recursive: true });
+if (!fs.existsSync(textsDir)) {
+  fs.mkdirSync(textsDir, { recursive: true });
+}
 
-// Lit index.json
-const indexData = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
-
-// Fonction pour récupérer le nom exact de l'auteur
+/**
+ * Récupère le nom de l'auteur depuis Firestore
+ */
 async function getAuthorName(authorId) {
   if (!authorId) return "Auteur inconnu";
 
@@ -34,7 +36,8 @@ async function getAuthorName(authorId) {
 
     if (userSnap.exists()) {
       const userData = userSnap.data();
-      return userData.name || userData.email?.split("@")[0] || "Auteur inconnu";
+      // Priorité au nom d'auteur, puis pseudo, puis début de l'email
+      return userData.penName || userData.name || userData.email?.split("@")[0] || "Auteur inconnu";
     }
   } catch (err) {
     console.error(`Erreur récupération auteur ${authorId}:`, err);
@@ -43,28 +46,49 @@ async function getAuthorName(authorId) {
   return "Auteur inconnu";
 }
 
-// Génère tous les fichiers
+/**
+ * Génère les fichiers JSON individuels à partir de l'index global
+ */
 async function generateFiles() {
-  for (const text of indexData) {
-    const authorName = await getAuthorName(text.authorId);
+  try {
+    if (!fs.existsSync(indexPath)) {
+      console.error("❌ index.json introuvable à l'adresse :", indexPath);
+      return;
+    }
 
-    const textFile = {
-      id: text.id,
-      title: text.title || "Titre inconnu",
-      authorName,
-      authorId: text.authorId || null,
-      date: text.date || new Date().toISOString(),
-      content: text.content || "",
-      image: text.image || placeholderImage,
-    };
+    const indexData = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
 
-    const filePath = path.join(textsDir, `${text.id}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(textFile, null, 2));
-    console.log(`✅ Fichier créé: ${filePath}`);
+    for (const text of indexData) {
+      if (!text.id) continue;
+
+      const authorName = await getAuthorName(text.authorId);
+
+      const textFile = {
+        id: text.id,
+        title: text.title || "Titre inconnu",
+        penName: authorName, // Unifié avec ta nouvelle structure
+        authorId: text.authorId || null,
+        date: text.date || new Date().toISOString(),
+        content: text.content || "",
+        category: text.category || "Inconnue",
+        image: text.image || placeholderImage,
+        stats: {
+          views: text.views || 0,
+          likes: text.totalLikes || 0,
+          certified: text.totalCertified || 0
+        }
+      };
+
+      const filePath = path.join(textsDir, `${text.id}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(textFile, null, 2));
+      console.log(`✅ Fichier synchronisé : ${text.id}.json`);
+    }
+
+    console.log("\n🚀 Tous les fichiers individuels ont été générés avec succès !");
+  } catch (error) {
+    console.error("🔴 Erreur lors de la génération :", error);
   }
-
-  console.log("✅ Tous les fichiers textes ont été générés !");
 }
 
-// Exécution
+// Lancement
 generateFiles();
