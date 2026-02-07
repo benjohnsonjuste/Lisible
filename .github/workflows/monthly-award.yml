@@ -1,8 +1,8 @@
 name: Update Monthly Badge
 on:
   schedule:
-    - cron: '0 0 1 * *'
-  workflow_dispatch:
+    - cron: '0 0 1 * *' # S'exécute le 1er de chaque mois à minuit
+  workflow_dispatch: # Permet le lancement manuel depuis l'onglet Actions
 
 jobs:
   build:
@@ -10,17 +10,31 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Mise à jour vers v4 (plus rapide et sécurisée)
+
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # Mise à jour vers v4
         with:
-          node-version: '18'
-      - name: Calculate
+          node-version: '20' # Utilisation de la version LTS actuelle
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          fi
+
+      - name: Calculate Winner
         run: node scripts/calculate-winner.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Commit and Push
         run: |
           git config --global user.name "Lisible Bot"
           git config --global user.email "bot@lisible.com"
           git add data/awards/winner.json data/awards/reader.json
-          git commit -m "🏆 Mise à jour des trophées mensuels" || exit 0
-          git push
+          # Le commit ne se fera que s'il y a des changements pour éviter l'échec du workflow
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🏆 Mise à jour des trophées mensuels" && git push)
