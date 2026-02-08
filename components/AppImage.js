@@ -1,3 +1,6 @@
+// components/AppImage.jsx
+"use client";
+
 import React from "react";
 
 /**
@@ -14,13 +17,13 @@ export default function AppImage({
   ...props
 }) {
   const handleError = (e) => {
-    // si l'image échoue, on charge une image par défaut
+    // Si l'image échoue, on charge une image par défaut située dans /public/assets/images/
     e.target.src = "/assets/images/no_image.png";
   };
 
   return (
     <img
-      src={src}
+      src={src || "/assets/images/no_image.png"}
       alt={alt}
       className={className}
       onError={handleError}
