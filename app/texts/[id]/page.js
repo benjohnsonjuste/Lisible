@@ -1,37 +1,55 @@
-// app/texts/[id]/page.js
-
 import React from "react";
 import { notFound } from "next/navigation";
+import mongoose from "mongoose";
 import TextPageClient from "./TextPageClient";
 
-// 1. Récupération des données (Côté Serveur)
+// Modèle de données (doit correspondre à tes autres routes)
+const TextSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  category: String,
+  authorName: String,
+  authorEmail: String,
+  imageBase64: String,
+  isConcours: Boolean,
+  concurrentId: String,
+  createdAt: { type: Date, default: Date.now },
+  likes: { type: Number, default: 0 },
+  views: { type: Number, default: 0 },
+  comments: { type: Array, default: [] }
+});
+
+const Text = mongoose.models.Text || mongoose.model("Text", TextSchema);
+
+// 1. Récupération des données (Côté Serveur) via MongoDB
 async function getFullData(id) {
   try {
-    // Récupérer le texte spécifique
-    const res = await fetch(
-      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${id}.json?t=${Date.now()}`,
-      { next: { revalidate: 60 } }
-    );
-    if (!res.ok) return null;
-
-    const fileData = await res.json();
-    const initialText = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
-
-    // Récupérer l'index pour les recommandations
-    const indexRes = await fetch(
-      `https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/index.json`,
-      { next: { revalidate: 3600 } }
-    );
-    
-    let allTexts = [];
-    if (indexRes.ok) {
-      const indexData = await indexRes.json();
-      allTexts = JSON.parse(decodeURIComponent(escape(atob(indexData.content))));
+    // Connexion à la base de données
+    if (mongoose.connection.readyState >= 1) {
+      // Déjà connecté
+    } else {
+      await mongoose.connect(process.env.MONGODB_URI);
     }
 
-    return { initialText, allTexts };
+    // Récupérer le texte spécifique par son ID MongoDB
+    // On utilise .lean() pour obtenir un objet JS pur (plus léger pour Next.js)
+    const work = await Text.findById(id).lean();
+    if (!work) return null;
+
+    // Récupérer tous les textes pour les recommandations (limité aux 50 derniers pour la performance)
+    const allTexts = await Text.find({})
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('title authorName category createdAt') // On ne prend que le nécessaire
+      .lean();
+
+    // Sécurisation des données pour le passage du Serveur au Client (JSON serializable)
+    return { 
+      initialText: JSON.parse(JSON.stringify(work)), 
+      allTexts: JSON.parse(JSON.stringify(allTexts)) 
+    };
   } catch (e) {
-    console.error("Fetch error:", e);
+    console.error("MongoDB Fetch error:", e);
     return null;
   }
 }
@@ -53,7 +71,9 @@ export default async function Page({ params }) {
   );
 }
 
-// Optionnel: Générer les chemins statiques pour les performances au build
+// Forcer le rendu dynamique pour toujours avoir les derniers likes/vues
+export const dynamic = 'force-dynamic';
+
 export async function generateStaticParams() {
   return [];
 }
