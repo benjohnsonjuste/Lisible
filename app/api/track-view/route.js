@@ -1,40 +1,49 @@
-// app/api/track-view/route.js
-import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 
-export const runtime = "edge"; // On conserve l'exécution aux frontières pour la vitesse
+const MONGODB_URI = process.env.MONGODB_URI;
 
-const redis = Redis.fromEnv();
+async function dbConnect() {
+  if (mongoose.connection.readyState >= 1) return;
+  return mongoose.connect(MONGODB_URI);
+}
+
+// Récupération du modèle Text (doit correspondre à ton schéma)
+const TextSchema = new mongoose.Schema({
+  views: { type: Number, default: 0 }
+});
+const Text = mongoose.models.Text || mongoose.model("Text", TextSchema);
 
 export async function POST(req) {
   try {
+    await dbConnect();
     const { textId } = await req.json();
 
     if (!textId) {
-      return NextResponse.json(
-        { error: "textId requis" }, 
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "textId requis" }, { status: 400 });
     }
 
-    // Pipeline Redis : incrémentation atomique (Vues par texte + Global)
-    const [newViewCount, totalGlobal] = await redis
-      .pipeline()
-      .incr(`views:${textId}`)
-      .incr("stats:total_views_global")
-      .exec();
+    // Incrémentation atomique du champ "views" dans MongoDB
+    const updatedText = await Text.findByIdAndUpdate(
+      textId,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+
+    if (!updatedText) {
+      return NextResponse.json({ error: "Texte non trouvé" }, { status: 404 });
+    }
 
     return NextResponse.json({ 
       success: true, 
-      views: newViewCount,
-      global: totalGlobal,
-      source: "edge_redis_fast" 
+      views: updatedText.views,
+      source: "mongodb_atomic" 
     }, { status: 200 });
 
   } catch (e) {
-    console.error("Redis Edge Error:", e);
+    console.error("MongoDB Tracking Error:", e);
     return NextResponse.json(
-      { error: "Redis Tracking Error" }, 
+      { error: "Tracking Error", details: e.message }, 
       { status: 500 }
     );
   }
