@@ -2,26 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { 
-  BookOpen, Users, Sparkles, ArrowRight, Star, 
-  MapPin, Copyright, Heart, Phone 
+  BookOpen, Users, Sparkles, ArrowRight, Star 
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import Navbar from "@/components/Navbar";
 
 export default function Home() {
-  const pathname = usePathname();
-  const currentYear = new Date().getFullYear();
-
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 font-sans selection:bg-teal-100 transition-colors duration-300">
+    <div className="bg-white dark:bg-slate-950 font-sans selection:bg-teal-100 transition-colors duration-300">
       
-      {/* --- NAVBAR (Gestion complète de l'Auth, Notifications & Sidebar) --- */}
-      <Navbar />
-
       {/* --- CONTENU PRINCIPAL --- */}
-      {/* pt-24 permet de laisser de la place sous la Navbar qui est en position: fixed */}
+      {/* pt-24 permet de laisser de la place sous la Navbar globale qui est en position: fixed */}
       <main className="pt-24 space-y-16 pb-12 animate-in fade-in duration-1000">
         
         {/* Section Hero - Identité Visuelle */}
@@ -96,72 +86,6 @@ export default function Home() {
           </p>
         </section>
       </main>
-
-      {/* --- FOOTER (Inclus directement pour garantir l'affichage) --- */}
-      <footer className="relative bg-white dark:bg-slate-950 pt-20 pb-10 border-t border-slate-50 dark:border-white/5 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-teal-500/20 to-transparent" />
-
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col items-center text-center space-y-6">
-            
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black italic tracking-tighter text-slate-900 dark:text-white">
-                Lisible<span className="text-teal-600">.</span>
-              </h2>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                Streaming Littéraire
-              </p>
-            </div>
-
-            <div className="h-10 w-[1px] bg-slate-100 dark:bg-white/5" aria-hidden="true" />
-
-            <div className="space-y-4">
-              <p className="text-sm text-slate-500 font-medium">
-                Une production de{" "}
-                <span className="text-slate-900 dark:text-white font-bold">La Belle Littéraire</span>
-              </p>
-              
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center justify-center gap-2 text-slate-400">
-                  <MapPin size={14} className="text-teal-500" />
-                  <address className="not-italic text-xs font-semibold tracking-wide uppercase">
-                    22 RUE A. LAZARRE, DELMAS, HAÏTI
-                  </address>
-                </div>
-                <div className="flex items-center justify-center gap-2 text-slate-400">
-                  <Phone size={14} className="text-teal-500" />
-                  <span className="text-xs font-semibold tracking-wide hover:text-slate-900 dark:hover:text-white transition-colors">
-                    (509) 4352 4498
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-10 w-full border-t border-slate-50 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                <Copyright size={12} />
-                {currentYear} Lisible — Tous droits réservés
-              </div>
-
-              <nav className="flex items-center gap-4 flex-wrap justify-center">
-                <Link href="/terms" className="text-[10px] font-black text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors uppercase tracking-widest">
-                  CGU
-                </Link>
-                <Link href="/confidentialite" className="text-[10px] font-black text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors uppercase tracking-widest">
-                  Confidentialité
-                </Link>
-                <Link href="/refund" className="text-[10px] font-black text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors uppercase tracking-widest">
-                  Remboursement
-                </Link>
-              </nav>
-
-              <p className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Fait avec <Heart size={12} className="text-pink-500 fill-pink-500" /> pour les mots
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
