@@ -1,0 +1,13 @@
+{
+  "title": "Hi",
+  "content": "Test",
+  "authorEmail": "user@example.com",
+  "penName": "Ma Plume",
+  "isConcours": false,
+  "createdAt": "2026-02-08T19:51:54.824Z",
+  "stats": {
+    "views": 0,
+    "likes": 0,
+    "certified": 0
+  }
+}
