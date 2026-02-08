@@ -8,7 +8,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Playfair_Display } from 'next/font/google';
 
-// Configuration des polices
 const inter = Inter({ 
   subsets: ['latin'], 
   variable: '--font-inter',
@@ -22,7 +21,6 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
-// Metadata (SEO & PWA)
 export const metadata = {
   title: "Lisible | L'Élite de la Plume",
   description: "Le sanctuaire numérique de la littérature moderne.",
@@ -38,7 +36,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${inter.variable} ${playfair.variable} h-full`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -58,19 +56,21 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 font-sans">
+      {/* Correction : flex flex-col min-h-screen pour organiser les composants */}
+      <body className="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 font-sans flex flex-col min-h-screen">
         <AuthProvider>
-          {/* Composants Globaux */}
+          {/* 1. Navbar toujours en haut */}
           <Navbar />
           
-          <main className="min-h-screen pt-4 pb-20">
+          {/* 2. Main prend tout l'espace restant (flex-1) */}
+          <main className="flex-1 w-full pt-16">
             {children}
           </main>
           
+          {/* 3. Footer et Prompt toujours à la suite du contenu */}
           <InstallPrompt />
           <Footer />
           
-          {/* Utilitaires */}
           <Toaster position="top-center" richColors closeButton expand={false} />
           <Analytics />
         </AuthProvider>
