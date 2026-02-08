@@ -1,4 +1,4 @@
-l"use client";
+"use client";
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UploadCloud, CheckCircle, AlertCircle, Loader2, Sparkles, Coins } from 'lucide-react';
