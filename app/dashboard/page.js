@@ -1,16 +1,17 @@
+// app/dashboard/page.jsx
 "use client";
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  Loader2, Send, FileText, UserCircle, 
+  Loader2, FileText, UserCircle, 
   Download, Bell, Users, Share2, 
   Maximize2, Minimize2, Wallet, 
-  TrendingUp, ShieldCheck, Sparkles,
+  ShieldCheck, Sparkles,
   Radio, Globe
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Utilitaire de formatage (à adapter selon ton lib/utils)
 const formatLi = (val) => Number(val || 0).toLocaleString();
 
 export default function AuthorDashboard() {
@@ -22,7 +23,6 @@ export default function AuthorDashboard() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   
-  // États pour le Live
   const [isLiveLoading, setIsLiveLoading] = useState(false);
   const [liveTitle, setLiveTitle] = useState("");
 
@@ -35,15 +35,12 @@ export default function AuthorDashboard() {
     "jeanpierreborlhaïniedarha@gmail.com"
   ];
 
-  // 1. Récupération des données fraîches depuis GitHub via ton API
   const fetchLatestData = useCallback(async (email) => {
     try {
       const res = await fetch(`/api/user-stats?email=${encodeURIComponent(email)}`);
-      
       if (res.ok) {
         const data = await res.json();
         setUser(data);
-        // On met à jour le localStorage pour garder la session synchro
         const stored = JSON.parse(localStorage.getItem("lisible_user") || "{}");
         localStorage.setItem("lisible_user", JSON.stringify({ ...stored, ...data }));
       }
@@ -72,14 +69,12 @@ export default function AuthorDashboard() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [router, fetchLatestData]);
 
-  // 2. Logique de lancement du Live
   const handleStartLive = async () => {
     if (!liveTitle.trim()) return toast.error("Donnez un titre à votre salon");
     setIsLiveLoading(true);
     const tid = toast.loading("Initialisation du flux direct...");
     
     try {
-      // Simulation ou appel à ta future route live
       const res = await fetch("/api/live/create-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,7 +98,6 @@ export default function AuthorDashboard() {
     }
   };
 
-  // 3. Logique de transfert de Li
   const handleTransfer = async () => {
     if (transfer.amount < 1000) return toast.error("Le minimum est de 1000 Li");
     const tid = toast.loading("Sécurisation du transfert...");
@@ -121,7 +115,7 @@ export default function AuthorDashboard() {
 
       if (res.ok) {
         toast.success("Li envoyés avec succès !", { id: tid });
-        fetchLatestData(user.email); // Rafraîchir le solde
+        fetchLatestData(user.email);
       } else { 
         const err = await res.json();
         toast.error(err.error || "Erreur de transfert", { id: tid }); 
@@ -161,10 +155,26 @@ export default function AuthorDashboard() {
 
   const isStaff = ADMIN_EMAILS.includes(user?.email?.toLowerCase().trim());
 
+  // Logique de découpage du nom pour le badge
+  const name = user.penName || user.name || "";
+  const words = name.split(" ");
+  const lines = [];
+  let currentLine = "";
+
+  words.forEach(word => {
+    if ((currentLine + word).length > 12) {
+      lines.push(currentLine.trim());
+      currentLine = word + " ";
+    } else {
+      currentLine += word + " ";
+    }
+  });
+  lines.push(currentLine.trim());
+  const finalLines = lines.slice(0, 3); // Max 3 lignes
+
   return (
-    <div className={`min-h-screen font-sans transition-all duration-1000 ${isFocusMode ? 'bg-[#F9F7F2] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
+    <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#F9F7F2] dark:bg-slate-950' : 'bg-[#FCFBF9] dark:bg-slate-950'}`}>
       
-      {/* Barre de progression de lecture/scroll */}
       <div className="fixed top-0 left-0 w-full h-[2px] z-[100] bg-teal-600/20">
         <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
       </div>
@@ -175,7 +185,6 @@ export default function AuthorDashboard() {
 
       <div className="max-w-2xl mx-auto px-6 py-12 sm:py-20">
         
-        {/* HEADER SECTION */}
         <header className={`mb-16 transition-all duration-700 ${isFocusMode ? 'opacity-20 blur-sm scale-95' : 'opacity-100'}`}>
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-4">
@@ -221,7 +230,6 @@ export default function AuthorDashboard() {
 
         <section className="space-y-12">
           
-          {/* LISIBLE LIVE MODULE */}
           <div className={`bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/20 dark:to-slate-900 p-8 rounded-[3rem] border border-rose-100 dark:border-rose-900/30 shadow-xl transition-all duration-700 ${isFocusMode ? 'opacity-0 scale-95' : 'opacity-100'}`}>
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-rose-600">
@@ -239,8 +247,8 @@ export default function AuthorDashboard() {
                   type="text" 
                   value={liveTitle}
                   onChange={(e) => setLiveTitle(e.target.value)}
-                  placeholder="Sujet de votre direct (ex: Lecture de poèmes...)" 
-                  className="w-full p-5 bg-white dark:bg-slate-800 rounded-2xl border-none text-sm placeholder:text-slate-300 focus:ring-2 ring-rose-500 outline-none transition-all shadow-inner"
+                  placeholder="Sujet de votre direct..." 
+                  className="w-full p-5 bg-white dark:bg-slate-800 rounded-2xl border-none text-sm focus:ring-2 ring-rose-500 outline-none shadow-inner"
                 />
                 <Globe className="absolute right-5 top-5 text-slate-200" size={18} />
               </div>
@@ -255,9 +263,8 @@ export default function AuthorDashboard() {
             </div>
           </div>
 
-          {/* ACTIONS RAPIDES */}
           <div className={`grid grid-cols-2 gap-4 transition-all duration-700 ${isFocusMode ? 'opacity-0 translate-y-10' : ''}`}>
-            <button onClick={() => router.push("/publish")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] hover:border-teal-500 transition-all group">
+            <button onClick={() => router.push("/publier")} className="flex flex-col gap-4 p-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] hover:border-teal-500 transition-all group">
               <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 w-fit rounded-2xl group-hover:scale-110 transition-all">
                 <Sparkles size={20} />
               </div>
@@ -271,41 +278,55 @@ export default function AuthorDashboard() {
             </button>
           </div>
 
-          {/* TRANSFERT SECTION */}
           <div className="bg-slate-900 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-8 flex items-center gap-2 text-teal-400">
               <Wallet size={14} /> Transfert Li Express
             </h3>
             <div className="space-y-4 relative z-10">
               <input type="email" placeholder="Email destinataire" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, email: e.target.value})}/>
-              <input type="number" placeholder="Montant" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, amount: e.target.value})}/>
+              <input type="number" placeholder="Montant" className="w-full p-4 bg-white/10 rounded-2xl border-none text-sm placeholder:text-white/30 focus:ring-2 ring-teal-500 outline-none" onChange={(e) => setTransfer({...transfer, amount: Number(e.target.value)})}/>
               <button onClick={handleTransfer} className="w-full bg-teal-500 text-slate-900 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white transition-colors active:scale-95">Confirmer l'envoi</button>
             </div>
           </div>
 
-          {/* SVG BADGE HIDDEN */}
           <div className="hidden">
             <svg ref={badgeRef} width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
               <rect width="1024" height="1024" fill="#0f172a"/>
               <rect x="50" y="50" width="924" height="924" fill="none" stroke="#14b8a6" strokeWidth="15"/>
-              <text x="512" y="380" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
-              <text x="512" y="550" fontFamily="serif" fontSize="100" fontWeight="900" fontStyle="italic" fill="white" textAnchor="middle">{user.penName || user.name}</text>
+              <text x="512" y="300" fontFamily="sans-serif" fontSize="30" fontWeight="900" fill="#14b8a6" textAnchor="middle" style={{letterSpacing: '20px'}}>COMPTE OFFICIEL</text>
+              
+              <g transform="translate(512, 500)">
+                {finalLines.map((line, i) => (
+                  <text
+                    key={i}
+                    y={i * 110 - ((finalLines.length - 1) * 55)}
+                    fontFamily="serif"
+                    fontSize="100"
+                    fontWeight="900"
+                    fontStyle="italic"
+                    fill="white"
+                    textAnchor="middle"
+                  >
+                    {line}
+                  </text>
+                ))}
+              </g>
+
               <circle cx="512" cy="850" r="40" fill="#14b8a6" />
               <text x="512" y="865" fontFamily="sans-serif" fontSize="40" fill="white" textAnchor="middle">✓</text>
             </svg>
           </div>
 
-          {/* FOOTER ACTIONS */}
           <div className={`flex flex-col items-center gap-6 transition-all duration-700 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
             <div className="flex gap-4">
                <button onClick={() => {navigator.clipboard.writeText("https://lisible.biz"); toast.success("Lien copié !");}} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm active:scale-90 transition-transform"><Share2 size={20} /></button>
                <button onClick={handleDownloadBadge} className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-teal-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95">
-                 <Download size={16} /> Badge Auteur
+                 <Download size={16} /> Télécharger mon badge
                </button>
             </div>
             <div className="flex items-center gap-2 opacity-40">
               <ShieldCheck size={14} className="text-teal-600" />
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">v3.1.0 Direct Ready • 2026</p>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Compte Officiel• 2026</p>
             </div>
           </div>
         </section>
