@@ -60,12 +60,17 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 font-sans">
         <AuthProvider>
+          {/* Composants Globaux */}
           <Navbar />
+          
           <main className="min-h-screen pt-4 pb-20">
             {children}
           </main>
+          
           <InstallPrompt />
           <Footer />
+          
+          {/* Utilitaires */}
           <Toaster position="top-center" richColors closeButton expand={false} />
           <Analytics />
         </AuthProvider>
