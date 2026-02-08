@@ -1,16 +1,11 @@
 // components/AppIcon.jsx
+"use client";
+
 import React from "react";
 
 /**
  * Barrel qui réexporte quelques icônes courantes depuis lucide-react,
  * + default export : AppIcon (simple fallback image/svg).
- *
- * Cela permet d'utiliser :
- *   import { PenTool } from "@/components/AppIcon"
- * ou
- *   import AppIcon from "@/components/AppIcon"
- *
- * Ajuste la liste d'icônes exportées si tu en utilises d'autres.
  */
 export {
   PenTool,
@@ -31,7 +26,14 @@ export default function AppIcon({ src, alt = "icon", className, size = 24, ...pr
   if (src) {
     return (
       // simple image logo
-      <img src={src} alt={alt} width={size} height={size} className={className} {...props} />
+      <img 
+        src={src} 
+        alt={alt} 
+        width={size} 
+        height={size} 
+        className={className} 
+        {...props} 
+      />
     );
   }
 
