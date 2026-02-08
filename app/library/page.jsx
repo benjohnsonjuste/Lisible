@@ -1,159 +1,190 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { 
-  Search, BookOpen, Clock, Sparkles, 
-  ChevronRight, Filter, TrendingUp 
-} from 'lucide-react';
-import Link from 'next/link';
+  Eye, Heart, Loader2, Share2, Trophy, ShieldCheck, 
+  Sparkles, Search, ChevronDown, Filter 
+} from "lucide-react";
+import { toast } from "sonner";
 
-export default function LibraryPage() {
-  const [works, setWorks] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function Bibliotheque({ initialTexts = [], initialCursor = null }) {
+  const [texts, setTexts] = useState(initialTexts);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  
+  // --- Nouveaux états de filtrage ---
+  const [activeGenre, setActiveGenre] = useState("Tous");
+  const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
   useEffect(() => {
-    async function fetchLibrary() {
-      try {
-        // On récupère l'index central pour la performance
-        const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/index.json?t=${Date.now()}`, { cache: 'no-store' });
-        const data = await res.json();
-        // Décodage Base64 du contenu de l'index
-        const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-        setWorks(content.reverse()); // Les plus récents en premier
-      } catch (err) {
-        console.error("Erreur de chargement de l'index:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchLibrary();
+    if (texts.length === 0) fetchInitial();
   }, []);
 
-  const categories = ["All", "Poetry", "Novel", "Essay", "Battle"];
+  const fetchInitial = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/texts?limit=12&t=${Date.now()}`);
+      const json = await res.json();
+      if (json.data) {
+        setTexts(json.data);
+        setCursor(json.nextCursor);
+      }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
 
-  const filteredWorks = works.filter(w => {
-    const matchesSearch = w.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          w.author.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = activeCategory === "All" || w.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const loadMore = async () => {
+    if (!cursor || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/texts?limit=12&lastId=${cursor}`);
+      const json = await res.json();
+      if (json.data?.length > 0) {
+        setTexts((prev) => [...prev, ...json.data]);
+        setCursor(json.nextCursor);
+      } else { setCursor(null); }
+    } catch (e) { toast.error("Fin des archives."); } finally { setLoading(false); }
+  };
 
-  if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-white">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Syncing Library...</p>
-      </div>
-    </div>
-  );
+  // --- Logique de filtrage combinée ---
+  const filteredTexts = useMemo(() => {
+    return texts.filter(t => {
+      const matchesSearch = 
+        t.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.authorName?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesGenre = 
+        activeGenre === "Tous" || 
+        (t.genre === activeGenre || t.category === activeGenre);
+
+      return matchesSearch && matchesGenre;
+    });
+  }, [texts, searchTerm, activeGenre]);
 
   return (
-    <div className="min-h-screen bg-white pb-20">
-      {/* Header Section */}
-      <header className="max-w-7xl mx-auto px-6 pt-16 md:pt-24 mb-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-4">
-            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter text-slate-900 leading-[0.8]">
-              Library<span className="text-teal-600">.</span>
-            </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600 flex items-center gap-2">
-              <TrendingUp size={14} /> Explore the data lake
-            </p>
-          </div>
-
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search a masterpiece..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl md:rounded-3xl pl-14 pr-6 py-4 md:py-5 text-sm font-bold outline-none focus:border-teal-500/20 transition-all"
-            />
-          </div>
+    <div className="max-w-7xl mx-auto px-6 py-16 font-sans">
+      
+      {/* Barre de Recherche & Filtres */}
+      <div className="space-y-10 mb-20">
+        <div className="relative max-w-2xl mx-auto group">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
+          <input
+            type="text"
+            placeholder="Rechercher une œuvre, une plume..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-slate-50 border-none rounded-[2.5rem] pl-16 pr-8 py-6 text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-teal-500/5 transition-all shadow-sm"
+          />
         </div>
 
-        {/* Categories Bar */}
-        <div className="flex gap-3 mt-12 overflow-x-auto pb-4 no-scrollbar">
-          {categories.map((cat) => (
+        {/* Chips de filtrage */}
+        <div className="flex flex-wrap justify-center gap-3">
+          {genres.map((g) => (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                activeCategory === cat 
-                ? 'bg-slate-950 text-white shadow-xl shadow-slate-200' 
-                : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+              key={g}
+              onClick={() => setActiveGenre(g)}
+              className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border ${
+                activeGenre === g
+                  ? "bg-slate-900 border-slate-900 text-white shadow-xl scale-105"
+                  : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
               }`}
             >
-              {cat}
+              {g}
             </button>
           ))}
         </div>
-      </header>
+      </div>
 
-      {/* Grid Section */}
-      <main className="max-w-7xl mx-auto px-6">
-        {filteredWorks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
-            {filteredWorks.map((work) => (
-              <Link 
-                href={`/texts/${work.id}`} 
-                key={work.id}
-                className="group relative bg-white border border-slate-100 p-8 rounded-[3rem] shadow-sm hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-2 transition-all duration-500"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="bg-teal-50 text-teal-700 px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-tighter border border-teal-100/50">
-                    {work.category}
+      {/* Grille de résultats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
+        {filteredTexts.map((item) => {
+          const isConcours = item.isConcours === true || item.genre === "Battle Poétique";
+          const isAdmin = ["adm.lablitteraire7@gmail.com", "jb7management@gmail.com"].includes(item.authorEmail);
+
+          return (
+            <Link href={`/texts/${item.id}`} key={item.id} className="group">
+              <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
+                isConcours ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
+              } hover:-translate-y-2 hover:shadow-2xl`}>
+                
+                {/* Visual Header */}
+                <div className="h-60 bg-slate-100 relative overflow-hidden">
+                  <img
+                    src={item.imageBase64 || `https://lisible.biz/api/placeholder/${item.id}`}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                    onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
+                  />
+                  
+                  <div className="absolute top-6 left-6 flex flex-col gap-2">
+                    {isConcours && (
+                      <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                        <Trophy size={12} /> Duel
+                      </span>
+                    )}
+                    {isAdmin && (
+                      <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                        <ShieldCheck size={12} /> Staff
+                      </span>
+                    )}
                   </div>
-                  {work.isConcours && (
-                    <div className="flex items-center gap-1 text-amber-500 animate-pulse">
-                      <Sparkles size={14} />
-                      <span className="text-[8px] font-black uppercase">Contest</span>
-                    </div>
-                  )}
                 </div>
 
-                <h3 className="text-2xl md:text-3xl font-black italic text-slate-900 tracking-tighter mb-4 group-hover:text-teal-600 transition-colors line-clamp-2">
-                  {work.title}
-                </h3>
-
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden border border-slate-50">
-                      <img 
-                        src={`https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${work.authorEmail}`} 
-                        alt={work.author} 
-                      />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      By {work.author}
+                {/* Content */}
+                <div className="p-10 flex-grow flex flex-col">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">
+                      {item.genre || "Écrit"}
+                    </span>
+                    <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                    <span className="text-[10px] font-bold text-slate-300">
+                      {item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
                   </div>
 
-                  <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-slate-300">
-                      <div className="flex items-center gap-1 text-[9px] font-bold">
-                        <Clock size={12} /> {new Date(work.createdAt).toLocaleDateString()}
+                  <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
+                    {item.title}
+                  </h2>
+
+                  <p className="text-slate-500 line-clamp-2 font-serif italic mb-10 text-[17px] leading-relaxed">
+                    {item.content?.replace(/<[^>]*>/g, "") || "Plonger dans l'œuvre..."}
+                  </p>
+
+                  <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-[11px] font-black">
+                        {item.authorName?.charAt(0).toUpperCase()}
                       </div>
+                      <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">
+                        {item.authorName}
+                      </span>
                     </div>
-                    <div className="w-10 h-10 bg-slate-950 text-white rounded-2xl flex items-center justify-center group-hover:bg-teal-600 transition-colors">
-                      <ChevronRight size={18} />
+                    
+                    <div className="flex gap-4 text-slate-300 text-[11px] font-black">
+                      <span className="flex items-center gap-1.5"><Eye size={16} /> {item.views || 0}</span>
+                      <span className="flex items-center gap-1.5 text-rose-500"><Heart size={16} fill="currentColor" /> {item.totalLikes || 0}</span>
                     </div>
                   </div>
                 </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="py-20 text-center space-y-4">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-              <BookOpen className="text-slate-200" size={32} />
-            </div>
-            <p className="text-slate-400 font-black italic uppercase text-xs tracking-widest">No manuscripts found in this sector</p>
-          </div>
-        )}
-      </main>
+              </article>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Pagination Contextuelle */}
+      {cursor && searchTerm === "" && activeGenre === "Tous" && (
+        <div className="mt-24 flex justify-center">
+          <button
+            onClick={loadMore}
+            disabled={loading}
+            className="group flex items-center gap-4 px-14 py-6 bg-slate-900 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : "Explorer plus"}
+            <ChevronDown size={20} className="group-hover:translate-y-1 transition-transform" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
