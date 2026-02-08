@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation"; // Changé pour navigation
+import { useRouter } from "next/navigation"; 
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { 
@@ -40,7 +40,7 @@ export default function TextPageClient({ initialText, id, allTexts }) {
 
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
-  // Analyse du Mood
+  // Analyse du Mood (Inchangé)
   const mood = useMemo(() => {
     if (!text?.content) return null;
     const content = text.content.toLowerCase();
@@ -55,17 +55,17 @@ export default function TextPageClient({ initialText, id, allTexts }) {
     return winner.score > 0 ? winner : null;
   }, [text?.content]);
 
-  // Sync Data
+  // Sync Data ADAPTÉ POUR MONGODB
   const fetchData = useCallback(async (tid) => {
     if (!tid) return;
     try {
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/publications/${tid}.json?t=${Date.now()}`);
+      // On appelle l'API locale qui communique avec MongoDB
+      const res = await fetch(`/api/texts/${tid}`);
       if (res.ok) {
         const data = await res.json();
-        const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-        setText(content);
+        setText(data);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Erreur de rafraîchissement MongoDB:", e); }
   }, []);
 
   useEffect(() => {
@@ -93,11 +93,11 @@ export default function TextPageClient({ initialText, id, allTexts }) {
           const data = await res.json();
           localStorage.setItem(viewKey, "true");
           setLiveViews(data.views);
-          setLiveLikes(data.likes || initialText.totalLikes || 0);
+          setLiveLikes(data.likes || initialText.likes || initialText.totalLikes || 0);
         }
       });
     }
-  }, [id, initialText.totalLikes]);
+  }, [id, initialText.totalLikes, initialText.likes]);
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
 
@@ -139,7 +139,7 @@ export default function TextPageClient({ initialText, id, allTexts }) {
                   }} 
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black hover:border-rose-500 transition-colors"
                 >
-                  <Heart size={14} className={isLiking ? "animate-ping" : ""} /> {liveLikes || text.totalLikes || 0}
+                  <Heart size={14} className={isLiking ? "animate-ping" : ""} /> {liveLikes || text.likes || text.totalLikes || 0}
                 </button>
               </>
             )}
@@ -171,7 +171,6 @@ export default function TextPageClient({ initialText, id, allTexts }) {
           <button onClick={() => setIsReportOpen(true)} className="flex items-center gap-2 text-slate-300 hover:text-rose-500 transition-colors text-[9px] font-black uppercase"><AlertTriangle size={14} /> Signaler un contenu inapproprié</button>
         </article>
 
-        {/* Pied de page et interactions */}
         <div className={isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100 transition-all duration-700'}>
           <div className="my-12"><InTextAd /></div>
           {!isStaffText && (
