@@ -17,7 +17,7 @@ const TextSchema = new mongoose.Schema({
   category: { type: String, default: "Poésie" },
   authorName: { type: String, required: true },
   authorEmail: { type: String, required: true },
-  imageBase64: { type: String }, // L'image est stockée ici en texte
+  imageBase64: { type: String }, 
   isConcours: { type: Boolean, default: false },
   concurrentId: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
@@ -25,17 +25,14 @@ const TextSchema = new mongoose.Schema({
   views: { type: Number, default: 0 }
 });
 
-// On récupère le modèle existant ou on en crée un nouveau
 const Text = mongoose.models.Text || mongoose.model("Text", TextSchema);
 
 // --- FONCTION DE PUBLICATION ---
 export async function POST(req) {
   try {
     await dbConnect();
-
     const body = await req.json();
     
-    // On nettoie les données reçues
     const payload = {
       title: body.title,
       content: body.content,
@@ -47,7 +44,6 @@ export async function POST(req) {
       concurrentId: body.concurrentId ? body.concurrentId.toUpperCase() : null,
     };
 
-    // Création dans MongoDB
     const newText = await Text.create(payload);
 
     return NextResponse.json({ 
@@ -57,11 +53,38 @@ export async function POST(req) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Erreur MongoDB:", error.message);
+    console.error("Erreur MongoDB POST:", error.message);
     return NextResponse.json({ 
       success: false, 
       error: "Erreur lors de l'enregistrement",
       details: error.message 
     }, { status: 500 });
+  }
+}
+
+// --- FONCTION DE MISE À JOUR (LIKES) ---
+export async function PATCH(req) {
+  try {
+    await dbConnect();
+    const { id, action } = await req.json();
+
+    if (action === "like") {
+      const updatedText = await Text.findByIdAndUpdate(
+        id,
+        { $inc: { likes: 1 } }, // Incrémente de 1
+        { new: true }
+      );
+
+      return NextResponse.json({ 
+        success: true, 
+        count: updatedText.likes 
+      }, { status: 200 });
+    }
+
+    return NextResponse.json({ error: "Action non reconnue" }, { status: 400 });
+
+  } catch (error) {
+    console.error("Erreur MongoDB PATCH:", error.message);
+    return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
   }
 }
