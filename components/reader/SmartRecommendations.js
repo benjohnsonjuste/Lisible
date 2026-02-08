@@ -1,15 +1,16 @@
 "use client";
 import React, { useMemo } from "react";
 import Link from "next/link"; 
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight, Compass, Feather } from "lucide-react";
 
 export default function SmartRecommendations({ currentId, allTexts = [] }) {
   const recommendations = useMemo(() => {
     if (!allTexts || !allTexts.length) return [];
     
     // Filtre pour exclure le texte actuel et sélectionne 2 textes au hasard
+    // Ajout d'une sécurité : vérifie que les objets ont bien un ID et un titre
     return allTexts
-      .filter(t => t.id !== currentId)
+      .filter(t => t.id !== currentId && t.title)
       .sort(() => 0.5 - Math.random())
       .slice(0, 2);
   }, [currentId, allTexts]);
@@ -17,47 +18,76 @@ export default function SmartRecommendations({ currentId, allTexts = [] }) {
   if (recommendations.length === 0) return null;
 
   return (
-    <div className="mt-24 border-t border-slate-100 dark:border-slate-800 pt-16 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-      <div className="flex flex-col items-center mb-12">
-        <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-2xl mb-4 group hover:rotate-12 transition-transform">
-          <Sparkles size={20} className="text-teal-600 animate-pulse" />
+    <div className="mt-32 border-t border-slate-100 pt-24 animate-in fade-in slide-in-from-bottom-12 duration-1000">
+      
+      <div className="flex flex-col items-center mb-16 space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="h-px w-8 bg-slate-200" />
+          <div className="p-4 bg-white rounded-full shadow-xl border border-slate-50 text-teal-600 group hover:rotate-[360deg] transition-transform duration-1000">
+            <Compass size={22} className="animate-pulse" />
+          </div>
+          <div className="h-px w-8 bg-slate-200" />
         </div>
-        <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 text-center">
-          Poursuivre la traversée
-        </h4>
+        <div className="text-center">
+          <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-400">
+            Poursuivre la traversée
+          </h4>
+          <p className="text-[9px] font-bold text-teal-600/50 uppercase tracking-widest mt-2">Résonances suggérées</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {recommendations.map((rec) => (
           <Link 
             href={`/texts/${rec.id}`} 
             key={rec.id} 
-            className="group relative block bg-white dark:bg-slate-900 p-8 md:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 hover:border-teal-500/30 transition-all duration-500 hover:-translate-y-2 shadow-sm hover:shadow-2xl overflow-hidden"
+            className="group relative block bg-white p-10 md:p-12 rounded-[3.5rem] border border-slate-100 transition-all duration-700 hover:-translate-y-3 shadow-sm hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] overflow-hidden"
           >
-            {/* Indicateur de mouvement */}
-            <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
-              <ArrowRight size={24} className="text-teal-600 -rotate-45" />
+            {/* Décoration d'arrière-plan */}
+            <div className="absolute -top-6 -right-6 text-slate-50 opacity-0 group-hover:opacity-100 group-hover:scale-150 transition-all duration-1000 rotate-12">
+               <Feather size={120} />
             </div>
 
-            <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest block mb-4 opacity-70">
-              Écho Littéraire
-            </span>
-            
-            <h5 className="font-serif text-2xl font-black italic leading-tight group-hover:text-teal-600 transition-colors text-slate-900 dark:text-slate-100 tracking-tighter mb-6">
-              {rec.title}
-            </h5>
-            
-            <div className="flex items-center gap-3">
-              <div className="h-[2px] w-8 bg-slate-100 dark:bg-slate-800 group-hover:w-16 group-hover:bg-teal-500 transition-all duration-700" />
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                Scribe : <span className="text-slate-900 dark:text-slate-200">{rec.authorName || "Plume Anonyme"}</span>
-              </p>
+            {/* Bouton d'action flottant */}
+            <div className="absolute top-10 right-10 w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 shadow-2xl">
+              <ArrowRight size={20} />
             </div>
 
-            {/* Subtle Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/0 via-transparent to-transparent opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none" />
+            <header className="relative z-10 space-y-6">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
+                <span className="text-[10px] font-black text-teal-600 uppercase tracking-[0.2em]">
+                  Écho {rec.category || rec.genre || "Littéraire"}
+                </span>
+              </div>
+              
+              <h5 className="font-serif text-3xl font-black italic leading-[0.9] text-slate-900 tracking-tighter group-hover:text-teal-600 transition-colors duration-500">
+                {rec.title}
+              </h5>
+              
+              <div className="pt-8 border-t border-slate-50 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Signé par</span>
+                  <span className="text-xs font-bold text-slate-700">{rec.authorName || "Une Plume Lisible"}</span>
+                </div>
+                
+                <div className="flex items-center gap-1 text-[10px] font-black text-slate-300">
+                   <Sparkles size={12} className="text-amber-400" />
+                   {Math.floor(Math.random() * 5 + 1)} MIN
+                </div>
+              </div>
+            </header>
+
+            {/* Overlay de gradient subtil au survol */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-teal-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
           </Link>
         ))}
+      </div>
+
+      <div className="mt-20 text-center">
+        <Link href="/bibliotheque" className="inline-flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300 hover:text-teal-600 transition-colors group">
+          Exploration intégrale <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+        </Link>
       </div>
     </div>
   );
