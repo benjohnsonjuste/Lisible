@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, loading, error }}>
+      {/* On affiche children sans condition pour libérer le Header/Footer */}
       {children}
     </AuthContext.Provider>
   );
