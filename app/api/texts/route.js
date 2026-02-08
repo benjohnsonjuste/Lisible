@@ -1,112 +1,67 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
-// --- CONFIGURATION MONGODB ---
+// 1. Gestion de la connexion (Stable pour Vercel)
 const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("Veuillez définir la variable MONGODB_URI dans votre fichier .env");
-}
-
-/**
- * Connexion à la base de données (Singleton pattern pour Next.js)
- */
-let cached = global.mongoose;
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
 async function dbConnect() {
-  if (cached.conn) return cached.conn;
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((m) => m);
-  }
-  cached.conn = await cached.promise;
-  return cached.conn;
+  if (mongoose.connection.readyState >= 1) return;
+  if (!MONGODB_URI) throw new Error("La variable MONGODB_URI est absente des réglages Vercel.");
+  return mongoose.connect(MONGODB_URI);
 }
 
-// --- MODÈLE DE DONNÉES (Schema) ---
-// On définit le modèle ici pour éviter les erreurs de compilation Next.js
+// 2. Modèle Unique (Identique pour tout le site)
 const TextSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
   category: { type: String, default: "Poésie" },
   authorName: { type: String, required: true },
   authorEmail: { type: String, required: true },
-  imageBase64: { type: String }, // Stockage simple de l'image
+  imageBase64: { type: String }, // L'image est stockée ici en texte
   isConcours: { type: Boolean, default: false },
-  concurrentId: { type: String },
+  concurrentId: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
-  likes: { type: Array, default: [] },
+  likes: { type: Number, default: 0 },
   views: { type: Number, default: 0 }
 });
 
-// Empêche la re-déclaration du modèle lors du Hot Reload
+// On récupère le modèle existant ou on en crée un nouveau
 const Text = mongoose.models.Text || mongoose.model("Text", TextSchema);
 
-// --- HANDLER POST ---
+// --- FONCTION DE PUBLICATION ---
 export async function POST(req) {
   try {
     await dbConnect();
 
     const body = await req.json();
-    const { 
-      title, 
-      content, 
-      category, 
-      authorName, 
-      authorEmail, 
-      imageBase64, 
-      isConcours, 
-      concurrentId 
-    } = body;
+    
+    // On nettoie les données reçues
+    const payload = {
+      title: body.title,
+      content: body.content,
+      category: body.category,
+      authorName: body.authorName,
+      authorEmail: body.authorEmail,
+      imageBase64: body.imageBase64,
+      isConcours: body.isConcours || false,
+      concurrentId: body.concurrentId ? body.concurrentId.toUpperCase() : null,
+    };
 
-    // Validation basique côté serveur
-    if (!title || !content || !authorEmail) {
-      return NextResponse.json(
-        { error: "Données manquantes (titre, contenu ou email)." },
-        { status: 400 }
-      );
-    }
+    // Création dans MongoDB
+    const newText = await Text.create(payload);
 
-    // Création de l'entrée en base de données
-    const newText = await Text.create({
-      title,
-      content,
-      category,
-      authorName,
-      authorEmail,
-      imageBase64,
-      isConcours,
-      concurrentId: concurrentId ? concurrentId.toUpperCase() : null,
-    });
-
-    // Réponse de succès
-    return NextResponse.json({
-      success: true,
-      message: "Œuvre enregistrée avec succès",
-      id: newText._id
+    return NextResponse.json({ 
+      success: true, 
+      id: newText._id,
+      message: "L'œuvre a rejoint la bibliothèque." 
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Erreur API Texts:", error);
-    
-    // On renvoie TOUJOURS du JSON, même en cas d'erreur
+    console.error("Erreur MongoDB:", error.message);
     return NextResponse.json({ 
-      success: false,
-      error: "Erreur interne du serveur lors de la publication.",
+      success: false, 
+      error: "Erreur lors de l'enregistrement",
       details: error.message 
     }, { status: 500 });
-  }
-}
-
-// --- HANDLER GET (Optionnel : pour lister les textes) ---
-export async function GET() {
-  try {
-    await dbConnect();
-    const texts = await Text.find({}).sort({ createdAt: -1 }).limit(20);
-    return NextResponse.json(texts);
-  } catch (error) {
-    return NextResponse.json({ error: "Impossible de récupérer les textes" }, { status: 500 });
   }
 }
