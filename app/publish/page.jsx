@@ -1,94 +1,83 @@
 "use client";
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, BookOpen, Sparkles, Loader2 } from 'lucide-react';
+import { UploadCloud, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PublishPage() {
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    isConcours: false
-  });
+  const [loading, setLoading] = useState(false);
+  const [content, setContent] = useState('');
 
-  const handlePublish = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
+    const formData = new FormData(e.target);
+    const payload = {
+      title: formData.get('title'),
+      category: formData.get('category'),
+      isConcours: formData.get('isConcours') === 'on',
+      content: content,
+      penName: "Current User", // To be replaced by session
+      authorEmail: "user@lisible.ht"
+    };
 
     try {
-      const res = await fetch('/api/publish', {
+      const res = await fetch('/api/github-db', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          authorEmail: "user@example.com", // À récupérer via ta session/auth
-          penName: "Ma Plume" 
-        }),
+        body: JSON.stringify(payload)
       });
-
-      const result = await res.json();
-      if (result.success) {
-        toast.success("Texte publié avec succès !");
-        router.push('/bibliotheque');
-      } else {
-        throw new Error(result.error);
+      if (res.ok) {
+        toast.success("Work published to the Data Lake!");
+        router.push('/library');
       }
     } catch (err) {
-      toast.error("Échec de la publication");
+      toast.error("Cloud synchronization failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-12">
-          <h1 className="text-5xl font-black italic tracking-tighter text-slate-900">Publier.</h1>
-          <p className="text-teal-600 font-bold uppercase text-[10px] tracking-widest mt-2 flex items-center gap-2">
-            <Sparkles size={14}/> Partagez votre univers au monde
-          </p>
-        </header>
-
-        <form onSubmit={handlePublish} className="space-y-8">
+    <div className="max-w-4xl mx-auto py-20 px-6">
+      <form onSubmit={handleSubmit} className="space-y-12">
+        <div className="space-y-4">
           <input 
-            type="text"
-            placeholder="Titre de votre œuvre..."
-            className="w-full text-4xl font-bold outline-none border-b border-slate-100 pb-4 focus:border-teal-500 transition-colors"
-            onChange={(e) => setFormData({...formData, title: e.target.value})}
+            name="title"
+            className="text-6xl font-black italic tracking-tighter w-full outline-none border-b-4 border-slate-50 focus:border-teal-500 transition-all"
+            placeholder="Work Title"
             required
           />
+          <select name="category" className="w-full p-4 bg-slate-50 rounded-xl font-bold text-slate-500">
+            <option value="Poetry">Poetry</option>
+            <option value="Novel">Novel</option>
+            <option value="Essay">Essay</option>
+            <option value="Battle">Battle</option>
+          </select>
+        </div>
 
-          <textarea 
-            placeholder="Écrivez ici..."
-            className="w-full h-96 text-lg leading-relaxed outline-none resize-none text-slate-700"
-            onChange={(e) => setFormData({...formData, content: e.target.value})}
-            required
-          />
+        <textarea 
+          onChange={(e) => setContent(e.target.value)}
+          className="w-full h-[500px] text-xl font-serif leading-relaxed outline-none bg-slate-50/30 p-8 rounded-[3rem] border border-transparent focus:border-slate-100"
+          placeholder="Start your masterpiece here..."
+          required
+        />
 
-          <div className="flex items-center justify-between bg-slate-50 p-6 rounded-3xl">
-            <div className="flex items-center gap-4">
-              <input 
-                type="checkbox" 
-                id="concours"
-                className="w-5 h-5 accent-teal-600"
-                onChange={(e) => setFormData({...formData, isConcours: e.target.checked})}
-              />
-              <label htmlFor="concours" className="text-sm font-bold text-slate-600">Participer au concours en cours</label>
-            </div>
+        <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input type="checkbox" name="isConcours" className="w-6 h-6 rounded-full accent-teal-600" />
+            <span className="font-black italic uppercase text-xs text-slate-400 group-hover:text-slate-900">Enter this work into the current contest</span>
+          </label>
 
-            <button 
-              disabled={loading}
-              className="bg-slate-950 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center gap-3 hover:bg-teal-600 transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="animate-spin" size={16}/> : <Send size={16}/>}
-              Mettre en ligne
-            </button>
-          </div>
-        </form>
-      </div>
+          <button 
+            disabled={loading}
+            className="bg-slate-950 text-white px-12 py-5 rounded-full font-black uppercase text-xs tracking-[0.2em] hover:bg-teal-600 transition-all disabled:opacity-20"
+          >
+            {loading ? "Committing to GitHub..." : "Publier"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
