@@ -24,6 +24,7 @@
     "canvas-confetti": "latest",
     "jspdf": "latest",
     "react": "18.2.0",
+    "mongoose": "^8.0.0",
     "react-onesignal": "latest",
     "nodemailer": "^6.9.13",
     "@octokit/rest": "^20.1.1",
