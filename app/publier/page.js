@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
-import WorkForm from "@/components/WorkForm"; // Ajuste le chemin selon ton dossier components
-import { PenTool, Sparkles } from "lucide-react";
+import WorkForm from "@/components/WorkForm";
+import { Sparkles } from "lucide-react";
 
 export default function PublierPage() {
   return (
@@ -21,9 +21,11 @@ export default function PublierPage() {
 
         <div className="bg-white p-2 rounded-[3rem] shadow-2xl shadow-slate-200/50">
           <div className="bg-[#FCFBF9] border border-slate-50 rounded-[2.5rem] p-8 md:p-12">
+            {/* Ajout explicite de la route API pour MongoDB */}
             <WorkForm 
               submitLabel="Publier l'œuvre" 
               isConcours={false} 
+              onSubmitApi="/api/texts" 
             />
           </div>
         </div>
