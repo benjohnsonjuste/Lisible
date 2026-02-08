@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins
+  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,10 +12,10 @@ export default function BattlePoetique() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fonction de tri unifiée pour le leaderboard
-  const sortBattleTexts = (data) => {
+  // Logique de tri unifiée : Likes > Certifications > Date
+  const sortBattleTexts = useCallback((data) => {
     return data
-      .filter(item => item.isConcours === true || item.isConcours === "true")
+      .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique")
       .sort((a, b) => {
         const likesA = Number(a.totalLikes || a.likes || 0);
         const likesB = Number(b.totalLikes || b.likes || 0);
@@ -27,38 +27,34 @@ export default function BattlePoetique() {
         
         return new Date(b.date) - new Date(a.date);
       });
-  };
+  }, []);
 
-  const loadConcoursTexts = useCallback(async (showSilent = false) => {
-    if (!showSilent) setLoading(true);
+  const loadConcoursTexts = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     else setIsRefreshing(true);
 
     try {
-      // Appel vers ton API route (app/api/texts/route.js)
       const res = await fetch(`/api/texts?limit=1000&t=${Date.now()}`); 
       const json = await res.json();
       
       if (json.data && Array.isArray(json.data)) {
-        const sorted = sortBattleTexts(json.data);
-        setTexts(sorted);
+        setTexts(sortBattleTexts(json.data));
       }
     } catch (e) { 
-      console.error("Erreur de mise à jour de l'arène:", e); 
+      console.error("Erreur Arène:", e); 
     } finally { 
       setLoading(false); 
       setIsRefreshing(false);
     }
-  }, []);
+  }, [sortBattleTexts]);
 
   useEffect(() => {
     loadConcoursTexts();
   }, [loadConcoursTexts]);
 
-  // Auto-refresh toutes les 60 secondes
+  // Auto-refresh toutes les 60 secondes pour le leaderboard live
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadConcoursTexts(true);
-    }, 60000); 
+    const interval = setInterval(() => loadConcoursTexts(true), 60000); 
     return () => clearInterval(interval);
   }, [loadConcoursTexts]);
 
@@ -69,163 +65,180 @@ export default function BattlePoetique() {
     try {
       if (navigator.share) {
         await navigator.share({ 
-            title: `Votez pour mon texte "${item.title}" dans la Battle Lisible !`, 
+            title: `Votez pour "${item.title}" dans la Battle Lisible !`, 
             url 
         });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success("Lien de la Battle copié !");
+        toast.success("Lien de vote copié !");
       }
-    } catch (err) {
-      console.log("Partage annulé");
-    }
+    } catch (err) { /* Annulé */ }
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4 font-sans bg-[#FCFBF9] min-h-screen">
-      <Loader2 className="animate-spin text-teal-600" size={40}/>
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
-        Synchronisation de l'Arène...
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#FCFBF9] gap-6">
+      <div className="relative">
+        <Loader2 className="animate-spin text-teal-600" size={50}/>
+        <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-teal-200" size={20} />
+      </div>
+      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 animate-pulse">
+        Calcul des rangs de l'Arène...
       </p>
     </div>
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 animate-in fade-in duration-700 font-sans bg-[#FCFBF9]">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-slate-100 pb-12">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-900/20 border border-slate-700">
-              <Trophy size={14} className="text-amber-400 animate-pulse" /> Battle Poétique
-            </div>
-            {isRefreshing && (
-              <div className="flex items-center gap-2 text-teal-600">
-                <RefreshCcw size={12} className="animate-spin" />
-                <span className="text-[9px] font-black uppercase tracking-tighter">Calcul des scores...</span>
+    <div className="min-h-screen bg-[#FCFBF9] font-sans pb-20">
+      {/* Header Immersif */}
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-slate-100 pb-16">
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl border border-slate-700">
+                <Trophy size={14} className="text-amber-400 fill-amber-400" /> Battle Saison 1
               </div>
-            )}
-          </div>
-          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter text-slate-900 leading-none">
-            L'Arène des <br /><span className="text-teal-600">Mots</span>
-          </h1>
-        </div>
-
-        <div className="flex flex-wrap gap-4">
-          <Link href="/bibliotheque" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
-            <BookOpen size={16} /> Bibliothèque
-          </Link>
-          <Link href="/publier?concours=true" className="flex items-center gap-2 bg-teal-600 text-white px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-teal-600/20">
-            <PenTool size={16} /> Entrer dans la Battle
-          </Link>
-        </div>
-      </header>
-
-      {texts.length > 0 ? (
-        <div className="grid gap-10 md:grid-cols-2">
-          {texts.map((item, index) => {
-            const isLeader = index === 0;
-            const certifiedCount = Number(item.totalCertified || 0);
-            const totalLikes = Number(item.totalLikes || item.likes || 0);
-            
-            return (
-              <Link href={`/texts/${item.id}`} key={item.id} className="group">
-                <div className={`bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 hover:-translate-y-2 flex flex-col h-full relative ${
-                  isLeader ? "border-amber-200 shadow-2xl shadow-amber-900/10" : "border-slate-100 shadow-xl shadow-slate-200/50 hover:border-teal-200"
-                }`}>
-                  
-                  {isLeader && (
-                    <div className="absolute top-0 right-10 z-30">
-                      <div className="bg-amber-400 text-slate-900 px-4 py-6 rounded-b-2xl shadow-xl flex flex-col items-center gap-1">
-                        <Trophy size={20} />
-                        <span className="text-[8px] font-black uppercase">Leader</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="h-64 bg-slate-100 relative overflow-hidden">
-                    {item.imageBase64 && item.imageBase64 !== "exists" ? (
-                      <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center ${
-                        isLeader ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900'
-                      }`}>
-                         <Zap size={60} className="text-white/20 -rotate-12 animate-pulse" />
-                      </div>
-                    )}
-                    
-                    <button onClick={(e) => handleShare(e, item)} className="absolute top-6 left-6 p-3 bg-white/90 backdrop-blur-md text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-lg z-10">
-                      <Share2 size={18} />
-                    </button>
-
-                    <div className="absolute bottom-6 left-6 flex gap-2">
-                      <div className="bg-slate-900/80 backdrop-blur-md text-white text-[8px] font-black px-4 py-2 rounded-xl uppercase tracking-[0.2em] border border-white/10">
-                        Concurrent #{item.concurrentId || (index + 1)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-10 flex-grow flex flex-col">
-                    <div className="flex items-center gap-2 mb-4">
-                       <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest">{item.genre || "Candidat"}</span>
-                       <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                        {item.date ? new Date(item.date).toLocaleDateString() : "Battle en cours"}
-                       </span>
-                    </div>
-
-                    <h2 className="text-3xl font-black italic text-slate-900 group-hover:text-teal-600 transition-colors mb-4 tracking-tighter leading-[0.9]">
-                      {item.title}
-                    </h2>
-                    
-                    <p className="text-slate-500 line-clamp-3 font-serif italic mb-8 flex-grow leading-relaxed">
-                      {item.content?.replace(/<[^>]*>/g, '')}
-                    </p>
-                    
-                    <div className="flex items-center justify-between pt-8 border-t border-slate-50 mt-auto">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-[11px] transition-all border ${
-                          certifiedCount > 0 
-                          ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm" 
-                          : "bg-slate-50 border-slate-100 text-slate-400"
-                        }`}>
-                          <Coins size={14} className={certifiedCount > 0 ? "animate-pulse" : ""}/> 
-                          {certifiedCount * 50} <span className="text-[8px] opacity-70 ml-1">LI</span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-4">
-                        <div className="flex items-center gap-1.5 text-slate-400 font-black text-[11px]">
-                          <Eye size={16} className="text-slate-300"/> {item.views || 0}
-                        </div>
-                        <div className={`flex items-center gap-1.5 font-black text-[11px] px-4 py-2 rounded-2xl ${totalLikes > 0 ? 'bg-rose-50 text-rose-500' : 'text-slate-300'}`}>
-                          <Heart size={16} fill={totalLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform"/> {totalLikes}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              {isRefreshing && (
+                <div className="flex items-center gap-2 text-teal-600 animate-in fade-in">
+                  <RefreshCcw size={12} className="animate-spin" />
+                  <span className="text-[9px] font-black uppercase">Live Update</span>
                 </div>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="py-32 text-center space-y-8 bg-slate-50 rounded-[4rem] border-2 border-dashed border-slate-200 font-sans">
-          <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto shadow-sm">
-             <Trophy size={40} className="text-slate-200" />
+              )}
+            </div>
+            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter text-slate-900 leading-[0.85]">
+              L'Arène <br /><span className="text-teal-600">Sacrée.</span>
+            </h1>
+            <p className="text-slate-400 font-medium max-w-md leading-relaxed text-sm">
+              Ici, les mots s'affrontent. Votez pour vos plumes favorites et hissez-les au sommet du Panthéon.
+            </p>
           </div>
-          <div className="space-y-2">
-            <p className="font-black uppercase text-slate-900 tracking-[0.2em] text-sm">L'arène est vide</p>
-            <p className="text-slate-400 text-xs font-medium">Les poètes fourbissent leurs armes.</p>
-          </div>
-          <Link href="/publier?concours=true" className="inline-flex items-center gap-3 bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
-             Lancer le défi <ArrowRight size={16} />
-          </Link>
-        </div>
-      )}
 
-      <footer className="pt-20 text-center border-t border-slate-100">
-         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">
-           Lisible.biz • Arène Officielle • {new Date().getFullYear()}
+          <div className="flex flex-wrap gap-4">
+            <Link href="/bibliotheque" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+              <BookOpen size={16} /> Archives
+            </Link>
+            <Link href="/publier?concours=true" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
+              <PenTool size={18} /> Déposer un défi
+            </Link>
+          </div>
+        </header>
+
+        {/* Liste des concurrents */}
+        <main className="mt-20">
+          {texts.length > 0 ? (
+            <div className="grid gap-12 md:grid-cols-2">
+              {texts.map((item, index) => {
+                const isLeader = index === 0;
+                const liPoints = Number(item.totalCertified || 0) * 50;
+                const totalLikes = Number(item.totalLikes || item.likes || 0);
+                
+                return (
+                  <Link href={`/texts/${item.id}`} key={item.id} className="group relative">
+                    <div className={`bg-white rounded-[4rem] overflow-hidden border transition-all duration-700 flex flex-col h-full ${
+                      isLeader 
+                      ? "border-amber-200 shadow-[0_30px_60px_-15px_rgba(245,158,11,0.15)] ring-2 ring-amber-100 ring-offset-8" 
+                      : "border-slate-100 shadow-xl shadow-slate-200/40 hover:border-teal-200"
+                    }`}>
+                      
+                      {/* Badge Leader */}
+                      {isLeader && (
+                        <div className="absolute -top-4 -left-4 z-40 rotate-[-12deg] bg-amber-400 text-slate-900 px-6 py-2 rounded-xl shadow-xl border-2 border-white flex items-center gap-2">
+                          <Sparkles size={14} className="animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Maître d'Arène</span>
+                        </div>
+                      )}
+
+                      {/* Cover visuelle */}
+                      <div className="h-72 bg-slate-100 relative overflow-hidden">
+                        {item.imageBase64 && item.imageBase64 !== "exists" ? (
+                          <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center ${
+                            isLeader ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-slate-900 to-teal-900'
+                          }`}>
+                             <Zap size={80} className="text-white/10 -rotate-12 group-hover:rotate-0 transition-transform duration-700" />
+                          </div>
+                        )}
+                        
+                        <div className="absolute top-8 left-8 flex gap-3">
+                          <button onClick={(e) => handleShare(e, item)} className="p-4 bg-white/90 backdrop-blur-md text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-xl">
+                            <Share2 size={18} />
+                          </button>
+                        </div>
+
+                        <div className="absolute bottom-8 right-8">
+                          <div className="bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-5 py-2.5 rounded-2xl uppercase tracking-[0.2em] border border-white/10">
+                            Rang #{index + 1}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Détails du texte */}
+                      <div className="p-12 flex-grow flex flex-col">
+                        <div className="flex items-center gap-3 mb-6">
+                           <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest bg-teal-50 px-3 py-1 rounded-lg">
+                             {item.genre || "Candidat"}
+                           </span>
+                           <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                             {item.date ? new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : 'Maintenant'}
+                           </span>
+                        </div>
+
+                        <h2 className="text-4xl font-black italic text-slate-900 group-hover:text-teal-600 transition-colors mb-6 tracking-tighter leading-[0.85]">
+                          {item.title}
+                        </h2>
+                        
+                        <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-lg leading-relaxed flex-grow">
+                          {item.content?.replace(/<[^>]*>/g, '')}
+                        </p>
+                        
+                        {/* Footer de la carte */}
+                        <div className="flex items-center justify-between pt-8 border-t border-slate-50">
+                          <div className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-black text-[12px] transition-all border ${
+                            liPoints > 0 
+                            ? "bg-amber-50 border-amber-200 text-amber-600 shadow-inner" 
+                            : "bg-slate-50 border-slate-100 text-slate-300"
+                          }`}>
+                            <Coins size={16} className={liPoints > 0 ? "animate-pulse" : ""}/> 
+                            {liPoints} <span className="text-[9px] opacity-60">LI</span>
+                          </div>
+
+                          <div className="flex gap-6">
+                            <div className="flex items-center gap-2 text-slate-400 font-black text-[11px]">
+                              <Eye size={18} className="text-slate-200"/> {item.views || 0}
+                            </div>
+                            <div className={`flex items-center gap-2 font-black text-[12px] ${totalLikes > 0 ? 'text-rose-500' : 'text-slate-300'}`}>
+                              <Heart size={20} fill={totalLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform duration-300"/> {totalLikes}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-40 text-center space-y-10 bg-white rounded-[5rem] border-2 border-dashed border-slate-100">
+              <div className="w-24 h-24 bg-slate-50 rounded-[2rem] flex items-center justify-center mx-auto">
+                 <Zap size={40} className="text-slate-200" />
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-black uppercase text-slate-900 tracking-[0.3em] text-lg">Le silence règne</h3>
+                <p className="text-slate-400 text-sm font-medium">L'arène attend son premier champion.</p>
+              </div>
+              <Link href="/publier?concours=true" className="inline-flex items-center gap-3 bg-slate-900 text-white px-12 py-6 rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
+                 Prendre la place <ArrowRight size={18} />
+              </Link>
+            </div>
+          )}
+        </main>
+      </div>
+
+      <footer className="mt-32 text-center pb-10">
+         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 flex items-center justify-center gap-4">
+           <span className="w-8 h-px bg-slate-100"></span>
+           Lisible Battle System v4.2 • {new Date().getFullYear()}
+           <span className="w-8 h-px bg-slate-100"></span>
          </p>
       </footer>
     </div>
