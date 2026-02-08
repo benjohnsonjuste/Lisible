@@ -7,7 +7,7 @@ export default function Footer() {
 
   return (
     <footer className="relative bg-white pt-20 pb-10 border-t border-slate-50 overflow-hidden">
-      {/* Element de design en arrière-plan (Optionnel pour le côté High-Tech) */}
+      {/* Élément de design en arrière-plan (Effet de ligne laser) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-teal-500/20 to-transparent" />
 
       <div className="container mx-auto px-6">
@@ -24,7 +24,7 @@ export default function Footer() {
           </div>
 
           {/* Séparateur minimaliste */}
-          <div className="h-10 w-[1px] bg-slate-100" />
+          <div className="h-10 w-[1px] bg-slate-100" aria-hidden="true" />
 
           {/* Informations de production */}
           <div className="space-y-4">
@@ -35,7 +35,7 @@ export default function Footer() {
               </span>
             </p>
             
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-3">
               <div className="flex items-center justify-center gap-2 text-slate-400">
                 <MapPin size={14} className="text-teal-500" />
                 <address className="not-italic text-xs font-semibold tracking-wide uppercase">
@@ -44,33 +44,36 @@ export default function Footer() {
               </div>
               <div className="flex items-center justify-center gap-2 text-slate-400">
                 <Phone size={14} className="text-teal-500" />
-                <span className="text-xs font-semibold tracking-wide">
+                <a 
+                  href="tel:+50943524498" 
+                  className="text-xs font-semibold tracking-wide hover:text-slate-900 transition-colors"
+                >
                   (509) 4352 4498
-                </span>
+                </a>
               </div>
             </div>
           </div>
 
           {/* Copyright & Crédits */}
-          <div className="pt-10 w-full border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="pt-10 w-full border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
               <Copyright size={12} />
               {currentYear} Lisible — Tous droits réservés
             </div>
 
-            <div className="flex items-center gap-4 flex-wrap justify-center">
+            <nav className="flex items-center gap-4 flex-wrap justify-center" aria-label="Liens légaux">
               <Link href="/terms" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
-                Conditions Générales d'Utilisation (CGU)
+                CGU
               </Link>
-              <div className="w-1 h-1 bg-slate-200 rounded-full" />
+              <div className="w-1 h-1 bg-slate-200 rounded-full" aria-hidden="true" />
               <Link href="/confidentialite" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
                 Confidentialité
               </Link>
-              <div className="w-1 h-1 bg-slate-200 rounded-full" />
+              <div className="w-1 h-1 bg-slate-200 rounded-full" aria-hidden="true" />
               <Link href="/refund" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
-                Politique de remboursement
+                Remboursement
               </Link>
-            </div>
+            </nav>
 
             <p className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               Fait avec <Heart size={12} className="text-pink-500 fill-pink-500" /> pour les mots
