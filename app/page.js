@@ -10,9 +10,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Équivalent de getStaticProps avec revalidate
-export const revalidate = 3600; 
-
 export default function Home() {
   const pathname = usePathname();
 
