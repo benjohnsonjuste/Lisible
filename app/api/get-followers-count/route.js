@@ -2,6 +2,9 @@
 import { getFile } from "@/lib/github";
 import { Buffer } from "buffer";
 
+// Force le rendu dynamique pour éviter l'erreur de build "Dynamic server usage"
+export const dynamic = 'force-dynamic';
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -22,7 +25,7 @@ export async function GET(req) {
 
     const path = `data/users/${fileName}.json`;
     
-    // On force la récupération fraîche (no-store) pour éviter le cache serveur de Next.js
+    // Récupération des données via GitHub (lib/github doit gérer le fetch)
     const userFile = await getFile(path);
 
     if (!userFile) {
@@ -36,7 +39,7 @@ export async function GET(req) {
     }
 
     // On compte soit la longueur du tableau subscribers, soit la valeur numérique
-    const subscribers = userFile.content.subscribers;
+    const subscribers = userFile.content?.subscribers;
     const count = Array.isArray(subscribers) ? subscribers.length : (parseInt(subscribers) || 0);
     
     return new Response(JSON.stringify({ followersCount: count }), {
