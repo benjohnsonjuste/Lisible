@@ -32,15 +32,14 @@ export default function TextPageClient({ initialText, id, allTexts }) {
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false); 
-  const [liveViews, setLiveViews] = useState(0); 
-  const [liveLikes, setLiveLikes] = useState(0);
+  const [liveViews, setLiveViews] = useState(initialText.views || 0); 
+  const [liveLikes, setLiveLikes] = useState(initialText.likes || 0);
   const viewLogged = useRef(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
 
   const ADMIN_EMAILS = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com", "robergeaurodley97@gmail.com", "jb7management@gmail.com", "woolsleypierre01@gmail.com", "jeanpierreborlhaïniedarha@gmail.com"];
 
-  // Analyse du Mood (Inchangé)
   const mood = useMemo(() => {
     if (!text?.content) return null;
     const content = text.content.toLowerCase();
@@ -55,15 +54,15 @@ export default function TextPageClient({ initialText, id, allTexts }) {
     return winner.score > 0 ? winner : null;
   }, [text?.content]);
 
-  // Sync Data ADAPTÉ POUR MONGODB
   const fetchData = useCallback(async (tid) => {
     if (!tid) return;
     try {
-      // On appelle l'API locale qui communique avec MongoDB
       const res = await fetch(`/api/texts/${tid}`);
       if (res.ok) {
         const data = await res.json();
         setText(data);
+        setLiveLikes(data.likes || 0);
+        setLiveViews(data.views || 0);
       }
     } catch (e) { console.error("Erreur de rafraîchissement MongoDB:", e); }
   }, []);
@@ -93,14 +92,12 @@ export default function TextPageClient({ initialText, id, allTexts }) {
           const data = await res.json();
           localStorage.setItem(viewKey, "true");
           setLiveViews(data.views);
-          setLiveLikes(data.likes || initialText.likes || initialText.totalLikes || 0);
         }
       });
     }
-  }, [id, initialText.totalLikes, initialText.likes]);
+  }, [id]);
 
   const readingTime = useMemo(() => Math.max(1, Math.ceil((text?.content?.split(/\s+/).length || 0) / 200)), [text?.content]);
-
   const isStaffText = ADMIN_EMAILS.includes(text.authorEmail?.toLowerCase().trim());
 
   return (
@@ -118,7 +115,7 @@ export default function TextPageClient({ initialText, id, allTexts }) {
           <div className="flex gap-2">
             {!isStaffText && (
               <>
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border text-[10px] font-black"><Eye size={14} /> {liveViews || text.views || 0}</div>
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border text-[10px] font-black"><Eye size={14} /> {liveViews}</div>
                 <button 
                   onClick={async () => {
                     const lKey = `like_${id}`; 
@@ -139,7 +136,7 @@ export default function TextPageClient({ initialText, id, allTexts }) {
                   }} 
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white dark:bg-slate-900 text-[10px] font-black hover:border-rose-500 transition-colors"
                 >
-                  <Heart size={14} className={isLiking ? "animate-ping" : ""} /> {liveLikes || text.likes || text.totalLikes || 0}
+                  <Heart size={14} className={isLiking ? "animate-ping" : ""} /> {liveLikes}
                 </button>
               </>
             )}
