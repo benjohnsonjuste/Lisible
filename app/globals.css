@@ -20,8 +20,13 @@
 body {
   margin: 0;
   background-color: var(--bg-main);
-  @apply antialiased text-slate-900 transition-colors duration-1000;
+  @apply antialiased text-slate-900 transition-colors duration-1000 min-h-screen flex flex-col;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* Assure que le contenu principal occupe l'espace entre Navbar et Footer */
+main {
+  @apply flex-grow;
 }
 
 /* Gestion du mode sombre forcé pour le Focus Mode */
@@ -32,6 +37,7 @@ body {
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 6rem;
+  @apply h-full;
 }
 
 /* =========================================
