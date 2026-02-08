@@ -1,4 +1,6 @@
+// components/Navbar.jsx
 "use client";
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -17,7 +19,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLiveActive, setIsLiveActive] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -61,8 +62,6 @@ export default function Navbar() {
         } catch (e) { console.warn("Audio bloqué"); }
       };
       playNotifSound();
-
-      if (notif.type === 'live') setIsLiveActive(true);
       
       const getToastIcon = () => {
         switch(notif.type) {
@@ -90,20 +89,6 @@ export default function Navbar() {
       });
     });
 
-    // 3. Status Live
-    const checkLiveStatus = async () => {
-      try {
-        const res = await fetch("https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/live_status.json?t=" + Date.now());
-        if (res.ok) {
-          const data = await res.json();
-          setIsLiveActive(data.isLive);
-        }
-      } catch (e) { setIsLiveActive(false); }
-    };
-
-    checkLiveStatus();
-    const liveTimer = setInterval(checkLiveStatus, 45000); 
-
     const handleStorageChange = () => {
       const updatedUser = localStorage.getItem("lisible_user");
       setUser(updatedUser ? JSON.parse(updatedUser) : null);
@@ -112,7 +97,6 @@ export default function Navbar() {
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(liveTimer);
       pusher.unsubscribe('global-notifications');
     };
   }, [router]);
@@ -134,11 +118,6 @@ export default function Navbar() {
   const menuItems = [
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/bibliotheque", label: "Bibliothèque", icon: <Library size={20} /> },
-    { 
-      href: "/lisible-club", 
-      label: isLiveActive ? "Lisible Club • LIVE" : "Lisible Club", 
-      icon: <Radio size={20} className={isLiveActive ? "text-red-500 animate-pulse" : ""} /> 
-    },
     { href: "/dashboard", label: "Studio Auteur", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/communaute", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
@@ -158,7 +137,7 @@ export default function Navbar() {
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <Link href="/" className="group flex items-center gap-2">
-              <span className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white italic">Lisible.</span>
+              <span className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white italic">Lisible<span className="text-teal-600">.</span></span>
             </Link>
           </div>
 
@@ -166,12 +145,6 @@ export default function Navbar() {
             <nav className="hidden md:flex items-center gap-1 bg-slate-50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
-              <NavLink 
-                href="/lisible-club" 
-                icon={<Radio size={20} className={isLiveActive ? "text-red-500 animate-pulse" : ""} />} 
-                active={pathname === "/lisible-club"} 
-                title="Club" 
-              />
               {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Studio Auteur" />}
             </nav>
 
@@ -216,7 +189,7 @@ export default function Navbar() {
           {user && (
             <Link href="/account" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
               <div className="flex items-center gap-4 overflow-hidden">
-                <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-900 shadow-lg">
+                <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-950 shadow-lg">
                   {user.profilePic ? (
                     <img src={user.profilePic} className="w-full h-full object-cover" alt="Avatar" />
                   ) : (
@@ -244,7 +217,6 @@ export default function Navbar() {
               >
                 <span className={pathname === item.href ? "text-teal-400" : "text-slate-400 dark:text-slate-600"}>{item.icon}</span>
                 <span className="flex-grow">{item.label}</span>
-                {item.href === "/lisible-club" && isLiveActive && <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />}
               </Link>
             )))}
           </nav>
