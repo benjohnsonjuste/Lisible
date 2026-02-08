@@ -1,4 +1,6 @@
+// components/Contact.jsx
 "use client";
+
 import Link from "next/link";
 import { MessageCircle, Send, Mail, HeartHandshake } from "lucide-react";
 
@@ -31,36 +33,36 @@ export default function Contact() {
   ];
 
   return (
-    <section className="py-16">
-      <div className="card-lisible bg-white border-none shadow-xl shadow-slate-200/50 text-center space-y-10">
+    <section className="py-16 px-4">
+      <div className="max-w-4xl mx-auto bg-white border border-slate-100 rounded-[2.5rem] p-10 md:p-16 text-center shadow-xl shadow-slate-200/50 space-y-10">
         <div className="space-y-3">
-          <div className="inline-flex p-3 bg-teal-50 text-teal-600 rounded-2xl mb-2">
+          <div className="inline-flex p-4 bg-teal-50 text-teal-600 rounded-2xl mb-2">
             <HeartHandshake size={32} />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight italic">
             Besoin d'aide ?
           </h2>
-          <p className="text-slate-400 font-medium max-w-sm mx-auto leading-relaxed">
+          <p className="text-slate-400 font-medium max-w-sm mx-auto leading-relaxed text-sm md:text-base">
             Notre équipe est à votre écoute pour vous accompagner dans votre aventure littéraire.
           </p>
         </div>
 
-        <div className="flex justify-center gap-6 md:gap-12">
+        <div className="flex flex-wrap justify-center gap-8 md:gap-16">
           {socialLinks.map((link, index) => (
             <Link
               key={index}
               href={link.href}
               target={link.name !== "E-mail" ? "_blank" : undefined}
               rel="noopener noreferrer"
-              className="group flex flex-col items-center gap-3"
+              className="group flex flex-col items-center gap-4"
             >
               {/* Icône circulaire */}
               <div className={`
                 w-16 h-16 md:w-20 md:h-20 
                 flex items-center justify-center 
-                rounded-[1.8rem] transition-all duration-300
+                rounded-[1.8rem] transition-all duration-500
                 ${link.bg} ${link.color}
-                group-hover:scale-110 group-hover:shadow-lg group-hover:text-white
+                group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-current/20 group-hover:text-white
                 ${link.hover}
               `}>
                 {link.icon}
@@ -74,8 +76,9 @@ export default function Contact() {
           ))}
         </div>
 
-        <div className="pt-4">
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+        <div className="pt-6">
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             Disponible 7j/7 • Réponse sous 24h
           </p>
         </div>
