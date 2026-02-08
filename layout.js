@@ -56,18 +56,18 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      {/* Correction : flex flex-col min-h-screen pour organiser les composants */}
       <body className="antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 font-sans flex flex-col min-h-screen">
         <AuthProvider>
-          {/* 1. Navbar toujours en haut */}
+          {/* 1. Navbar globale fixe ou statique selon ton composant */}
           <Navbar />
           
-          {/* 2. Main prend tout l'espace restant (flex-1) */}
-          <main className="flex-1 w-full pt-16">
+          {/* 2. Main occupe l'espace disponible entre le header et le footer */}
+          {/* pt-20 (80px) pour compenser la hauteur de ta Navbar h-20 */}
+          <main className="flex-1 w-full pt-20">
             {children}
           </main>
           
-          {/* 3. Footer et Prompt toujours à la suite du contenu */}
+          {/* 3. Éléments de fin de page */}
           <InstallPrompt />
           <Footer />
           
