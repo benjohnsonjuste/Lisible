@@ -106,14 +106,14 @@ export default function Navbar() {
     setUser(null);
     setUnreadCount(0);
     setIsMenuOpen(false);
-    router.push("/auth"); // Redirige vers ta nouvelle page d'auth
+    router.push("/login"); // Redirige vers ta nouvelle page d'auth
   };
 
   const menuItems = [
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/dashboard", label: "Studio Auteur", icon: <LayoutDashboard size={20} />, authRequired: true },
-    { href: "/communaute", label: "Communauté", icon: <Users size={20} /> },
+    { href: "/community", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
     { href: "/contact", label: "Contact", icon: <MessageCircle size={20} /> },
   ];
@@ -141,7 +141,7 @@ export default function Navbar() {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
-              <NavLink href="/library" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
+              <NavLink href="/library" icon={<Library size={20} />} active={pathname === "/library"} title="Bibliothèque" />
               {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Studio Auteur" />}
             </nav>
 
