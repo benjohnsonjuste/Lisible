@@ -1,7 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import Image from "next/image"; 
-import { MessageCircle, Loader2, Send, Sparkles, Quote } from "lucide-center";
+// Correction : lucide-react au lieu de lucide-center
+import { MessageCircle, Loader2, Send, Sparkles, Quote } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CommentSection({ textId, comments = [], user, onCommented }) {
@@ -18,10 +19,10 @@ export default function CommentSection({ textId, comments = [], user, onCommente
     try {
       // Utilisation de l'API unifiée github-db
       const res = await fetch('/api/github-db', {
-        method: 'POST', // Utilisation de POST pour les actions
+        method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          action: "comment", // L'action identifiée par ton API
+          action: "comment", 
           id: textId, 
           userEmail: user.email, 
           userName: user.penName || user.name || "Plume", 
@@ -112,7 +113,6 @@ export default function CommentSection({ textId, comments = [], user, onCommente
         )}
       </div>
 
-      {/* Barre de saisie flottante */}
       <div className="sticky bottom-8 z-50">
         <div className="bg-white/90 backdrop-blur-2xl p-3 rounded-[2.5rem] border border-white shadow-2xl flex items-center gap-3 ring-1 ring-slate-900/5 focus-within:ring-teal-500/20 transition-all group">
           <input 
