@@ -84,7 +84,7 @@ export default function PublishPage() {
     }
 
     setLoading(true);
-    const toastId = toast.loading("Action...");
+    const toastId = toast.loading("Action sur la base GitHub...");
 
     try {
       const id = Date.now().toString();
@@ -119,7 +119,7 @@ export default function PublishPage() {
         throw new Error(data.error || "Erreur de communication avec GitHub");
       }
 
-      toast.success("Œuvre publiée avec succès ! ", { id: toastId });
+      toast.success("Œuvre publiée avec succès ! ✨", { id: toastId });
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
