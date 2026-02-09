@@ -16,6 +16,8 @@
     "next": "14.2.3",
     "pusher": "^5.2.0",
     "framer-motion": "^11.0.0",
+    "idb": "^8.0.0",
+    "@ducanh2912/next-pwa": "^10.2.7",
     "pusher-js": "^8.4.0",
     "@livepeer/react": "^3.1.5",
     "html2canvas": "^1.4.1",
