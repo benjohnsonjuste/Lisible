@@ -37,11 +37,13 @@ export default function AuthPage() {
           <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-slate-50 rounded-full blur-3xl opacity-50" />
           
           <div className="relative z-10">
-            {/* Suspense requis pour useSearchParams() dans AuthForm */}
+            {/* Suspense requis car AuthForm utilise useSearchParams() */}
             <Suspense fallback={
               <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 animate-pulse">Initialisation...</p>
+                <div className="w-8 h-8 border-[3px] border-slate-100 border-t-teal-500 rounded-full animate-spin" />
+                <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
+                  Préparation du pupitre...
+                </p>
               </div>
             }>
               <AuthForm />
@@ -52,7 +54,7 @@ export default function AuthPage() {
             <p className="text-slate-400 font-medium text-[11px] leading-relaxed">
               Prêt à explorer la nouvelle ère de l'écrit ? <br/>
               <span className="text-slate-900 font-black italic uppercase text-[9px] tracking-widest mt-1 block">
-                Rejoignez Lisible.
+                Rejoignez le sanctuaire.
               </span>
             </p>
           </footer>
