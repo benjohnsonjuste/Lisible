@@ -10,7 +10,6 @@ export default function WorkForm({
   isConcours = false,
   requireBattleAcceptance = false,
   submitLabel = "Diffuser",
-  onSubmitApi = "/api/texts",
 }) {
   const router = useRouter();
 
@@ -30,17 +29,16 @@ export default function WorkForm({
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (!storedUser) {
-      router.push("/login");
+      router.push("/auth");
       return;
     }
     try {
       const u = JSON.parse(storedUser);
       setUser(u);
     } catch (e) {
-      router.push("/login");
+      router.push("/auth");
     }
 
-    // Charger le brouillon uniquement si ce n'est pas un concours
     if (!isConcours) {
       const draftTitle = localStorage.getItem("draft_title");
       const draftContent = localStorage.getItem("draft_content");
@@ -51,9 +49,8 @@ export default function WorkForm({
     setIsChecking(false);
   }, [router, isConcours]);
 
-  // Sauvegarde automatique du brouillon
   useEffect(() => {
-    if (!isChecking && !isConcours) {
+    if (!isChecking && !isConcours && (title || content)) {
       localStorage.setItem("draft_title", title);
       localStorage.setItem("draft_content", content);
     }
@@ -98,6 +95,7 @@ export default function WorkForm({
       if (imageFile) imageBase64 = await toBase64(imageFile);
 
       const payload = {
+        action: "publish", // Action pour l'API unifiée
         title: title.trim(),
         content: content.trim(),
         category,
@@ -106,23 +104,17 @@ export default function WorkForm({
         imageBase64,
         isConcours: isConcours || category === "Battle Poétique",
         concurrentId: concurrentId?.toUpperCase().trim() || null,
+        date: new Date().toISOString()
       };
 
-      const res = await fetch(onSubmitApi, {
+      // Appel à l'API centralisée github-db
+      const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const contentType = res.headers.get("content-type");
-      let data;
-      
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        throw new Error("Le Grand Livre est indisponible. Réessayez plus tard.");
-      }
-
+      const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec de l'archivage");
 
       toast.success(isConcours ? "Défi lancé avec succès !" : "Œuvre immortalisée ✨", { id: toastId });
@@ -132,6 +124,7 @@ export default function WorkForm({
         localStorage.removeItem("draft_content");
       }
 
+      // Redirection vers le texte ou la bibliothèque
       if (data.id) {
         router.push(`/texts/${data.id}`);
       } else {
@@ -149,20 +142,20 @@ export default function WorkForm({
     return (
       <div className="h-64 flex flex-col items-center justify-center gap-4">
         <Loader2 className="animate-spin text-teal-600" size={40} />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Préparation de l'Atelier...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ouverture de l'Atelier...</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-12 font-sans max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-12 font-sans max-w-4xl mx-auto px-4">
       
-      {/* --- Section Duel (si applicable) --- */}
+      {/* Duel / Battle */}
       {requireBattleAcceptance && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-1000">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in duration-700">
           <div 
             className={`p-10 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 ${
-              isBattlePoetic ? 'border-teal-500 bg-teal-50/50 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-200'
+              isBattlePoetic ? 'border-teal-500 bg-teal-50 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-200'
             }`}
             onClick={() => setIsBattlePoetic(!isBattlePoetic)}
           >
@@ -178,36 +171,35 @@ export default function WorkForm({
               type="text"
               value={concurrentId}
               onChange={(e) => setConcurrentId(e.target.value.toUpperCase())}
-              placeholder="CODE DU DUEL"
+              placeholder="CODE DUEL"
               className="w-full bg-slate-50 border-none py-4 px-6 rounded-2xl text-2xl font-black outline-none focus:ring-4 ring-teal-500/10 transition-all text-center tracking-[0.3em] placeholder:opacity-20"
             />
           </div>
         </div>
       )}
 
-      {/* --- Corps du Manuscrit --- */}
-      <div className="bg-white p-10 md:p-14 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 space-y-10">
+      {/* Manuscrit */}
+      <div className="bg-white p-8 md:p-14 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50/50 rounded-bl-[100px] -z-0 opacity-50" />
         
-        {/* Titre */}
-        <div className="space-y-4">
+        <div className="space-y-4 relative z-10">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <Type size={14} className="text-teal-500" /> Titre de l'œuvre
+            <Type size={14} className="text-teal-500" /> Titre du manuscrit
           </label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Le silence des plumes..."
+            placeholder="Le murmure des encres..."
             required
             className="w-full bg-slate-50 border-none rounded-2xl px-8 py-6 text-3xl font-serif font-black italic outline-none focus:bg-white focus:ring-4 ring-teal-500/5 transition shadow-inner"
           />
         </div>
 
-        {/* Catégorie & Genre */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <BookOpen size={14} className="text-teal-500" /> Genre Littéraire
+                <BookOpen size={14} className="text-teal-500" /> Genre
               </label>
               <select
                 value={category}
@@ -224,42 +216,44 @@ export default function WorkForm({
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                 <PenTool size={14} className="text-teal-500" /> État du Scribe
               </label>
-              <div className="px-8 py-5 bg-teal-50 rounded-2xl text-[11px] font-bold text-teal-700 flex items-center gap-2">
-                <Sparkles size={14} /> Publication Directe Activée
+              <div className="px-8 py-5 bg-teal-50/50 rounded-2xl text-[11px] font-bold text-teal-700 flex items-center gap-2 border border-teal-100">
+                <Sparkles size={14} className="animate-pulse" /> Archivage Direct
               </div>
             </div>
         </div>
 
-        {/* Zone de Texte */}
-        <div className="space-y-4">
+        <div className="space-y-4 relative z-10">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <PenTool size={14} className="text-teal-500" /> Corps du Manuscrit
+            <PenTool size={14} className="text-teal-500" /> Corps de l'œuvre
           </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Laissez courir votre plume sur ce parchemin numérique..."
+            placeholder="Laissez votre plume s'évader..."
             required
             className="w-full bg-slate-50 border-none rounded-[2.5rem] p-10 font-serif text-xl leading-relaxed min-h-[500px] outline-none focus:bg-white focus:ring-4 ring-teal-500/5 transition shadow-inner resize-none"
           />
-          <p className="text-[9px] text-right font-black text-slate-300 uppercase tracking-widest">
-            {content.length} Caractères • {content.split(/\s+/).filter(Boolean).length} Mots
-          </p>
+          <div className="flex justify-between items-center px-4">
+             <span className="text-[9px] font-bold text-slate-300 uppercase italic">Lisible Studio v1.0</span>
+             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+               {content.length} Signes • {content.split(/\s+/).filter(Boolean).length} Mots
+             </p>
+          </div>
         </div>
       </div>
 
-      {/* --- Illustration --- */}
+      {/* Illustration */}
       <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-lg space-y-6">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-          <ImageIcon size={14} className="text-teal-500" /> Illustration de couverture
+          <ImageIcon size={14} className="text-teal-500" /> Couverture du manuscrit
         </label>
         
         <input type="file" accept="image/*" id="cover" className="hidden" onChange={handleImageChange} />
         
         {imagePreview ? (
           <div className="relative h-80 rounded-[2.5rem] overflow-hidden shadow-2xl group border-4 border-white">
-            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                 <button 
                   type="button" 
                   onClick={() => { setImagePreview(null); setImageFile(null); }} 
@@ -270,33 +264,33 @@ export default function WorkForm({
             </div>
           </div>
         ) : (
-          <label htmlFor="cover" className="flex flex-col items-center justify-center p-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[3rem] cursor-pointer hover:bg-teal-50/30 hover:border-teal-200 transition-all group">
+          <label htmlFor="cover" className="flex flex-col items-center justify-center p-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[3rem] cursor-pointer hover:bg-teal-50 hover:border-teal-200 transition-all group">
             <div className="p-6 bg-white rounded-3xl shadow-sm group-hover:scale-110 transition-transform">
                <ImageIcon size={32} className="text-slate-300 group-hover:text-teal-500" />
             </div>
-            <span className="text-[10px] font-black uppercase text-slate-400 mt-6 tracking-[0.3em]">Déposer une image (Max 2Mo)</span>
+            <span className="text-[10px] font-black uppercase text-slate-400 mt-6 tracking-[0.3em]">Ajouter une illustration (2Mo)</span>
           </label>
         )}
       </div>
 
-      {/* --- Action Finale --- */}
-      <div className="pt-6">
+      {/* Action */}
+      <div className="pt-6 pb-20">
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-slate-900 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.5em] text-[14px] flex justify-center items-center hover:bg-teal-600 transition-all shadow-[0_20px_50px_-10px_rgba(15,23,42,0.3)] active:scale-95 disabled:opacity-50"
+          className="w-full bg-slate-950 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.5em] text-[14px] flex justify-center items-center hover:bg-teal-600 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
         >
           {loading ? (
             <div className="flex items-center gap-4">
               <Loader2 className="animate-spin" size={24} />
-              <span>Scellement en cours...</span>
+              <span>Scellement...</span>
             </div>
           ) : (
             submitLabel
           )}
         </button>
         <p className="text-center text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-8">
-          En diffusant, vous acceptez les chartes du Scribe Lisible.
+          En archivant, vous contribuez au patrimoine de Lisible.biz
         </p>
       </div>
     </form>
