@@ -2,18 +2,17 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
-  Eye, Heart, Loader2, Share2, Trophy, ShieldCheck, 
-  Sparkles, Search, ChevronDown, Filter 
+  Eye, Heart, Loader2, Trophy, ShieldCheck, 
+  Search, ChevronDown 
 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function Bibliotheque({ initialTexts = [], initialCursor = null }) {
+export default function Bibliotheque({ initialTexts = [] }) {
   const [texts, setTexts] = useState(initialTexts);
-  const [cursor, setCursor] = useState(initialCursor);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // --- Nouveaux états de filtrage ---
+  // États de filtrage
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
@@ -24,34 +23,28 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
   const fetchInitial = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/texts?limit=12&t=${Date.now()}`);
+      // Utilisation du type=library de github-db
+      const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
-      if (json.data) {
-        setTexts(json.data);
-        setCursor(json.nextCursor);
+      
+      // On récupère le contenu de l'index (json.content est le tableau de textes)
+      if (json && json.content) {
+        setTexts(json.content);
       }
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { 
+      console.error(e); 
+      toast.error("Impossible de charger les manuscrits");
+    } finally { 
+      setLoading(false); 
+    }
   };
 
-  const loadMore = async () => {
-    if (!cursor || loading) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/texts?limit=12&lastId=${cursor}`);
-      const json = await res.json();
-      if (json.data?.length > 0) {
-        setTexts((prev) => [...prev, ...json.data]);
-        setCursor(json.nextCursor);
-      } else { setCursor(null); }
-    } catch (e) { toast.error("Fin des archives."); } finally { setLoading(false); }
-  };
-
-  // --- Logique de filtrage combinée ---
+  // Logique de filtrage combinée (Côté client pour une réactivité maximale)
   const filteredTexts = useMemo(() => {
     return texts.filter(t => {
       const matchesSearch = 
-        t.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.authorName?.toLowerCase().includes(searchTerm.toLowerCase());
+        (t.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (t.author || t.authorName || "").toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesGenre = 
         activeGenre === "Tous" || 
@@ -61,8 +54,15 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
     });
   }, [texts, searchTerm, activeGenre]);
 
+  if (loading && texts.length === 0) return (
+    <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
+    </div>
+  );
+
   return (
-    <div className="max-w-7xl mx-auto px-6 py-16 font-sans">
+    <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
       
       {/* Barre de Recherche & Filtres */}
       <div className="space-y-10 mb-20">
@@ -73,7 +73,7 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
             placeholder="Rechercher une œuvre, une plume..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-slate-50 border-none rounded-[2.5rem] pl-16 pr-8 py-6 text-sm font-bold outline-none focus:bg-white focus:ring-4 ring-teal-500/5 transition-all shadow-sm"
+            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-6 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-sm"
           />
         </div>
 
@@ -98,19 +98,19 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
       {/* Grille de résultats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
-          const isConcours = item.isConcours === true || item.genre === "Battle Poétique";
+          const isConcours = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const isAdmin = ["adm.lablitteraire7@gmail.com", "jb7management@gmail.com"].includes(item.authorEmail);
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
               <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
                 isConcours ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
-              } hover:-translate-y-2 hover:shadow-2xl`}>
+              } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
                 
                 {/* Visual Header */}
                 <div className="h-60 bg-slate-100 relative overflow-hidden">
                   <img
-                    src={item.imageBase64 || `https://lisible.biz/api/placeholder/${item.id}`}
+                    src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
                     alt=""
                     className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                     onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
@@ -134,7 +134,7 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
                 <div className="p-10 flex-grow flex flex-col">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">
-                      {item.genre || "Écrit"}
+                      {item.category || item.genre || "Écrit"}
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
                     <span className="text-[10px] font-bold text-slate-300">
@@ -147,22 +147,21 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
                   </h2>
 
                   <p className="text-slate-500 line-clamp-2 font-serif italic mb-10 text-[17px] leading-relaxed">
-                    {item.content?.replace(/<[^>]*>/g, "") || "Plonger dans l'œuvre..."}
+                    {item.summary || "Une œuvre à découvrir sur Lisible..."}
                   </p>
 
                   <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-[11px] font-black">
-                        {item.authorName?.charAt(0).toUpperCase()}
+                        {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
                       </div>
                       <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">
-                        {item.authorName}
+                        {item.author || item.authorName}
                       </span>
                     </div>
                     
                     <div className="flex gap-4 text-slate-300 text-[11px] font-black">
                       <span className="flex items-center gap-1.5"><Eye size={16} /> {item.views || 0}</span>
-                      <span className="flex items-center gap-1.5 text-rose-500"><Heart size={16} fill="currentColor" /> {item.totalLikes || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -172,17 +171,12 @@ export default function Bibliotheque({ initialTexts = [], initialCursor = null }
         })}
       </div>
 
-      {/* Pagination Contextuelle */}
-      {cursor && searchTerm === "" && activeGenre === "Tous" && (
-        <div className="mt-24 flex justify-center">
-          <button
-            onClick={loadMore}
-            disabled={loading}
-            className="group flex items-center gap-4 px-14 py-6 bg-slate-900 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl"
-          >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : "Explorer plus"}
-            <ChevronDown size={20} className="group-hover:translate-y-1 transition-transform" />
-          </button>
+      {filteredTexts.length === 0 && !loading && (
+        <div className="text-center py-32 bg-white rounded-[4rem] border-2 border-dashed border-slate-100">
+           <Search className="text-slate-200 mx-auto mb-4" size={48} />
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+             Aucun manuscrit ne correspond à cette recherche.
+           </p>
         </div>
       )}
     </div>
