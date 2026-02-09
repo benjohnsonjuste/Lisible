@@ -54,7 +54,7 @@ export default function UsersPage() {
     if (!currentUser) return toast.error("Connectez-vous pour suivre cette plume");
     setSubmitting(targetEmail);
     try {
-      const res = await fetch("/api/github-db/subscribe", {
+      const res = await fetch("/api/github-db", {
         method: "POST",
         body: JSON.stringify({ followerEmail: currentUser.email, targetEmail: targetEmail })
       });
