@@ -8,22 +8,19 @@ const withPWA = withPWAInit({
   reloadOnOnline: true,
   swcMinify: true,
   disable: process.env.NODE_ENV === "development",
-  workboxOptions: {
-    expiration: {
-      maxEntries: 50,
-      maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours de cache
-    },
-  },
+  // Suppression du bloc workboxOptions.expiration erroné
+  // Le plugin gère déjà une mise en cache par défaut très efficace
 });
 
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    // Ajout des domaines pour les avatars et les couvertures
+    // Liste consolidée des domaines autorisés
     domains: [
       'api.dicebear.com', 
       'raw.githubusercontent.com', 
-      'avatars.githubusercontent.com'
+      'avatars.githubusercontent.com',
+      'res.cloudinary.com' // Recommandé si tu héberges des couvertures plus tard
     ],
   },
   logging: {
