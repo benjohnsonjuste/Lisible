@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ShieldCheck, Download, Sparkles, Lock, ScrollText } from "lucide-react";
+import { ShieldCheck, Download, Sparkles, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SceauCertification({ 
@@ -19,7 +19,7 @@ export default function SceauCertification({
   const [progress, setProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Synchronisation avec le stockage local pour éviter la double certification
+  // Synchronisation avec le stockage local pour éviter la double certification sur le même appareil
   useEffect(() => {
     const deviceKey = `cert_${fileName}`;
     if (localStorage.getItem(deviceKey)) {
@@ -79,7 +79,7 @@ export default function SceauCertification({
       doc.setFont("times", "bolditalic"); 
       doc.setFontSize(32);
       doc.setTextColor(13, 148, 136);
-      doc.text(`${textTitle.toUpperCase()}`, 148.5, 105, { align: "center" });
+      doc.text(`${(textTitle || "Sans Titre").toUpperCase()}`, 148.5, 105, { align: "center" });
       
       doc.setFont("helvetica", "normal");
       doc.setFontSize(14); 
@@ -108,12 +108,15 @@ export default function SceauCertification({
     const t = toast.loading("Apposition du sceau de cire...");
     
     try {
+      // Appel à l'API centralisée github-db
       const res = await fetch('/api/github-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          textId: fileName, 
-          readerEmail: userEmail || "visiteur@lisible.biz" 
+          action: "certify",
+          id: fileName, 
+          readerEmail: userEmail || "visiteur@lisible.biz",
+          date: new Date().toISOString()
         })
       });
 
@@ -123,10 +126,11 @@ export default function SceauCertification({
         toast.success("Sceau apposé. Votre lecture est immortalisée.", { id: t });
         if (onValidated) onValidated(); 
       } else {
-        throw new Error();
+        const data = await res.json();
+        throw new Error(data.error || "Erreur serveur");
       }
     } catch (e) { 
-      toast.error("Le Grand Livre est inaccessible.", { id: t }); 
+      toast.error("Le Grand Livre est inaccessible : " + e.message, { id: t }); 
     } finally { 
       setIsProcessing(false); 
     }
@@ -180,9 +184,9 @@ export default function SceauCertification({
           </div>
           <div className="flex flex-col">
             <span className="text-[12px] font-black text-slate-900 uppercase tracking-widest leading-none">
-              {Number(certifiedCount) || 0} Lectures
+              {Number(certifiedCount) || 0} Certifications
             </span>
-            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter mt-1">Sceau de reconnaissance</span>
+            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter mt-1">Niveau de confiance</span>
           </div>
         </div>
 
@@ -207,7 +211,7 @@ export default function SceauCertification({
         </div>
 
         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] max-w-[250px] text-center leading-relaxed">
-          Chaque certification renforce la preuve d'existence de l'œuvre sur la plateforme Lisible.
+          Le sceau valide le temps d'attention accordé à cette œuvre.
         </p>
       </div>
     </div>
