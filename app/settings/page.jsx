@@ -51,7 +51,6 @@ export default function AccountPage() {
     const storedUser = localStorage.getItem("lisible_user");
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
-      // Récupération directe depuis le Data Lake GitHub pour les stats fraîches
       refreshUserData(parsed.email);
     } else { 
       router.push("/login"); 
@@ -60,21 +59,22 @@ export default function AccountPage() {
 
   const refreshUserData = async (email) => {
     try {
-      const id = btoa(email);
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${id}.json?t=${Date.now()}`, { cache: 'no-store' });
+      // Utilisation de l'API unifiée pour récupérer le profil
+      const res = await fetch(`/api/github-db?type=user&id=${email}`);
       if (res.ok) {
         const data = await res.json();
-        const freshUser = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+        const freshUser = data.content;
         setUser(freshUser);
         setFormData({ 
             penName: freshUser.penName || "",
             birthday: freshUser.birthday || "",
-            profilePic: freshUser.profilePic || ""
+            profilePic: freshUser.profilePic || freshUser.image || ""
         });
+        // Mettre à jour le local storage avec les stats fraîches
+        localStorage.setItem("lisible_user", JSON.stringify(freshUser));
       }
     } catch (e) { 
       console.error("Sync Error:", e);
-      // Fallback sur le local storage si GitHub API échoue
       const local = JSON.parse(localStorage.getItem("lisible_user"));
       setUser(local);
     } finally { 
@@ -86,10 +86,15 @@ export default function AccountPage() {
     setIsSaving(true);
     const t = toast.loading("Mise à jour du manuscrit d'identité...");
     try {
-      const res = await fetch('/api/github-db/update-user', { 
-        method: 'PATCH', 
+      // On utilise l'action 'update-user' de ton API unifiée
+      const res = await fetch('/api/github-db', { 
+        method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email: user.email, updates: formData }) 
+        body: JSON.stringify({ 
+          action: 'update-user', 
+          email: user.email, 
+          updates: formData 
+        }) 
       });
       
       if (res.ok) {
@@ -115,8 +120,8 @@ export default function AccountPage() {
   );
 
   const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase().trim());
-  const rank = getRank(user?.wallet?.balance || 0);
-  const balance = user?.wallet?.balance || 0;
+  const balance = user.li || user.wallet?.balance || 0;
+  const rank = getRank(balance);
   const progressToWithdraw = Math.min((balance / 25000) * 100, 100);
 
   return (
@@ -149,7 +154,7 @@ export default function AccountPage() {
               {rank.icon} {rank.name}
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none mb-2">
-              {formData.penName || "Ma Plume"}
+              {formData.penName || user.name || "Ma Plume"}
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user.email}</p>
           </div>
@@ -162,12 +167,11 @@ export default function AccountPage() {
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <AccountStatCard label="Inspirations" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-teal-600" />
-        <AccountStatCard label="Abonnés" value={user?.stats?.subscribers || 0} icon={<Star />} color="text-amber-500" />
-        <AccountStatCard label="Certification" value={user?.stats?.totalCertified || 0} icon={<ShieldCheck />} color="text-blue-600" />
+        <AccountStatCard label="Abonnés" value={user?.followers?.length || 0} icon={<Star />} color="text-amber-500" />
+        <AccountStatCard label="Certification" value={user?.totalCertified || 0} icon={<ShieldCheck />} color="text-blue-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Profile Settings */}
         <section className="lg:col-span-2 space-y-8">
           <div className="bg-white rounded-[3.5rem] p-10 md:p-14 shadow-2xl shadow-slate-200/60 border border-slate-100">
             <h2 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.5em] mb-12 flex items-center gap-3">
@@ -190,11 +194,8 @@ export default function AccountPage() {
           </div>
         </section>
 
-        {/* Wallet Sidebar */}
         <aside className="space-y-8">
           <div className="bg-slate-950 rounded-[3.5rem] p-10 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-teal-500/10 rounded-full blur-3xl" />
-            
             <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-12">
               <Wallet size={24} /> Coffre-fort
             </h2>
@@ -204,13 +205,13 @@ export default function AccountPage() {
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Solde actuel</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-black italic tracking-tighter text-white">{balance.toLocaleString()}</span>
-                  <span className="text-sm font-bold text-teal-500 uppercase">Li</span>
+                  <span className="text-sm font-bold text-teal-400 uppercase">Li</span>
                 </div>
 
                 <div className="mt-8 space-y-3">
-                  <div className="flex justify-between text-[8px] font-black uppercase tracking-widest">
-                    <span className="text-slate-500 text-[10px]">Objectif Retrait</span>
-                    <span className="text-teal-400 text-[10px]">{Math.floor(progressToWithdraw)}%</span>
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                    <span className="text-slate-500">Retrait</span>
+                    <span className="text-teal-400">{Math.floor(progressToWithdraw)}%</span>
                   </div>
                   <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
                     <div 
@@ -218,12 +219,12 @@ export default function AccountPage() {
                       style={{ width: `${progressToWithdraw}%` }} 
                     />
                   </div>
-                  <p className="text-[9px] font-medium text-slate-500 italic text-center pt-2">Seuil de transfert : 25,000 Li</p>
+                  <p className="text-[9px] font-medium text-slate-500 italic text-center pt-2">Seuil : 25,000 Li</p>
                 </div>
               </div>
 
               <button 
-                onClick={() => balance >= 25000 ? router.push("/withdraw") : toast.error("Coffre insuffisant")}
+                onClick={() => balance >= 25000 ? router.push("/withdraw") : toast.info("Solde insuffisant pour un retrait")}
                 className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
                   balance < 25000 
                   ? 'bg-white/5 text-slate-600 cursor-not-allowed' 
@@ -242,19 +243,12 @@ export default function AccountPage() {
                 <h3 className="font-black uppercase text-xs tracking-widest italic">Accès Admin</h3>
               </div>
               <p className="text-[10px] font-bold leading-relaxed opacity-80 uppercase tracking-tighter">
-                Accès prioritaire au registre des manuscrits et à la forge des utilisateurs.
+                Accès prioritaire au registre des manuscrits.
               </p>
             </div>
           )}
         </aside>
       </div>
-
-      <footer className="pt-12 text-center">
-         <div className="w-16 h-1 bg-slate-100 mx-auto mb-6 rounded-full" />
-         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300">
-           LISIBLE DATA LAKE • SECURITY LAYER V2
-         </p>
-      </footer>
     </div>
   );
 }
