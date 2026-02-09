@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Image from "next/image"; 
-import { MessageCircle, Loader2, Send, Sparkles, Quote } from "lucide-react";
+import { MessageCircle, Loader2, Send, Sparkles, Quote } from "lucide-center";
 import { toast } from "sonner";
 
 export default function CommentSection({ textId, comments = [], user, onCommented }) {
@@ -16,18 +16,17 @@ export default function CommentSection({ textId, comments = [], user, onCommente
     const tid = toast.loading("Transmission de votre pensée...");
 
     try {
+      // Utilisation de l'API unifiée github-db
       const res = await fetch('/api/github-db', {
-        method: 'PATCH',
+        method: 'POST', // Utilisation de POST pour les actions
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          action: "comment", // L'action identifiée par ton API
           id: textId, 
-          action: "comment", 
-          payload: { 
-            userEmail: user.email, 
-            userName: user.penName || user.name || "Plume", 
-            text: msg.trim(), 
-            date: new Date().toISOString() 
-          } 
+          userEmail: user.email, 
+          userName: user.penName || user.name || "Plume", 
+          comment: msg.trim(), 
+          date: new Date().toISOString() 
         })
       });
 
@@ -36,7 +35,7 @@ export default function CommentSection({ textId, comments = [], user, onCommente
         if (onCommented) onCommented(); 
         toast.success("Pensée publiée avec succès", { id: tid }); 
         
-        // Tentative de revalidation silencieuse
+        // Revalidation optionnelle pour mettre à jour le cache Next.js
         try {
           await fetch(`/api/revalidate?path=/texts/${textId}`);
         } catch (e) { /* Silencieux */ }
@@ -53,7 +52,7 @@ export default function CommentSection({ textId, comments = [], user, onCommente
   };
 
   return (
-    <div className="mt-32 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000">
+    <div className="mt-32 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000 px-4">
       <header className="flex items-center justify-between mb-12 border-b border-slate-100 pb-6">
         <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 flex items-center gap-3">
           <MessageCircle size={18} className="text-teal-600" /> Flux des Pensées
@@ -75,16 +74,16 @@ export default function CommentSection({ textId, comments = [], user, onCommente
             </p>
           </div>
         ) : (
-          comments.slice().reverse().map((c, i) => (
+          [...comments].reverse().map((c, i) => (
             <div 
               key={i} 
               className="group animate-in slide-in-from-bottom-4 duration-700"
-              style={{ animationDelay: `${i * 100}ms` }}
+              style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex gap-5">
                 <div className="relative shrink-0 w-12 h-12 rounded-[1.25rem] overflow-hidden border-2 border-white shadow-md bg-slate-100 group-hover:rotate-3 transition-transform">
                   <Image 
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.userEmail || i}&backgroundColor=f1f5f9&mood=happy`} 
+                    src={c.userPic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.userEmail || i}&backgroundColor=f1f5f9`} 
                     alt={c.userName}
                     fill
                     className="object-cover"
@@ -98,12 +97,12 @@ export default function CommentSection({ textId, comments = [], user, onCommente
                       {c.userEmail === user?.email && <Sparkles size={10} className="text-amber-400" />}
                     </span>
                     <span className="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">
-                      {c.date ? new Date(c.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Instant présent'}
+                      {c.date ? new Date(c.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : 'Maintenant'}
                     </span>
                   </div>
                   <div className="bg-white p-6 rounded-[1.8rem] rounded-tl-none border border-slate-100 shadow-sm group-hover:shadow-md transition-shadow relative">
                     <p className="text-[15px] text-slate-700 leading-relaxed font-serif italic">
-                      {c.text}
+                      {c.text || c.comment}
                     </p>
                   </div>
                 </div>
@@ -113,13 +112,9 @@ export default function CommentSection({ textId, comments = [], user, onCommente
         )}
       </div>
 
-      {/* Barre de saisie flottante ultra-moderne */}
+      {/* Barre de saisie flottante */}
       <div className="sticky bottom-8 z-50">
-        <div className="bg-white/80 backdrop-blur-2xl p-3 rounded-[2.5rem] border border-white shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1)] flex items-center gap-3 ring-1 ring-slate-900/5 focus-within:ring-teal-500/20 transition-all group">
-          <div className="hidden sm:flex shrink-0 w-10 h-10 rounded-2xl bg-teal-50 items-center justify-center text-teal-600 transition-transform group-focus-within:rotate-12">
-            <MessageCircle size={18} />
-          </div>
-          
+        <div className="bg-white/90 backdrop-blur-2xl p-3 rounded-[2.5rem] border border-white shadow-2xl flex items-center gap-3 ring-1 ring-slate-900/5 focus-within:ring-teal-500/20 transition-all group">
           <input 
             value={msg} 
             onChange={e => setMsg(e.target.value)} 
@@ -129,31 +124,19 @@ export default function CommentSection({ textId, comments = [], user, onCommente
                 if (!sending && msg.trim().length >= 2) postComment();
               }
             }}
-            placeholder={user ? "Une pensée à partager..." : "Inscrivez-vous pour commenter"}
+            placeholder={user ? "Une pensée à partager..." : "Connectez-vous pour commenter"}
             disabled={!user || sending} 
-            className="flex-1 bg-transparent px-2 py-4 text-sm font-bold outline-none text-slate-800 placeholder:text-slate-300 placeholder:font-medium tracking-tight" 
+            className="flex-1 bg-transparent px-4 py-4 text-sm font-bold outline-none text-slate-800 placeholder:text-slate-300" 
           />
           
           <button 
             onClick={postComment} 
             disabled={sending || !user || msg.trim().length < 2} 
-            className="shrink-0 flex items-center gap-2 px-6 py-4 bg-slate-900 text-white rounded-[1.8rem] hover:bg-teal-600 active:scale-95 transition-all shadow-xl disabled:opacity-20 disabled:grayscale group"
+            className="shrink-0 flex items-center gap-2 px-6 py-4 bg-slate-900 text-white rounded-[1.8rem] hover:bg-teal-600 active:scale-95 transition-all shadow-xl disabled:opacity-20"
           >
-            {sending ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <>
-                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest ml-1">Publier</span>
-                <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-              </>
-            )}
+            {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
           </button>
         </div>
-        {!user && (
-          <p className="text-center text-[9px] font-black text-slate-400 uppercase tracking-widest mt-4 animate-pulse">
-            Accès restreint aux utilisateurs connectés
-          </p>
-        )}
       </div>
     </div>
   );
