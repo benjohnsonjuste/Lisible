@@ -1,4 +1,3 @@
-// components/Navbar.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -46,7 +45,7 @@ export default function Navbar() {
         return next;
       });
 
-      // Feedback Audio
+      // Feedback Audio "Lisible"
       const playNotifSound = () => {
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -59,7 +58,7 @@ export default function Navbar() {
           gainNode.connect(audioCtx.destination);
           oscillator.start();
           oscillator.stop(audioCtx.currentTime + 0.3);
-        } catch (e) { console.warn("Audio bloqué"); }
+        } catch (e) { /* Silencieux si bloqué par navigateur */ }
       };
       playNotifSound();
       
@@ -74,7 +73,7 @@ export default function Navbar() {
       };
 
       toast(notif.message, {
-        description: notif.description || "Nouvelle activité sur Lisible",
+        description: notif.description || "Nouvelle résonance sur Lisible",
         icon: getToastIcon(),
         action: {
           label: "VOIR",
@@ -85,7 +84,7 @@ export default function Navbar() {
           }
         },
         duration: 6000,
-        className: "rounded-[1.5rem] border-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-white shadow-2xl font-sans",
+        className: "rounded-[2rem] border-slate-100 dark:border-white/10 dark:bg-slate-900 dark:text-white shadow-2xl font-sans",
       });
     });
 
@@ -107,17 +106,12 @@ export default function Navbar() {
     setUser(null);
     setUnreadCount(0);
     setIsMenuOpen(false);
-    router.push("/login");
-  };
-
-  const handleNotifClick = () => {
-    setUnreadCount(0);
-    localStorage.setItem("unread_notifs", "0");
+    router.push("/auth"); // Redirige vers ta nouvelle page d'auth
   };
 
   const menuItems = [
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
-    { href: "/bibliotheque", label: "Bibliothèque", icon: <Library size={20} /> },
+    { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/dashboard", label: "Studio Auteur", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/communaute", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
@@ -126,7 +120,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-md fixed top-0 left-0 w-full z-50 h-20 border-b border-slate-100 dark:border-white/5 shadow-sm transition-colors duration-300">
+      <header className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-md fixed top-0 left-0 w-full z-50 h-20 border-b border-slate-100 dark:border-white/5 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-6">
           
           <div className="flex items-center gap-6">
@@ -137,40 +131,43 @@ export default function Navbar() {
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <Link href="/" className="group flex items-center gap-2">
-              <span className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white italic">Lisible<span className="text-teal-600">.</span></span>
+              <span className="font-black text-2xl tracking-tighter text-slate-900 dark:text-white italic">
+                Lisible<span className="text-teal-600">.</span>
+              </span>
             </Link>
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <nav className="hidden md:flex items-center gap-1 bg-slate-50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
-              <NavLink href="/bibliotheque" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
+              <NavLink href="/library" icon={<Library size={20} />} active={pathname === "/bibliotheque"} title="Bibliothèque" />
               {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Studio Auteur" />}
             </nav>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <ThemeToggle />
               
               <Link 
                 href="/notifications" 
-                onClick={handleNotifClick}
+                onClick={() => { setUnreadCount(0); localStorage.setItem("unread_notifs", "0"); }}
                 className="p-3 text-slate-400 dark:text-slate-500 hover:text-teal-600 transition-all relative"
               >
                 <Bell size={22} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 bg-teal-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-in zoom-in duration-300">
-                    {unreadCount > 9 ? "9+" : unreadCount}
+                  <span className="absolute top-2 right-2 bg-teal-600 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-bounce">
+                    {unreadCount > 9 ? "!" : unreadCount}
                   </span>
                 )}
               </Link>
               
               {user ? (
-                <button onClick={handleLogout} className="p-3 text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-all">
+                <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-rose-500 transition-all">
                   <LogOut size={22} />
                 </button>
               ) : (
-                <Link href="/login" className="p-3 bg-teal-600 text-white rounded-2xl hover:bg-slate-900 transition-all shadow-lg">
-                  <LogIn size={22} />
+                <Link href="/login" className="ml-2 px-6 py-2.5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-teal-600 dark:hover:bg-teal-500 dark:hover:text-white transition-all shadow-lg active:scale-95">
+                  Connexion
                 </Link>
               )}
             </div>
@@ -178,18 +175,18 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR OVERLAY */}
       <aside className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-500 ease-in-out z-[60] border-r border-slate-50 dark:border-white/5 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="p-8 flex flex-col h-full">
           <div className="flex items-center justify-between mb-10">
             <span className="font-black italic text-xl tracking-tighter text-teal-600">Lisible.</span>
-            <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400"><X size={24} /></button>
+            <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-teal-600 transition-colors"><X size={24} /></button>
           </div>
 
           {user && (
             <Link href="/account" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
               <div className="flex items-center gap-4 overflow-hidden">
-                <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-950 shadow-lg">
+                <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-950 shadow-lg relative">
                   {user.profilePic ? (
                     <img src={user.profilePic} className="w-full h-full object-cover" alt="Avatar" />
                   ) : (
@@ -200,10 +197,10 @@ export default function Navbar() {
                 </div>
                 <div className="text-left overflow-hidden">
                   <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user.penName || user.name}</p>
-                  <p className="text-[9px] uppercase font-black text-teal-600">Mon Profil</p>
+                  <p className="text-[9px] uppercase font-black text-teal-600 tracking-widest">Compte Lisible</p>
                 </div>
               </div>
-              <ChevronRight size={18} className="text-slate-300 dark:text-slate-600" />
+              <ChevronRight size={18} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
             </Link>
           )}
 
@@ -213,18 +210,24 @@ export default function Navbar() {
                 key={item.href} 
                 href={item.href} 
                 onClick={() => setIsMenuOpen(false)} 
-                className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === item.href ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg" : "text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"}`}
+                className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === item.href ? "bg-slate-950 dark:bg-white text-white dark:text-slate-900 shadow-xl" : "text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"}`}
               >
-                <span className={pathname === item.href ? "text-teal-400" : "text-slate-400 dark:text-slate-600"}>{item.icon}</span>
+                <span className={pathname === item.href ? "text-teal-400" : "text-slate-300 dark:text-slate-600"}>{item.icon}</span>
                 <span className="flex-grow">{item.label}</span>
               </Link>
             )))}
           </nav>
+
+          <footer className="mt-auto pt-10 text-center">
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 dark:text-slate-700">
+              Écosystème Lisible
+            </p>
+          </footer>
         </div>
       </aside>
 
+      {/* Backdrop */}
       {isMenuOpen && <div onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />}
-      <div className="h-20" />
     </>
   );
 }
@@ -234,10 +237,12 @@ function NavLink({ href, icon, active, title }) {
     <Link 
       href={href} 
       title={title} 
-      className={`p-3 rounded-2xl transition-all relative ${active ? "bg-white dark:bg-slate-800 text-teal-600 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"}`}
+      className={`p-3 rounded-2xl transition-all relative group ${active ? "bg-white dark:bg-slate-800 text-teal-600 shadow-sm" : "text-slate-400 dark:text-slate-500 hover:text-teal-600 hover:bg-white/50 dark:hover:bg-slate-800"}`}
     >
       {icon}
-      {active && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-teal-600 rounded-full" />}
+      {active && (
+        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-teal-600 rounded-full shadow-[0_0_8px_rgba(13,148,136,0.6)]" />
+      )}
     </Link>
   );
 }
