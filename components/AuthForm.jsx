@@ -34,10 +34,11 @@ export default function AuthForm() {
 
     if (today.getDate() === birthDate.getDate() && today.getMonth() === birthDate.getMonth()) {
       try {
-        await fetch("/api/create-notif", {
+        await fetch("/api/github-db", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            action: "create-notif",
             type: "anniversaire",
             targetEmail: userData.email,
             message: `Joyeux anniversaire ${userData.penName || userData.name} !`,
@@ -55,11 +56,15 @@ export default function AuthForm() {
     try {
       const emailClean = formData.email.trim().toLowerCase();
 
+      // Gestion du mot de passe oublié via l'API unifiée
       if (mode === "forgot") {
-        const res = await fetch("/api/reset-password", {
+        const res = await fetch("/api/github-db", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: emailClean })
+          body: JSON.stringify({ 
+            action: "reset-password",
+            email: emailClean 
+          })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.error || "Compte inconnu");
@@ -68,45 +73,39 @@ export default function AuthForm() {
         return;
       }
 
-      if (mode === "register") {
-        const regRes = await fetch("/api/register-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: formData.name,
-            email: emailClean,
-            password: formData.password,
-            referralCode: refCode
-          })
-        });
-        if (!regRes.ok) {
-          const err = await regRes.json();
-          throw new Error(err.error || "Erreur d'inscription");
-        }
-      }
-
-      const loginRes = await fetch("/api/login", {
+      // Inscription ou Connexion via l'API unifiée
+      const authAction = mode === "register" ? "register" : "login";
+      const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: authAction,
+          name: formData.name,
           email: emailClean,
-          password: formData.password
+          password: formData.password,
+          referralCode: refCode
         })
       });
 
-      const result = await loginRes.json();
-      if (!loginRes.ok) throw new Error(result.error || "Identifiants invalides");
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Identifiants invalides");
 
       const userData = result.user;
+      
+      // Bonus visuel si parrainage réussi
+      if (mode === "register" && refCode) {
+        toast.success("Bienvenue ! +200 Li crédités sur votre compte.");
+      }
+
       await checkAndNotifyBirthday(userData);
       
       // 1. Stockage local pour l'UI
       localStorage.setItem("lisible_user", JSON.stringify(userData));
       
-      // 2. Création du cookie pour le Middleware (Sécurité Serveur)
+      // 2. Création du cookie de session
       document.cookie = "lisible_session=true; path=/; max-age=86400; SameSite=Lax";
       
-      toast.success(`Heureux de vous voir, ${userData.penName || userData.name}`);
+      toast.success(`Heureux de vous voir, ${userData.penName || userData.name || "Auteur"}`);
       router.push("/dashboard");
 
     } catch (err) {
@@ -132,7 +131,7 @@ export default function AuthForm() {
             type="text"
             placeholder="Nom complet"
             required
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500/10 focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
@@ -145,7 +144,7 @@ export default function AuthForm() {
           type="email"
           placeholder="Email"
           required
-          className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
+          className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500/10 focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
         />
@@ -158,7 +157,7 @@ export default function AuthForm() {
             type="password"
             placeholder="Mot de passe"
             required
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-100 transition-all font-medium text-slate-900"
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500/10 focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
@@ -186,7 +185,7 @@ export default function AuthForm() {
           <Loader2 className="animate-spin" size={18} />
         ) : (
           <>
-            {mode === "login" ? "Connecter" : mode === "register" ? "Créer mon compte" : "Retrouver l'accès"}
+            {mode === "login" ? "Accéder à l'Atelier" : mode === "register" ? "Devenir Auteur" : "Retrouver l'accès"}
             <ArrowRight size={16} />
           </>
         )}
@@ -197,9 +196,9 @@ export default function AuthForm() {
           <button 
             type="button" 
             onClick={() => setMode("login")}
-            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all"
+            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-950 transition-all"
           >
-            <ArrowLeft size={14} /> Retour
+            <ArrowLeft size={14} /> Revenir à la connexion
           </button>
         ) : (
           <button
@@ -207,7 +206,7 @@ export default function AuthForm() {
             onClick={() => setMode(mode === "login" ? "register" : "login")}
             className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-all"
           >
-            {mode === "login" ? "Créer un compte" : "Déjà membre ? Se connecter"}
+            {mode === "login" ? "Créer un nouveau compte" : "Déjà membre ? Se connecter"}
           </button>
         )}
       </div>
