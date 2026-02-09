@@ -10,7 +10,7 @@ import { toast } from "sonner";
 export default function AuthorCataloguePage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
-  const authorEmailId = resolvedParams.email; // C'est l'email encodé en Base64
+  const authorEmailId = resolvedParams.email; // Email encodé ou brut
 
   const [author, setAuthor] = useState(null);
   const [texts, setTexts] = useState([]);
@@ -18,7 +18,6 @@ export default function AuthorCataloguePage({ params }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Système de rang basé sur les Li accumulés
   const getRank = (balance) => {
     const sc = Number(balance || 0);
     if (sc >= 25000) return { name: "Légende de Plume", color: "text-amber-600", bg: "bg-amber-50", icon: "🏆" };
@@ -35,29 +34,27 @@ export default function AuthorCataloguePage({ params }) {
   const fetchAuthorData = useCallback(async (id) => {
     setLoading(true);
     try {
-      // 1. Lecture du profil directement depuis le Data Lake GitHub
-      const userRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${id}.json`, { cache: 'no-store' });
-      if (!userRes.ok) throw new Error("Auteur introuvable");
-      
+      // 1. Récupération du profil via le nouveau système (Décode l'email si nécessaire)
+      const authorEmail = id.includes('=') ? atob(id) : id;
+      const userRes = await fetch(`/api/github-db?type=user&id=${authorEmail}`);
       const userData = await userRes.json();
-      const profile = JSON.parse(decodeURIComponent(escape(atob(userData.content))));
-      setAuthor(profile);
+      
+      if (!userData || !userData.content) throw new Error("Auteur introuvable");
+      setAuthor(userData.content);
 
-      // 2. Récupération des textes via l'index central (plus rapide)
-      const indexRes = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/index.json`, { cache: 'no-store' });
+      // 2. Récupération des textes filtrés via l'index central
+      const indexRes = await fetch(`/api/github-db?type=library`);
       const indexData = await indexRes.json();
-      const allTexts = JSON.parse(decodeURIComponent(escape(atob(indexData.content))));
       
-      // Filtrer par l'email décodé de l'auteur
-      const authorEmail = atob(id);
-      const filtered = allTexts
-        .filter(t => t.authorEmail?.toLowerCase() === authorEmail.toLowerCase())
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      
-      setTexts(filtered);
+      if (indexData && indexData.content) {
+        const filtered = indexData.content
+          .filter(t => t.authorEmail?.toLowerCase() === authorEmail.toLowerCase())
+          .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+        setTexts(filtered);
+      }
     } catch (e) { 
       console.error(e);
-      toast.error("Erreur de connexion au Data Lake"); 
+      toast.error("Impossible de charger le profil"); 
     } finally { 
       setLoading(false); 
     }
@@ -72,25 +69,34 @@ export default function AuthorCataloguePage({ params }) {
     setSubmitting(true);
     
     try {
-      // Appel à ton API de synchronisation GitHub pour l'abonnement
-      const res = await fetch("/api/github-db/subscribe", {
+      // Utilisation de l'action centralisée 'toggle_follow'
+      const res = await fetch("/api/github-db", {
         method: "POST",
-        body: JSON.stringify({ followerEmail: currentUser.email, targetEmail: author.email })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: "toggle_follow", 
+          userEmail: currentUser.email, 
+          targetEmail: author.email 
+        })
       });
       
       if (res.ok) {
-        toast.success("Statut d'abonnement mis à jour");
-        // Update local state pour feedback immédiat
+        const data = await res.json();
+        toast.success(data.following ? "Vous suivez cette plume" : "Abonnement retiré");
+        
+        // Mise à jour locale pour éviter un rechargement complet
         setAuthor(prev => ({
-            ...prev,
-            stats: { 
-                ...prev.stats, 
-                subscribers: isFollowing ? (prev.stats.subscribers - 1) : (prev.stats.subscribers + 1) 
-            }
+          ...prev,
+          followers: data.following 
+            ? [...(prev.followers || []), currentUser.email] 
+            : (prev.followers || []).filter(e => e !== currentUser.email)
         }));
       }
-    } catch (err) { toast.error("Action impossible"); } 
-    finally { setSubmitting(false); }
+    } catch (err) { 
+      toast.error("Action impossible"); 
+    } finally { 
+      setSubmitting(false); 
+    }
   };
 
   if (loading) return (
@@ -100,12 +106,11 @@ export default function AuthorCataloguePage({ params }) {
     </div>
   );
 
-  const rank = getRank(author?.wallet?.balance || 0);
-  const isFollowing = author?.subscribersList?.includes(currentUser?.email);
+  const rank = getRank(author?.li || 0);
+  const isFollowing = author?.followers?.includes(currentUser?.email);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 space-y-16 animate-in fade-in duration-1000 bg-[#FCFBF9]">
-      {/* Header Profile Card */}
       <header className="relative flex flex-col md:flex-row items-center gap-10 bg-white p-10 rounded-[4rem] border border-slate-100 shadow-xl">
         <button onClick={() => router.back()} className="absolute top-10 left-10 p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-teal-600 transition-all hover:rotate-12">
           <ArrowLeft size={20} />
@@ -122,7 +127,7 @@ export default function AuthorCataloguePage({ params }) {
         <div className="text-center md:text-left grow space-y-4">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter italic leading-none">
-              {author?.penName}
+              {author?.penName || author?.name || "Plume"}
             </h1>
             {author?.role === 'verified' && <ShieldCheck className="text-teal-500 mx-auto md:mx-0" size={32} fill="currentColor" fillOpacity={0.1} />}
           </div>
@@ -138,7 +143,7 @@ export default function AuthorCataloguePage({ params }) {
             </div>
             <div className="bg-teal-50 text-teal-600 px-5 py-2.5 rounded-2xl flex items-center gap-2">
                <Coins size={14} /> 
-               <span className="text-[10px] font-black uppercase tracking-tighter">{author?.wallet?.balance || 0} Li en poche</span>
+               <span className="text-[10px] font-black uppercase tracking-tighter">{author?.li || 0} Li en poche</span>
             </div>
           </div>
         </div>
@@ -167,7 +172,6 @@ export default function AuthorCataloguePage({ params }) {
         </div>
       </header>
 
-      {/* Grid of Texts */}
       <div className="space-y-10">
         <div className="flex items-center gap-4">
           <h2 className="text-[11px] font-black uppercase tracking-[0.6em] text-slate-300 italic">Catalogue des œuvres</h2>
@@ -186,7 +190,6 @@ export default function AuthorCataloguePage({ params }) {
                   <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-xl uppercase tracking-widest">
                     {txt.category}
                   </span>
-                  {txt.isConcours && <Sparkles className="text-amber-500" size={16} />}
                 </div>
                 <h3 className="text-3xl font-black text-slate-900 group-hover:text-teal-600 transition-colors italic tracking-tighter leading-tight">
                   {txt.title}
@@ -197,7 +200,7 @@ export default function AuthorCataloguePage({ params }) {
                 <div className="flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-teal-500" />
                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                     {new Date(txt.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                     {new Date(txt.date || txt.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                    </span>
                 </div>
                 <ChevronRight className="text-slate-200 group-hover:text-teal-600 group-hover:translate-x-2 transition-all" />
