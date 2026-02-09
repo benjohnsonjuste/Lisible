@@ -3,129 +3,173 @@
 @tailwind utilities;
 
 /* =========================================
-   VARIABLES ET THÈME
+   VARIABLES ET THÈME LISIBLE v2.0
 ========================================= */
 :root {
-  --accent: #0ea5a4; /* Turquoise Lisible */
-  --bg-main: #fcfbf9; /* Teinte papier luxueux */
+  --accent: #0ea5a4;       /* Turquoise Lisible */
+  --accent-soft: #f0fdfa;  /* Teal 50 */
+  --bg-main: #fcfbf9;      /* Papier luxueux */
   --live-red: #e11d48;
+  --slate-950: #020617;
 }
 
 /* =========================================
-   STRUCTURE DE BASE
+   STRUCTURE & TYPOGRAPHIE
 ========================================= */
 body {
   margin: 0;
   background-color: var(--bg-main);
   @apply antialiased text-slate-900 transition-colors duration-1000;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Désactive le scroll rebondissant sur mobile pour le mode focus */
+  overscroll-behavior-y: none;
 }
 
-/* Gestion du mode sombre forcé pour le Focus Mode */
+/* Mode Sombre / Mode Focus */
 .dark {
-  --bg-main: #020617; /* Slate 950 */
+  --bg-main: var(--slate-950);
 }
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 6rem;
+  /* Évite le masquage par la barre de navigation fixe */
+  scroll-padding-top: 7rem;
 }
 
 /* =========================================
-   COMPOSANTS "LISIBLE"
+   COMPOSANTS "LISIBLE" (ATELIER & READER)
 ========================================= */
 @layer components {
+  /* Cartes de la Bibliothèque */
   .card-lisible {
     @apply bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 
-           shadow-sm rounded-[2.5rem] p-6 md:p-8 transition-all duration-300;
+           shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] p-6 md:p-8 
+           transition-all duration-500 hover:shadow-[0_20px_50px_rgba(14,165,164,0.1)]
+           hover:-translate-y-1;
   }
 
+  /* Bouton Signature */
   .btn-lisible {
-    @apply inline-flex items-center justify-center px-6 py-3 
-           rounded-2xl font-black transition-all duration-200 
-           active:scale-95 cursor-pointer text-white;
+    @apply inline-flex items-center justify-center px-8 py-4 
+           rounded-[1.5rem] font-black transition-all duration-300 
+           active:scale-90 cursor-pointer text-white shadow-xl
+           hover:shadow-teal-500/20 hover:brightness-110;
     background-color: var(--accent);
   }
 
+  /* Inputs de l'Atelier */
   .input-lisible {
-    @apply w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl p-4 
-           text-sm font-bold focus:ring-2 focus:ring-[#0ea5a4] 
-           outline-none transition-all dark:text-white;
+    @apply w-full bg-slate-50 dark:bg-slate-900 border-2 border-transparent 
+           rounded-[1.25rem] p-5 text-sm font-bold 
+           focus:bg-white focus:border-teal-500/20 focus:ring-4 focus:ring-teal-500/5 
+           outline-none transition-all dark:text-white shadow-inner;
   }
 
-  /* Style spécifique pour la prose typographique */
+  /* Style Prose pour le Reader */
   .prose-lisible {
     @apply prose prose-slate dark:prose-invert max-w-none;
+    /* On privilégie une police Serif pour la lecture longue */
     font-family: 'Lora', 'Georgia', serif;
+    line-height: 1.85;
+    letter-spacing: -0.011em;
   }
 }
 
 /* =========================================
-   ANIMATIONS LISIBLE CLUB & READER
+   ANIMATIONS D'IMMERSION
 ========================================= */
 
 /**
- * 1. Animation des commentaires éphémères
+ * 1. Apparition des Pensées (Commentaires)
  */
-@keyframes message-fade {
-  0% { transform: translateX(-30px) scale(0.9); opacity: 0; }
-  10% { transform: translateX(0) scale(1); opacity: 1; }
-  85% { opacity: 1; transform: translateY(0); }
-  100% { transform: translateY(-40px); opacity: 0; }
+@keyframes thinking-flow {
+  0% { transform: translateY(20px) scale(0.95); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-.animate-message-fade {
-  animation: message-fade 6s ease-in-out forwards;
+.animate-thinking {
+  animation: thinking-flow 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 /**
- * 2. Animation des cœurs qui s'envolent
+ * 2. Cœurs de Gratitude (Likes)
  */
 @keyframes float-heart {
   0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(-500px) scale(1.8) rotate(-20deg); opacity: 0; }
+  100% { transform: translateY(-400px) scale(2) rotate(-15deg); opacity: 0; }
 }
 
 .animate-float-heart {
-  animation: float-heart 3s ease-out forwards;
+  animation: float-heart 2.5s cubic-bezier(0.1, 0.5, 0.5, 1) forwards;
 }
 
 /**
- * 3. Pulsation du badge LIVE & Scellement
+ * 3. Pulsation du Sceau (Certification)
  */
-@keyframes live-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+@keyframes seal-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(14, 165, 164, 0.4)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(14, 165, 164, 0.2)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(14, 165, 164, 0)); }
 }
 
-.pulse-live {
-  animation: live-pulse 2s infinite;
+.pulse-seal {
+  animation: seal-pulse 3s infinite ease-in-out;
 }
 
 /* =========================================
-   UTILITAIRES TYPOGRAPHIQUES (LEVIER 1 & 4)
+   UTILITAIRES DE LECTURE (LEVIER 4)
 ========================================= */
 
-/* Lettrine élégante pour le début des textes */
-.first-letter-cap::first-letter {
-  @apply text-7xl font-black float-left mr-3 mt-2 text-teal-600;
-  font-family: 'Inter', sans-serif;
+/* Grain de papier (Subtil) */
+.paper-grain {
+  position: relative;
+}
+.paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* Sélection de texte personnalisée */
+/* Lettrine Typographique (Drop Cap) */
+.drop-cap::first-letter {
+  @apply text-7xl font-black float-left mr-3 mt-2 text-teal-600 leading-[0.8];
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+}
+
+/* Sélection de texte Lisible */
 ::selection {
-  @apply bg-teal-100 text-teal-900;
+  background-color: rgba(14, 165, 164, 0.15);
+  color: #0d7e7d;
+}
+
+/* Barre de progression de lecture (Scroll-track) */
+.reading-progress-track {
+  @apply fixed top-0 left-0 w-full h-1 z-[110] bg-slate-100/50 backdrop-blur-sm;
 }
 
 /* =========================================
-   UTILITAIRES VIDÉO & IMAGES
+   MEDIA & VIDÉO
 ========================================= */
 video {
-  @apply rounded-[3rem];
+  @apply rounded-[2.5rem] shadow-2xl;
   object-fit: cover;
 }
 
+/* Masquer les contrôles natifs pour une interface épurée */
 video::-webkit-media-controls {
   display: none !important;
+}
+
+/* Hide scrollbar pour le mode focus tout en gardant le scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
