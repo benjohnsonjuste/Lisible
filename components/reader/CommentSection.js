@@ -16,7 +16,7 @@ export default function CommentSection({ textId, comments = [], user, onCommente
     const tid = toast.loading("Transmission de votre pensée...");
 
     try {
-      const res = await fetch('/api/texts', {
+      const res = await fetch('/api/github-db', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
