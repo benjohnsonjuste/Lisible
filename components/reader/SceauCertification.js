@@ -108,7 +108,7 @@ export default function SceauCertification({
     const t = toast.loading("Apposition du sceau de cire...");
     
     try {
-      const res = await fetch('/api/certify', {
+      const res = await fetch('/api/github-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
