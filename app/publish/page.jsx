@@ -1,144 +1,221 @@
 "use client";
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { UploadCloud, CheckCircle, AlertCircle, Loader2, Sparkles, Coins } from 'lucide-react';
-import { toast } from 'sonner';
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Loader2,
+  Image as ImageIcon,
+  X,
+  Feather,
+  BookOpen
+} from "lucide-react";
 
 export default function PublishPage() {
   const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState("Poésie");
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [content, setContent] = useState('');
+  const [isChecking, setIsChecking] = useState(true);
 
-  // Note: Dans une version finale, ces infos viendraient de ta session utilisateur
-  const currentUser = {
-    penName: "Rodley Robergeau Fontaine",
-    email: "robergeaurodley97@gmail.com",
-    role: "verified", // Permet d'activer le badge 'certified' automatiquement
-    balance: 150
+  const categories = ["Poésie", "Nouvelle", "Roman", "Poésie", "Essai", "Article", "Battle Poétique"];
+
+  useEffect(() => {
+    const loggedUser = localStorage.getItem("lisible_user");
+    if (!loggedUser) {
+      router.push("/login");
+      return;
+    }
+    setUser(JSON.parse(loggedUser));
+    setTitle(localStorage.getItem("draft_title") || "");
+    setContent(localStorage.getItem("draft_content") || "");
+    setIsChecking(false);
+  }, [router]);
+
+  useEffect(() => {
+    if (!isChecking) {
+      localStorage.setItem("draft_title", title);
+      localStorage.setItem("draft_content", content);
+    }
+  }, [title, content, isChecking]);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800; 
+        const scale = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Compression stricte pour GitHub-DB (évite les fichiers trop lourds)
+        setImagePreview(canvas.toDataURL("image/jpeg", 0.5));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (content.length < 100) {
-      return toast.error("Votre œuvre est trop courte pour être publiée.");
+    if (loading) return;
+
+    if (content.trim().length < 1001) {
+      return toast.error("Le texte doit faire au moins 1001 caractères.");
     }
 
     setLoading(true);
-    const formData = new FormData(e.target);
-    
-    const payload = {
-      title: formData.get('title'),
-      category: formData.get('category'),
-      isConcours: formData.get('isConcours') === 'on',
-      content: content,
-      penName: currentUser.penName,
-      authorEmail: currentUser.email,
-      authorRole: currentUser.role,
-      // Metadata pour l'indexation
-      wordCount: content.split(/\s+/).length,
-      publishedAt: new Date().toISOString()
-    };
+    const toastId = toast.loading("Connexion aux archives GitHub...");
 
     try {
-      const res = await fetch('/api/github-db', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      // Génération d'un ID unique type slug
+      const id = Date.now().toString();
+
+      const payload = {
+        id,
+        title: title.trim(),
+        content: content.trim(),
+        authorName: user.penName || user.name || "Plume",
+        authorEmail: user.email.toLowerCase().trim(),
+        authorPic: user.profilePic || null,
+        genre: category,
+        category: category,
+        imageBase64: imagePreview, // GitHub-DB stockera cela dans le JSON
+        isConcours: category === "Battle Poétique",
+        date: new Date().toISOString(),
+        views: 0,
+        totalLikes: 0,
+        comments: []
+      };
+
+      // Appel à ton API github-db
+      const res = await fetch("/api/github-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      const result = await res.json();
+      const data = await res.json();
 
-      if (res.ok) {
-        toast.success("Succès ! Votre œuvre est enregistrée dans le Data Lake.");
-        router.push(`/texts/${result.id}`);
-      } else {
-        throw new Error(result.error || "Erreur lors du commit");
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur lors de l'écriture");
       }
+
+      toast.success("Œuvre publiée sur Lisible !", { id: toastId });
+
+      localStorage.removeItem("draft_title");
+      localStorage.removeItem("draft_content");
+
+      // Redirection vers la page de lecture fraîchement créée
+      router.push(`/texts/${data.id || id}`);
+
     } catch (err) {
       console.error(err);
-      toast.error("Échec de la synchronisation avec GitHub.");
+      toast.error("Échec : " + err.message, { id: toastId });
     } finally {
       setLoading(false);
     }
   };
 
+  if (isChecking) return (
+    <div className="h-screen flex items-center justify-center bg-[#FCFBF9]">
+      <Loader2 className="animate-spin text-teal-600" size={30} />
+    </div>
+  );
+
   return (
-    <div className="max-w-4xl mx-auto py-12 md:py-20 px-6 animate-in fade-in duration-700">
-      <header className="mb-12">
-        <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter text-slate-900 leading-[0.8]">
-          Publier<span className="text-teal-600">.</span>
-        </h1>
-        <div className="flex items-center gap-4 mt-6">
-          <div className="flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-[10px] font-black uppercase tracking-widest">
-            <Coins size={12}/> {currentUser.balance} Li disponibles
-          </div>
-          <div className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-            {currentUser.penName}
-          </div>
-        </div>
-      </header>
-
-      <form onSubmit={handleSubmit} className="space-y-12">
-        <div className="space-y-6">
-          <input 
-            name="title"
-            autoFocus
-            className="text-4xl md:text-6xl font-black italic tracking-tighter w-full outline-none border-b-4 border-slate-50 focus:border-teal-500 transition-all placeholder:text-slate-100"
-            placeholder="Titre de l'œuvre"
-            required
-          />
-          
-          <div className="flex flex-wrap gap-4">
-            <select name="category" className="bg-slate-50 border-none p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-slate-500 outline-none focus:ring-2 ring-teal-500/20">
-              <option value="Poetry">Poésie</option>
-              <option value="Novel">Roman / Nouvelle</option>
-              <option value="Essay">Essai</option>
-              <option value="Battle">Battle Littéraire</option>
-            </select>
-
-            <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black uppercase tracking-widest">
-              <Sparkles size={14}/> Mode Création Activé
-            </div>
-          </div>
-        </div>
-
-        <textarea 
-          onChange={(e) => setContent(e.target.value)}
-          className="w-full h-[400px] md:h-[600px] text-xl md:text-2xl font-serif leading-relaxed outline-none bg-slate-50/20 p-8 md:p-12 rounded-[3rem] border-2 border-transparent focus:border-slate-50 transition-all placeholder:text-slate-200"
-          placeholder="Laissez couler votre plume ici..."
-          required
-        />
-
-        <div className="bg-slate-950 p-8 md:p-10 rounded-[3.5rem] flex flex-col md:flex-row gap-8 items-center justify-between shadow-2xl shadow-slate-200">
-          <label className="flex items-center gap-4 cursor-pointer group">
-            <div className="relative">
-              <input type="checkbox" name="isConcours" className="peer sr-only" />
-              <div className="w-12 h-6 bg-slate-800 rounded-full peer-checked:bg-teal-500 transition-colors"></div>
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-6 transition-transform"></div>
-            </div>
-            <span className="font-black italic uppercase text-[10px] text-slate-400 group-hover:text-white transition-colors tracking-widest">
-              Participer au concours officiel
-            </span>
-          </label>
-
-          <button 
-            disabled={loading}
-            className="w-full md:w-auto bg-teal-500 text-white px-12 py-6 rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] hover:bg-white hover:text-slate-950 transition-all disabled:opacity-20 flex items-center justify-center gap-3"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={18}/>
-                Synchronisation...
-              </>
-            ) : (
-              <>
-                <UploadCloud size={18}/>
-                Push Publication
-              </>
-            )}
+    <div className="min-h-screen bg-[#FCFBF9] pb-20 font-sans">
+      <div className="max-w-3xl mx-auto px-6 pt-10">
+        
+        <header className="flex items-center justify-between mb-12">
+          <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
+            <ArrowLeft size={20} />
           </button>
-        </div>
-      </form>
+          <div className="text-center">
+            <h1 className="font-serif font-black italic text-2xl tracking-tighter">Écrire une œuvre</h1>
+          </div>
+          <div className="w-10" />
+        </header>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          
+          {/* Cover Image */}
+          <div className="relative group">
+            {imagePreview ? (
+              <div className="relative h-64 rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white">
+                <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
+                <button 
+                  type="button"
+                  onClick={() => setImagePreview(null)}
+                  className="absolute top-4 right-4 p-2 bg-rose-500 text-white rounded-full hover:scale-110 transition-transform"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-200 bg-white rounded-[2.5rem] cursor-pointer hover:border-teal-400 hover:bg-teal-50/50 transition-all">
+                <ImageIcon size={32} className="text-slate-300 mb-2" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ajouter une couverture</span>
+                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+              </label>
+            )}
+          </div>
+
+          {/* Genre Picker */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                  category === cat 
+                  ? "bg-teal-600 text-white shadow-lg" 
+                  : "bg-white text-slate-400 border border-slate-100"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
+            <input 
+              type="text"
+              placeholder="Titre de l'œuvre"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full text-3xl font-serif font-black italic tracking-tighter outline-none placeholder:text-slate-200"
+            />
+            
+            <textarea 
+              placeholder="Commencez votre récit..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full min-h-[350px] text-lg font-serif leading-relaxed outline-none placeholder:text-slate-200 resize-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-4 py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-xl disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin" size={18} /> : <><Feather size={18}/> Publier</>}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
