@@ -9,7 +9,6 @@ import {
   Image as ImageIcon,
   X,
   Feather,
-  BookOpen
 } from "lucide-react";
 
 export default function PublishPage() {
@@ -22,7 +21,7 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  const categories = ["Poésie", "Nouvelle", "Roman", "Poésie", "Essai", "Article", "Battle Poétique"];
+  const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Article"];
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
@@ -58,8 +57,6 @@ export default function PublishPage() {
         canvas.height = img.height * scale;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // Compression stricte pour GitHub-DB (évite les fichiers trop lourds)
         setImagePreview(canvas.toDataURL("image/jpeg", 0.5));
       };
       img.src = ev.target.result;
@@ -71,35 +68,45 @@ export default function PublishPage() {
     e.preventDefault();
     if (loading) return;
 
-    if (content.trim().length < 1001) {
-      return toast.error("Le texte doit faire au moins 1001 caractères.");
+    // VALIDATION : Pas de minimum, mais maximum 1000
+    const cleanContent = content.trim();
+    
+    if (cleanContent.length === 0) {
+      return toast.error("Le Grand Livre ne peut pas publier de page blanche.");
+    }
+
+    if (cleanContent.length > 1000) {
+      return toast.error(`Votre texte est trop long (${cleanContent.length}/1000). Soyez plus concis.`);
+    }
+
+    if (!title.trim()) {
+      return toast.error("Veuillez donner un titre à votre œuvre.");
     }
 
     setLoading(true);
-    const toastId = toast.loading("Connexion aux archives GitHub...");
+    const toastId = toast.loading("Action...");
 
     try {
-      // Génération d'un ID unique type slug
       const id = Date.now().toString();
 
       const payload = {
         id,
         title: title.trim(),
-        content: content.trim(),
+        content: cleanContent,
         authorName: user.penName || user.name || "Plume",
         authorEmail: user.email.toLowerCase().trim(),
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
-        imageBase64: imagePreview, // GitHub-DB stockera cela dans le JSON
-        isConcours: category === "Battle Poétique",
+        imageBase64: imagePreview,
+        isConcours: false,
         date: new Date().toISOString(),
         views: 0,
         totalLikes: 0,
-        comments: []
+        comments: [],
+        totalCertified: 0 // Initialisation pour le sceau
       };
 
-      // Appel à ton API github-db
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,20 +116,19 @@ export default function PublishPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Erreur lors de l'écriture");
+        throw new Error(data.error || "Erreur de communication avec GitHub");
       }
 
-      toast.success("Œuvre publiée sur Lisible !", { id: toastId });
+      toast.success("Œuvre publiée avec succès ! ", { id: toastId });
 
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
-      // Redirection vers la page de lecture fraîchement créée
-      router.push(`/texts/${data.id || id}`);
+      router.push(`/texts/${id}`);
 
     } catch (err) {
       console.error(err);
-      toast.error("Échec : " + err.message, { id: toastId });
+      toast.error(err.message, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -150,7 +156,6 @@ export default function PublishPage() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           
-          {/* Cover Image */}
           <div className="relative group">
             {imagePreview ? (
               <div className="relative h-64 rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white">
@@ -172,7 +177,6 @@ export default function PublishPage() {
             )}
           </div>
 
-          {/* Genre Picker */}
           <div className="flex flex-wrap gap-2 justify-center">
             {categories.map((cat) => (
               <button
@@ -191,19 +195,24 @@ export default function PublishPage() {
           </div>
 
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
-            <input 
-              type="text"
-              placeholder="Titre de l'œuvre"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-3xl font-serif font-black italic tracking-tighter outline-none placeholder:text-slate-200"
-            />
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 pb-4">
+               <input 
+                type="text"
+                placeholder="Titre de l'œuvre"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full text-3xl font-serif font-black italic tracking-tighter outline-none placeholder:text-slate-200"
+              />
+              <div className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-colors ${content.length > 1000 ? 'text-rose-500 border-rose-100 bg-rose-50' : 'text-slate-300 border-slate-100'}`}>
+                {content.length} / 1000
+              </div>
+            </div>
             
             <textarea 
-              placeholder="Commencez votre récit..."
+              placeholder="Laissez parler votre plume... (Max 1000 caractères)"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full min-h-[350px] text-lg font-serif leading-relaxed outline-none placeholder:text-slate-200 resize-none"
+              className="w-full min-h-[450px] text-lg font-serif leading-relaxed outline-none placeholder:text-slate-200 resize-none"
             />
           </div>
 
