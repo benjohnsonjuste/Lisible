@@ -68,7 +68,6 @@ export default function PublishPage() {
     e.preventDefault();
     if (loading) return;
 
-    // VALIDATION : Pas de minimum, mais maximum 1000
     const cleanContent = content.trim();
     
     if (cleanContent.length === 0) {
@@ -84,12 +83,14 @@ export default function PublishPage() {
     }
 
     setLoading(true);
-    const toastId = toast.loading("Action sur la base GitHub...");
+    const toastId = toast.loading("Envoi au Data Lake...");
 
     try {
       const id = Date.now().toString();
 
+      // Adaptation du payload pour ton API github-db
       const payload = {
+        action: "publish", // Action requise par ton API fusionnée
         id,
         title: title.trim(),
         content: cleanContent,
@@ -98,13 +99,13 @@ export default function PublishPage() {
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
-        imageBase64: imagePreview,
+        image: imagePreview, // Renommé 'image' pour correspondre à ton index library
         isConcours: false,
         date: new Date().toISOString(),
         views: 0,
         totalLikes: 0,
         comments: [],
-        totalCertified: 0 // Initialisation pour le sceau
+        totalCertified: 0
       };
 
       const res = await fetch("/api/github-db", {
@@ -116,11 +117,12 @@ export default function PublishPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Erreur de communication avec GitHub");
+        throw new Error(data.error || "Erreur de communication avec le serveur");
       }
 
       toast.success("Œuvre publiée avec succès ! ✨", { id: toastId });
 
+      // Nettoyage des brouillons
       localStorage.removeItem("draft_title");
       localStorage.removeItem("draft_content");
 
