@@ -25,43 +25,31 @@ export default function NotificationsPage() {
     setReadIds(savedReadIds);
   }, []);
 
-  // --- RÉCUPÉRATION DEPUIS LE PROFIL UTILISATEUR ---
+  // --- RÉCUPÉRATION VIA GITHUB-DB (Profil Utilisateur) ---
   const fetchNotifications = useCallback(async (userEmail, silent = false) => {
     if (!userEmail) return;
     if (!silent) setLoading(true);
     else setIsSyncing(true);
 
     try {
-      const fileName = btoa(userEmail.toLowerCase().trim()).replace(/=/g, "");
-      const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/users/${fileName}.json?t=${Date.now()}`);
+      // On récupère le profil complet via notre API unifiée
+      const res = await fetch(`/api/github-db?type=user&id=${userEmail}`);
       
       if (res.ok) {
-        const fileData = await res.json();
-        const userData = JSON.parse(atob(fileData.content));
-        const myNotifs = userData.notifications || [];
+        const data = await res.json();
+        const userData = data.content;
+        const myNotifs = userData?.notifications || [];
         
+        // Tri par date décroissante
         const sorted = myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
         setNotifications(sorted);
         notifsRef.current = sorted;
       }
     } catch (error) { 
-      console.error("Erreur Sync:", error); 
+      console.error("Erreur Sync Signaux:", error); 
     } finally { 
       setLoading(false); 
       setIsSyncing(false);
-    }
-  }, []);
-
-  // --- DÉCLENCHEUR DE NETTOYAGE ---
-  const triggerCleanup = useCallback(async (email) => {
-    try {
-      await fetch("/api/clean-notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-    } catch (e) {
-      console.error("Cleanup error silencieux");
     }
   }, []);
 
@@ -75,16 +63,14 @@ export default function NotificationsPage() {
       
       fetchNotifications(userData.email);
 
-      const cleanupTimer = setTimeout(() => {
-        triggerCleanup(userData.email);
-      }, 5000);
-
+      // Rafraîchissement périodique (Fallback si Pusher est inactif)
       interval = setInterval(() => {
         fetchNotifications(userData.email, true);
       }, 30000);
 
       // --- PUSHER (Temps Réel) ---
       const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
+      // On utilise l'email brut pour le canal (plus simple avec ton API)
       const userKey = btoa(userData.email.toLowerCase().trim()).replace(/=/g, "");
       const privateChannel = pusher.subscribe(`user-${userKey}`);
       
@@ -102,14 +88,13 @@ export default function NotificationsPage() {
 
       return () => {
         if (interval) clearInterval(interval);
-        clearTimeout(cleanupTimer);
         pusher.unsubscribe(`user-${userKey}`);
       };
     } else {
       setLoading(false);
       router.push("/login");
     }
-  }, [fetchNotifications, router, triggerCleanup]);
+  }, [fetchNotifications, router]);
 
   const markAsRead = (id) => {
     if (!readIds.includes(id)) {
@@ -138,7 +123,7 @@ export default function NotificationsPage() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen animate-in fade-in duration-700">
+    <div className="max-w-2xl mx-auto py-10 px-4 min-h-screen animate-in fade-in duration-700 bg-[#FCFBF9] dark:bg-slate-950">
       <header className="flex items-center justify-between mb-10">
         <button onClick={() => router.back()} className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-slate-900 dark:text-white">
           <ArrowLeft size={20} />
