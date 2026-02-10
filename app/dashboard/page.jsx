@@ -1,15 +1,19 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { Coins, BookOpen, TrendingUp, Settings as SettingsIcon, Loader2, Sparkles, Plus } from 'lucide-react';
+import { 
+  Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
+  Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink 
+} from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
 export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
+  const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadStudio() {
       try {
         const loggedUser = localStorage.getItem("lisible_user");
         if (!loggedUser) {
@@ -19,108 +23,181 @@ export default function AuthorDashboard() {
         
         const { email } = JSON.parse(loggedUser);
 
-        // Chargement depuis l'API centralisée github-db
-        const res = await fetch(`/api/github-db?type=user&id=${email}`);
-        const data = await res.json();
+        // 1. Charger Profil
+        const userRes = await fetch(`/api/github-db?type=user&id=${email}`);
+        const userData = await userRes.json();
         
-        if (data && data.content) {
-          setUser(data.content);
-          // Sync optionnelle du localStorage si les Li ont changé
-          localStorage.setItem("lisible_user", JSON.stringify(data.content));
-        } else {
-          toast.error("Profil introuvable");
+        if (userData && userData.content) {
+          setUser(userData.content);
+          localStorage.setItem("lisible_user", JSON.stringify(userData.content));
         }
+
+        // 2. Charger les œuvres de l'auteur depuis l'index
+        const libraryRes = await fetch(`/api/github-db?type=library`);
+        const libraryData = await libraryRes.json();
+        if (libraryData && libraryData.content) {
+          const authorWorks = libraryData.content.filter(w => 
+            w.authorEmail?.toLowerCase() === email.toLowerCase()
+          );
+          setWorks(authorWorks);
+        }
+
       } catch (e) {
-        console.error("Dashboard Load Error:", e);
-        toast.error("Erreur de synchronisation");
+        toast.error("Erreur de synchronisation avec le registre");
       } finally {
         setLoading(false);
       }
     }
-    loadProfile();
+    loadStudio();
   }, []);
+
+  const handleDelete = async (id, title) => {
+    if (!confirm(`Voulez-vous vraiment retirer "${title}" des archives ?`)) return;
+    
+    toast.loading("Retrait du manuscrit...");
+    try {
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_text', textId: id })
+      });
+      if (res.ok) {
+        setWorks(works.filter(w => w.id !== id));
+        toast.success("Manuscrit effacé des registres.");
+      }
+    } catch (e) {
+      toast.error("Erreur lors de la suppression.");
+    } finally {
+      toast.dismiss();
+    }
+  };
 
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Accès au Studio...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture du Studio...</p>
     </div>
   );
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
+      <div className="max-w-6xl mx-auto space-y-12">
         
         <header className="flex justify-between items-end">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={14} className="text-teal-600" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Espace Auteur</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Espace Créatif</span>
             </div>
             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Mon Studio.</h1>
           </div>
-          <Link href="/settings" className="p-4 bg-white rounded-[1.5rem] shadow-sm hover:rotate-90 transition-all border border-slate-100 text-slate-400 hover:text-teal-600">
+          <Link href="/settings" className="p-4 bg-white rounded-[1.5rem] shadow-sm hover:text-teal-600 transition-all border border-slate-100">
             <SettingsIcon size={20} />
           </Link>
         </header>
 
+        {/* --- SECTION QUICK ACTIONS --- */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p>
+              <h3 className="text-xl font-bold italic">Publier un texte</h3>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus size={24} />
+            </div>
+          </Link>
+
+          <Link href="/account" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p>
+              <h3 className="text-xl font-bold italic">Gérer mon compte</h3>
+            </div>
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <User size={22} />
+            </div>
+          </Link>
+        </section>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-slate-950 text-white p-10 rounded-[3rem] relative overflow-hidden group shadow-2xl shadow-slate-950/20">
-            <Coins className="absolute -right-4 -bottom-4 text-white/10 group-hover:scale-110 transition-transform duration-700" size={140} />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-50 mb-4">Bourse Actuelle</p>
-            <h2 className="text-6xl font-black italic tracking-tighter">
-              {user.li || 0} <span className="text-teal-400 text-2xl not-italic ml-1">Li</span>
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+            <Coins className="absolute -right-4 -bottom-4 text-slate-50" size={120} />
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">Bourse Li</p>
+            <h2 className="text-5xl font-black italic tracking-tighter text-slate-900">
+              {user.li || 0} <span className="text-teal-600 text-xl not-italic ml-1">Li</span>
             </h2>
+            <p className="text-[9px] font-bold text-slate-300 mt-2 uppercase tracking-tighter">Val. estimée: {(user.li * 0.0002).toFixed(2)} USD</p>
           </div>
           
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
-            <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-6">
-              <BookOpen size={24} />
-            </div>
+            <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-6"><BookOpen size={24} /></div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Abonnés</p>
-              <h2 className="text-4xl font-black italic mt-1 text-slate-900">{user.followers?.length || 0}</h2>
+              <h2 className="text-4xl font-black italic text-slate-900">{user.followers?.length || 0}</h2>
             </div>
           </div>
 
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
-             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-6">
-              <TrendingUp size={24} />
-            </div>
+             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-6"><TrendingUp size={24} /></div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Influences</p>
-              <h2 className="text-4xl font-black italic mt-1 text-slate-900">{user.following?.length || 0}</h2>
+              <h2 className="text-4xl font-black italic text-slate-900">{user.following?.length || 0}</h2>
             </div>
           </div>
         </div>
 
-        {/* Actions Principales */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Link href="/publish" className="flex items-center justify-center gap-3 bg-teal-600 text-white py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] hover:bg-teal-700 transition-all hover:-translate-y-1 shadow-xl shadow-teal-900/10">
-            <Plus size={18} />
-            Nouvelle Publication
-          </Link>
-          <Link href="/shop" className="flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-900 py-6 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] hover:bg-slate-50 transition-all">
-            <Coins size={18} className="text-amber-500" />
-            Recharger en Li
-          </Link>
-        </div>
+        {/* --- GESTION DES TEXTES --- */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Manuscrits.</h2>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{works.length} Œuvres</span>
+          </div>
 
-        {/* Note du Data Lake */}
-        <div className="p-10 bg-white rounded-[3rem] border border-slate-100 relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-3">Statut du Registre</p>
-            <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-2xl">
-              Votre Studio est directement synchronisé avec le Grand Livre de l'Atelier. Vos <span className="text-slate-900 font-bold">Li</span> sont des actifs numériques que vous pouvez transférer ou utiliser pour débloquer des privilèges.
-            </p>
-          </div>
-          <div className="absolute right-[-20px] top-[-20px] opacity-[0.03] pointer-events-none">
-            <Sparkles size={200} />
-          </div>
-        </div>
+          {works.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {works.map((work) => (
+                <div key={work.id} className="group bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-start gap-5">
+                    <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                      <FileText size={28} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">{work.title}</h3>
+                      <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <span>{work.category}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1"><ExternalLink size={10}/> {new Date(work.date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link href={`/texts/${work.id}`} className="p-4 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-100 transition-colors">
+                      <ExternalLink size={18} />
+                    </Link>
+                    <Link href={`/edit/${work.id}`} className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all">
+                      <Edit3 size={18} />
+                    </Link>
+                    <button 
+                      onClick={() => handleDelete(work.id, work.title)}
+                      className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
+              <p className="text-slate-400 font-medium italic">Aucun manuscrit n'a encore été scellé...</p>
+              <Link href="/publish" className="inline-block mt-4 text-[10px] font-black uppercase tracking-widest text-teal-600 underline">Commencer à écrire</Link>
+            </div>
+          )}
+        </section>
 
       </div>
     </div>
