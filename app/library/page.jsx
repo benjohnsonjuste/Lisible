@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, ChevronDown 
+  Search, ChevronDown, Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,23 +23,23 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const fetchInitial = async () => {
     setLoading(true);
     try {
-      // Utilisation du type=library de github-db
+      // Appel au Data Lake centralisé
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       
-      // On récupère le contenu de l'index (json.content est le tableau de textes)
       if (json && json.content) {
+        // Le contenu de l'index est un tableau d'objets (métadonnées des textes)
         setTexts(json.content);
       }
     } catch (e) { 
       console.error(e); 
-      toast.error("Impossible de charger les manuscrits");
+      toast.error("Le Grand Livre des manuscrits est inaccessible.");
     } finally { 
       setLoading(false); 
     }
   };
 
-  // Logique de filtrage combinée (Côté client pour une réactivité maximale)
+  // Logique de filtrage combinée
   const filteredTexts = useMemo(() => {
     return texts.filter(t => {
       const matchesSearch = 
@@ -64,6 +64,15 @@ export default function Bibliotheque({ initialTexts = [] }) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
       
+      {/* En-tête de section */}
+      <div className="text-center mb-16 space-y-4">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles size={14} className="text-teal-600" />
+            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-teal-600">Patrimoine Littéraire</span>
+          </div>
+          <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Les Archives.</h1>
+      </div>
+
       {/* Barre de Recherche & Filtres */}
       <div className="space-y-10 mb-20">
         <div className="relative max-w-2xl mx-auto group">
@@ -73,7 +82,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
             placeholder="Rechercher une œuvre, une plume..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-6 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-sm"
+            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-7 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-sm"
           />
         </div>
 
@@ -83,9 +92,9 @@ export default function Bibliotheque({ initialTexts = [] }) {
             <button
               key={g}
               onClick={() => setActiveGenre(g)}
-              className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border ${
+              className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border ${
                 activeGenre === g
-                  ? "bg-slate-900 border-slate-900 text-white shadow-xl scale-105"
+                  ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105"
                   : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
               }`}
             >
@@ -95,20 +104,20 @@ export default function Bibliotheque({ initialTexts = [] }) {
         </div>
       </div>
 
-      {/* Grille de résultats */}
+      {/* Grille de manuscrits */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
-          const isConcours = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
-          const isAdmin = ["adm.lablitteraire7@gmail.com", "jb7management@gmail.com"].includes(item.authorEmail);
+          const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
+          const isAdmin = ["adm.lablitteraire7@gmail.com", "jb7management@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(item.authorEmail);
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
               <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
-                isConcours ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
+                isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
               } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
                 
                 {/* Visual Header */}
-                <div className="h-60 bg-slate-100 relative overflow-hidden">
+                <div className="h-64 bg-slate-100 relative overflow-hidden">
                   <img
                     src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
                     alt=""
@@ -117,14 +126,14 @@ export default function Bibliotheque({ initialTexts = [] }) {
                   />
                   
                   <div className="absolute top-6 left-6 flex flex-col gap-2">
-                    {isConcours && (
+                    {isDuel && (
                       <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                        <Trophy size={12} /> Duel
+                        <Trophy size={12} /> Duel de Plume
                       </span>
                     )}
                     {isAdmin && (
                       <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                        <ShieldCheck size={12} /> Staff
+                        <ShieldCheck size={12} /> Officiel
                       </span>
                     )}
                   </div>
@@ -132,12 +141,12 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
                 {/* Content */}
                 <div className="p-10 flex-grow flex flex-col">
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-5">
                     <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">
                       {item.category || item.genre || "Écrit"}
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-300">
+                    <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
                       {item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
                   </div>
@@ -146,22 +155,26 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     {item.title}
                   </h2>
 
-                  <p className="text-slate-500 line-clamp-2 font-serif italic mb-10 text-[17px] leading-relaxed">
-                    {item.summary || "Une œuvre à découvrir sur Lisible..."}
+                  <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
+                    {item.summary || "Un nouveau manuscrit scellé dans les registres de l'Atelier..."}
                   </p>
 
                   <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-[11px] font-black">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-slate-50">
                         {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-[11px] font-black uppercase tracking-widest text-slate-700">
-                        {item.author || item.authorName}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
+                          {item.author || item.authorName}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">Auteur Scellé</span>
+                      </div>
                     </div>
                     
-                    <div className="flex gap-4 text-slate-300 text-[11px] font-black">
-                      <span className="flex items-center gap-1.5"><Eye size={16} /> {item.views || 0}</span>
+                    <div className="flex gap-5 text-slate-300 text-[11px] font-black">
+                      <span className="flex items-center gap-2"><Eye size={18} /> {item.views || 0}</span>
+                      <span className="flex items-center gap-2"><Heart size={18} /> {item.likes || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -172,10 +185,10 @@ export default function Bibliotheque({ initialTexts = [] }) {
       </div>
 
       {filteredTexts.length === 0 && !loading && (
-        <div className="text-center py-32 bg-white rounded-[4rem] border-2 border-dashed border-slate-100">
-           <Search className="text-slate-200 mx-auto mb-4" size={48} />
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-             Aucun manuscrit ne correspond à cette recherche.
+        <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
+           <Search className="text-slate-100 mx-auto mb-6" size={64} />
+           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
+             Aucun manuscrit n'a été trouvé dans ce compartiment des archives.
            </p>
         </div>
       )}
