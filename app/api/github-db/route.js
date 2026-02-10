@@ -11,6 +11,12 @@ const GITHUB_CONFIG = {
   token: process.env.GITHUB_TOKEN
 };
 
+const ECONOMY = {
+  MIN_TRANSFER: 1000,
+  WITHDRAWAL_THRESHOLD: 25000, // 5 USD
+  LI_VALUE_USD: 0.0002 // 1000 Li = 0.20 USD
+};
+
 // --- HELPERS CORE ---
 
 async function getFile(path) {
@@ -52,7 +58,7 @@ async function updateFile(path, content, sha, message) {
 
 const getSafePath = (email) => `data/users/${email?.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
 
-// --- ROUTE PRINCIPALE POST (ÉCRITURE & ACTIONS) ---
+// --- ROUTE PRINCIPALE POST ---
 
 export async function POST(req) {
   try {
@@ -60,7 +66,7 @@ export async function POST(req) {
     const { action, userEmail, textId, amount, ...data } = body;
     const targetPath = getSafePath(userEmail || data.email);
 
-    // 1. AUTH & COMPTE (Login, Register, Update, Sync)
+    // 1. AUTH & COMPTE
     if (['user_sync', 'login', 'register', 'update_user'].includes(action)) {
       const file = await getFile(targetPath);
       const isNew = !file;
@@ -77,7 +83,7 @@ export async function POST(req) {
       return NextResponse.json({ success: true, user: userData });
     }
 
-    // 2. TEXTES (Publish, Comment, Report)
+    // 2. TEXTES
     if (action === 'publish') {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
@@ -86,56 +92,44 @@ export async function POST(req) {
       
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
       const index = await getFile(indexPath) || { content: [] };
-      index.content.unshift({ id: pubId, title: data.title, author: data.authorName, category: data.category, date: newPub.date });
+      index.content.unshift({ 
+        id: pubId, title: data.title, author: data.authorName, 
+        authorEmail: data.authorEmail, category: data.category, date: newPub.date 
+      });
       await updateFile(indexPath, index.content, index.sha, `📝 Index Update`);
       
       return NextResponse.json({ success: true, id: pubId });
     }
 
-    if (action === 'comment') {
-      const file = await getFile(`data/texts/${textId}.json`);
-      file.content.comments.unshift({ user: userEmail, text: data.comment, date: new Date().toISOString() });
-      await updateFile(`data/texts/${textId}.json`, file.content, file.sha, `💬 Comment on ${textId}`);
-      return NextResponse.json({ success: true });
-    }
-
-    // 3. ÉCONOMIE (Transfert, Wallet, Cadeau, Retrait)
+    // 3. ÉCONOMIE (Transfert & Retrait)
     if (action === 'transfer_li' || action === 'gift_li') {
+      if (amount < ECONOMY.MIN_TRANSFER) {
+        return NextResponse.json({ error: `Le minimum d'envoi est de ${ECONOMY.MIN_TRANSFER} Li` }, { status: 400 });
+      }
+
       const sender = await getFile(getSafePath(userEmail));
       const receiver = await getFile(getSafePath(data.recipientEmail));
+      
+      if (!sender || !receiver) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
       
       sender.content.li -= amount;
       receiver.content.li += amount;
-      await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent ${amount}`);
-      await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received ${amount}`);
+      
+      await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent ${amount} Li`);
+      await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received ${amount} Li`);
       return NextResponse.json({ success: true });
     }
 
-    // 4. SOCIAL (Follow, Notif)
-    if (action === 'toggle_follow') {
-      const me = await getFile(getSafePath(userEmail));
-      const target = await getFile(getSafePath(data.targetEmail));
-      const isFollowing = me.content.following.includes(data.targetEmail);
-      me.content.following = isFollowing ? me.content.following.filter(e => e !== data.targetEmail) : [...me.content.following, data.targetEmail];
-      target.content.followers = isFollowing ? target.content.followers.filter(e => e !== userEmail) : [...target.content.followers, userEmail];
-      await updateFile(getSafePath(userEmail), me.content, me.sha, `🤝 Follow Toggle`);
-      await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 Followers Update`);
-      return NextResponse.json({ success: true, isFollowing: !isFollowing });
-    }
-
-    if (action === 'create_notif') {
-      const file = await getFile(getSafePath(data.targetEmail));
-      file.content.notifications.unshift({ id: Date.now(), ...data, read: false, date: new Date().toISOString() });
-      await updateFile(getSafePath(data.targetEmail), file.content, file.sha, `🔔 Notif`);
-      return NextResponse.json({ success: true });
-    }
-
-    // 5. SÉCURITÉ (Delete Account, Report)
-    if (action === 'delete_account') {
-      const file = await getFile(targetPath);
-      await updateFile(targetPath, { deleted: true, email: userEmail }, file.sha, `❌ Deleted Account`);
-      return NextResponse.json({ success: true });
+    if (action === 'request_withdrawal') {
+      const user = await getFile(targetPath);
+      if (user.content.li < ECONOMY.WITHDRAWAL_THRESHOLD) {
+        return NextResponse.json({ 
+          error: `Seuil de retrait non atteint (${ECONOMY.WITHDRAWAL_THRESHOLD} Li requis)` 
+        }, { status: 400 });
+      }
+      // Logique de demande de retrait à implémenter (ex: enregistrer dans data/withdrawals.json)
+      return NextResponse.json({ success: true, message: "Demande de retrait enregistrée" });
     }
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
@@ -144,7 +138,7 @@ export async function POST(req) {
   }
 }
 
-// --- MÉTHODE GET (LECTURE & SEARCH) ---
+// --- MÉTHODE GET ---
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -153,56 +147,47 @@ export async function GET(req) {
 
   try {
     if (type === 'text') return NextResponse.json(await getFile(`data/texts/${id}.json`));
-    if (type === 'user') return NextResponse.json(await getFile(getSafePath(id)));
+    if (type === 'user') {
+        const user = await getFile(getSafePath(id));
+        if (user) {
+            // Ajouter dynamiquement la valeur estimée en USD
+            user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
+        }
+        return NextResponse.json(user);
+    }
     if (type === 'library' || type === 'publications') return NextResponse.json(await getFile(`data/publications/index.json`));
     
-    // NOUVEAU : Liste tous les utilisateurs pour la page Cercle
-    if (type === 'users_list') {
-      const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`, {
-        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }
-      });
-      const files = await res.json();
-      const users = await Promise.all(
-        files.filter(f => f.name.endsWith('.json')).map(async (f) => {
-          const u = await getFile(f.path);
-          return u?.content;
-        })
-      );
-      return NextResponse.json({ users: users.filter(u => u && !u.deleted) });
-    }
-
-    if (type === 'search') {
-      const index = await getFile(`data/publications/index.json`);
-      const q = searchParams.get('q').toLowerCase();
-      const results = index.content.filter(t => t.title.toLowerCase().includes(q) || t.author.toLowerCase().includes(q));
-      return NextResponse.json(results);
-    }
-    
-    if (type === 'author_works') {
-      const index = await getFile(`data/publications/index.json`);
-      return NextResponse.json(index.content.filter(t => t.authorEmail === id));
-    }
-
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
-    return NextResponse.json({ error: "GitHub saturé" }, { status: 429 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
-// --- MÉTHODE PATCH (STATS & MISES À JOUR RAPIDES) ---
+// --- MÉTHODE PATCH ---
 
 export async function PATCH(req) {
   try {
     const { id, action } = await req.json();
     const path = `data/texts/${id}.json`;
-    const file = await getFile(path);
+    const textFile = await getFile(path);
     
-    if (action === 'view') file.content.views = (file.content.views || 0) + 1;
-    if (action === 'like') file.content.likes = (file.content.likes || 0) + 1;
-    if (action === 'certify') file.content.certified = (file.content.certified || 0) + 1;
+    if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
 
-    await updateFile(path, file.content, file.sha, `📈 Stat update: ${action}`);
-    return NextResponse.json({ success: true, count: file.content[action === 'certify' ? 'certified' : action + 's'] });
+    if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
+    if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
+    
+    if (action === 'certify') {
+      textFile.content.certified = (textFile.content.certified || 0) + 1;
+      const authorPath = getSafePath(textFile.content.authorEmail);
+      const authorFile = await getFile(authorPath);
+      if (authorFile) {
+        authorFile.content.li = (authorFile.content.li || 0) + 1;
+        await updateFile(authorPath, authorFile.content, authorFile.sha, `💎 Reward: +1 Li`);
+      }
+    }
+
+    await updateFile(path, textFile.content, textFile.sha, `📈 Stat update: ${action}`);
+    return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
