@@ -133,7 +133,6 @@ export async function POST(req) {
 
     // 5. SÉCURITÉ (Delete Account, Report)
     if (action === 'delete_account') {
-      // Pour GitHub, on vide le fichier ou on le marque comme supprimé
       const file = await getFile(targetPath);
       await updateFile(targetPath, { deleted: true, email: userEmail }, file.sha, `❌ Deleted Account`);
       return NextResponse.json({ success: true });
@@ -157,6 +156,21 @@ export async function GET(req) {
     if (type === 'user') return NextResponse.json(await getFile(getSafePath(id)));
     if (type === 'library' || type === 'publications') return NextResponse.json(await getFile(`data/publications/index.json`));
     
+    // NOUVEAU : Liste tous les utilisateurs pour la page Cercle
+    if (type === 'users_list') {
+      const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`, {
+        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }
+      });
+      const files = await res.json();
+      const users = await Promise.all(
+        files.filter(f => f.name.endsWith('.json')).map(async (f) => {
+          const u = await getFile(f.path);
+          return u?.content;
+        })
+      );
+      return NextResponse.json({ users: users.filter(u => u && !u.deleted) });
+    }
+
     if (type === 'search') {
       const index = await getFile(`data/publications/index.json`);
       const q = searchParams.get('q').toLowerCase();
