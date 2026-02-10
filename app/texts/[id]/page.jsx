@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost
+  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost, Sparkles
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -19,9 +19,9 @@ const CommentSection = dynamic(() => import("@/components/reader/CommentSection"
 
 function BadgeConcours() {
   return (
-    <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-2xl shadow-lg mb-6">
-      <Trophy size={14} className="animate-pulse" />
-      <span className="text-[10px] font-black uppercase tracking-widest">Battle Poétique</span>
+    <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
+      <Trophy size={14} className="animate-bounce" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Duel de Plume</span>
     </div>
   );
 }
@@ -43,17 +43,17 @@ export default function TextPage() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
 
-  // --- LOGIQUE DE CACHE LOCAL (ANTI-LIMITES GITHUB) ---
+  // --- LOGIQUE DE CACHE LOCAL ---
   const saveToLocal = useCallback((id, data) => {
     try {
-      const cache = JSON.parse(localStorage.getItem('lisible_local_library') || '{}');
+      const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
       cache[id] = { ...data, savedAt: Date.now() };
-      localStorage.setItem('lisible_local_library', JSON.stringify(cache));
-    } catch (e) { console.warn("Mémoire locale saturée"); }
+      localStorage.setItem('atelier_local_library', JSON.stringify(cache));
+    } catch (e) { console.warn("Cache local saturé"); }
   }, []);
 
   const getFromLocal = useCallback((id) => {
-    const cache = JSON.parse(localStorage.getItem('lisible_local_library') || '{}');
+    const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
     return cache[id] || null;
   }, []);
 
@@ -72,26 +72,25 @@ export default function TextPage() {
       
       if (res.status === 429) {
         setIsOffline(true);
-        if (!localVersion) throw new Error("GitHub saturé.");
+        if (!localVersion) throw new Error("Accès limité.");
         return;
       }
 
       const data = await res.json();
-      if (!data || !data.content) throw new Error("Texte introuvable");
+      if (!data || !data.content) throw new Error("Manuscrit introuvable");
 
       setText(data.content);
       setLiveViews(data.content.views || 0);
       saveToLocal(id, data.content);
       setIsOffline(false);
 
-      // Charger la bibliothèque pour les recommandations
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
         setAllTexts(indexData.content || []);
       }
     } catch (e) {
-      if (!localVersion) toast.error("Le manuscrit est introuvable.");
+      if (!localVersion) toast.error("Ce manuscrit a été retiré des archives.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +100,6 @@ export default function TextPage() {
     loadContent();
   }, [loadContent]);
 
-  // Logique d'interaction (Vues & Utilisateur)
   useEffect(() => {
     const handleScroll = () => {
       const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -115,7 +113,6 @@ export default function TextPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Enregistrement de la vue via PATCH
   useEffect(() => {
     if (id && text && !viewLogged.current && !isOffline) {
       viewLogged.current = true;
@@ -139,9 +136,9 @@ export default function TextPage() {
         body: JSON.stringify({ id, action: "like" })
       });
       const data = await res.json();
-      if (data.success) toast.success("Vous avez aimé ce texte");
+      if (data.success) toast.success("Manuscrit apprécié");
     } catch (e) {
-      toast.error("Erreur réseau");
+      toast.error("Connexion au registre échouée");
     } finally {
       setIsLiking(false);
     }
@@ -151,10 +148,10 @@ export default function TextPage() {
     if (!text?.content) return null;
     const content = text.content.toLowerCase();
     const moods = [
-        { label: "Mélancolique", icon: <Ghost size={12}/>, color: "bg-indigo-50 text-indigo-600", words: ['ombre', 'triste', 'nuit', 'mort', 'seul'] },
-        { label: "Lumineux", icon: <Sun size={12}/>, color: "bg-amber-50 text-amber-600", words: ['soleil', 'joie', 'amour', 'clair', 'vie'] },
-        { label: "Épique", icon: <Zap size={12}/>, color: "bg-rose-50 text-rose-600", words: ['force', 'guerre', 'feu', 'épée', 'destin'] },
-        { label: "Apaisant", icon: <Coffee size={12}/>, color: "bg-emerald-50 text-emerald-600", words: ['silence', 'calme', 'paix', 'vent', 'mer'] }
+        { label: "Mélancolique", icon: <Ghost size={12}/>, color: "bg-indigo-50 text-indigo-600", words: ['ombre', 'triste', 'nuit', 'mort', 'seul', 'pleure'] },
+        { label: "Lumineux", icon: <Sun size={12}/>, color: "bg-amber-50 text-amber-600", words: ['soleil', 'joie', 'amour', 'clair', 'vie', 'rire'] },
+        { label: "Épique", icon: <Zap size={12}/>, color: "bg-rose-50 text-rose-600", words: ['force', 'guerre', 'feu', 'épée', 'destin', 'sang'] },
+        { label: "Apaisant", icon: <Coffee size={12}/>, color: "bg-emerald-50 text-emerald-600", words: ['silence', 'calme', 'paix', 'vent', 'mer', 'doux'] }
     ];
     const scores = moods.map(m => ({ ...m, score: m.words.reduce((acc, word) => acc + (content.split(word).length - 1), 0) }));
     return scores.reduce((p, c) => (p.score > c.score) ? p : c);
@@ -163,90 +160,88 @@ export default function TextPage() {
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Exhumation du manuscrit...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Déchiffrement du manuscrit...</p>
     </div>
   );
 
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${isFocusMode ? 'bg-[#F5F2ED]' : 'bg-[#FCFBF9]'}`}>
         
-        {/* Barre de progression */}
-        <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-slate-100/20">
-           <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
+        <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
+           <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
         </div>
 
-        {/* Navigation */}
-        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${readingProgress > 5 ? 'bg-white/90 backdrop-blur-md border-b border-slate-100 py-3' : 'bg-transparent py-6'}`}>
+        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
           <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-            <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600">
+            <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
               <ArrowLeft size={20} />
             </button>
             
             {isOffline && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full">
-                <Download size={12} />
-                <span className="text-[9px] font-black uppercase tracking-widest text-amber-600">Mode Archive</span>
+              <div className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-full shadow-lg">
+                <Download size={14} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Version Archivée</span>
               </div>
             )}
 
-            <button onClick={() => setIsFocusMode(!isFocusMode)} className={`p-3 rounded-2xl transition-all ${isFocusMode ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 border border-slate-100 shadow-sm'}`}>
+            <button onClick={() => setIsFocusMode(!isFocusMode)} className={`p-4 rounded-2xl transition-all ${isFocusMode ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-900 border border-slate-100 shadow-sm'}`}>
               {isFocusMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
             </button>
           </div>
         </nav>
 
-        <main className="max-w-3xl mx-auto px-6 pt-32 pb-40">
-           {text.isConcours && <BadgeConcours />}
+        <main className="max-w-3xl mx-auto px-6 pt-40 pb-48">
+           {(text.isConcours || text.genre === "Battle Poétique") && <BadgeConcours />}
 
-           <header className="mb-16 space-y-8">
-              <div className="flex flex-wrap items-center gap-3">
-                 <span className="px-4 py-1.5 bg-teal-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-teal-500/20">
-                   {text.category || "Inédit"}
+           <header className="mb-20 space-y-10">
+              <div className="flex flex-wrap items-center gap-4">
+                 <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10">
+                   {text.category || text.genre || "Inédit"}
                  </span>
                  {mood?.score > 0 && (
-                   <span className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${mood.color}`}>
+                   <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-current/10 ${mood.color}`}>
                      {mood.icon} {mood.label}
                    </span>
                  )}
-                 <div className="ml-auto flex items-center gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    <span className="flex items-center gap-1.5"><Eye size={12}/> {liveViews}</span>
-                    <span className="flex items-center gap-1.5"><Clock size={12}/> {Math.ceil(text.content?.length / 1200)} min</span>
+                 <div className="ml-auto flex items-center gap-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                    <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>
+                    <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>
                  </div>
               </div>
 
-              <h1 className="font-serif font-black italic text-5xl sm:text-7xl text-slate-900 leading-[1.1] tracking-tighter">
+              <h1 className="font-serif font-black italic text-5xl sm:text-7xl text-slate-900 leading-[1.05] tracking-tighter">
                 {text.title}
               </h1>
 
-              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
-                 <div className="w-14 h-14 rounded-2xl bg-slate-200 border-2 border-white shadow-lg overflow-hidden">
+              <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
+                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative group">
                     <img 
                       src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} 
-                      className="w-full h-full object-cover" 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                       alt={text.authorName} 
                     />
                  </div>
                  <div className="text-left">
-                    <p className="text-[9px] font-black text-teal-600 uppercase tracking-[0.2em] mb-1">Auteur du Cercle</p>
-                    <p className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      {text.authorName} <Feather size={14} className="text-teal-500" />
+                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
+                      <Sparkles size={12} /> Auteur Certifié
+                    </p>
+                    <p className="text-xl font-bold text-slate-900 flex items-center gap-2 italic tracking-tight">
+                      {text.authorName} <Feather size={16} className="text-teal-500" />
                     </p>
                  </div>
               </div>
            </header>
 
-           {/* Corps du texte */}
-           <article className="relative font-serif leading-[2] text-xl sm:text-2xl text-slate-800 transition-all duration-1000">
+           <article className="relative font-serif leading-[1.9] text-xl sm:text-[22px] text-slate-800 transition-all duration-1000 antialiased">
               <div 
-                className="whitespace-pre-wrap first-letter:text-7xl first-letter:font-black first-letter:mr-3 first-letter:float-left first-letter:text-teal-600"
+                className="whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:text-teal-600 first-letter:leading-none first-letter:mt-2"
                 dangerouslySetInnerHTML={{ __html: text.content }} 
               />
            </article>
 
            <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent my-32" />
 
-           {/* Interactions & Modules */}
-           <section className="space-y-40">
+           <section className="space-y-48">
               <SceauCertification 
                 wordCount={text.content?.length} 
                 fileName={id} 
@@ -262,24 +257,23 @@ export default function TextPage() {
            </section>
         </main>
 
-        {/* Barre d'actions flottante */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2 rounded-[2.5rem] shadow-2xl border border-white/10">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5">
             <button 
               onClick={handleLike}
-              className={`p-4 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}
+              className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}
             >
-              <Heart size={20} className={isLiking ? "fill-current" : ""} />
+              <Heart size={22} className={isLiking ? "fill-current" : ""} />
             </button>
-            <div className="w-px h-6 bg-white/10 mx-1" />
+            <div className="w-px h-8 bg-white/10 mx-1" />
             <button 
               onClick={() => navigator.share({ title: text.title, url: window.location.href })}
-              className="p-4 text-white hover:text-teal-400 rounded-full"
+              className="p-5 text-white hover:text-teal-400 rounded-full"
             >
-              <Share2 size={20} />
+              <Share2 size={22} />
             </button>
-            <div className="w-px h-6 bg-white/10 mx-1" />
-            <button onClick={() => setIsReportOpen(true)} className="p-4 text-slate-500 hover:text-rose-500 rounded-full">
-              <AlertTriangle size={20} />
+            <div className="w-px h-8 bg-white/10 mx-1" />
+            <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full">
+              <AlertTriangle size={22} />
             </button>
         </div>
 
