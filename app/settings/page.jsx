@@ -41,9 +41,9 @@ export default function AccountPage() {
   ];
 
   const getRank = (sc) => {
-    if (sc >= 1000) return { name: "Maître de Plume", color: "text-purple-600", bg: "bg-purple-50", icon: "👑" };
-    if (sc >= 200) return { name: "Plume d'Argent", color: "text-slate-500", bg: "bg-slate-50", icon: "✨" };
-    if (sc >= 50) return { name: "Plume de Bronze", color: "text-orange-600", bg: "bg-orange-50", icon: "📜" };
+    if (sc >= 10000) return { name: "Maître de Plume", color: "text-purple-600", bg: "bg-purple-50", icon: "👑" };
+    if (sc >= 2500) return { name: "Plume d'Argent", color: "text-slate-500", bg: "bg-slate-50", icon: "✨" };
+    if (sc >= 1000) return { name: "Plume de Bronze", color: "text-orange-600", bg: "bg-orange-50", icon: "📜" };
     return { name: "Plume de Plomb", color: "text-slate-400", bg: "bg-slate-100", icon: "🖋️" };
   };
 
@@ -59,7 +59,6 @@ export default function AccountPage() {
 
   const refreshUserData = async (email) => {
     try {
-      // Utilisation de l'API unifiée pour récupérer le profil
       const res = await fetch(`/api/github-db?type=user&id=${email}`);
       if (res.ok) {
         const data = await res.json();
@@ -70,7 +69,6 @@ export default function AccountPage() {
             birthday: freshUser.birthday || "",
             profilePic: freshUser.profilePic || freshUser.image || ""
         });
-        // Mettre à jour le local storage avec les stats fraîches
         localStorage.setItem("lisible_user", JSON.stringify(freshUser));
       }
     } catch (e) { 
@@ -86,7 +84,6 @@ export default function AccountPage() {
     setIsSaving(true);
     const t = toast.loading("Mise à jour du manuscrit d'identité...");
     try {
-      // On utilise l'action 'update-user' de ton API unifiée
       const res = await fetch('/api/github-db', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
@@ -120,7 +117,7 @@ export default function AccountPage() {
   );
 
   const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase().trim());
-  const balance = user.li || user.wallet?.balance || 0;
+  const balance = user.li || 0;
   const rank = getRank(balance);
   const progressToWithdraw = Math.min((balance / 25000) * 100, 100);
 
@@ -243,7 +240,7 @@ export default function AccountPage() {
                 <h3 className="font-black uppercase text-xs tracking-widest italic">Accès Admin</h3>
               </div>
               <p className="text-[10px] font-bold leading-relaxed opacity-80 uppercase tracking-tighter">
-                Accès prioritaire au registre des manuscrits.
+                Accès prioritaire au registre des manuscrits de l'Atelier.
               </p>
             </div>
           )}
