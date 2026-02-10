@@ -69,7 +69,6 @@ export default function TextPage() {
 
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
-      
       if (res.status === 429) {
         setIsOffline(true);
         if (!localVersion) throw new Error("Accès limité.");
@@ -106,25 +105,62 @@ export default function TextPage() {
       setReadingProgress(totalHeight > 0 ? (window.scrollY / totalHeight) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
-    
     const stored = localStorage.getItem("lisible_user");
     if (stored) setUser(JSON.parse(stored));
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Unicité des Vues par appareil
   useEffect(() => {
     if (id && text && !viewLogged.current && !isOffline) {
-      viewLogged.current = true;
-      fetch('/api/github-db', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: "view" })
-      }).then(res => res.json()).then(data => {
-        if (data.success) setLiveViews(data.count);
-      });
+      const viewedKey = `v_${id}`;
+      const alreadyViewed = localStorage.getItem(viewedKey);
+
+      if (!alreadyViewed) {
+        viewLogged.current = true;
+        fetch('/api/github-db', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, action: "view" })
+        }).then(res => res.json()).then(data => {
+          if (data.success) {
+            setLiveViews(data.count);
+            localStorage.setItem(viewedKey, "1");
+          }
+        });
+      }
     }
   }, [id, text, isOffline]);
+
+  // Gestion des Certifications (Unicité + Récompense Li)
+  const handleCertification = async () => {
+    const certKey = `c_${id}`;
+    if (localStorage.getItem(certKey)) {
+      return toast.info("Vous avez déjà scellé ce manuscrit.");
+    }
+
+    try {
+      const res = await fetch('/api/github-db', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id, 
+          action: "certify",
+          authorEmail: text.authorEmail,
+          reward: 1 // 1 Certification = 1 Li
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem(certKey, "1");
+        toast.success("Sceau apposé ! +1 Li envoyé à l'auteur.");
+        loadContent(true);
+      }
+    } catch (e) {
+      toast.error("Échec du scellage.");
+    }
+  };
 
   const handleLike = async () => {
     if (isLiking || isOffline) return;
@@ -138,7 +174,7 @@ export default function TextPage() {
       const data = await res.json();
       if (data.success) toast.success("Manuscrit apprécié");
     } catch (e) {
-      toast.error("Connexion au registre échouée");
+      toast.error("Erreur de registre");
     } finally {
       setIsLiking(false);
     }
@@ -160,13 +196,12 @@ export default function TextPage() {
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Déchiffrement du manuscrit...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Déchiffrement...</p>
     </div>
   );
 
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${isFocusMode ? 'bg-[#F5F2ED]' : 'bg-[#FCFBF9]'}`}>
-        
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
            <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
         </div>
@@ -176,14 +211,6 @@ export default function TextPage() {
             <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
               <ArrowLeft size={20} />
             </button>
-            
-            {isOffline && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-full shadow-lg">
-                <Download size={14} />
-                <span className="text-[9px] font-black uppercase tracking-widest">Version Archivée</span>
-              </div>
-            )}
-
             <button onClick={() => setIsFocusMode(!isFocusMode)} className={`p-4 rounded-2xl transition-all ${isFocusMode ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-900 border border-slate-100 shadow-sm'}`}>
               {isFocusMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
             </button>
@@ -217,7 +244,7 @@ export default function TextPage() {
                  <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative group">
                     <img 
                       src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      className="w-full h-full object-cover" 
                       alt={text.authorName} 
                     />
                  </div>
@@ -246,7 +273,7 @@ export default function TextPage() {
                 wordCount={text.content?.length} 
                 fileName={id} 
                 userEmail={user?.email} 
-                onValidated={() => loadContent(true)} 
+                onValidated={handleCertification} 
                 certifiedCount={text.certified || 0} 
                 authorName={text.authorName} 
                 textTitle={text.title} 
