@@ -19,7 +19,7 @@ export default function SceauCertification({
   const [progress, setProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Synchronisation avec le stockage local pour éviter la double certification sur le même appareil
+  // Synchronisation avec le stockage local
   useEffect(() => {
     const deviceKey = `cert_${fileName}`;
     if (localStorage.getItem(deviceKey)) {
@@ -29,7 +29,7 @@ export default function SceauCertification({
     }
   }, [fileName]);
 
-  // Chronomètre de lecture immersive
+  // Chronomètre de lecture
   useEffect(() => {
     if (isValidated || seconds <= 0) return;
     const timer = setInterval(() => {
@@ -57,7 +57,7 @@ export default function SceauCertification({
 
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       
-      // Design "Atelier Lisible"
+      // Design du Parchemin
       doc.setFillColor(252, 251, 249); 
       doc.rect(0, 0, 297, 210, "F");
       doc.setLineWidth(1); 
@@ -96,41 +96,41 @@ export default function SceauCertification({
 
       doc.save(`Lisible_Certificat_${fileName}.pdf`);
     } catch (error) {
-      toast.error("Échec de l'invocation du parchemin.");
+      toast.error("L'invocation du parchemin a échoué.");
     }
   };
 
   const validate = async () => {
-    if (seconds > 0) return toast.info(`L'encre doit encore sécher pendant ${seconds}s.`);
+    if (seconds > 0) return toast.info(`L'encre est encore fraîche. Patientez ${seconds}s.`);
     if (isValidated || isProcessing) return;
     
     setIsProcessing(true);
-    const t = toast.loading("Apposition du sceau de cire...");
+    const t = toast.loading("Application du sceau de cire...");
     
     try {
-      // Appel à l'API centralisée github-db
+      // Utilisation de PATCH pour l'action 'certify' sur l'API github-db
       const res = await fetch('/api/github-db', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          id: fileName,
           action: "certify",
-          id: fileName, 
-          readerEmail: userEmail || "visiteur@lisible.biz",
-          date: new Date().toISOString()
+          readerEmail: userEmail || "visiteur@lisible.biz"
         })
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (data.success) {
         localStorage.setItem(`cert_${fileName}`, "true");
         setIsValidated(true);
-        toast.success("Sceau apposé. Votre lecture est immortalisée.", { id: t });
+        toast.success("Votre lecture a été immortalisée dans le Grand Livre.", { id: t });
         if (onValidated) onValidated(); 
       } else {
-        const data = await res.json();
-        throw new Error(data.error || "Erreur serveur");
+        throw new Error(data.error || "Indisponible");
       }
     } catch (e) { 
-      toast.error("Le Grand Livre est inaccessible : " + e.message, { id: t }); 
+      toast.error("Échec de la liaison au Grand Livre.", { id: t }); 
     } finally { 
       setIsProcessing(false); 
     }
@@ -140,7 +140,7 @@ export default function SceauCertification({
     <div className="my-32 flex flex-col items-center gap-10 animate-in fade-in zoom-in duration-1000">
       
       <div className="relative group">
-        {/* L'Anneau de Progression */}
+        {/* Anneau de Progression */}
         <svg className="w-56 h-56 -rotate-90 drop-shadow-2xl">
           <circle cx="112" cy="112" r="100" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-slate-100" />
           <circle cx="112" cy="112" r="100" stroke="currentColor" strokeWidth="8" fill="transparent" 
@@ -150,19 +150,19 @@ export default function SceauCertification({
           />
         </svg>
 
-        {/* Le Sceau Central */}
+        {/* Sceau de Cire Central */}
         <div 
           onClick={validate} 
           className={`absolute inset-8 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-700 shadow-2xl ${
             isValidated 
             ? 'bg-teal-600 shadow-teal-600/30 rotate-[360deg]' 
-            : 'bg-slate-950 shadow-slate-950/40 hover:scale-105 active:scale-90 group-hover:bg-slate-900'
+            : 'bg-slate-950 shadow-slate-950/40 hover:scale-105 active:scale-95 group-hover:bg-slate-900'
           } ${isProcessing ? 'animate-pulse' : ''}`}
         >
           {isValidated ? (
             <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
               <ShieldCheck size={64} className="text-white mb-1" />
-              <span className="text-[8px] font-black text-white tracking-[0.3em] uppercase">Vérifié</span>
+              <span className="text-[8px] font-black text-white tracking-[0.3em] uppercase">Certifié</span>
             </div>
           ) : (
             <div className="text-center text-white p-6">
@@ -177,20 +177,18 @@ export default function SceauCertification({
       </div>
 
       <div className="flex flex-col items-center gap-8">
-        {/* Badge de Reconnaissance */}
-        <div className="flex items-center gap-4 bg-white px-8 py-4 rounded-[2rem] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-          <div className="relative">
-            <Sparkles size={18} className="text-amber-500 animate-pulse" />
-          </div>
+        {/* Statut des certifications */}
+        <div className="flex items-center gap-4 bg-white px-8 py-4 rounded-[2rem] border border-slate-100 shadow-sm">
+          <Sparkles size={18} className="text-amber-500 animate-pulse" />
           <div className="flex flex-col">
             <span className="text-[12px] font-black text-slate-900 uppercase tracking-widest leading-none">
               {Number(certifiedCount) || 0} Certifications
             </span>
-            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter mt-1">Niveau de confiance</span>
+            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter mt-1">Sceaux de confiance</span>
           </div>
         </div>
 
-        {/* Action du Parchemin */}
+        {/* Bouton du Parchemin */}
         <div className="relative group">
           <button 
             onClick={generateCertificate} 
@@ -210,8 +208,8 @@ export default function SceauCertification({
           )}
         </div>
 
-        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] max-w-[250px] text-center leading-relaxed">
-          Le sceau valide le temps d'attention accordé à cette œuvre.
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em] max-w-[250px] text-center leading-relaxed italic">
+          Le sceau Lisible garantit l'intégrité de la lecture et le mérite de l'auteur.
         </p>
       </div>
     </div>
