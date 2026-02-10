@@ -9,6 +9,7 @@ import {
   Image as ImageIcon,
   X,
   Feather,
+  Sparkles
 } from "lucide-react";
 
 export default function PublishPage() {
@@ -21,7 +22,7 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Article"];
+  const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique"];
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
@@ -30,15 +31,18 @@ export default function PublishPage() {
       return;
     }
     setUser(JSON.parse(loggedUser));
-    setTitle(localStorage.getItem("draft_title") || "");
-    setContent(localStorage.getItem("draft_content") || "");
+    
+    // Récupération des brouillons si existants
+    setTitle(localStorage.getItem("atelier_draft_title") || "");
+    setContent(localStorage.getItem("atelier_draft_content") || "");
     setIsChecking(false);
   }, [router]);
 
+  // Sauvegarde automatique des brouillons
   useEffect(() => {
     if (!isChecking) {
-      localStorage.setItem("draft_title", title);
-      localStorage.setItem("draft_content", content);
+      localStorage.setItem("atelier_draft_title", title);
+      localStorage.setItem("atelier_draft_content", content);
     }
   }, [title, content, isChecking]);
 
@@ -57,7 +61,8 @@ export default function PublishPage() {
         canvas.height = img.height * scale;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setImagePreview(canvas.toDataURL("image/jpeg", 0.5));
+        // Compression en JPEG pour économiser de l'espace sur le GitHub Data Lake
+        setImagePreview(canvas.toDataURL("image/jpeg", 0.6));
       };
       img.src = ev.target.result;
     };
@@ -70,42 +75,33 @@ export default function PublishPage() {
 
     const cleanContent = content.trim();
     
-    if (cleanContent.length === 0) {
-      return toast.error("Le Grand Livre ne peut pas publier de page blanche.");
-    }
-
-    if (cleanContent.length > 1000) {
-      return toast.error(`Votre texte est trop long (${cleanContent.length}/1000). Soyez plus concis.`);
-    }
-
-    if (!title.trim()) {
-      return toast.error("Veuillez donner un titre à votre œuvre.");
-    }
+    if (!title.trim()) return toast.error("Votre œuvre a besoin d'un titre.");
+    if (cleanContent.length === 0) return toast.error("Le Grand Livre ne peut pas sceller une page blanche.");
+    if (cleanContent.length > 3000) return toast.error("Ce manuscrit est trop volumineux pour un seul scellé.");
 
     setLoading(true);
-    const toastId = toast.loading("Envoi au Data Lake...");
+    const toastId = toast.loading("Scellement du manuscrit dans le Data Lake...");
 
     try {
       const id = Date.now().toString();
 
-      // Adaptation du payload pour ton API github-db
       const payload = {
-        action: "publish", // Action requise par ton API fusionnée
+        action: "publish", 
         id,
         title: title.trim(),
         content: cleanContent,
-        authorName: user.penName || user.name || "Plume",
+        authorName: user.penName || user.name || "Une Plume",
         authorEmail: user.email.toLowerCase().trim(),
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
-        image: imagePreview, // Renommé 'image' pour correspondre à ton index library
+        image: imagePreview, 
         isConcours: false,
         date: new Date().toISOString(),
         views: 0,
-        totalLikes: 0,
+        likes: 0,
         comments: [],
-        totalCertified: 0
+        certified: 0
       };
 
       const res = await fetch("/api/github-db", {
@@ -114,22 +110,17 @@ export default function PublishPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      if (!res.ok) throw new Error("Échec de la synchronisation avec le registre.");
 
-      if (!res.ok) {
-        throw new Error(data.error || "Erreur de communication avec le serveur");
-      }
+      toast.success("Manuscrit scellé avec succès ! ✨", { id: toastId });
 
-      toast.success("Œuvre publiée avec succès ! ✨", { id: toastId });
-
-      // Nettoyage des brouillons
-      localStorage.removeItem("draft_title");
-      localStorage.removeItem("draft_content");
+      // Nettoyage des brouillons locaux
+      localStorage.removeItem("atelier_draft_title");
+      localStorage.removeItem("atelier_draft_content");
 
       router.push(`/texts/${id}`);
 
     } catch (err) {
-      console.error(err);
       toast.error(err.message, { id: toastId });
     } finally {
       setLoading(false);
@@ -143,52 +134,58 @@ export default function PublishPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FCFBF9] pb-20 font-sans">
-      <div className="max-w-3xl mx-auto px-6 pt-10">
+    <div className="min-h-screen bg-[#FCFBF9] pb-32">
+      <div className="max-w-3xl mx-auto px-6 pt-12">
         
-        <header className="flex items-center justify-between mb-12">
-          <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
+        <header className="flex items-center justify-between mb-16">
+          <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
             <ArrowLeft size={20} />
           </button>
           <div className="text-center">
-            <h1 className="font-serif font-black italic text-2xl tracking-tighter">Écrire une œuvre</h1>
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Sparkles size={12} className="text-teal-600" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Nouvelle Inspiration</span>
+            </div>
+            <h1 className="font-serif font-black italic text-3xl tracking-tighter text-slate-900">Le Studio.</h1>
           </div>
-          <div className="w-10" />
+          <div className="w-12" />
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-10">
           
           <div className="relative group">
             {imagePreview ? (
-              <div className="relative h-64 rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white">
-                <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
+              <div className="relative h-72 rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white">
+                <img src={imagePreview} className="w-full h-full object-cover" alt="Couverture" />
                 <button 
                   type="button"
                   onClick={() => setImagePreview(null)}
-                  className="absolute top-4 right-4 p-2 bg-rose-500 text-white rounded-full hover:scale-110 transition-transform"
+                  className="absolute top-6 right-6 p-3 bg-slate-950 text-white rounded-2xl hover:bg-rose-600 transition-colors shadow-lg"
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-slate-200 bg-white rounded-[2.5rem] cursor-pointer hover:border-teal-400 hover:bg-teal-50/50 transition-all">
-                <ImageIcon size={32} className="text-slate-300 mb-2" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ajouter une couverture</span>
+              <label className="flex flex-col items-center justify-center h-56 border-2 border-dashed border-slate-200 bg-white rounded-[3rem] cursor-pointer hover:border-teal-400 hover:bg-teal-50/30 transition-all group">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <ImageIcon size={28} className="text-slate-300 group-hover:text-teal-500" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Enluminer votre œuvre</span>
                 <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               </label>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center">
             {categories.map((cat) => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setCategory(cat)}
-                className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                   category === cat 
-                  ? "bg-teal-600 text-white shadow-lg" 
-                  : "bg-white text-slate-400 border border-slate-100"
+                  ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105" 
+                  : "bg-white text-slate-400 border-slate-100 hover:border-teal-200"
                 }`}
               >
                 {cat}
@@ -196,34 +193,37 @@ export default function PublishPage() {
             ))}
           </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 pb-4">
+          <div className="bg-white p-10 md:p-14 rounded-[3.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 space-y-10">
+            <div className="flex flex-col gap-4 border-b border-slate-50 pb-8">
                <input 
                 type="text"
-                placeholder="Titre de l'œuvre"
+                placeholder="Titre du manuscrit"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full text-3xl font-serif font-black italic tracking-tighter outline-none placeholder:text-slate-200"
+                className="w-full text-4xl md:text-5xl font-serif font-black italic tracking-tighter outline-none placeholder:text-slate-100 text-slate-900"
               />
-              <div className={`text-[10px] font-black px-3 py-1.5 rounded-full border transition-colors ${content.length > 1000 ? 'text-rose-500 border-rose-100 bg-rose-50' : 'text-slate-300 border-slate-100'}`}>
-                {content.length} / 1000
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest">Registre de l'Atelier</p>
+                <div className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-colors ${content.length > 2800 ? 'text-rose-500 border-rose-100 bg-rose-50' : 'text-slate-300 border-slate-100'}`}>
+                  {content.length.toLocaleString()} caractères
+                </div>
               </div>
             </div>
             
             <textarea 
-              placeholder="Laissez parler votre plume... (Max 1000 caractères)"
+              placeholder="Laissez votre plume glisser sur le parchemin..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full min-h-[450px] text-lg font-serif leading-relaxed outline-none placeholder:text-slate-200 resize-none"
+              className="w-full min-h-[500px] text-xl md:text-2xl font-serif leading-[1.8] outline-none placeholder:text-slate-100 resize-none text-slate-800"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-4 py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-xl disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-4 py-7 bg-slate-950 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50 hover:-translate-y-1 active:scale-95"
           >
-            {loading ? <Loader2 className="animate-spin" size={18} /> : <><Feather size={18}/> Publier</>}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Feather size={20}/>Publier</>}
           </button>
         </form>
       </div>
