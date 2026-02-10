@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation"; 
-import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, AlignLeft, Sparkles } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EditWorkPage() {
@@ -19,10 +19,8 @@ export default function EditWorkPage() {
     summary: ""
   });
 
-  // Récupération via le nouveau système github-db
   const fetchWork = useCallback(async (currentUser, workId) => {
     try {
-      // Utilisation de l'endpoint unifié pour lire le texte
       const res = await fetch(`/api/github-db?type=text&id=${workId}`);
       const data = await res.json();
       
@@ -30,7 +28,6 @@ export default function EditWorkPage() {
       
       const content = data.content;
 
-      // Sécurité : Vérification de l'auteur
       if (content.authorEmail?.toLowerCase().trim() !== currentUser.email?.toLowerCase().trim()) {
         toast.error("Violation d'accès : Ce manuscrit appartient à une autre plume.");
         router.push("/dashboard");
@@ -44,7 +41,6 @@ export default function EditWorkPage() {
         summary: content.summary || ""
       });
     } catch (err) {
-      console.error("Fetch error:", err);
       toast.error("Échec de l'ouverture du parchemin.");
       router.push("/dashboard");
     } finally {
@@ -74,16 +70,15 @@ export default function EditWorkPage() {
     const tid = toast.loading("Mise à jour des archives...");
 
     try {
-      // On utilise l'action 'publish' de github-db (qui gère l'update si l'ID existe)
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "publish",
-          id: id, // Garder le même ID écrase le fichier existant
+          id: id, 
           userEmail: user.email,
           ...formData,
-          authorName: user.penName || user.name || "Auteur Lisible",
+          authorName: user.name || "Auteur Lisible",
           authorEmail: user.email,
           updatedAt: new Date().toISOString()
         })
@@ -93,7 +88,7 @@ export default function EditWorkPage() {
         toast.success("Manuscrit ré-archivé !", { id: tid });
         router.push("/dashboard");
       } else {
-        throw new Error("Erreur de synchronisation avec le Data Lake");
+        throw new Error("Erreur de synchronisation");
       }
     } catch (err) {
       toast.error(err.message, { id: tid });
@@ -113,7 +108,7 @@ export default function EditWorkPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#FCFBF9] py-12 px-6 font-sans">
+    <div className="min-h-screen bg-[#FCFBF9] py-12 px-6">
       <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000">
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
@@ -130,8 +125,8 @@ export default function EditWorkPage() {
                 <Edit3 size={28} />
               </div>
               <div>
-                <h1 className="text-4xl font-serif font-black italic text-slate-900 tracking-tighter">Retoucher l'œuvre</h1>
-                <p className="text-[10px] font-bold text-teal-600 uppercase tracking-[0.2em] mt-1">ID Archive : {id}</p>
+                <h1 className="text-4xl font-serif font-black italic text-slate-900 tracking-tighter leading-none">Retoucher l'œuvre</h1>
+                <p className="text-[10px] font-bold text-teal-600 uppercase tracking-[0.2em] mt-2">ID : {id}</p>
               </div>
             </div>
           </div>
@@ -141,7 +136,7 @@ export default function EditWorkPage() {
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 ml-2">
-                <Type size={14} className="text-teal-500" /> Titre du Manuscrit
+                <Type size={14} className="text-teal-500" /> Titre
               </label>
               <input 
                 type="text" 
@@ -149,17 +144,16 @@ export default function EditWorkPage() {
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
                 className="w-full p-4 bg-slate-50 border-none rounded-2xl text-2xl font-serif font-black text-slate-900 focus:bg-white focus:ring-4 ring-teal-500/5 outline-none transition-all"
-                placeholder="Titre"
               />
             </div>
 
-            <div className="bg-white p-2 rounded-[3rem] border border-slate-100 shadow-sm relative">
+            <div className="bg-white p-2 rounded-[3rem] border border-slate-100 shadow-sm">
               <textarea 
                 required
                 value={formData.content}
                 onChange={(e) => setFormData({...formData, content: e.target.value})}
                 className="w-full p-10 pt-14 bg-transparent min-h-[600px] font-serif text-xl leading-relaxed text-slate-800 outline-none resize-none"
-                placeholder="Le texte..."
+                placeholder="Exprimez-vous..."
               />
             </div>
           </div>
@@ -168,7 +162,7 @@ export default function EditWorkPage() {
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8 sticky top-10">
               <div className="space-y-4">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                  <Tag size={14} /> Classification
+                  <Tag size={14} /> Genre
                 </label>
                 <select 
                   value={formData.genre}
@@ -190,7 +184,7 @@ export default function EditWorkPage() {
                 className="w-full py-6 bg-slate-950 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 hover:bg-teal-600 transition-all shadow-2xl disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                {submitting ? "Scellement..." : "Sauvegarder"}
+                {submitting ? "Mise à jour..." : "Sauvegarder"}
               </button>
             </div>
           </aside>
