@@ -62,11 +62,15 @@ export default function AccountPage() {
       const res = await fetch(`/api/github-db?type=user&id=${email}`);
       if (res.ok) {
         const data = await res.json();
-        // Forcer le solde à 0 pour les nouveaux profils sans champ 'li' défini
+        
+        // Initialisation du solde à 0 Li pour les nouveaux profils (li undefined ou nul)
         const freshUser = {
           ...data.content,
-          li: data.content.li !== undefined ? data.content.li : 0
+          li: (data.content && data.content.li !== undefined && data.content.li !== null) 
+              ? data.content.li 
+              : 0
         };
+        
         setUser(freshUser);
         setFormData({ 
             penName: freshUser.penName || "",
@@ -77,7 +81,11 @@ export default function AccountPage() {
       }
     } catch (e) { 
       const local = JSON.parse(localStorage.getItem("lisible_user"));
-      setUser(local);
+      // Appliquer également la règle au fallback local si nécessaire
+      if (local) {
+        local.li = local.li !== undefined ? local.li : 0;
+        setUser(local);
+      }
     } finally { 
       setLoading(false); 
     }
@@ -124,7 +132,6 @@ export default function AccountPage() {
   const followersCount = user?.followers?.length || 0;
   const rank = getRank(balance);
   
-  // Nouveaux critères de retrait
   const hasEnoughLi = balance >= 25000;
   const hasEnoughFollowers = followersCount >= 250;
   const isEligibleForWithdraw = hasEnoughLi && hasEnoughFollowers;
@@ -226,7 +233,6 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              {/* SECTION DEMANDE DE RETRAIT */}
               <div className="space-y-4">
                 <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-3">
                   <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
