@@ -186,6 +186,28 @@ export default function TextPage() {
     }
   };
 
+  const handleShare = async () => {
+    const shareTitle = text.title;
+    const shareUrl = window.location.href;
+    const shareText = `Je vous invite à apprécier ce magnifique texte : "${shareTitle}" sur Lisible. ✨\n\nDécouvrez-le ici :`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (err) {
+        console.log("Erreur de partage");
+      }
+    } else {
+      // Fallback pour desktop / navigateurs sans navigator.share
+      navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      toast.success("Lien et invitation copiés dans le presse-papier !");
+    }
+  };
+
   const mood = useMemo(() => {
     if (!text?.content) return null;
     const content = text.content.toLowerCase();
@@ -245,7 +267,6 @@ export default function TextPage() {
                  </div>
               </div>
 
-              {/* Affichage de l'image uniquement si ce n'est PAS une battle */}
               {!isBattle && text.image && (
                 <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
                   <img src={text.image} className="w-full h-full object-cover" alt="" />
@@ -311,8 +332,8 @@ export default function TextPage() {
             </button>
             <div className="w-px h-8 bg-white/10 mx-1" />
             <button 
-              onClick={() => navigator.share({ title: text.title, url: window.location.href })}
-              className="p-5 text-white hover:text-teal-400 rounded-full"
+              onClick={handleShare}
+              className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90"
             >
               <Share2 size={22} />
             </button>
