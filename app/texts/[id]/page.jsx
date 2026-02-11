@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost, Sparkles
+  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost, Sparkles, Megaphone
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -22,6 +22,15 @@ function BadgeConcours() {
     <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
       <Trophy size={14} className="animate-bounce" />
       <span className="text-[10px] font-black uppercase tracking-[0.2em]">Duel de Plume</span>
+    </div>
+  );
+}
+
+function BadgeAnnonce() {
+  return (
+    <div className="inline-flex items-center gap-2 bg-rose-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
+      <Megaphone size={14} className="animate-pulse" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Annonce Officielle</span>
     </div>
   );
 }
@@ -43,7 +52,6 @@ export default function TextPage() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
 
-  // --- LOGIQUE DE CACHE LOCAL ---
   const saveToLocal = useCallback((id, data) => {
     try {
       const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
@@ -110,7 +118,6 @@ export default function TextPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Unicité des Vues par appareil
   useEffect(() => {
     if (id && text && !viewLogged.current && !isOffline) {
       const viewedKey = `v_${id}`;
@@ -132,7 +139,6 @@ export default function TextPage() {
     }
   }, [id, text, isOffline]);
 
-  // Gestion des Certifications (Unicité + Récompense Li)
   const handleCertification = async () => {
     const certKey = `c_${id}`;
     if (localStorage.getItem(certKey)) {
@@ -147,7 +153,7 @@ export default function TextPage() {
           id, 
           action: "certify",
           authorEmail: text.authorEmail,
-          reward: 1 // 1 Certification = 1 Li
+          reward: 1 
         })
       });
       
@@ -200,6 +206,8 @@ export default function TextPage() {
     </div>
   );
 
+  const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
+
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${isFocusMode ? 'bg-[#F5F2ED]' : 'bg-[#FCFBF9]'}`}>
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
@@ -218,7 +226,7 @@ export default function TextPage() {
         </nav>
 
         <main className="max-w-3xl mx-auto px-6 pt-40 pb-48">
-           {(text.isConcours || text.genre === "Battle Poétique") && <BadgeConcours />}
+           {isAnnouncementAccount ? <BadgeAnnonce /> : (text.isConcours || text.genre === "Battle Poétique") ? <BadgeConcours /> : null}
 
            <header className="mb-20 space-y-10">
               <div className="flex flex-wrap items-center gap-4">
@@ -231,7 +239,7 @@ export default function TextPage() {
                    </span>
                  )}
                  <div className="ml-auto flex items-center gap-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                    <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>
+                    {!isAnnouncementAccount && <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>}
                     <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>
                  </div>
               </div>
@@ -250,7 +258,7 @@ export default function TextPage() {
                  </div>
                  <div className="text-left">
                     <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
-                      <Sparkles size={12} /> Auteur Certifié
+                      <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
                     </p>
                     <p className="text-xl font-bold text-slate-900 flex items-center gap-2 italic tracking-tight">
                       {text.authorName} <Feather size={16} className="text-teal-500" />
@@ -269,15 +277,17 @@ export default function TextPage() {
            <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent my-32" />
 
            <section className="space-y-48">
-              <SceauCertification 
-                wordCount={text.content?.length} 
-                fileName={id} 
-                userEmail={user?.email} 
-                onValidated={handleCertification} 
-                certifiedCount={text.certified || 0} 
-                authorName={text.authorName} 
-                textTitle={text.title} 
-              />
+              {!isAnnouncementAccount && (
+                <SceauCertification 
+                  wordCount={text.content?.length} 
+                  fileName={id} 
+                  userEmail={user?.email} 
+                  onValidated={handleCertification} 
+                  certifiedCount={text.certified || 0} 
+                  authorName={text.authorName} 
+                  textTitle={text.title} 
+                />
+              )}
               <InTextAd />
               <SmartRecommendations currentId={id} allTexts={allTexts} />
               <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
