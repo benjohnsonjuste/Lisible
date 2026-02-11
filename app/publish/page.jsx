@@ -9,8 +9,11 @@ import {
   Image as ImageIcon,
   X,
   Feather,
-  Sparkles
+  Sparkles,
+  Trophy,
+  ArrowRight
 } from "lucide-react";
+import Link from "next/link";
 
 export default function PublishPage() {
   const router = useRouter();
@@ -22,7 +25,8 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique"];
+  // Catégories mises à jour
+  const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
@@ -32,13 +36,11 @@ export default function PublishPage() {
     }
     setUser(JSON.parse(loggedUser));
     
-    // Récupération des brouillons si existants
     setTitle(localStorage.getItem("atelier_draft_title") || "");
     setContent(localStorage.getItem("atelier_draft_content") || "");
     setIsChecking(false);
   }, [router]);
 
-  // Sauvegarde automatique des brouillons
   useEffect(() => {
     if (!isChecking) {
       localStorage.setItem("atelier_draft_title", title);
@@ -61,7 +63,6 @@ export default function PublishPage() {
         canvas.height = img.height * scale;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        // Compression en JPEG pour économiser de l'espace sur le GitHub Data Lake
         setImagePreview(canvas.toDataURL("image/jpeg", 0.6));
       };
       img.src = ev.target.result;
@@ -114,7 +115,6 @@ export default function PublishPage() {
 
       toast.success("Manuscrit scellé avec succès ! ✨", { id: toastId });
 
-      // Nettoyage des brouillons locaux
       localStorage.removeItem("atelier_draft_title");
       localStorage.removeItem("atelier_draft_content");
 
@@ -150,6 +150,22 @@ export default function PublishPage() {
           </div>
           <div className="w-12" />
         </header>
+
+        {/* Section Battle Poétique */}
+        <div className="mb-12 p-8 bg-teal-50 rounded-[3rem] border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/20">
+              <Trophy size={28} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black italic text-slate-900 tracking-tight">Battle Poétique International</h3>
+              <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">Entrez dans l'arène des plumes.</p>
+            </div>
+          </div>
+          <Link href="/battle/close" className="flex items-center gap-3 px-6 py-4 bg-white text-teal-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100">
+            Rejoindre le Duel <ArrowRight size={14} />
+          </Link>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-10">
           
