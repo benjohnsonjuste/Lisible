@@ -2,7 +2,15 @@
   "email": "juniorzoro382@gmail.com",
   "name": "",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770837202291",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Une lettre pour le futur\" !",
+      "date": "2026-02-11T19:13:22.291Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
