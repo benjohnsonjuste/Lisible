@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Coins, TrendingUp, 
-  Crown, Briefcase, ChevronDown 
+  Crown, Briefcase, ChevronDown, PenTool, BarChart3, Star, Settings
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -24,13 +24,10 @@ export default function UsersPage() {
 
   async function loadUsers() {
     try {
-      // Appel à l'API fusionnée pour lister les utilisateurs
-      // Note: Assure-toi que ton API github-db gère type=users_list en listant le dossier data/users
       const res = await fetch(`/api/github-db?type=users_list`); 
       const data = await res.json();
       
       if (data && data.users) {
-        // Tri par richesse (Li) pour créer un classement naturel
         const sorted = data.users.sort((a, b) => (Number(b.li) || 0) - (Number(a.li) || 0));
         setAuthors(sorted);
       }
@@ -61,7 +58,6 @@ export default function UsersPage() {
         const result = await res.json();
         toast.success(result.isFollowing ? "Abonnement réussi" : "Abonnement retiré");
         
-        // Mise à jour optimiste de l'interface
         setAuthors(prev => prev.map(auth => {
           if (auth.email === targetEmail) {
             const currentFollowers = auth.followers || [];
@@ -86,14 +82,29 @@ export default function UsersPage() {
     const badges = [];
     const email = author.email?.toLowerCase().trim();
     
-    // Grades Administratifs
-    if (email === "jb7management@gmail.com") badges.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400 border border-amber-500/20" });
-    if (email === "robergeaurodley97@gmail.com") badges.push({ icon: <Briefcase size={10} />, label: "Direction", color: "bg-indigo-600 text-white" });
-    if (email === "cmo.lablitteraire7@gmail.com") badges.push({ icon: <ShieldCheck size={10} />, label: "Staff", color: "bg-teal-600 text-white" });
+    // --- GRADES ADMINISTRATIFS ET DIRECTION ---
+    if (email === "adm.lablitteraire7@gmail.com") {
+      badges.push({ icon: <Settings size={10} />, label: "Admin", color: "bg-rose-600 text-white shadow-lg shadow-rose-600/20" });
+    }
+    else if (email === "jb7management@gmail.com") {
+      badges.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400 border border-amber-500/20" });
+    }
+    else if (email === "robergeaurodley97@gmail.com") {
+      badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-indigo-600 text-white" });
+    }
+    else if (email === "woolsleypierre01@gmail.com") {
+      badges.push({ icon: <PenTool size={10} />, label: "Dir. Éditoriale", color: "bg-purple-600 text-white" });
+    }
+    else if (email === "jeanpierreborlhaïniedarha@gmail.com") {
+      badges.push({ icon: <BarChart3 size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
+    }
+    else if (email === "cmo.lablitteraire7@gmail.com") {
+      badges.push({ icon: <ShieldCheck size={10} />, label: "Support Team", color: "bg-teal-600 text-white" });
+    }
     
-    // Grades de mérite
+    // Grades de mérite (Plume d'Or pour plus de 10 abonnés)
     if ((author.followers?.length || 0) > 10) {
-      badges.push({ icon: <Gem size={10} />, label: "Plume d'Or", color: "bg-amber-100 text-amber-700" });
+      badges.push({ icon: <Star size={10} />, label: "Plume d'Or", color: "bg-amber-100 text-amber-700" });
     }
     
     return badges;
@@ -142,7 +153,6 @@ export default function UsersPage() {
 
           return (
             <div key={a.email} className="group bg-white rounded-[3rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:border-teal-500/20 transition-all relative overflow-hidden">
-              {/* Badge Area */}
               <div className="absolute top-6 right-8 flex flex-col items-end gap-2">
                 {getBadges(a).map((b, i) => (
                   <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm`}>
