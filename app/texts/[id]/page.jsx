@@ -1,5 +1,67 @@
+import React from "react";
+import TextPageClient from "./TextPageClient"; // On va wrapper le contenu client
+
+/**
+ * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
+ * S'exécute côté serveur pour les crawlers (FB, WhatsApp, X)
+ */
+export async function generateMetadata({ params }) {
+  const { id } = params;
+  const baseUrl = "https://lisible.fr"; // À remplacer par votre domaine réel
+
+  try {
+    const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
+    const data = await res.json();
+    const text = data?.content;
+
+    if (!text) return { title: "Manuscrit introuvable | Lisible" };
+
+    const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
+    
+    // LOGIQUE IMAGE : og-default pour concours ou texte sans image, sinon illustration
+    const ogImage = (isBattle || !text.image) 
+      ? `${baseUrl}/og-default.jpg` 
+      : text.image;
+
+    const shareTitle = `${text.title} — ${text.authorName}`;
+    const shareDesc = `Je vous invite à apprécier ce magnifique texte sur Lisible. ✨`;
+
+    return {
+      title: shareTitle,
+      description: shareDesc,
+      openGraph: {
+        title: shareTitle,
+        description: shareDesc,
+        url: `${baseUrl}/texts/${id}`,
+        siteName: 'Lisible',
+        images: [{ url: ogImage, width: 1200, height: 630 }],
+        type: 'article',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: shareTitle,
+        description: shareDesc,
+        images: [ogImage],
+      },
+    };
+  } catch (e) {
+    return { title: "Lecture | Lisible" };
+  }
+}
+
+/**
+ * COMPOSANT PRINCIPAL (SERVEUR)
+ */
+export default function Page() {
+  return <TextContent />;
+}
+
+/**
+ * LE CONTENU CLIENT
+ * (Placé dans le même fichier avec "use client")
+ */
 "use client";
-import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
@@ -11,7 +73,6 @@ import {
 
 import { InTextAd } from "@/components/InTextAd";
 
-// --- IMPORTS DYNAMIQUES ---
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
@@ -35,7 +96,7 @@ function BadgeAnnonce() {
   );
 }
 
-export default function TextPage() {
+function TextContent() {
   const router = useRouter();
   const params = useParams();
   const id = params.id;
@@ -202,9 +263,8 @@ export default function TextPage() {
         console.log("Erreur de partage");
       }
     } else {
-      // Fallback pour desktop / navigateurs sans navigator.share
       navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-      toast.success("Lien et invitation copiés dans le presse-papier !");
+      toast.success("Lien et invitation copiés !");
     }
   };
 
