@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles
+  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,11 +34,12 @@ export default function BattlePoetique() {
     else setIsRefreshing(true);
 
     try {
-      const res = await fetch(`/api/texts?limit=1000&t=${Date.now()}`); 
+      // On récupère depuis la bibliothèque globale (library)
+      const res = await fetch(`/api/github-db?type=library&t=${Date.now()}`); 
       const json = await res.json();
       
-      if (json.data && Array.isArray(json.data)) {
-        setTexts(sortBattleTexts(json.data));
+      if (json.content && Array.isArray(json.content)) {
+        setTexts(sortBattleTexts(json.content));
       }
     } catch (e) { 
       console.error("Erreur Arène:", e); 
@@ -52,7 +53,6 @@ export default function BattlePoetique() {
     loadConcoursTexts();
   }, [loadConcoursTexts]);
 
-  // Auto-refresh toutes les 60 secondes pour le leaderboard live
   useEffect(() => {
     const interval = setInterval(() => loadConcoursTexts(true), 60000); 
     return () => clearInterval(interval);
@@ -89,7 +89,6 @@ export default function BattlePoetique() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] font-sans pb-20">
-      {/* Header Immersif */}
       <div className="max-w-6xl mx-auto px-6 py-12">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-10 border-b border-slate-100 pb-16">
           <div className="space-y-6">
@@ -108,7 +107,7 @@ export default function BattlePoetique() {
               L'Arène <br /><span className="text-teal-600">Sacrée.</span>
             </h1>
             <p className="text-slate-400 font-medium max-w-md leading-relaxed text-sm">
-              Ici, les mots s'affrontent. Votez pour vos plumes favorites et hissez-les au sommet du Panthéon.
+              Ici, les mots s'affrontent. Sans artifices visuels, seule la force du verbe compte.
             </p>
           </div>
 
@@ -116,19 +115,18 @@ export default function BattlePoetique() {
             <Link href="/bibliotheque" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
               <BookOpen size={16} /> Archives
             </Link>
-            <Link href="/publier?concours=true" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
+            <Link href="/publier-battle" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
               <PenTool size={18} /> Déposer un défi
             </Link>
           </div>
         </header>
 
-        {/* Liste des concurrents */}
         <main className="mt-20">
           {texts.length > 0 ? (
             <div className="grid gap-12 md:grid-cols-2">
               {texts.map((item, index) => {
                 const isLeader = index === 0;
-                const liPoints = Number(item.totalCertified || 0) * 50;
+                const liPoints = Number(item.totalCertified || 0) * 1; // 1 Li par certification
                 const totalLikes = Number(item.totalLikes || item.likes || 0);
                 
                 return (
@@ -139,7 +137,6 @@ export default function BattlePoetique() {
                       : "border-slate-100 shadow-xl shadow-slate-200/40 hover:border-teal-200"
                     }`}>
                       
-                      {/* Badge Leader */}
                       {isLeader && (
                         <div className="absolute -top-4 -left-4 z-40 rotate-[-12deg] bg-amber-400 text-slate-900 px-6 py-2 rounded-xl shadow-xl border-2 border-white flex items-center gap-2">
                           <Sparkles size={14} className="animate-pulse" />
@@ -147,39 +144,26 @@ export default function BattlePoetique() {
                         </div>
                       )}
 
-                      {/* Cover visuelle */}
-                      <div className="h-72 bg-slate-100 relative overflow-hidden">
-                        {item.imageBase64 && item.imageBase64 !== "exists" ? (
-                          <img src={item.imageBase64} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
-                        ) : (
-                          <div className={`w-full h-full flex items-center justify-center ${
-                            isLeader ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-slate-900 to-teal-900'
-                          }`}>
-                             <Zap size={80} className="text-white/10 -rotate-12 group-hover:rotate-0 transition-transform duration-700" />
-                          </div>
-                        )}
-                        
-                        <div className="absolute top-8 left-8 flex gap-3">
-                          <button onClick={(e) => handleShare(e, item)} className="p-4 bg-white/90 backdrop-blur-md text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-xl">
-                            <Share2 size={18} />
-                          </button>
+                      {/* Header Card : Rang & Share */}
+                      <div className={`p-8 flex justify-between items-center ${isLeader ? 'bg-amber-50/50' : 'bg-slate-50/30'}`}>
+                        <div className="flex items-center gap-4">
+                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isLeader ? 'bg-amber-400 text-white' : 'bg-slate-900 text-white'}`}>
+                             {index + 1}
+                           </div>
+                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Position actuelle</span>
                         </div>
-
-                        <div className="absolute bottom-8 right-8">
-                          <div className="bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-5 py-2.5 rounded-2xl uppercase tracking-[0.2em] border border-white/10">
-                            Rang #{index + 1}
-                          </div>
-                        </div>
+                        <button onClick={(e) => handleShare(e, item)} className="p-4 bg-white text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-slate-100">
+                          <Share2 size={18} />
+                        </button>
                       </div>
 
-                      {/* Détails du texte */}
                       <div className="p-12 flex-grow flex flex-col">
                         <div className="flex items-center gap-3 mb-6">
                            <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest bg-teal-50 px-3 py-1 rounded-lg">
-                             {item.genre || "Candidat"}
+                             <AlignLeft size={10} className="inline mr-1" /> {item.category || "Battle"}
                            </span>
                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                             {item.date ? new Date(item.date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : 'Maintenant'}
+                             {item.authorName || 'Anonyme'}
                            </span>
                         </div>
 
@@ -187,11 +171,10 @@ export default function BattlePoetique() {
                           {item.title}
                         </h2>
                         
-                        <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-lg leading-relaxed flex-grow">
-                          {item.content?.replace(/<[^>]*>/g, '')}
+                        <p className="text-slate-500 line-clamp-4 font-serif italic mb-10 text-lg leading-relaxed flex-grow">
+                          {item.content?.replace(/<[^>]*>/g, '').substring(0, 300)}...
                         </p>
                         
-                        {/* Footer de la carte */}
                         <div className="flex items-center justify-between pt-8 border-t border-slate-50">
                           <div className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-black text-[12px] transition-all border ${
                             liPoints > 0 
@@ -199,7 +182,7 @@ export default function BattlePoetique() {
                             : "bg-slate-50 border-slate-100 text-slate-300"
                           }`}>
                             <Coins size={16} className={liPoints > 0 ? "animate-pulse" : ""}/> 
-                            {liPoints} <span className="text-[9px] opacity-60">LI</span>
+                            {liPoints} <span className="text-[9px] opacity-60">LI GAGNÉS</span>
                           </div>
 
                           <div className="flex gap-6">
@@ -223,11 +206,11 @@ export default function BattlePoetique() {
                  <Zap size={40} className="text-slate-200" />
               </div>
               <div className="space-y-3">
-                <h3 className="font-black uppercase text-slate-900 tracking-[0.3em] text-lg">Le silence règne</h3>
-                <p className="text-slate-400 text-sm font-medium">L'arène attend son premier champion.</p>
+                <h3 className="font-black uppercase text-slate-900 tracking-[0.3em] text-lg">L'arène est vide</h3>
+                <p className="text-slate-400 text-sm font-medium">Les gladiateurs de la plume ne sont pas encore arrivés.</p>
               </div>
-              <Link href="/publier?concours=true" className="inline-flex items-center gap-3 bg-slate-900 text-white px-12 py-6 rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
-                 Prendre la place <ArrowRight size={18} />
+              <Link href="/publier-battle" className="inline-flex items-center gap-3 bg-slate-900 text-white px-12 py-6 rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
+                 Lancer le premier défi <ArrowRight size={18} />
               </Link>
             </div>
           )}
@@ -237,7 +220,7 @@ export default function BattlePoetique() {
       <footer className="mt-32 text-center pb-10">
          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 flex items-center justify-center gap-4">
            <span className="w-8 h-px bg-slate-100"></span>
-           Lisible Battle System v4.2 • {new Date().getFullYear()}
+           Arène Officielle • {new Date().getFullYear()}
            <span className="w-8 h-px bg-slate-100"></span>
          </p>
       </footer>
