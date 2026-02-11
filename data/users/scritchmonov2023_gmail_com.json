@@ -4,6 +4,13 @@
   "li": 71,
   "notifications": [
     {
+      "id": "like_1770840561183",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Pour te dire je t'aime\" !",
+      "date": "2026-02-11T20:09:21.183Z",
+      "read": false
+    },
+    {
       "id": "cert_1770840004895",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"Pour te dire je t'aime\" a reçu un Sceau de Certification (+1 Li).",
