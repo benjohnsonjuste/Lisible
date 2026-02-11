@@ -1,8 +1,15 @@
 {
   "email": "jhonsonwmaykerlycesarin@gmail.com",
   "name": "Cesarin Jhonson Maykerly Woods",
-  "li": 50,
+  "li": 51,
   "notifications": [
+    {
+      "id": "cert_1770848613525",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Ville en béton\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-11T22:23:33.525Z",
+      "read": false
+    },
     {
       "id": "like_1770848566479",
       "type": "like",
