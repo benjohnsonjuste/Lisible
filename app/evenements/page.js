@@ -29,7 +29,7 @@ export default function EvenementsPage() {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* CARTE 1 : BATTLE POÉTIQUE (OUVERT) */}
-        <Link href="/battle-poetique" className="group relative">
+        <Link href="/battle" className="group relative">
           <div className="h-full bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 border border-teal-100 dark:border-white/5 shadow-2xl shadow-teal-900/5 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-teal-900/10 relative overflow-hidden">
             {/* Badge Status */}
             <div className="absolute top-8 right-8 bg-teal-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse z-20">
