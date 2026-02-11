@@ -14,6 +14,7 @@ const GITHUB_CONFIG = {
 const ECONOMY = {
   MIN_TRANSFER: 1000,
   WITHDRAWAL_THRESHOLD: 25000, // 5 USD
+  REQUIRED_FOLLOWERS: 250,      // Seuil communautaire
   LI_VALUE_USD: 0.0002 // 1000 Li = 0.20 USD
 };
 
@@ -123,13 +124,29 @@ export async function POST(req) {
 
     if (action === 'request_withdrawal') {
       const user = await getFile(targetPath);
-      if (user.content.li < ECONOMY.WITHDRAWAL_THRESHOLD) {
+      if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+
+      const currentLi = user.content.li || 0;
+      const followerCount = user.content.followers?.length || 0;
+
+      // Vérification double : Solde ET Communauté
+      if (currentLi < ECONOMY.WITHDRAWAL_THRESHOLD) {
         return NextResponse.json({ 
           error: `Seuil de retrait non atteint (${ECONOMY.WITHDRAWAL_THRESHOLD} Li requis)` 
         }, { status: 400 });
       }
-      // Logique de demande de retrait à implémenter (ex: enregistrer dans data/withdrawals.json)
-      return NextResponse.json({ success: true, message: "Demande de retrait enregistrée" });
+
+      if (followerCount < ECONOMY.REQUIRED_FOLLOWERS) {
+        return NextResponse.json({ 
+          error: `Influence insuffisante. Vous devez avoir au moins ${ECONOMY.REQUIRED_FOLLOWERS} abonnés pour monétiser.` 
+        }, { status: 400 });
+      }
+
+      // Logique de demande de retrait enregistrée
+      return NextResponse.json({ 
+        success: true, 
+        message: "Votre plume est éligible. Demande de retrait de 5 USD enregistrée." 
+      });
     }
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
@@ -150,8 +167,9 @@ export async function GET(req) {
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
         if (user) {
-            // Ajouter dynamiquement la valeur estimée en USD
             user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
+            // On ajoute l'info d'éligibilité pour le frontend
+            user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
         }
         return NextResponse.json(user);
     }
