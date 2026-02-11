@@ -1,8 +1,16 @@
 {
   "email": "ephraimmbuya17@gmail.com",
   "name": "",
-  "li": 50,
-  "notifications": [],
+  "li": 51,
+  "notifications": [
+    {
+      "id": "cert_1770840690208",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"La beauté d'une nymphe\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-11T20:11:30.208Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
