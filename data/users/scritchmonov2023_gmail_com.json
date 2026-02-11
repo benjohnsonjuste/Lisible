@@ -1,8 +1,15 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "",
-  "li": 71,
+  "li": 72,
   "notifications": [
+    {
+      "id": "cert_1770841972071",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Pour te dire je t'aime\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-11T20:32:52.071Z",
+      "read": false
+    },
     {
       "id": "like_1770840613953",
       "type": "like",
