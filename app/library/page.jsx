@@ -15,21 +15,29 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
+  // Récupération automatique des statistiques en temps réel au montage
   useEffect(() => {
-    if (texts.length === 0) fetchInitial();
+    fetchInitial();
+    
+    // Optionnel : rafraîchissement toutes les 30 secondes pour un effet "temps réel"
+    const interval = setInterval(fetchInitial, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
-    setLoading(true);
+    // On ne met loading=true que si on n'a pas encore de données pour éviter le flash
+    if (texts.length === 0) setLoading(true);
+    
     try {
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       if (json && json.content) {
+        // Mise à jour des textes avec les stats les plus récentes
         setTexts(json.content);
       }
     } catch (e) { 
       console.error(e); 
-      toast.error("Le Grand Livre des manuscrits est inaccessible.");
+      if (texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
     } finally { 
       setLoading(false); 
     }
@@ -106,7 +114,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
                 isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
               } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
                 
-                {/* Condition : Pas d'image si c'est un Duel/Battle */}
                 {!isDuel ? (
                   <div className="h-64 bg-slate-100 relative overflow-hidden">
                     <img
