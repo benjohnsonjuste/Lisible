@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { 
   User, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera
+  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info
 } from "lucide-react";
 
 // Sous-composant pour les statistiques
@@ -117,7 +117,13 @@ export default function AccountPage() {
 
   const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase().trim());
   const balance = user.li || 0;
+  const followersCount = user?.followers?.length || 0;
   const rank = getRank(balance);
+  
+  // Nouveaux critères de retrait
+  const hasEnoughLi = balance >= 25000;
+  const hasEnoughFollowers = followersCount >= 250;
+  const isEligibleForWithdraw = hasEnoughLi && hasEnoughFollowers;
   const progressToWithdraw = Math.min((balance / 25000) * 100, 100);
 
   return (
@@ -161,7 +167,7 @@ export default function AccountPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <AccountStatCard label="Manuscrits" value={user?.works?.length || 0} icon={<BookOpen />} color="text-teal-600" />
-        <AccountStatCard label="Abonnés" value={user?.followers?.length || 0} icon={<Star />} color="text-amber-500" />
+        <AccountStatCard label="Abonnés" value={followersCount} icon={<Star />} color="text-amber-500" />
         <AccountStatCard label="Certifications" value={user?.certified || 0} icon={<ShieldCheck />} color="text-blue-600" />
       </div>
 
@@ -204,7 +210,7 @@ export default function AccountPage() {
 
                 <div className="mt-8 space-y-3">
                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-slate-500">Progression Retrait</span>
+                    <span className="text-slate-500">Progression Monétaire</span>
                     <span className="text-teal-400">{Math.floor(progressToWithdraw)}%</span>
                   </div>
                   <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
@@ -213,21 +219,39 @@ export default function AccountPage() {
                       style={{ width: `${progressToWithdraw}%` }} 
                     />
                   </div>
-                  <p className="text-[9px] font-medium text-slate-500 italic text-center pt-2">Seuil : 25,000 Li (5 USD)</p>
                 </div>
               </div>
 
-              <button 
-                onClick={() => balance >= 25000 ? router.push("/withdraw") : toast.info("Seuil de 25,000 Li requis.")}
-                className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                  balance < 25000 
-                  ? 'bg-white/5 text-slate-600 cursor-not-allowed' 
-                  : 'bg-teal-500 text-slate-950 hover:scale-105 shadow-lg shadow-teal-500/20'
-                }`}
-              >
-                Demander un transfert
-              </button>
+              {/* SECTION DEMANDE DE RETRAIT */}
+              <div className="space-y-4">
+                <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-3">
+                  <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+                    <span className={hasEnoughLi ? "text-teal-400" : "text-slate-500"}>● 25,000 Li</span>
+                    <span className={hasEnoughFollowers ? "text-teal-400" : "text-slate-500"}>● 250 Abonnés</span>
+                  </div>
+                  {!isEligibleForWithdraw && (
+                    <div className="flex items-start gap-2 text-[8px] font-bold text-amber-500/80 uppercase leading-tight">
+                      <Info size={12} className="shrink-0" />
+                      Critères de monétisation non atteints pour débloquer les transferts.
+                    </div>
+                  )}
+                </div>
+
+                <button 
+                  disabled={!isEligibleForWithdraw}
+                  onClick={() => router.push("/withdraw")}
+                  className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${
+                    isEligibleForWithdraw 
+                    ? 'bg-teal-500 text-slate-950 hover:scale-[1.02] shadow-xl shadow-teal-500/20 active:scale-95' 
+                    : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
+                  }`}
+                >
+                  {!isEligibleForWithdraw && <Lock size={14} />}
+                  Demander un retrait (5 USD)
+                </button>
+              </div>
             </div>
+
             <div className="absolute right-[-20px] top-[-20px] opacity-[0.03] pointer-events-none">
                 <Sparkles size={200} />
             </div>
