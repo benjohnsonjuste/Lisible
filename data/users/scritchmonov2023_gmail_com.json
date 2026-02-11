@@ -1,8 +1,16 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "Scritchmonov Jean Baptiste",
-  "li": 50,
-  "notifications": [],
+  "li": 51,
+  "notifications": [
+    {
+      "id": "cert_1770827035159",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Pour te dire je t'aime\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-11T16:23:55.159Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
