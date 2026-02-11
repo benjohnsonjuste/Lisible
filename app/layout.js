@@ -11,15 +11,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body className="flex flex-col min-h-screen">
-        {/* S'affiche sur toutes les pages */}
+        {/* Navbar fixe en haut */}
         <Navbar />
         
-        {/* Contenu principal qui pousse le footer vers le bas */}
-        <main className="flex-grow">
+        {/* Le padding-top (pt-20) compense la hauteur de la Navbar fixe.
+          La classe 'flex-grow' assure que le footer reste en bas.
+        */}
+        <main className="flex-grow pt-20 md:pt-24">
           {children}
         </main>
         
-        {/* S'affiche sur toutes les pages */}
+        {/* Footer en bas de page */}
         <Footer />
         
         <Toaster position="top-center" richColors />
