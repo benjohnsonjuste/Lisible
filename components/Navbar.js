@@ -10,7 +10,7 @@ import ThemeToggle from "./ThemeToggle";
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, X, Sparkles,
-  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell
+  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, UserPlus
 } from "lucide-react";
 
 export default function Navbar() {
@@ -106,7 +106,7 @@ export default function Navbar() {
     setUser(null);
     setUnreadCount(0);
     setIsMenuOpen(false);
-    router.push("/login"); // Redirige vers ta nouvelle page d'auth
+    router.push("/login");
   };
 
   const menuItems = [
@@ -162,12 +162,16 @@ export default function Navbar() {
               </Link>
               
               {user ? (
-                <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-rose-500 transition-all">
+                <button onClick={handleLogout} className="p-3 text-slate-400 hover:text-rose-500 transition-all" title="Déconnexion">
                   <LogOut size={22} />
                 </button>
               ) : (
-                <Link href="/login" className="ml-2 px-6 py-2.5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-teal-600 dark:hover:bg-teal-500 dark:hover:text-white transition-all shadow-lg active:scale-95">
-                  Connexion
+                <Link 
+                  href="/login" 
+                  className="p-3 text-slate-400 dark:text-slate-500 hover:text-teal-600 transition-all"
+                  title="Se connecter"
+                >
+                  <LogIn size={22} />
                 </Link>
               )}
             </div>
@@ -183,8 +187,8 @@ export default function Navbar() {
             <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-teal-600 transition-colors"><X size={24} /></button>
           </div>
 
-          {user && (
-            <Link href="/account" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
+          {user ? (
+            <Link href="/settings" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
               <div className="flex items-center gap-4 overflow-hidden">
                 <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-950 shadow-lg relative">
                   {user.profilePic ? (
@@ -201,6 +205,18 @@ export default function Navbar() {
                 </div>
               </div>
               <ChevronRight size={18} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          ) : (
+            <Link 
+              href="/login" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="mb-10 p-5 bg-teal-600 text-white rounded-[2rem] flex items-center gap-4 border border-teal-500 transition-all shadow-lg active:scale-95"
+            >
+              <LogIn size={22} />
+              <div className="text-left">
+                <p className="text-sm font-black uppercase tracking-widest">Rejoindre</p>
+                <p className="text-[9px] font-medium opacity-80 uppercase tracking-tighter">Entrer sur Lisible</p>
+              </div>
             </Link>
           )}
 
