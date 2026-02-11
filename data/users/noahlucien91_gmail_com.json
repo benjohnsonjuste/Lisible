@@ -4,6 +4,13 @@
   "li": 71,
   "notifications": [
     {
+      "id": "like_1770836664620",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Et si la femme était un objet\" !",
+      "date": "2026-02-11T19:04:24.620Z",
+      "read": false
+    },
+    {
       "id": "cert_1770836659350",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"Et si la femme était un objet\" a reçu un Sceau de Certification (+1 Li).",
