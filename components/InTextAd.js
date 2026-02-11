@@ -1,4 +1,3 @@
-// components/InTextAd.jsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -45,8 +44,8 @@ export function InTextAd() {
   if (!isVisible) return null;
 
   return (
-    <div className="my-12 animate-in fade-in zoom-in duration-1000">
-      <div className="max-w-xl mx-auto bg-slate-900 dark:bg-black/60 backdrop-blur-2xl border border-slate-800 dark:border-white/10 p-3 rounded-[2.5rem] shadow-2xl flex flex-col gap-3">
+    <div className="my-12 animate-in fade-in zoom-in duration-1000 px-4">
+      <div className="max-w-xl mx-auto bg-slate-900 border border-slate-800 p-3 rounded-[2.5rem] shadow-2xl flex flex-col gap-3">
         
         {/* Header de l'annonce */}
         <div className="flex items-center justify-between px-4 pt-1">
@@ -56,7 +55,7 @@ export function InTextAd() {
             </div>
             <div>
               <p className="text-white text-[9px] font-black uppercase tracking-[0.2em] leading-none">Annonce Lisible</p>
-              <p className="text-slate-400 text-[8px] italic font-medium mt-1">Soutenez la plume libre</p>
+              <p className="text-slate-400 text-[8px] italic font-medium mt-1 uppercase tracking-tighter">Soutien à la création</p>
             </div>
           </div>
           <button 
@@ -73,9 +72,14 @@ export function InTextAd() {
            {/* L'ID DOIT CORRESPONDRE EXACTEMENT AU SCRIPT INVOKE.JS */}
            <div 
              id="container-874a186feecd3e968c16a58bb085fd56" 
-             className="w-full flex justify-center py-2 min-h-[250px]"
+             className="w-full flex justify-center py-2 min-h-[250px] z-10"
            >
              {/* Le script injectera la pub ici */}
+           </div>
+           
+           {/* Loader discret en arrière-plan pendant le chargement de la pub */}
+           <div className="absolute inset-0 flex items-center justify-center -z-0">
+             <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-700 animate-pulse">Chargement du mécène...</p>
            </div>
         </div>
       </div>
