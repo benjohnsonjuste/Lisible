@@ -13,9 +13,9 @@ const GITHUB_CONFIG = {
 
 const ECONOMY = {
   MIN_TRANSFER: 1000,
-  WITHDRAWAL_THRESHOLD: 25000, // 5 USD
-  REQUIRED_FOLLOWERS: 250,      // Seuil communautaire
-  LI_VALUE_USD: 0.0002 // 1000 Li = 0.20 USD
+  WITHDRAWAL_THRESHOLD: 25000, 
+  REQUIRED_FOLLOWERS: 250,      
+  LI_VALUE_USD: 0.0002 
 };
 
 // --- HELPERS CORE ---
@@ -67,7 +67,6 @@ export async function POST(req) {
     const { action, userEmail, textId, amount, ...data } = body;
     const targetPath = getSafePath(userEmail || data.email);
 
-    // 1. AUTH & COMPTE
     if (['user_sync', 'login', 'register', 'update_user'].includes(action)) {
       const file = await getFile(targetPath);
       const isNew = !file;
@@ -84,29 +83,49 @@ export async function POST(req) {
       return NextResponse.json({ success: true, user: userData });
     }
 
-    // 2. TEXTES
     if (action === 'publish') {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
       const indexPath = `data/publications/index.json`;
-      const newPub = { ...data, id: pubId, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      
+      const isConcours = data.isConcours === true || data.genre === "Battle Poétique";
+      const finalImage = isConcours ? null : (data.image || data.imageBase64);
+
+      const newPub = { 
+        ...data, 
+        id: pubId, 
+        image: finalImage,
+        imageBase64: finalImage,
+        date: new Date().toISOString(), 
+        views: 0, 
+        likes: 0, 
+        comments: [], 
+        certified: 0 
+      };
       
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
-      const index = await getFile(indexPath) || { content: [] };
-      index.content.unshift({ 
-        id: pubId, title: data.title, author: data.authorName, 
-        authorEmail: data.authorEmail, category: data.category, date: newPub.date 
-      });
-      await updateFile(indexPath, index.content, index.sha, `📝 Index Update`);
       
+      const indexFile = await getFile(indexPath) || { content: [] };
+      const indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
+      
+      indexContent.unshift({ 
+        id: pubId, 
+        title: data.title, 
+        author: data.authorName, 
+        authorEmail: data.authorEmail, 
+        category: data.category, 
+        genre: data.genre,
+        isConcours: isConcours,
+        image: finalImage,
+        date: newPub.date 
+      });
+      
+      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update`);
       return NextResponse.json({ success: true, id: pubId });
     }
 
-    // 3. ÉCONOMIE (Transfert & Retrait)
     if (action === 'transfer_li' || action === 'gift_li') {
-      if (amount < ECONOMY.MIN_TRANSFER) {
-        return NextResponse.json({ error: `Le minimum d'envoi est de ${ECONOMY.MIN_TRANSFER} Li` }, { status: 400 });
-      }
+      if (amount < ECONOMY.MIN_TRANSFER) return NextResponse.json({ error: "Minimum non atteint" }, { status: 400 });
 
       const sender = await getFile(getSafePath(userEmail));
       const receiver = await getFile(getSafePath(data.recipientEmail));
@@ -116,37 +135,19 @@ export async function POST(req) {
       
       sender.content.li -= amount;
       receiver.content.li += amount;
-      
-      await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent ${amount} Li`);
-      await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received ${amount} Li`);
-      return NextResponse.json({ success: true });
-    }
 
-    if (action === 'request_withdrawal') {
-      const user = await getFile(targetPath);
-      if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-
-      const currentLi = user.content.li || 0;
-      const followerCount = user.content.followers?.length || 0;
-
-      // Vérification double : Solde ET Communauté
-      if (currentLi < ECONOMY.WITHDRAWAL_THRESHOLD) {
-        return NextResponse.json({ 
-          error: `Seuil de retrait non atteint (${ECONOMY.WITHDRAWAL_THRESHOLD} Li requis)` 
-        }, { status: 400 });
-      }
-
-      if (followerCount < ECONOMY.REQUIRED_FOLLOWERS) {
-        return NextResponse.json({ 
-          error: `Influence insuffisante. Vous devez avoir au moins ${ECONOMY.REQUIRED_FOLLOWERS} abonnés pour monétiser.` 
-        }, { status: 400 });
-      }
-
-      // Logique de demande de retrait enregistrée
-      return NextResponse.json({ 
-        success: true, 
-        message: "Votre plume est éligible. Demande de retrait de 5 USD enregistrée." 
+      // Notification de réception
+      receiver.content.notifications.unshift({
+        id: `notif_${Date.now()}`,
+        type: "gift",
+        message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`,
+        date: new Date().toISOString(),
+        read: false
       });
+      
+      await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
+      await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
@@ -168,13 +169,11 @@ export async function GET(req) {
         const user = await getFile(getSafePath(id));
         if (user) {
             user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
-            // On ajoute l'info d'éligibilité pour le frontend
             user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
         }
         return NextResponse.json(user);
     }
     if (type === 'library' || type === 'publications') return NextResponse.json(await getFile(`data/publications/index.json`));
-    
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -191,16 +190,38 @@ export async function PATCH(req) {
     
     if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
 
+    const authorPath = getSafePath(textFile.content.authorEmail);
+    const authorFile = await getFile(authorPath);
+
     if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
-    if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
+    if (action === 'like') {
+      textFile.content.likes = (textFile.content.likes || 0) + 1;
+      // Notification de like
+      if (authorFile) {
+        authorFile.content.notifications.unshift({
+          id: `like_${Date.now()}`,
+          type: "like",
+          message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`,
+          date: new Date().toISOString(),
+          read: false
+        });
+        await updateFile(authorPath, authorFile.content, authorFile.sha, `❤️ Like Notif`);
+      }
+    }
     
     if (action === 'certify') {
       textFile.content.certified = (textFile.content.certified || 0) + 1;
-      const authorPath = getSafePath(textFile.content.authorEmail);
-      const authorFile = await getFile(authorPath);
       if (authorFile) {
         authorFile.content.li = (authorFile.content.li || 0) + 1;
-        await updateFile(authorPath, authorFile.content, authorFile.sha, `💎 Reward: +1 Li`);
+        // Notification de certification
+        authorFile.content.notifications.unshift({
+          id: `cert_${Date.now()}`,
+          type: "certification",
+          message: `Félicitations ! Votre texte "${textFile.content.title}" a reçu un Sceau de Certification (+1 Li).`,
+          date: new Date().toISOString(),
+          read: false
+        });
+        await updateFile(authorPath, authorFile.content, authorFile.sha, `💎 Reward & Notif`);
       }
     }
 
