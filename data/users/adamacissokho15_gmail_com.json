@@ -4,6 +4,13 @@
   "li": 50,
   "notifications": [
     {
+      "id": "like_1770829671956",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Mon départ\" !",
+      "date": "2026-02-11T17:07:51.956Z",
+      "read": false
+    },
+    {
       "id": "like_1770829624358",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Mon départ\" !",
