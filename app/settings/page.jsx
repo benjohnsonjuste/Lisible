@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { 
   User, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, AlertTriangle, Wallet, Camera
+  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera
 } from "lucide-react";
 
 // Sous-composant pour les statistiques
@@ -72,7 +72,6 @@ export default function AccountPage() {
         localStorage.setItem("lisible_user", JSON.stringify(freshUser));
       }
     } catch (e) { 
-      console.error("Sync Error:", e);
       const local = JSON.parse(localStorage.getItem("lisible_user"));
       setUser(local);
     } finally { 
@@ -88,9 +87,9 @@ export default function AccountPage() {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ 
-          action: 'update-user', 
-          email: user.email, 
-          updates: formData 
+          action: 'update_user', 
+          userEmail: user.email, 
+          ...formData 
         }) 
       });
       
@@ -123,7 +122,6 @@ export default function AccountPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 pb-32 bg-[#FCFBF9]">
-      {/* Header Profile */}
       <header className="flex flex-col md:flex-row gap-8 items-center justify-between bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
         <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
            <div className="relative group">
@@ -161,11 +159,10 @@ export default function AccountPage() {
         </button>
       </header>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <AccountStatCard label="Inspirations" value={user?.stats?.totalTexts || 0} icon={<BookOpen />} color="text-teal-600" />
+        <AccountStatCard label="Manuscrits" value={user?.works?.length || 0} icon={<BookOpen />} color="text-teal-600" />
         <AccountStatCard label="Abonnés" value={user?.followers?.length || 0} icon={<Star />} color="text-amber-500" />
-        <AccountStatCard label="Certification" value={user?.totalCertified || 0} icon={<ShieldCheck />} color="text-blue-600" />
+        <AccountStatCard label="Certifications" value={user?.certified || 0} icon={<ShieldCheck />} color="text-blue-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -207,7 +204,7 @@ export default function AccountPage() {
 
                 <div className="mt-8 space-y-3">
                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-slate-500">Retrait</span>
+                    <span className="text-slate-500">Progression Retrait</span>
                     <span className="text-teal-400">{Math.floor(progressToWithdraw)}%</span>
                   </div>
                   <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
@@ -216,12 +213,12 @@ export default function AccountPage() {
                       style={{ width: `${progressToWithdraw}%` }} 
                     />
                   </div>
-                  <p className="text-[9px] font-medium text-slate-500 italic text-center pt-2">Seuil : 25,000 Li</p>
+                  <p className="text-[9px] font-medium text-slate-500 italic text-center pt-2">Seuil : 25,000 Li (5 USD)</p>
                 </div>
               </div>
 
               <button 
-                onClick={() => balance >= 25000 ? router.push("/withdraw") : toast.info("Solde insuffisant pour un retrait")}
+                onClick={() => balance >= 25000 ? router.push("/withdraw") : toast.info("Seuil de 25,000 Li requis.")}
                 className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
                   balance < 25000 
                   ? 'bg-white/5 text-slate-600 cursor-not-allowed' 
@@ -230,6 +227,9 @@ export default function AccountPage() {
               >
                 Demander un transfert
               </button>
+            </div>
+            <div className="absolute right-[-20px] top-[-20px] opacity-[0.03] pointer-events-none">
+                <Sparkles size={200} />
             </div>
           </div>
 
@@ -240,7 +240,7 @@ export default function AccountPage() {
                 <h3 className="font-black uppercase text-xs tracking-widest italic">Accès Admin</h3>
               </div>
               <p className="text-[10px] font-bold leading-relaxed opacity-80 uppercase tracking-tighter">
-                Accès prioritaire au registre des manuscrits de l'Atelier.
+                Accès prioritaire aux registres de l'Atelier.
               </p>
             </div>
           )}
