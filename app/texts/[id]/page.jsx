@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost, Sparkles, Megaphone
+  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost, Sparkles, Megaphone, AlignLeft
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -207,6 +207,7 @@ export default function TextPage() {
   );
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
+  const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
 
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${isFocusMode ? 'bg-[#F5F2ED]' : 'bg-[#FCFBF9]'}`}>
@@ -226,7 +227,7 @@ export default function TextPage() {
         </nav>
 
         <main className="max-w-3xl mx-auto px-6 pt-40 pb-48">
-           {isAnnouncementAccount ? <BadgeAnnonce /> : (text.isConcours || text.genre === "Battle Poétique") ? <BadgeConcours /> : null}
+           {isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null}
 
            <header className="mb-20 space-y-10">
               <div className="flex flex-wrap items-center gap-4">
@@ -243,6 +244,13 @@ export default function TextPage() {
                     <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>
                  </div>
               </div>
+
+              {/* Affichage de l'image uniquement si ce n'est PAS une battle */}
+              {!isBattle && text.image && (
+                <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
+                  <img src={text.image} className="w-full h-full object-cover" alt="" />
+                </div>
+              )}
 
               <h1 className="font-serif font-black italic text-5xl sm:text-7xl text-slate-900 leading-[1.05] tracking-tighter">
                 {text.title}
