@@ -1,8 +1,16 @@
 {
   "email": "romualdmelong@gmail.com",
   "name": "",
-  "li": 50,
-  "notifications": [],
+  "li": 51,
+  "notifications": [
+    {
+      "id": "cert_1770849240345",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Femme de mon pays\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-11T22:34:00.345Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
