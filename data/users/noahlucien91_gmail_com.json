@@ -2,7 +2,15 @@
   "email": "noahlucien91@gmail.com",
   "name": "Ayissi Noah Lucien",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770827491819",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Et si la femme était un objet\" !",
+      "date": "2026-02-11T16:31:31.819Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
