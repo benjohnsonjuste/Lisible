@@ -4,6 +4,13 @@
   "li": 50,
   "notifications": [
     {
+      "id": "like_1770830236838",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Ville en béton\" !",
+      "date": "2026-02-11T17:17:16.838Z",
+      "read": false
+    },
+    {
       "id": "like_1770830042853",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Ville en béton\" !",
