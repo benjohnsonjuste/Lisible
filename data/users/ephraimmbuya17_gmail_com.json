@@ -4,6 +4,13 @@
   "li": 52,
   "notifications": [
     {
+      "id": "like_1770840909229",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La beauté d'une nymphe\" !",
+      "date": "2026-02-11T20:15:09.229Z",
+      "read": false
+    },
+    {
       "id": "cert_1770840691873",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"La beauté d'une nymphe\" a reçu un Sceau de Certification (+1 Li).",
