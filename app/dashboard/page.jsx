@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
-  Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink 
+  Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
+  ShieldCheck, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -17,14 +18,16 @@ export default function AuthorDashboard() {
       try {
         const loggedUser = localStorage.getItem("lisible_user");
         if (!loggedUser) {
-          window.location.href = "/login";
+          window.location.replace("/login"); // Utilisation de replace pour éviter les boucles d'historique
           return;
         }
         
         const { email } = JSON.parse(loggedUser);
 
-        // 1. Charger Profil
-        const userRes = await fetch(`/api/github-db?type=user&id=${email}`);
+        // 1. Charger Profil depuis l'API unifiée
+        const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
+        if (!userRes.ok) throw new Error("Erreur de chargement");
+        
         const userData = await userRes.json();
         
         if (userData && userData.content) {
@@ -32,7 +35,7 @@ export default function AuthorDashboard() {
           localStorage.setItem("lisible_user", JSON.stringify(userData.content));
         }
 
-        // 2. Charger les œuvres de l'auteur depuis l'index
+        // 2. Charger les œuvres
         const libraryRes = await fetch(`/api/github-db?type=library`);
         const libraryData = await libraryRes.json();
         if (libraryData && libraryData.content) {
@@ -43,7 +46,8 @@ export default function AuthorDashboard() {
         }
 
       } catch (e) {
-        toast.error("Erreur de synchronisation avec le registre");
+        console.error("Dashboard Error:", e);
+        toast.error("Connexion au registre Lisible perdue.");
       } finally {
         setLoading(false);
       }
@@ -54,7 +58,7 @@ export default function AuthorDashboard() {
   const handleDelete = async (id, title) => {
     if (!confirm(`Voulez-vous vraiment retirer "${title}" des archives ?`)) return;
     
-    toast.loading("Retrait du manuscrit...");
+    const toastId = toast.loading("Retrait du manuscrit...");
     try {
       const res = await fetch('/api/github-db', {
         method: 'POST',
@@ -63,12 +67,12 @@ export default function AuthorDashboard() {
       });
       if (res.ok) {
         setWorks(works.filter(w => w.id !== id));
-        toast.success("Manuscrit effacé des registres.");
+        toast.success("Manuscrit effacé des registres.", { id: toastId });
+      } else {
+        throw new Error();
       }
     } catch (e) {
-      toast.error("Erreur lors de la suppression.");
-    } finally {
-      toast.dismiss();
+      toast.error("Erreur lors de la suppression.", { id: toastId });
     }
   };
 
@@ -81,11 +85,14 @@ export default function AuthorDashboard() {
 
   if (!user) return null;
 
+  // Conditions pour le retrait
+  const canWithdraw = (user.li >= 25000) && (user.followers?.length >= 250);
+
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
       <div className="max-w-6xl mx-auto space-y-12">
         
-        <header className="flex justify-between items-end">
+        <header className="flex justify-between items-end pt-12">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={14} className="text-teal-600" />
@@ -97,6 +104,17 @@ export default function AuthorDashboard() {
             <SettingsIcon size={20} />
           </Link>
         </header>
+
+        {/* Status de Monétisation */}
+        {!canWithdraw && (
+          <div className="bg-amber-50 border border-amber-100 p-4 rounded-3xl flex items-center gap-4 text-amber-800">
+            <AlertCircle size={20} className="shrink-0" />
+            <p className="text-[11px] font-bold uppercase tracking-tight">
+              Monétisation inactive : 25 000 Li et 250 abonnés requis pour le retrait. 
+              ({user.li || 0}/25000 Li • {user.followers?.length || 0}/250 abonnés)
+            </p>
+          </div>
+        )}
 
         {/* --- SECTION QUICK ACTIONS --- */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -129,7 +147,10 @@ export default function AuthorDashboard() {
             <h2 className="text-5xl font-black italic tracking-tighter text-slate-900">
               {user.li || 0} <span className="text-teal-600 text-xl not-italic ml-1">Li</span>
             </h2>
-            <p className="text-[9px] font-bold text-slate-300 mt-2 uppercase tracking-tighter">Val. estimée: {(user.li * 0.0002).toFixed(2)} USD</p>
+            <div className="flex items-center gap-2 mt-2">
+               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Val. estimée: {(user.li * 0.0002).toFixed(2)} USD</p>
+               {canWithdraw && <ShieldCheck size={12} className="text-teal-500" />}
+            </div>
           </div>
           
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
@@ -143,7 +164,7 @@ export default function AuthorDashboard() {
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-6"><TrendingUp size={24} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Influences</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Suivis</p>
               <h2 className="text-4xl font-black italic text-slate-900">{user.following?.length || 0}</h2>
             </div>
           </div>
