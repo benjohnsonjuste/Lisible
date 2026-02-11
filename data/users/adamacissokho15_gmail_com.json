@@ -2,7 +2,15 @@
   "email": "adamacissokho15@gmail.com",
   "name": "",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770829608439",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Mon départ\" !",
+      "date": "2026-02-11T17:06:48.439Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
