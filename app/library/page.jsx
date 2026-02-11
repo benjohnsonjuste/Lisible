@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, ChevronDown, Sparkles
+  Search, ChevronDown, Sparkles, Megaphone
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,7 +12,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // États de filtrage
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
@@ -23,12 +22,9 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const fetchInitial = async () => {
     setLoading(true);
     try {
-      // Appel au Data Lake centralisé
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
-      
       if (json && json.content) {
-        // Le contenu de l'index est un tableau d'objets (métadonnées des textes)
         setTexts(json.content);
       }
     } catch (e) { 
@@ -39,17 +35,14 @@ export default function Bibliotheque({ initialTexts = [] }) {
     }
   };
 
-  // Logique de filtrage combinée
   const filteredTexts = useMemo(() => {
     return texts.filter(t => {
       const matchesSearch = 
         (t.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.author || t.authorName || "").toLowerCase().includes(searchTerm.toLowerCase());
-      
       const matchesGenre = 
         activeGenre === "Tous" || 
         (t.genre === activeGenre || t.category === activeGenre);
-
       return matchesSearch && matchesGenre;
     });
   }, [texts, searchTerm, activeGenre]);
@@ -64,7 +57,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
   return (
     <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
       
-      {/* En-tête de section */}
       <div className="text-center mb-16 space-y-4">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles size={14} className="text-teal-600" />
@@ -73,7 +65,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
           <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Les Archives.</h1>
       </div>
 
-      {/* Barre de Recherche & Filtres */}
       <div className="space-y-10 mb-20">
         <div className="relative max-w-2xl mx-auto group">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
@@ -86,7 +77,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
           />
         </div>
 
-        {/* Chips de filtrage */}
         <div className="flex flex-wrap justify-center gap-3">
           {genres.map((g) => (
             <button
@@ -104,11 +94,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
         </div>
       </div>
 
-      {/* Grille de manuscrits */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
-          const isAdmin = ["adm.lablitteraire7@gmail.com", "jb7management@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(item.authorEmail);
+          const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(item.authorEmail);
+          const isOtherAdmin = ["jb7management@gmail.com"].includes(item.authorEmail);
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -116,7 +106,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
                 isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
               } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
                 
-                {/* Visual Header */}
                 <div className="h-64 bg-slate-100 relative overflow-hidden">
                   <img
                     src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
@@ -131,7 +120,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
                         <Trophy size={12} /> Duel de Plume
                       </span>
                     )}
-                    {isAdmin && (
+                    {isAnnouncementAccount ? (
+                      <span className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                        <Megaphone size={12} /> Annonce
+                      </span>
+                    ) : isOtherAdmin && (
                       <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
                         <ShieldCheck size={12} /> Officiel
                       </span>
@@ -139,7 +132,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
                   </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-10 flex-grow flex flex-col">
                   <div className="flex items-center gap-3 mb-5">
                     <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest">
@@ -172,10 +164,13 @@ export default function Bibliotheque({ initialTexts = [] }) {
                       </div>
                     </div>
                     
-                    <div className="flex gap-5 text-slate-300 text-[11px] font-black">
-                      <span className="flex items-center gap-2"><Eye size={18} /> {item.views || 0}</span>
-                      <span className="flex items-center gap-2"><Heart size={18} /> {item.likes || 0}</span>
-                    </div>
+                    {/* Masquer les stats pour les comptes Annonce */}
+                    {!isAnnouncementAccount && (
+                      <div className="flex gap-5 text-slate-300 text-[11px] font-black">
+                        <span className="flex items-center gap-2"><Eye size={18} /> {item.views || 0}</span>
+                        <span className="flex items-center gap-2"><Heart size={18} /> {item.likes || 0}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </article>
