@@ -62,7 +62,11 @@ export default function AccountPage() {
       const res = await fetch(`/api/github-db?type=user&id=${email}`);
       if (res.ok) {
         const data = await res.json();
-        const freshUser = data.content;
+        // Forcer le solde à 0 pour les nouveaux profils sans champ 'li' défini
+        const freshUser = {
+          ...data.content,
+          li: data.content.li !== undefined ? data.content.li : 0
+        };
         setUser(freshUser);
         setFormData({ 
             penName: freshUser.penName || "",
