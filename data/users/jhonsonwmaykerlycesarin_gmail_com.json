@@ -2,7 +2,15 @@
   "email": "jhonsonwmaykerlycesarin@gmail.com",
   "name": "Cesarin Jhonson Maykerly Woods",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770830042853",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Ville en béton\" !",
+      "date": "2026-02-11T17:14:02.853Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
