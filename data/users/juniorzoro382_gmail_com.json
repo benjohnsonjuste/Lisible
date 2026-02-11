@@ -1,8 +1,15 @@
 {
   "email": "juniorzoro382@gmail.com",
   "name": "",
-  "li": 53,
+  "li": 54,
   "notifications": [
+    {
+      "id": "cert_1770845262986",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Une lettre pour le futur\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-11T21:27:42.986Z",
+      "read": false
+    },
     {
       "id": "cert_1770845259306",
       "type": "certification",
