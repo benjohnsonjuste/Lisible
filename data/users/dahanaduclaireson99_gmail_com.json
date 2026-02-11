@@ -4,6 +4,13 @@
   "li": 62,
   "notifications": [
     {
+      "id": "like_1770848811948",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'inaltérable\" !",
+      "date": "2026-02-11T22:26:51.948Z",
+      "read": false
+    },
+    {
       "id": "like_1770848741469",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"L'inaltérable\" !",
