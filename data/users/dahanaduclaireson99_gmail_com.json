@@ -2,7 +2,15 @@
   "email": "dahanaduclaireson99@gmail.com",
   "name": "Duclaire Dahana",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770827287424",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'inaltérable\" !",
+      "date": "2026-02-11T16:28:07.424Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
