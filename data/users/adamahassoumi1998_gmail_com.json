@@ -2,7 +2,15 @@
   "email": "adamahassoumi1998@gmail.com",
   "name": "Hassoumi Adama",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770832010195",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"À toi mon étoile filante\" !",
+      "date": "2026-02-11T17:46:50.195Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
