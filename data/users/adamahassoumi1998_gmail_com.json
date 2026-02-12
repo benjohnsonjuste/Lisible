@@ -4,6 +4,13 @@
   "li": 95,
   "notifications": [
     {
+      "id": "like_1770887127108",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"À toi mon étoile filante\" !",
+      "date": "2026-02-12T09:05:27.108Z",
+      "read": false
+    },
+    {
       "id": "cert_1770887124210",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"À toi mon étoile filante\" a reçu un Sceau de Certification (+1 Li).",
