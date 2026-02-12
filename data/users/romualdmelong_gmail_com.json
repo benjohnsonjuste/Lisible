@@ -4,6 +4,13 @@
   "li": 64,
   "notifications": [
     {
+      "id": "like_1770882002139",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Femme en silence\" !",
+      "date": "2026-02-12T07:40:02.139Z",
+      "read": false
+    },
+    {
       "id": "cert_1770881996039",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"Femme en silence\" a reçu un Sceau de Certification (+1 Li).",
