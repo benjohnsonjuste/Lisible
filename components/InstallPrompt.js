@@ -8,24 +8,38 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     const handler = (e) => {
+      // Empêche la barre d'installation par défaut du navigateur
       e.preventDefault();
       setDeferredPrompt(e);
       
       const isDismissed = sessionStorage.getItem("pwa_prompt_dismissed");
+      // On n'affiche le prompt que si l'utilisateur ne l'a pas déjà fermé durant cette session
       if (!isDismissed) {
         setIsVisible(true);
       }
     };
 
     window.addEventListener("beforeinstallprompt", handler);
+    
+    // Vérifie si l'app est déjà installée (mode standalone)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsVisible(false);
+    }
+
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
+    
+    // Affiche le prompt natif
     deferredPrompt.prompt();
+    
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") setIsVisible(false);
+    if (outcome === "accepted") {
+      setIsVisible(false);
+      console.log("L'utilisateur a installé Lisible.biz");
+    }
     setDeferredPrompt(null);
   };
 
@@ -41,7 +55,7 @@ export default function InstallPrompt() {
       <div className="max-w-xl mx-auto bg-slate-900/95 dark:bg-black/80 backdrop-blur-2xl border border-white/10 p-2.5 pl-4 rounded-[2.5rem] shadow-2xl shadow-black/60 flex items-center justify-between gap-4">
         
         <div className="flex items-center gap-4">
-          {/* LOGO OFFICIEL */}
+          {/* LOGO OFFICIEL - Assuré par /icon-192.png dans public/ */}
           <div className="relative shrink-0">
             <img 
               src="/icon-192.png" 
@@ -58,7 +72,7 @@ export default function InstallPrompt() {
               Lisible App
             </h4>
             <p className="text-slate-400 text-[9px] mt-1.5 font-medium italic">
-              L'immersion totale
+              L'immersion totale sur lisible.biz
             </p>
           </div>
         </div>
