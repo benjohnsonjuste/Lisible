@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/navigation"; // Assurez-vous d'utiliser next/link ou next/navigation selon votre config
+import Link from "next/link"; // Correction ici : next/link au lieu de next/navigation
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
   Search, Sparkles, Megaphone, AlignLeft
@@ -115,7 +115,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const isOtherAdmin = ["jb7management@gmail.com"].includes(item.authorEmail);
           const hasSceau = (item.certified || item.totalCertified || 0) > 0;
 
-          // Normalisation des stats pour correspondre à la page individuelle
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
           const displayCerts = item.certified || item.totalCertified || 0;
