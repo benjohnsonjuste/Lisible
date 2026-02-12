@@ -4,7 +4,7 @@ import {
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Coins, TrendingUp, 
   Crown, Briefcase, ChevronDown, PenTool, BarChart3, Star, Settings
-} from "lucide-react";
+} from "lucide-center";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -28,7 +28,18 @@ export default function UsersPage() {
       const data = await res.json();
       
       if (data && data.users) {
-        const sorted = data.users.sort((a, b) => (Number(b.li) || 0) - (Number(a.li) || 0));
+        // Tri Universel appliqué au Cercle : Certifications > Likes > Fortune (Li)
+        const sorted = data.users.sort((a, b) => {
+          const certA = Number(a.certified || a.totalCertified || 0);
+          const certB = Number(b.certified || b.totalCertified || 0);
+          if (certB !== certA) return certB - certA;
+
+          const likesA = Number(a.likes || a.totalLikes || 0);
+          const likesB = Number(b.likes || b.totalLikes || 0);
+          if (likesB !== likesA) return likesB - likesA;
+
+          return (Number(b.li) || 0) - (Number(a.li) || 0);
+        });
         setAuthors(sorted);
       }
     } catch (e) { 
@@ -106,6 +117,11 @@ export default function UsersPage() {
     if ((author.followers?.length || 0) > 10) {
       badges.push({ icon: <Star size={10} />, label: "Plume d'Or", color: "bg-amber-100 text-amber-700" });
     }
+
+    // Badge de Certification (Nouveau)
+    if ((author.certified || author.totalCertified || 0) > 0) {
+      badges.push({ icon: <ShieldCheck size={10} />, label: "Plume Certifiée", color: "bg-teal-100 text-teal-700 border border-teal-200" });
+    }
     
     return badges;
   };
@@ -171,9 +187,12 @@ export default function UsersPage() {
                 </div>
 
                 <div className="flex-grow space-y-4 text-center sm:text-left">
-                  <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-none">
-                    {a.penName || a.name || "Plume Anonyme"}
-                  </h2>
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-none">
+                      {a.penName || a.name || "Plume Anonyme"}
+                    </h2>
+                    {(a.certified || a.totalCertified) > 0 && <ShieldCheck size={20} className="text-teal-500" />}
+                  </div>
                   
                   <div className="flex flex-wrap justify-center sm:justify-start gap-4">
                     <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
@@ -182,6 +201,11 @@ export default function UsersPage() {
                     <div className="flex items-center gap-1.5 text-[9px] font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full uppercase tracking-widest">
                       <Coins size={12}/> {a.li || 0} Li
                     </div>
+                    {(a.certified || a.totalCertified) > 0 && (
+                      <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase tracking-widest">
+                        ★ {a.certified || a.totalCertified} Sceaux
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2 justify-center sm:justify-start pt-2">
