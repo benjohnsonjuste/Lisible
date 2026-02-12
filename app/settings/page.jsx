@@ -59,13 +59,35 @@ export default function AccountPage() {
 
   const refreshUserData = async (email) => {
     try {
+      // 1. Récupération du profil
       const res = await fetch(`/api/github-db?type=user&id=${email}`);
-      if (res.ok) {
+      const libraryRes = await fetch(`/api/github-db?type=library`);
+      
+      if (res.ok && libraryRes.ok) {
         const data = await res.json();
+        const libraryData = await libraryRes.json();
         
-        // Initialisation du solde à 0 Li pour les nouveaux profils (li undefined ou nul)
+        // 2. Filtrage et Tri Universel des œuvres (Certifications > Likes > Date)
+        let sortedWorks = [];
+        if (libraryData && libraryData.content) {
+          sortedWorks = libraryData.content
+            .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
+            .sort((a, b) => {
+              const certA = Number(a.certified || a.totalCertified || 0);
+              const certB = Number(b.certified || b.totalCertified || 0);
+              if (certB !== certA) return certB - certA;
+
+              const likesA = Number(a.likes || a.totalLikes || 0);
+              const likesB = Number(b.likes || b.totalLikes || 0);
+              if (likesB !== likesA) return likesB - likesA;
+
+              return new Date(b.date) - new Date(a.date);
+            });
+        }
+
         const freshUser = {
           ...data.content,
+          works: sortedWorks,
           li: (data.content && data.content.li !== undefined && data.content.li !== null) 
               ? data.content.li 
               : 0
@@ -81,7 +103,6 @@ export default function AccountPage() {
       }
     } catch (e) { 
       const local = JSON.parse(localStorage.getItem("lisible_user"));
-      // Appliquer également la règle au fallback local si nécessaire
       if (local) {
         local.li = local.li !== undefined ? local.li : 0;
         setUser(local);
