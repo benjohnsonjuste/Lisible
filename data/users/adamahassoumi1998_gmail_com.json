@@ -1,8 +1,15 @@
 {
   "email": "adamahassoumi1998@gmail.com",
   "name": "",
-  "li": 86,
+  "li": 87,
   "notifications": [
+    {
+      "id": "cert_1770881379904",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Jeunesse\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-12T07:29:39.904Z",
+      "read": false
+    },
     {
       "id": "cert_1770881378323",
       "type": "certification",
