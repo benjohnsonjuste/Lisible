@@ -2,7 +2,8 @@
   "name": "Lisible : Streaming Littéraire",
   "short_name": "Lisible",
   "description": "Le sanctuaire numérique de l'élite de la plume.",
-  "start_url": "/",
+  "start_url": "https://lisible.biz/",
+  "id": "lisible-pwa-biz",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "minimal-ui"],
@@ -32,12 +33,14 @@
   "shortcuts": [
     {
       "name": "Bibliothèque",
+      "short_name": "Lectures",
       "url": "/bibliotheque",
       "description": "Accéder à mes lectures",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Atelier",
+      "short_name": "Écrire",
       "url": "/dashboard",
       "description": "Écrire une nouvelle œuvre",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
