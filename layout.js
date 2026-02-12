@@ -7,6 +7,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // Font Sans-Serif pour l'interface UI (Atelier, Menu, Dash)
 const inter = Inter({ 
@@ -64,6 +65,8 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-teal-100 selection:text-teal-900">
         <AuthProvider>
+          <ServiceWorkerRegistration />
+          
           {/* Interface Globale */}
           <Navbar />
           
