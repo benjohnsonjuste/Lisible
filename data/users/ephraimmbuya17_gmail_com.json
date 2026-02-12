@@ -4,6 +4,13 @@
   "li": 52,
   "notifications": [
     {
+      "id": "like_1770904756768",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La beauté d'une nymphe\" !",
+      "date": "2026-02-12T13:59:16.768Z",
+      "read": false
+    },
+    {
       "id": "like_1770886135131",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"La beauté d'une nymphe\" !",
