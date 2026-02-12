@@ -23,18 +23,32 @@ export default function AuthorDashboard() {
           return;
         }
         const { email } = JSON.parse(loggedUser);
+        
+        // Synchro profil
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
         const userData = await userRes.json();
         if (userData && userData.content) {
           setUser(userData.content);
           localStorage.setItem("lisible_user", JSON.stringify(userData.content));
         }
+
+        // Synchro œuvres avec Tri Universel (Certifications > Likes > Date)
         const libraryRes = await fetch(`/api/github-db?type=library`);
         const libraryData = await libraryRes.json();
         if (libraryData && libraryData.content) {
-          const authorWorks = libraryData.content.filter(w => 
-            w.authorEmail?.toLowerCase() === email.toLowerCase()
-          );
+          const authorWorks = libraryData.content
+            .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
+            .sort((a, b) => {
+              const certA = Number(a.certified || a.totalCertified || 0);
+              const certB = Number(b.certified || b.totalCertified || 0);
+              if (certB !== certA) return certB - certA;
+
+              const likesA = Number(a.likes || a.totalLikes || 0);
+              const likesB = Number(b.likes || b.totalLikes || 0);
+              if (likesB !== likesA) return likesB - likesA;
+
+              return new Date(b.date) - new Date(a.date);
+            });
           setWorks(authorWorks);
         }
       } catch (e) {
@@ -53,26 +67,21 @@ export default function AuthorDashboard() {
     const ctx = canvas.getContext('2d');
     const name = user.penName || user.name || "Auteur.e Lisible";
 
-    // Setup dimensions
     canvas.width = 600;
     canvas.height = 600;
 
-    // Background
-    ctx.fillStyle = '#0f172a'; // slate-900
+    ctx.fillStyle = '#0f172a'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Border
-    ctx.strokeStyle = '#14b8a6'; // teal-500
+    ctx.strokeStyle = '#14b8a6'; 
     ctx.lineWidth = 20;
     ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
-    // Header
     ctx.fillStyle = '#14b8a6';
     ctx.font = 'black 30px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
 
-    // User Name (Multiligne)
     ctx.fillStyle = '#ffffff';
     ctx.font = 'italic bold 50px serif';
     const words = name.split(' ');
@@ -94,7 +103,6 @@ export default function AuthorDashboard() {
     }
     ctx.fillText(line, canvas.width / 2, y);
 
-    // Footer
     ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 25px Arial';
     ctx.fillText('lisible.biz', canvas.width / 2, 540);
@@ -126,8 +134,6 @@ export default function AuthorDashboard() {
         toast.error("Partage annulé");
       }
     } else {
-      // Fallback si l'API de partage n'est pas supportée (ex: Desktop non compatible)
-      const url = canvas.toDataURL('image/jpeg');
       const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz`;
       window.open(shareUrl, '_blank');
       toast.info("Lien de partage généré !");
@@ -174,7 +180,6 @@ export default function AuthorDashboard() {
             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Mon Studio.</h1>
           </div>
 
-          {/* SECTION BADGE OFFICIEL */}
           <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
             <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
               <Award size={20} />
@@ -184,20 +189,8 @@ export default function AuthorDashboard() {
               <p className="text-[11px] font-bold text-slate-900">Compte Officiel</p>
             </div>
             <div className="flex gap-2">
-              <button 
-                onClick={handleUniversalShare}
-                className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors"
-                title="Partager mon badge"
-              >
-                <Share2 size={16} />
-              </button>
-              <button 
-                onClick={() => generateBadge(true)}
-                className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
-                title="Télécharger"
-              >
-                <Download size={16} />
-              </button>
+              <button onClick={handleUniversalShare} className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors" title="Partager mon badge"><Share2 size={16} /></button>
+              <button onClick={() => generateBadge(true)} className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors" title="Télécharger"><Download size={16} /></button>
             </div>
           </div>
         </header>
@@ -214,22 +207,12 @@ export default function AuthorDashboard() {
 
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p>
-              <h3 className="text-xl font-bold italic">Publier un texte</h3>
-            </div>
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus size={24} />
-            </div>
+            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
           <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p>
-              <h3 className="text-xl font-bold italic">Gérer mon compte</h3>
-            </div>
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-              <User size={22} />
-            </div>
+            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p><h3 className="text-xl font-bold italic">Gérer mon compte</h3></div>
+            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><User size={22} /></div>
           </Link>
         </section>
 
@@ -267,9 +250,16 @@ export default function AuthorDashboard() {
                   <div className="flex items-start gap-5">
                     <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors"><FileText size={28} /></div>
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900 leading-tight mb-1">{work.title}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold text-slate-900 leading-tight">{work.title}</h3>
+                        {(work.certified > 0 || work.totalCertified > 0) && <ShieldCheck size={16} className="text-teal-500" />}
+                      </div>
                       <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        <span>{work.category}</span><span>•</span><span className="flex items-center gap-1"><ExternalLink size={10}/> {new Date(work.date).toLocaleDateString()}</span>
+                        <span>{work.category}</span>
+                        <span>•</span>
+                        <span className="text-teal-600">{work.certified || work.totalCertified || 0} Sceaux</span>
+                        <span>•</span>
+                        <span>{new Date(work.date).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
