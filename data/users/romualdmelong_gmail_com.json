@@ -1,8 +1,15 @@
 {
   "email": "romualdmelong@gmail.com",
   "name": "",
-  "li": 61,
+  "li": 62,
   "notifications": [
+    {
+      "id": "cert_1770878429470",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"Femme du Cameroun, lumière d’Afrique\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-12T06:40:29.470Z",
+      "read": false
+    },
     {
       "id": "cert_1770878428066",
       "type": "certification",
