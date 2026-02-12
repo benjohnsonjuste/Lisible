@@ -3,11 +3,10 @@ import TextPageClient from "./TextPageClient";
 
 /**
  * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
- * S'exécute côté serveur pour les crawlers (FB, WhatsApp, X)
  */
 export async function generateMetadata({ params }) {
   const { id } = params;
-  const baseUrl = "https://lisible.biz"; // Domaine mis à jour
+  const baseUrl = "https://lisible.biz";
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
@@ -66,7 +65,8 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Feather, Ghost, Sparkles, Megaphone, ShieldCheck
+  Sun, Zap, Coffee, Loader2, Feather, Ghost, Sparkles, Megaphone, ShieldCheck,
+  Volume2, VolumeX, Pause, Play
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -111,6 +111,11 @@ function TextContent() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
 
+  // ÉTAT AUDIO
+  const [isPlaying, setIsPlaying] = useState(false);
+  const synth = useRef(null);
+  const utterance = useRef(null);
+
   const saveToLocal = useCallback((id, data) => {
     try {
       const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
@@ -150,7 +155,6 @@ function TextContent() {
       saveToLocal(id, data.content);
       setIsOffline(false);
 
-      // Chargement de la bibliothèque avec TRI UNIVERSEL (Certifications > Likes > Date)
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
@@ -158,11 +162,9 @@ function TextContent() {
             const certA = Number(a.certified || a.totalCertified || 0);
             const certB = Number(b.certified || b.totalCertified || 0);
             if (certB !== certA) return certB - certA;
-
             const likesA = Number(a.likes || a.totalLikes || 0);
             const likesB = Number(b.likes || b.totalLikes || 0);
             if (likesB !== likesA) return likesB - likesA;
-
             return new Date(b.date) - new Date(a.date);
         });
         setAllTexts(sortedLibrary);
@@ -176,6 +178,10 @@ function TextContent() {
 
   useEffect(() => {
     loadContent();
+    // Nettoyage audio au démontage
+    return () => {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+    };
   }, [loadContent]);
 
   useEffect(() => {
@@ -193,7 +199,6 @@ function TextContent() {
     if (id && text && !viewLogged.current && !isOffline) {
       const viewedKey = `v_${id}`;
       const alreadyViewed = localStorage.getItem(viewedKey);
-
       if (!alreadyViewed) {
         viewLogged.current = true;
         fetch('/api/github-db', {
@@ -210,33 +215,51 @@ function TextContent() {
     }
   }, [id, text, isOffline]);
 
+  // LOGIQUE AUDIO (API SYNTHESIS)
+  const toggleSpeech = () => {
+    if (!text?.content) return;
+
+    if (!window.speechSynthesis) {
+      return toast.error("La lecture audio n'est pas supportée sur ce navigateur.");
+    }
+
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+      return;
+    }
+
+    // Nettoyer le HTML pour la lecture
+    const plainText = text.content.replace(/<[^>]*>/g, '');
+    const speech = new SpeechSynthesisUtterance(plainText);
+    speech.lang = 'fr-FR';
+    speech.rate = 0.9; // Un peu plus lent pour la poésie
+    
+    speech.onend = () => setIsPlaying(false);
+    speech.onerror = () => setIsPlaying(false);
+
+    window.speechSynthesis.speak(speech);
+    setIsPlaying(true);
+  };
+
   const handleCertification = async () => {
     const certKey = `c_${id}`;
     if (localStorage.getItem(certKey)) {
       return toast.info("Vous avez déjà scellé ce manuscrit.");
     }
-
     try {
       const res = await fetch('/api/github-db', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id, 
-          action: "certify",
-          authorEmail: text.authorEmail,
-          reward: 1 
-        })
+        body: JSON.stringify({ id, action: "certify", authorEmail: text.authorEmail, reward: 1 })
       });
-      
       const data = await res.json();
       if (data.success) {
         localStorage.setItem(certKey, "1");
         toast.success("Sceau apposé ! +1 Li envoyé à l'auteur.");
         loadContent(true);
       }
-    } catch (e) {
-      toast.error("Échec du scellage.");
-    }
+    } catch (e) { toast.error("Échec du scellage."); }
   };
 
   const handleLike = async () => {
@@ -250,28 +273,17 @@ function TextContent() {
       });
       const data = await res.json();
       if (data.success) toast.success("Manuscrit apprécié");
-    } catch (e) {
-      toast.error("Erreur de registre");
-    } finally {
-      setIsLiking(false);
-    }
+    } catch (e) { toast.error("Erreur de registre"); }
+    finally { setIsLiking(false); }
   };
 
   const handleShare = async () => {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
     const shareText = `Je vous invite à apprécier ce magnifique texte : "${shareTitle}" sur Lisible.biz ✨\n\nDécouvrez-le ici :`;
-
     if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl,
-        });
-      } catch (err) {
-        console.log("Erreur de partage");
-      }
+      try { await navigator.share({ title: shareTitle, text: shareText, url: shareUrl }); } 
+      catch (err) { console.log("Erreur de partage"); }
     } else {
       navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
       toast.success("Lien et invitation copiés !");
@@ -302,26 +314,51 @@ function TextContent() {
   const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
 
   return (
-    <div className={`min-h-screen transition-colors duration-1000 ${isFocusMode ? 'bg-[#F5F2ED]' : 'bg-[#FCFBF9]'}`}>
+    <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
+        {/* Barre de progression */}
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
            <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
         </div>
 
-        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
+        {/* Navigation - Masquée en mode Focus */}
+        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
           <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
             <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
               <ArrowLeft size={20} />
             </button>
-            <button onClick={() => setIsFocusMode(!isFocusMode)} className={`p-4 rounded-2xl transition-all ${isFocusMode ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-900 border border-slate-100 shadow-sm'}`}>
-              {isFocusMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Bouton Audio */}
+              <button 
+                onClick={toggleSpeech} 
+                className={`p-4 rounded-2xl transition-all border shadow-sm ${isPlaying ? 'bg-teal-600 text-white border-teal-600 animate-pulse' : 'bg-white text-slate-900 border-slate-100'}`}
+              >
+                {isPlaying ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              {/* Bouton Focus */}
+              <button 
+                onClick={() => setIsFocusMode(true)} 
+                className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm"
+              >
+                <Maximize2 size={20} />
+              </button>
+            </div>
           </div>
         </nav>
 
-        <main className="max-w-3xl mx-auto px-6 pt-40 pb-48">
-           {isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null}
+        {/* Bouton pour quitter le mode focus (visible uniquement en focus) */}
+        {isFocusMode && (
+          <button 
+            onClick={() => setIsFocusMode(false)}
+            className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all"
+          >
+            <Minimize2 size={24} />
+          </button>
+        )}
 
-           <header className="mb-20 space-y-10">
+        <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
+           {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
+
+           <header className={`mb-20 space-y-10 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 grayscale' : 'opacity-100'}`}>
               <div className="flex flex-wrap items-center gap-4">
                  <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-900/10">
                    {text.category || text.genre || "Inédit"}
@@ -343,12 +380,12 @@ function TextContent() {
                 </div>
               )}
 
-              <h1 className="font-serif font-black italic text-5xl sm:text-7xl text-slate-900 leading-[1.05] tracking-tighter">
+              <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>
                 {text.title}
               </h1>
 
               <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
-                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative group">
+                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative">
                     <img 
                       src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} 
                       className="w-full h-full object-cover" 
@@ -360,7 +397,7 @@ function TextContent() {
                       <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
                     </p>
                     <div className="flex items-center gap-2">
-                      <p className="text-xl font-bold text-slate-900 italic tracking-tight">
+                      <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>
                         {text.authorName}
                       </p>
                       <ShieldCheck size={18} className="text-teal-500" />
@@ -369,16 +406,17 @@ function TextContent() {
               </div>
            </header>
 
-           <article className="relative font-serif leading-[1.9] text-xl sm:text-[22px] text-slate-800 transition-all duration-1000 antialiased">
+           <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
               <div 
-                className="whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:text-teal-600 first-letter:leading-none first-letter:mt-2"
+                className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}
                 dangerouslySetInnerHTML={{ __html: text.content }} 
               />
            </article>
 
-           <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent my-32" />
+           <div className={`h-px w-full my-32 transition-opacity duration-1000 ${isFocusMode ? 'bg-white/5 opacity-50' : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'}`} />
 
-           <section className="space-y-48">
+           {/* Sections masquées en mode focus pour la lecture pure */}
+           <section className={`space-y-48 transition-all duration-1000 ${isFocusMode ? 'opacity-10 pointer-events-none blur-sm' : 'opacity-100'}`}>
               {!isAnnouncementAccount && (
                 <SceauCertification 
                   wordCount={text.content?.length} 
@@ -396,7 +434,8 @@ function TextContent() {
            </section>
         </main>
 
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5">
+        {/* Barre flottante - Masquée en mode focus */}
+        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
             <button 
               onClick={handleLike}
               className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}
