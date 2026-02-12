@@ -12,19 +12,22 @@ export default function BattlePoetique() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Logique de tri unifiée : Likes > Certifications > Date
+  // Logique de tri modifiée : Certifications > Likes > Date
   const sortBattleTexts = useCallback((data) => {
     return data
       .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique")
       .sort((a, b) => {
+        // Priorité 1 : Certifications
+        const certA = Number(a.totalCertified || a.certified || 0);
+        const certB = Number(b.totalCertified || b.certified || 0);
+        if (certB !== certA) return certB - certA;
+        
+        // Priorité 2 : Likes
         const likesA = Number(a.totalLikes || a.likes || 0);
         const likesB = Number(b.totalLikes || b.likes || 0);
         if (likesB !== likesA) return likesB - likesA;
         
-        const certA = Number(a.totalCertified || 0);
-        const certB = Number(b.totalCertified || 0);
-        if (certB !== certA) return certB - certA;
-        
+        // Priorité 3 : Date
         return new Date(b.date) - new Date(a.date);
       });
   }, []);
@@ -34,7 +37,6 @@ export default function BattlePoetique() {
     else setIsRefreshing(true);
 
     try {
-      // On récupère depuis la bibliothèque globale (library)
       const res = await fetch(`/api/github-db?type=library&t=${Date.now()}`); 
       const json = await res.json();
       
@@ -112,10 +114,10 @@ export default function BattlePoetique() {
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <Link href="/bibliotheque" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+            <Link href="/library" className="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
               <BookOpen size={16} /> Archives
             </Link>
-            <Link href="/publier-battle" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
+            <Link href="/battle/close" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
               <PenTool size={18} /> Déposer un défi
             </Link>
           </div>
@@ -125,8 +127,9 @@ export default function BattlePoetique() {
           {texts.length > 0 ? (
             <div className="grid gap-12 md:grid-cols-2">
               {texts.map((item, index) => {
-                const isLeader = index === 0;
-                const liPoints = Number(item.totalCertified || 0) * 1; // 1 Li par certification
+                const liPoints = Number(item.totalCertified || item.certified || 0);
+                // Le leader est le 1er du tri s'il a au moins 1 certification
+                const isLeader = index === 0 && liPoints > 0;
                 const totalLikes = Number(item.totalLikes || item.likes || 0);
                 
                 return (
@@ -140,11 +143,10 @@ export default function BattlePoetique() {
                       {isLeader && (
                         <div className="absolute -top-4 -left-4 z-40 rotate-[-12deg] bg-amber-400 text-slate-900 px-6 py-2 rounded-xl shadow-xl border-2 border-white flex items-center gap-2">
                           <Sparkles size={14} className="animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Maître d'Arène</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest">Légende d'Arène</span>
                         </div>
                       )}
 
-                      {/* Header Card : Rang & Share */}
                       <div className={`p-8 flex justify-between items-center ${isLeader ? 'bg-amber-50/50' : 'bg-slate-50/30'}`}>
                         <div className="flex items-center gap-4">
                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isLeader ? 'bg-amber-400 text-white' : 'bg-slate-900 text-white'}`}>
