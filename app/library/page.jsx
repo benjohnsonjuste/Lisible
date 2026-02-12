@@ -19,7 +19,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
   useEffect(() => {
     fetchInitial();
     
-    // Optionnel : rafraîchissement toutes les 30 secondes pour un effet "temps réel"
+    // Rafraîchissement toutes les 30 secondes pour un effet "temps réel"
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -32,8 +32,19 @@ export default function Bibliotheque({ initialTexts = [] }) {
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       if (json && json.content) {
-        // Mise à jour des textes avec les stats les plus récentes
-        setTexts(json.content);
+        // APPLICATION DU TRI UNIVERSEL : Sceaux > Likes > Date
+        const sorted = json.content.sort((a, b) => {
+          const certA = Number(a.certified || a.totalCertified || 0);
+          const certB = Number(b.certified || b.totalCertified || 0);
+          if (certB !== certA) return certB - certA;
+
+          const likesA = Number(a.likes || a.totalLikes || 0);
+          const likesB = Number(b.likes || b.totalLikes || 0);
+          if (likesB !== likesA) return likesB - likesA;
+
+          return new Date(b.date) - new Date(a.date);
+        });
+        setTexts(sorted);
       }
     } catch (e) { 
       console.error(e); 
@@ -107,6 +118,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(item.authorEmail);
           const isOtherAdmin = ["jb7management@gmail.com"].includes(item.authorEmail);
+          const hasSceau = (item.certified || item.totalCertified || 0) > 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -128,9 +140,13 @@ export default function Bibliotheque({ initialTexts = [] }) {
                         <span className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
                           <Megaphone size={12} /> Annonce
                         </span>
-                      ) : isOtherAdmin && (
+                      ) : isOtherAdmin ? (
                         <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
                           <ShieldCheck size={12} /> Officiel
+                        </span>
+                      ) : hasSceau && (
+                        <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                          <ShieldCheck size={12} /> Certifié
                         </span>
                       )}
                     </div>
@@ -152,6 +168,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
                       {item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
+                    {hasSceau && (
+                        <span className="ml-auto text-teal-600 animate-pulse">
+                            <ShieldCheck size={16} />
+                        </span>
+                    )}
                   </div>
 
                   <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
@@ -164,7 +185,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
                   <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-slate-50">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white">
                         {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
@@ -172,15 +193,16 @@ export default function Bibliotheque({ initialTexts = [] }) {
                           {item.author || item.authorName}
                         </span>
                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">
-                          {isAnnouncementAccount ? "Compte Officiel" : "Auteur Scellé"}
+                          {isAnnouncementAccount ? "Compte Officiel" : hasSceau ? "Plume Certifiée" : "Auteur Scellé"}
                         </span>
                       </div>
                     </div>
                     
                     {!isAnnouncementAccount && (
                       <div className="flex gap-5 text-slate-300 text-[11px] font-black">
-                        <span className="flex items-center gap-2"><Eye size={18} /> {item.views || 0}</span>
-                        <span className="flex items-center gap-2"><Heart size={18} /> {item.likes || 0}</span>
+                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600"><Eye size={18} /> {item.views || 0}</span>
+                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500"><Heart size={18} /> {item.likes || 0}</span>
+                        {hasSceau && <span className="flex items-center gap-1 text-teal-600"><ShieldCheck size={18} /> {item.certified || item.totalCertified}</span>}
                       </div>
                     )}
                   </div>
