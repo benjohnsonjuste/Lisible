@@ -4,6 +4,13 @@
   "li": 66,
   "notifications": [
     {
+      "id": "like_1770882555410",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Femme en silence\" !",
+      "date": "2026-02-12T07:49:15.410Z",
+      "read": false
+    },
+    {
       "id": "like_1770882356837",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"L'Ombre Invisible\" !",
