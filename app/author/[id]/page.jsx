@@ -47,18 +47,28 @@ export default function AuthorCataloguePage({ params }) {
       const userRes = await fetch(`/api/github-db?type=user&id=${authorEmail}`);
       const userData = await userRes.json();
       
-      // On accède à userData.content car l'API renvoie { content, sha }
       if (!userData || !userData.content) throw new Error("Auteur introuvable");
       setAuthor(userData.content);
 
-      // 3. Récupération des œuvres via l'index global
+      // 3. Récupération des œuvres via l'index global avec tri universel
       const indexRes = await fetch(`/api/github-db?type=library`);
       const indexData = await indexRes.json();
       
       if (indexData && indexData.content) {
         const filtered = indexData.content
           .filter(t => t.authorEmail?.toLowerCase() === authorEmail.toLowerCase() || t.author === userData.content.name)
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
+          .sort((a, b) => {
+            // Logique de tri universelle : Certifications > Likes > Date
+            const certA = Number(a.certified || a.totalCertified || 0);
+            const certB = Number(b.certified || b.totalCertified || 0);
+            if (certB !== certA) return certB - certA;
+
+            const likesA = Number(a.likes || a.totalLikes || 0);
+            const likesB = Number(b.likes || b.totalLikes || 0);
+            if (likesB !== likesA) return likesB - likesA;
+
+            return new Date(b.date) - new Date(a.date);
+          });
         setTexts(filtered);
       }
     } catch (e) { 
@@ -83,7 +93,7 @@ export default function AuthorCataloguePage({ params }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          action: "toggle_follow", 
+          action: "follow", // Utilise "follow" conformément à la structure de l'API
           userEmail: currentUser.email, 
           targetEmail: author.email 
         })
@@ -91,12 +101,12 @@ export default function AuthorCataloguePage({ params }) {
       
       if (res.ok) {
         const data = await res.json();
-        toast.success(data.isFollowing ? "Vous suivez désormais cette plume" : "Abonnement retiré");
+        const nowFollowing = !isFollowing;
+        toast.success(nowFollowing ? "Vous suivez désormais cette plume" : "Abonnement retiré");
         
-        // Mise à jour locale de l'UI
         setAuthor(prev => ({
           ...prev,
-          followers: data.isFollowing 
+          followers: nowFollowing 
             ? [...(prev.followers || []), currentUser.email] 
             : (prev.followers || []).filter(e => e !== currentUser.email)
         }));
@@ -139,7 +149,7 @@ export default function AuthorCataloguePage({ params }) {
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic">
               {author?.penName || author?.name || "Plume Mystère"}
             </h1>
-            {author?.certified > 0 && <ShieldCheck className="text-teal-500 mx-auto md:mx-0" size={28} />}
+            {(author?.certified > 0 || author?.totalCertified > 0) && <ShieldCheck className="text-teal-500 mx-auto md:mx-0" size={28} />}
           </div>
           
           <div className={`inline-flex items-center gap-2 ${rank.bg} ${rank.color} px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-current/10`}>
@@ -194,15 +204,27 @@ export default function AuthorCataloguePage({ params }) {
               className="group p-8 bg-white rounded-[2.5rem] border border-slate-50 shadow-sm hover:shadow-xl hover:border-teal-500/10 transition-all"
             >
               <div className="space-y-4">
-                <span className="text-[8px] font-black bg-teal-50 text-teal-700 px-3 py-1 rounded-lg uppercase tracking-[0.2em]">
-                  {txt.category || "Littérature"}
-                </span>
+                <div className="flex justify-between items-start">
+                  <span className="text-[8px] font-black bg-teal-50 text-teal-700 px-3 py-1 rounded-lg uppercase tracking-[0.2em]">
+                    {txt.category || "Littérature"}
+                  </span>
+                  {(txt.certified > 0 || txt.totalCertified > 0) && (
+                    <ShieldCheck size={14} className="text-teal-500" />
+                  )}
+                </div>
                 <h3 className="text-2xl font-black text-slate-900 group-hover:text-teal-600 transition-colors tracking-tighter italic leading-tight">
                   {txt.title}
                 </h3>
                 <div className="pt-6 flex items-center justify-between border-t border-slate-50">
-                  <div className="flex items-center gap-2 text-[9px] font-black text-slate-300 uppercase tracking-widest">
-                    Posté le {new Date(txt.date).toLocaleDateString('fr-FR')}
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                      {new Date(txt.date).toLocaleDateString('fr-FR')}
+                    </div>
+                    {(txt.certified > 0 || txt.totalCertified > 0) && (
+                      <div className="text-[9px] font-black text-amber-500 uppercase">
+                        ★ {txt.certified || txt.totalCertified} Cert.
+                      </div>
+                    )}
                   </div>
                   <ChevronRight size={18} className="text-slate-200 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
                 </div>
