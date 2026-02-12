@@ -1,8 +1,15 @@
 {
   "email": "romualdmelong@gmail.com",
   "name": "",
-  "li": 64,
+  "li": 65,
   "notifications": [
+    {
+      "id": "cert_1770882341368",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"L'Ombre Invisible\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-12T07:45:41.368Z",
+      "read": false
+    },
     {
       "id": "like_1770882002139",
       "type": "like",
