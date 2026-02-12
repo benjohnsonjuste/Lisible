@@ -159,14 +159,27 @@ export async function POST(req) {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
       const indexPath = `data/publications/index.json`;
-      const isConcours = data.isConcours === true || data.genre === "Battle Poétique";
+      const isConcours = data.isConcours === true || data.isConcours === "true" || data.genre === "Battle Poétique";
       const finalImage = isConcours ? null : (data.image || data.imageBase64);
-      const newPub = { ...data, id: pubId, image: finalImage, imageBase64: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      const newPub = { ...data, id: pubId, isConcours: isConcours, image: finalImage, imageBase64: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
       
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
-      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: isConcours, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
+      indexContent.unshift({ 
+        id: pubId, 
+        title: data.title, 
+        author: data.authorName, 
+        authorEmail: data.authorEmail, 
+        category: data.category, 
+        genre: data.genre, 
+        isConcours: isConcours, 
+        image: finalImage, 
+        date: newPub.date, 
+        views: 0, 
+        likes: 0, 
+        certified: 0 
+      });
       
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
@@ -237,18 +250,22 @@ export async function PATCH(req) {
     const authorFile = await getFile(authorPath);
     const indexFile = await getFile(indexPath);
 
+    // Mise à jour des compteurs dans le fichier texte individuel
     if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
     if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
     if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
 
-    if (indexFile) {
+    // Synchronisation avec l'index global pour la bibliothèque et l'arène
+    if (indexFile && Array.isArray(indexFile.content)) {
       const itemIndex = indexFile.content.findIndex(t => t.id === id);
       if (itemIndex > -1) {
         indexFile.content[itemIndex].views = textFile.content.views;
         indexFile.content[itemIndex].likes = textFile.content.likes;
         indexFile.content[itemIndex].certified = textFile.content.certified;
+        
+        // Ré-application du tri universel après mise à jour des stats
         indexFile.content = globalSort(indexFile.content);
-        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync & Re-sort Index: ${id}`);
+        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync & Re-sort Index: ${id} (${action})`);
       }
     }
 
@@ -272,7 +289,11 @@ export async function PATCH(req) {
     }
 
     await updateFile(path, textFile.content, textFile.sha, `📈 Text Update: ${action}`);
-    return NextResponse.json({ success: true, count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) });
+    
+    return NextResponse.json({ 
+      success: true, 
+      count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) 
+    });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
