@@ -4,6 +4,13 @@
   "li": 66,
   "notifications": [
     {
+      "id": "like_1770882356837",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'Ombre Invisible\" !",
+      "date": "2026-02-12T07:45:56.837Z",
+      "read": false
+    },
+    {
       "id": "cert_1770882342713",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"L'Ombre Invisible\" a reçu un Sceau de Certification (+1 Li).",
