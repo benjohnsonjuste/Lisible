@@ -2,7 +2,15 @@
   "email": "adammanager65@gmail.com",
   "name": "Adam Ibrahim",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1770926170156",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"AFRIAMEURASIOCE\" !",
+      "date": "2026-02-12T19:56:10.156Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
