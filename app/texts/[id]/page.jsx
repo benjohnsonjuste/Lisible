@@ -1,5 +1,5 @@
 import React from "react";
-import TextPageClient from "./TextPageClient"; // On va wrapper le contenu client
+import TextPageClient from "./TextPageClient"; 
 
 /**
  * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
@@ -7,7 +7,7 @@ import TextPageClient from "./TextPageClient"; // On va wrapper le contenu clien
  */
 export async function generateMetadata({ params }) {
   const { id } = params;
-  const baseUrl = "https://lisible.fr"; // À remplacer par votre domaine réel
+  const baseUrl = "https://lisible.biz"; // Domaine mis à jour
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
@@ -18,7 +18,6 @@ export async function generateMetadata({ params }) {
 
     const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
     
-    // LOGIQUE IMAGE : og-default pour concours ou texte sans image, sinon illustration
     const ogImage = (isBattle || !text.image) 
       ? `${baseUrl}/og-default.jpg` 
       : text.image;
@@ -58,7 +57,6 @@ export default function Page() {
 
 /**
  * LE CONTENU CLIENT
- * (Placé dans le même fichier avec "use client")
  */
 "use client";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
@@ -68,7 +66,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Feather, Download, Ghost, Sparkles, Megaphone, AlignLeft
+  Sun, Zap, Coffee, Loader2, Feather, Ghost, Sparkles, Megaphone, ShieldCheck
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -152,10 +150,22 @@ function TextContent() {
       saveToLocal(id, data.content);
       setIsOffline(false);
 
+      // Chargement de la bibliothèque avec TRI UNIVERSEL (Certifications > Likes > Date)
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
-        setAllTexts(indexData.content || []);
+        const sortedLibrary = (indexData.content || []).sort((a, b) => {
+            const certA = Number(a.certified || a.totalCertified || 0);
+            const certB = Number(b.certified || b.totalCertified || 0);
+            if (certB !== certA) return certB - certA;
+
+            const likesA = Number(a.likes || a.totalLikes || 0);
+            const likesB = Number(b.likes || b.totalLikes || 0);
+            if (likesB !== likesA) return likesB - likesA;
+
+            return new Date(b.date) - new Date(a.date);
+        });
+        setAllTexts(sortedLibrary);
       }
     } catch (e) {
       if (!localVersion) toast.error("Ce manuscrit a été retiré des archives.");
@@ -250,7 +260,7 @@ function TextContent() {
   const handleShare = async () => {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
-    const shareText = `Je vous invite à apprécier ce magnifique texte : "${shareTitle}" sur Lisible. ✨\n\nDécouvrez-le ici :`;
+    const shareText = `Je vous invite à apprécier ce magnifique texte : "${shareTitle}" sur Lisible.biz ✨\n\nDécouvrez-le ici :`;
 
     if (navigator.share) {
       try {
@@ -349,9 +359,12 @@ function TextContent() {
                     <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
                       <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
                     </p>
-                    <p className="text-xl font-bold text-slate-900 flex items-center gap-2 italic tracking-tight">
-                      {text.authorName} <Feather size={16} className="text-teal-500" />
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-bold text-slate-900 italic tracking-tight">
+                        {text.authorName}
+                      </p>
+                      <ShieldCheck size={18} className="text-teal-500" />
+                    </div>
                  </div>
               </div>
            </header>
