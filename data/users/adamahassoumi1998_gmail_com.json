@@ -4,6 +4,13 @@
   "li": 87,
   "notifications": [
     {
+      "id": "like_1770881381559",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Jeunesse\" !",
+      "date": "2026-02-12T07:29:41.559Z",
+      "read": false
+    },
+    {
       "id": "cert_1770881379904",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"Jeunesse\" a reçu un Sceau de Certification (+1 Li).",
