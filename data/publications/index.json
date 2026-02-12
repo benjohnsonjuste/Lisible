@@ -78,6 +78,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1770822380909",
+    "title": "AFRIAMEURASIOCE",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:06:20.909Z",
+    "views": 31,
+    "likes": 9,
+    "certified": 2
+  },
+  {
     "id": "txt_1770822169168",
     "title": "Ville en béton",
     "author": "Cesarin Jhonson Maykerly Woods",
@@ -89,19 +102,6 @@
     "views": 13,
     "likes": 4,
     "certified": 2
-  },
-  {
-    "id": "txt_1770822380909",
-    "title": "AFRIAMEURASIOCE",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:06:20.909Z",
-    "views": 31,
-    "likes": 9,
-    "certified": 1
   },
   {
     "id": "1770908907554",
