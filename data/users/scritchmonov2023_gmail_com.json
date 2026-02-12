@@ -4,6 +4,13 @@
   "li": 75,
   "notifications": [
     {
+      "id": "like_1770863431159",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Pour te dire je t'aime\" !",
+      "date": "2026-02-12T02:30:31.159Z",
+      "read": false
+    },
+    {
       "id": "like_1770856587213",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Pour te dire je t'aime\" !",
