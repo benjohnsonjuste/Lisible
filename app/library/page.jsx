@@ -1,9 +1,9 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
+import Link from "next/navigation"; // Assurez-vous d'utiliser next/link ou next/navigation selon votre config
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, ChevronDown, Sparkles, Megaphone, AlignLeft
+  Search, Sparkles, Megaphone, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,24 +15,19 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
-  // Récupération automatique des statistiques en temps réel au montage
   useEffect(() => {
     fetchInitial();
-    
-    // Rafraîchissement toutes les 30 secondes pour un effet "temps réel"
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
-    // On ne met loading=true que si on n'a pas encore de données pour éviter le flash
     if (texts.length === 0) setLoading(true);
     
     try {
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       if (json && json.content) {
-        // APPLICATION DU TRI UNIVERSEL : Sceaux > Likes > Date
         const sorted = json.content.sort((a, b) => {
           const certA = Number(a.certified || a.totalCertified || 0);
           const certB = Number(b.certified || b.totalCertified || 0);
@@ -120,6 +115,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const isOtherAdmin = ["jb7management@gmail.com"].includes(item.authorEmail);
           const hasSceau = (item.certified || item.totalCertified || 0) > 0;
 
+          // Normalisation des stats pour correspondre à la page individuelle
+          const displayViews = item.views || item.totalViews || 0;
+          const displayLikes = item.likes || item.totalLikes || 0;
+          const displayCerts = item.certified || item.totalCertified || 0;
+
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
               <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
@@ -200,9 +200,17 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     
                     {!isAnnouncementAccount && (
                       <div className="flex gap-5 text-slate-300 text-[11px] font-black">
-                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600"><Eye size={18} /> {item.views || 0}</span>
-                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500"><Heart size={18} /> {item.likes || 0}</span>
-                        {hasSceau && <span className="flex items-center gap-1 text-teal-600"><ShieldCheck size={18} /> {item.certified || item.totalCertified}</span>}
+                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600">
+                          <Eye size={18} /> {displayViews}
+                        </span>
+                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500">
+                          <Heart size={18} /> {displayLikes}
+                        </span>
+                        {hasSceau && (
+                          <span className="flex items-center gap-1 text-teal-600">
+                            <ShieldCheck size={18} /> {displayCerts}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
