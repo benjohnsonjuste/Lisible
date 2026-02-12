@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { 
   User, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info
+  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info, KeyRound
 } from "lucide-react";
 
 // Sous-composant pour les statistiques
@@ -29,7 +29,9 @@ export default function AccountPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [formData, setFormData] = useState({ penName: "", birthday: "", profilePic: "" });
+  const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "" });
 
   const ADMIN_EMAILS = [
     "adm.lablitteraire7@gmail.com", 
@@ -59,7 +61,6 @@ export default function AccountPage() {
 
   const refreshUserData = async (email) => {
     try {
-      // 1. Récupération du profil
       const res = await fetch(`/api/github-db?type=user&id=${email}`);
       const libraryRes = await fetch(`/api/github-db?type=library`);
       
@@ -67,7 +68,6 @@ export default function AccountPage() {
         const data = await res.json();
         const libraryData = await libraryRes.json();
         
-        // 2. Filtrage et Tri Universel des œuvres (Certifications > Likes > Date)
         let sortedWorks = [];
         if (libraryData && libraryData.content) {
           sortedWorks = libraryData.content
@@ -141,6 +141,38 @@ export default function AccountPage() {
     }
   };
 
+  const updatePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      return toast.error("Veuillez remplir tous les champs de sécurité.");
+    }
+    setIsChangingPassword(true);
+    const t = toast.loading("Modification du sceau de sécurité...");
+    try {
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change_password',
+          userEmail: user.email,
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Sceau de sécurité mis à jour", { id: t });
+        setPasswordData({ currentPassword: "", newPassword: "" });
+      } else {
+        toast.error(data.message || "Ancien mot de passe incorrect", { id: t });
+      }
+    } catch (e) {
+      toast.error("Échec de la mise à jour de sécurité", { id: t });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (loading || !user) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9]">
       <Loader2 className="animate-spin text-teal-600 mb-4" size={40} />
@@ -204,7 +236,8 @@ export default function AccountPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        <section className="lg:col-span-2 space-y-8">
+        <section className="lg:col-span-2 space-y-12">
+          {/* Section Profil */}
           <div className="bg-white rounded-[3.5rem] p-10 md:p-14 shadow-2xl shadow-slate-200/60 border border-slate-100">
             <h2 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.5em] mb-12 flex items-center gap-3">
               <Edit3 size={18} /> Paramètres de l'auteur
@@ -222,6 +255,37 @@ export default function AccountPage() {
             >
               {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} 
               Sceller les changements
+            </button>
+          </div>
+
+          {/* Section Sécurité (Changement de mot de passe) */}
+          <div className="bg-white rounded-[3.5rem] p-10 md:p-14 shadow-2xl shadow-slate-200/60 border border-slate-100">
+            <h2 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.5em] mb-12 flex items-center gap-3">
+              <KeyRound size={18} /> Sécurité du registre
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 mb-12">
+                <InputBlock 
+                  label="Ancien mot de passe" 
+                  value={passwordData.currentPassword} 
+                  onChange={v => setPasswordData({...passwordData, currentPassword: v})} 
+                  type="password"
+                />
+                <InputBlock 
+                  label="Nouveau mot de passe" 
+                  value={passwordData.newPassword} 
+                  onChange={v => setPasswordData({...passwordData, newPassword: v})} 
+                  type="password" 
+                />
+            </div>
+
+            <button 
+              disabled={isChangingPassword} 
+              onClick={updatePassword} 
+              className="w-full py-6 bg-slate-50 text-slate-900 border border-slate-100 rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex justify-center items-center gap-4 shadow-sm active:scale-95 disabled:opacity-50"
+            >
+              {isChangingPassword ? <Loader2 className="animate-spin" size={20} /> : <Lock size={20} />} 
+              Modifier le mot de passe
             </button>
           </div>
         </section>
