@@ -50,7 +50,8 @@ async function updateFile(path, content, sha, message) {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      message,
+      // AJOUT DU PRÉFIXE [DATA] POUR LE FILTRE VERCEL
+      message: `[DATA] ${message}`,
       content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
       sha: sha || undefined
     }),
@@ -250,12 +251,10 @@ export async function PATCH(req) {
     const authorFile = await getFile(authorPath);
     const indexFile = await getFile(indexPath);
 
-    // Mise à jour des compteurs dans le fichier texte individuel
     if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
     if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
     if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
 
-    // Synchronisation avec l'index global pour la bibliothèque et l'arène
     if (indexFile && Array.isArray(indexFile.content)) {
       const itemIndex = indexFile.content.findIndex(t => t.id === id);
       if (itemIndex > -1) {
@@ -263,7 +262,6 @@ export async function PATCH(req) {
         indexFile.content[itemIndex].likes = textFile.content.likes;
         indexFile.content[itemIndex].certified = textFile.content.certified;
         
-        // Ré-application du tri universel après mise à jour des stats
         indexFile.content = globalSort(indexFile.content);
         await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync & Re-sort Index: ${id} (${action})`);
       }
