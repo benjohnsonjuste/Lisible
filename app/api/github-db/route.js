@@ -60,6 +60,22 @@ async function updateFile(path, content, sha, message) {
 
 const getSafePath = (email) => `data/users/${email?.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
 
+// --- LOGIQUE DE TRI UNIVERSELLE ---
+const globalSort = (list) => {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort((a, b) => {
+    const certA = Number(a.certified || a.totalCertified || 0);
+    const certB = Number(b.certified || b.totalCertified || 0);
+    if (certB !== certA) return certB - certA;
+
+    const likesA = Number(a.likes || a.totalLikes || 0);
+    const likesB = Number(b.likes || b.totalLikes || 0);
+    if (likesB !== likesA) return likesB - likesA;
+
+    return new Date(b.date) - new Date(a.date);
+  });
+};
+
 // --- ROUTE PRINCIPALE POST ---
 
 export async function POST(req) {
@@ -104,13 +120,10 @@ export async function POST(req) {
       return NextResponse.json({ success: true, user: safeUser });
     }
 
-    // GESTION FOLLOW / UNFOLLOW (Synchronisation Bi-latérale)
     if (action === 'follow' || action === 'unfollow') {
       const follower = await getFile(getSafePath(userEmail));
       const target = await getFile(getSafePath(data.targetEmail));
-      
       if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-
       if (action === 'follow') {
         if (!follower.content.following.includes(data.targetEmail)) {
           follower.content.following.push(data.targetEmail);
@@ -126,10 +139,8 @@ export async function POST(req) {
         follower.content.following = follower.content.following.filter(e => e !== data.targetEmail);
         target.content.followers = target.content.followers.filter(e => e !== userEmail);
       }
-
       await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
       await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
-      
       return NextResponse.json({ success: true, followersCount: target.content.followers.length });
     }
 
@@ -141,10 +152,13 @@ export async function POST(req) {
       const finalImage = isConcours ? null : (data.image || data.imageBase64);
       const newPub = { ...data, id: pubId, image: finalImage, imageBase64: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
+      
       const indexFile = await getFile(indexPath) || { content: [] };
-      const indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
+      let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
       indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: isConcours, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
-      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update`);
+      
+      indexContent = globalSort(indexContent);
+      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
       return NextResponse.json({ success: true, id: pubId });
     }
 
@@ -184,14 +198,20 @@ export async function GET(req) {
         }
         return NextResponse.json(user);
     }
-    if (type === 'library' || type === 'publications') return NextResponse.json(await getFile(`data/publications/index.json`));
+    if (type === 'library' || type === 'publications') {
+      const index = await getFile(`data/publications/index.json`);
+      if (index && Array.isArray(index.content)) {
+          index.content = globalSort(index.content);
+      }
+      return NextResponse.json(index);
+    }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
-// --- MÉTHODE PATCH (SYNCHRO STATS TEXTES) ---
+// --- MÉTHODE PATCH ---
 
 export async function PATCH(req) {
   try {
@@ -216,15 +236,15 @@ export async function PATCH(req) {
         indexFile.content[itemIndex].views = textFile.content.views;
         indexFile.content[itemIndex].likes = textFile.content.likes;
         indexFile.content[itemIndex].certified = textFile.content.certified;
-        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id}`);
+        indexFile.content = globalSort(indexFile.content);
+        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync & Re-sort Index: ${id}`);
       }
     }
 
     if (authorFile) {
       if (action === 'like') {
         authorFile.content.notifications.unshift({
-          id: `like_${Date.now()}`,
-          type: "like",
+          id: `like_${Date.now()}`, type: "like",
           message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`,
           date: new Date().toISOString(), read: false
         });
@@ -232,8 +252,7 @@ export async function PATCH(req) {
       if (action === 'certify') {
         authorFile.content.li = (authorFile.content.li || 0) + 1;
         authorFile.content.notifications.unshift({
-          id: `cert_${Date.now()}`,
-          type: "certification",
+          id: `cert_${Date.now()}`, type: "certification",
           message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`,
           date: new Date().toISOString(), read: false
         });
