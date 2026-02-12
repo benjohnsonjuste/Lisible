@@ -4,6 +4,13 @@
   "li": 62,
   "notifications": [
     {
+      "id": "like_1770878457362",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Femme du Cameroun, lumière d’Afrique\" !",
+      "date": "2026-02-12T06:40:57.362Z",
+      "read": false
+    },
+    {
       "id": "cert_1770878429470",
       "type": "certification",
       "message": "Félicitations ! Votre texte \"Femme du Cameroun, lumière d’Afrique\" a reçu un Sceau de Certification (+1 Li).",
