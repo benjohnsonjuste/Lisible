@@ -60,18 +60,15 @@ async function updateFile(path, content, sha, message) {
 
 const getSafePath = (email) => `data/users/${email?.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
 
-// --- LOGIQUE DE TRI UNIVERSELLE ---
 const globalSort = (list) => {
   if (!Array.isArray(list)) return [];
   return [...list].sort((a, b) => {
     const certA = Number(a.certified || a.totalCertified || 0);
     const certB = Number(b.certified || b.totalCertified || 0);
     if (certB !== certA) return certB - certA;
-
     const likesA = Number(a.likes || a.totalLikes || 0);
     const likesB = Number(b.likes || b.totalLikes || 0);
     if (likesB !== likesA) return likesB - likesA;
-
     return new Date(b.date) - new Date(a.date);
   });
 };
@@ -81,7 +78,7 @@ const globalSort = (list) => {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { action, userEmail, textId, amount, ...data } = body;
+    const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
     const targetPath = getSafePath(userEmail || data.email);
 
     if (action === 'register') {
@@ -109,6 +106,20 @@ export async function POST(req) {
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
+    }
+
+    if (action === 'change_password') {
+      const file = await getFile(targetPath);
+      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+      
+      const isMatch = await bcrypt.compare(currentPassword, file.content.password);
+      if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
+      
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      file.content.password = hashedNewPassword;
+      
+      await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'user_sync' || action === 'update_user') {
