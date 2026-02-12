@@ -4,7 +4,7 @@ import {
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Coins, TrendingUp, 
   Crown, Briefcase, ChevronDown, PenTool, BarChart3, Star, Settings
-} from "lucide-center";
+} from "lucide-react"; // Corrigé : lucide-react au lieu de lucide-center
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -93,9 +93,8 @@ export default function UsersPage() {
     const badges = [];
     const email = author.email?.toLowerCase().trim();
     
-    // --- GRADES ADMINISTRATIFS ET DIRECTION ---
     if (email === "adm.lablitteraire7@gmail.com") {
-      badges.push({ icon: <Settings size={10} />, label: "Admin", color: "bg-rose-600 text-white shadow-lg shadow-rose-600/20" });
+      badges.push({ icon: <Settings size={10} />, label: "Admin", color: "bg-rose-600 text-white shadow-lg" });
     }
     else if (email === "jb7management@gmail.com") {
       badges.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400 border border-amber-500/20" });
@@ -113,14 +112,12 @@ export default function UsersPage() {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Support Team", color: "bg-teal-600 text-white" });
     }
     
-    // Grades de mérite (Plume d'Or pour plus de 10 abonnés)
     if ((author.followers?.length || 0) > 10) {
       badges.push({ icon: <Star size={10} />, label: "Plume d'Or", color: "bg-amber-100 text-amber-700" });
     }
 
-    // Badge de Certification (Nouveau)
     if ((author.certified || author.totalCertified || 0) > 0) {
-      badges.push({ icon: <ShieldCheck size={10} />, label: "Plume Certifiée", color: "bg-teal-100 text-teal-700 border border-teal-200" });
+      badges.push({ icon: <ShieldCheck size={10} />, label: "Certifié", color: "bg-teal-100 text-teal-700 border border-teal-200" });
     }
     
     return badges;
@@ -169,7 +166,7 @@ export default function UsersPage() {
 
           return (
             <div key={a.email} className="group bg-white rounded-[3rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:border-teal-500/20 transition-all relative overflow-hidden">
-              <div className="absolute top-6 right-8 flex flex-col items-end gap-2">
+              <div className="absolute top-6 right-8 flex flex-col items-end gap-2 z-10">
                 {getBadges(a).map((b, i) => (
                   <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm`}>
                     {b.icon} {b.label}
@@ -177,7 +174,7 @@ export default function UsersPage() {
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-8">
+              <div className="flex flex-col sm:flex-row items-center gap-8 relative">
                 <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl bg-slate-50 flex-shrink-0">
                   <img 
                     src={a.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}`} 
@@ -201,11 +198,6 @@ export default function UsersPage() {
                     <div className="flex items-center gap-1.5 text-[9px] font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-full uppercase tracking-widest">
                       <Coins size={12}/> {a.li || 0} Li
                     </div>
-                    {(a.certified || a.totalCertified) > 0 && (
-                      <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full uppercase tracking-widest">
-                        ★ {a.certified || a.totalCertified} Sceaux
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex gap-2 justify-center sm:justify-start pt-2">
