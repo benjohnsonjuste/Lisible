@@ -91,6 +91,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1770822380909",
+    "title": "AFRIAMEURASIOCE",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:06:20.909Z",
+    "views": 7,
+    "likes": 1,
+    "certified": 0
+  },
+  {
     "id": "1770908907554",
     "title": "La beauté d'une nymphe",
     "author": "Une Plume",
@@ -222,18 +235,5 @@
     "isConcours": true,
     "image": null,
     "date": "2026-02-11T15:17:46.946Z"
-  },
-  {
-    "id": "txt_1770822380909",
-    "title": "AFRIAMEURASIOCE",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:06:20.909Z",
-    "views": 7,
-    "likes": 0,
-    "certified": 0
   }
 ]
