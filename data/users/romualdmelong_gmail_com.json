@@ -4,6 +4,13 @@
   "li": 58,
   "notifications": [
     {
+      "id": "like_1770857327531",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Femme du Cameroun, lumière d’Afrique\" !",
+      "date": "2026-02-12T00:48:47.531Z",
+      "read": false
+    },
+    {
       "id": "like_1770857316040",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Femme du Cameroun, lumière d’Afrique\" !",
