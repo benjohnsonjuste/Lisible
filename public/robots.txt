@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /settings
+Disallow: /api/
+Disallow: /admin
+
+Sitemap: https://lisible.biz/sitemap.xml
