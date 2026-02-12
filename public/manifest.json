@@ -34,14 +34,14 @@
     {
       "name": "Bibliothèque",
       "short_name": "Lectures",
-      "url": "/bibliotheque",
+      "url": "/library",
       "description": "Accéder à mes lectures",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Atelier",
       "short_name": "Écrire",
-      "url": "/dashboard",
+      "url": "/publish",
       "description": "Écrire une nouvelle œuvre",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
