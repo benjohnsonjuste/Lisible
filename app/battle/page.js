@@ -128,9 +128,11 @@ export default function BattlePoetique() {
             <div className="grid gap-12 md:grid-cols-2">
               {texts.map((item, index) => {
                 const liPoints = Number(item.totalCertified || item.certified || 0);
-                // Le leader est le 1er du tri s'il a au moins 1 certification
                 const isLeader = index === 0 && liPoints > 0;
-                const totalLikes = Number(item.totalLikes || item.likes || 0);
+                
+                // Normalisation des statistiques réelles
+                const displayViews = item.views || item.totalViews || 0;
+                const displayLikes = item.likes || item.totalLikes || 0;
                 
                 return (
                   <Link href={`/texts/${item.id}`} key={item.id} className="group relative">
@@ -162,7 +164,7 @@ export default function BattlePoetique() {
                       <div className="p-12 flex-grow flex flex-col">
                         <div className="flex items-center gap-3 mb-6">
                            <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest bg-teal-50 px-3 py-1 rounded-lg">
-                             <AlignLeft size={10} className="inline mr-1" /> {item.category || "Battle"}
+                             <AlignLeft size={10} className="inline mr-1" /> {item.category || item.genre || "Battle"}
                            </span>
                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
                              {item.authorName || 'Anonyme'}
@@ -189,10 +191,10 @@ export default function BattlePoetique() {
 
                           <div className="flex gap-6">
                             <div className="flex items-center gap-2 text-slate-400 font-black text-[11px]">
-                              <Eye size={18} className="text-slate-200"/> {item.views || 0}
+                              <Eye size={18} className="text-slate-200"/> {displayViews}
                             </div>
-                            <div className={`flex items-center gap-2 font-black text-[12px] ${totalLikes > 0 ? 'text-rose-500' : 'text-slate-300'}`}>
-                              <Heart size={20} fill={totalLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform duration-300"/> {totalLikes}
+                            <div className={`flex items-center gap-2 font-black text-[12px] ${displayLikes > 0 ? 'text-rose-500' : 'text-slate-300'}`}>
+                              <Heart size={20} fill={displayLikes > 0 ? "currentColor" : "none"} className="group-hover:scale-125 transition-transform duration-300"/> {displayLikes}
                             </div>
                           </div>
                         </div>
