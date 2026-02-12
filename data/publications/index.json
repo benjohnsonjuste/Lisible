@@ -1,5 +1,18 @@
 [
   {
+    "id": "txt_1770824079276",
+    "title": "À toi mon étoile filante",
+    "author": "Auteur Lisible",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "genre": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-12T07:57:59.377Z",
+    "views": 89,
+    "likes": 62,
+    "certified": 76
+  },
+  {
     "id": "txt_1770863741099",
     "title": "Le silence est d'or, la parole est sacrée",
     "author": "Ntchanna Josiane Ève",
@@ -73,16 +86,6 @@
     "genre": "Poésie",
     "isConcours": false,
     "date": "2026-02-12T15:09:45.854Z"
-  },
-  {
-    "id": "txt_1770824079276",
-    "title": "À toi mon étoile filante",
-    "author": "Auteur Lisible",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "genre": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-12T07:57:59.377Z"
   },
   {
     "id": "1770882254944",
