@@ -1,5 +1,18 @@
 [
   {
+    "id": "txt_1770823524319",
+    "title": "L'inaltérable",
+    "author": "Duclaire Dahana",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:25:24.319Z",
+    "views": 55,
+    "likes": 49,
+    "certified": 26
+  },
+  {
     "id": "1770908907554",
     "title": "La beauté d'une nymphe",
     "author": "Une Plume",
@@ -161,16 +174,6 @@
     "isConcours": true,
     "image": null,
     "date": "2026-02-11T15:27:24.100Z"
-  },
-  {
-    "id": "txt_1770823524319",
-    "title": "L'inaltérable",
-    "author": "Duclaire Dahana",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:25:24.319Z"
   },
   {
     "id": "txt_1770823066946",
