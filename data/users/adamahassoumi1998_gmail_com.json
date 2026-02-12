@@ -4,6 +4,13 @@
   "li": 103,
   "notifications": [
     {
+      "id": "like_1770887963419",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"À toi mon étoile filante\" !",
+      "date": "2026-02-12T09:19:23.419Z",
+      "read": false
+    },
+    {
       "id": "like_1770887529989",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"À toi mon étoile filante\" !",
