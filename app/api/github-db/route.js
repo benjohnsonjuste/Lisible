@@ -50,7 +50,7 @@ async function updateFile(path, content, sha, message) {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      // AJOUT DU PRÉFIXE [DATA] POUR LE FILTRE VERCEL
+      // PRÉFIXE [DATA] POUR LE FILTRE VERCEL
       message: `[DATA] ${message}`,
       content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
       sha: sha || undefined
@@ -103,8 +103,29 @@ export async function POST(req) {
     if (action === 'login') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      const isMatch = await bcrypt.compare(data.password, file.content.password);
+      
+      const storedPassword = file.content.password;
+      const providedPassword = data.password;
+      let isMatch = false;
+
+      // Détection du type de mot de passe (Hash ou clair)
+      const isHashed = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
+
+      if (isHashed) {
+        isMatch = await bcrypt.compare(providedPassword, storedPassword);
+      } else {
+        // Comparaison directe pour les anciens comptes
+        isMatch = (providedPassword === storedPassword);
+        
+        // Mise à jour automatique vers un hash sécurisé si match
+        if (isMatch) {
+          file.content.password = await bcrypt.hash(providedPassword, 10);
+          await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
+        }
+      }
+
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
+      
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
     }
