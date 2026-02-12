@@ -65,6 +65,19 @@
     "certified": 36
   },
   {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Plume Anonyme",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 23,
+    "likes": 4,
+    "certified": 4
+  },
+  {
     "id": "txt_1770822169168",
     "title": "Ville en béton",
     "author": "Cesarin Jhonson Maykerly Woods",
@@ -159,16 +172,6 @@
     "genre": "Poésie",
     "isConcours": false,
     "date": "2026-02-11T22:27:38.745Z"
-  },
-  {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Plume Anonyme",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z"
   },
   {
     "id": "txt_1770824772287",
