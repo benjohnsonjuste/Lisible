@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "",
-  "li": 73,
+  "li": 74,
   "notifications": [
+    {
+      "id": "cert_1770915524348",
+      "type": "certification",
+      "message": "Félicitations ! Votre texte \"L'inaltérable\" a reçu un Sceau de Certification (+1 Li).",
+      "date": "2026-02-12T16:58:44.348Z",
+      "read": false
+    },
     {
       "id": "cert_1770915522850",
       "type": "certification",
