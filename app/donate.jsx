@@ -25,7 +25,7 @@ export default function DonatePage() {
       const stored = localStorage.getItem("lisible_user");
       if (!stored) {
         toast.error("Connexion requise pour offrir des Li");
-        router.push("/auth");
+        router.push("/login");
         return;
       }
       const currentUser = JSON.parse(stored);
