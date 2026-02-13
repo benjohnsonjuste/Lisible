@@ -42,7 +42,7 @@
     "@prisma/client": "^5.10.0",
     "@vercel/blob": "^2.0.0",
     "resend": "^0.10.0",
-    "@cloudflare/next-on-pages": "1"
+    "@cloudflare/next-on-pages": "1",
     "sonner": "latest",
     "@vercel/analytics": "^1.2.2",
     "react-icons": "^4.11.0",
