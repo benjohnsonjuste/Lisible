@@ -4,4 +4,5 @@ compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-NEXT_FORCE_EDGE_RUNTIME = "1"
+# Ne pas forcer l'edge runtime ici, laisser Next.js gérer
+# Ajoute tes autres variables ici si besoin
