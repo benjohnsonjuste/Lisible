@@ -5,4 +5,3 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 NEXT_FORCE_EDGE_RUNTIME = "1"
-"
