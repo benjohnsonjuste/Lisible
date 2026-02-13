@@ -1,6 +1,9 @@
 import React from "react";
 import TextContent from "./TextContent"; 
 
+// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
+export const runtime = 'edge';
+
 /**
  * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
  */
