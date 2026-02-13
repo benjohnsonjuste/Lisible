@@ -1,8 +1,15 @@
 {
   "email": "romualdmelong@gmail.com",
   "name": "",
-  "li": 66,
+  "li": 67,
   "notifications": [
+    {
+      "id": "cert_1770953725461",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Femme en silence\" (+1 Li).",
+      "date": "2026-02-13T03:35:25.461Z",
+      "read": false
+    },
     {
       "id": "like_1770882555410",
       "type": "like",
