@@ -65,6 +65,7 @@ async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   
   const jsonString = JSON.stringify(content, null, 2);
+  // Encodage Base64 compatible Edge
   const bytes = new TextEncoder().encode(jsonString);
   const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
   const encodedContent = btoa(binString);
@@ -306,7 +307,8 @@ export async function GET(req) {
 
 export async function PATCH(req) {
   try {
-    const { id, action } = await req.json();
+    const body = await req.json();
+    const { id, action } = body;
     const path = `data/texts/${id}.json`;
     const indexPath = `data/publications/index.json`;
     
