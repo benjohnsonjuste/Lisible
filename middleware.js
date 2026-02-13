@@ -4,5 +4,5 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
-// Cette ligne est la clé du succès pour Cloudflare
-export const runtime = 'edge';
+// Correction demandée par ton build
+export const runtime = 'experimental-edge';
