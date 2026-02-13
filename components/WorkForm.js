@@ -29,14 +29,14 @@ export default function WorkForm({
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (!storedUser) {
-      router.push("/auth");
+      router.push("/login");
       return;
     }
     try {
       const u = JSON.parse(storedUser);
       setUser(u);
     } catch (e) {
-      router.push("/auth");
+      router.push("/login");
     }
 
     if (!isConcours) {
