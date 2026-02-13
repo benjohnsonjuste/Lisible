@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import NodeCache from 'node-cache';
 import bcrypt from 'bcryptjs';
 
+// Note: NodeCache fonctionne en mémoire locale sur chaque "Isolate". 
+// Sur Cloudflare, le cache ne sera pas partagé entre les différentes régions du globe.
 const localCache = new NodeCache({ stdTTL: 60 });
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const runtime = 'edge'; // CHANGÉ : nodejs -> edge
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -36,7 +38,11 @@ async function getFile(path) {
     if (res.status === 429) throw new Error("THROTTLED");
     if (!res.ok) return null;
     const data = await res.json();
-    const result = { content: JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8')), sha: data.sha };
+    
+    // CHANGÉ : Buffer remplacé par atob + décodage UTF-8 compatible Edge
+    const decodedContent = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
+    const result = { content: JSON.parse(decodedContent), sha: data.sha };
+    
     localCache.set(path, result);
     return result;
   } catch (err) {
@@ -46,13 +52,17 @@ async function getFile(path) {
 
 async function updateFile(path, content, sha, message) {
   localCache.del(path);
+  
+  // CHANGÉ : Buffer remplacé par btoa + encodage UTF-8 compatible Edge
+  const jsonString = JSON.stringify(content, null, 2);
+  const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
+
   const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      // PRÉFIXE [DATA] POUR LE FILTRE VERCEL
       message: `[DATA] ${message}`,
-      content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
+      content: encodedContent,
       sha: sha || undefined
     }),
   });
@@ -108,16 +118,12 @@ export async function POST(req) {
       const providedPassword = data.password;
       let isMatch = false;
 
-      // Détection du type de mot de passe (Hash ou clair)
       const isHashed = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
 
       if (isHashed) {
         isMatch = await bcrypt.compare(providedPassword, storedPassword);
       } else {
-        // Comparaison directe pour les anciens comptes
         isMatch = (providedPassword === storedPassword);
-        
-        // Mise à jour automatique vers un hash sécurisé si match
         if (isMatch) {
           file.content.password = await bcrypt.hash(providedPassword, 10);
           await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
@@ -189,18 +195,9 @@ export async function POST(req) {
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
       indexContent.unshift({ 
-        id: pubId, 
-        title: data.title, 
-        author: data.authorName, 
-        authorEmail: data.authorEmail, 
-        category: data.category, 
-        genre: data.genre, 
-        isConcours: isConcours, 
-        image: finalImage, 
-        date: newPub.date, 
-        views: 0, 
-        likes: 0, 
-        certified: 0 
+        id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, 
+        category: data.category, genre: data.genre, isConcours: isConcours, 
+        image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 
       });
       
       indexContent = globalSort(indexContent);
@@ -282,7 +279,6 @@ export async function PATCH(req) {
         indexFile.content[itemIndex].views = textFile.content.views;
         indexFile.content[itemIndex].likes = textFile.content.likes;
         indexFile.content[itemIndex].certified = textFile.content.certified;
-        
         indexFile.content = globalSort(indexFile.content);
         await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync & Re-sort Index: ${id} (${action})`);
       }
