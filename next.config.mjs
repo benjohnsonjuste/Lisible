@@ -12,11 +12,12 @@ const withPWA = withPWAInit({
 
 const nextConfig = {
   reactStrictMode: true,
-  // Force le runtime Edge pour toutes les routes (requis par Cloudflare Pages)
+  // Bloc expérimental nettoyé pour éviter les erreurs de build
   experimental: {
-    runtime: 'edge',
+    serverComponentsExternalPackages: ['bcrypt'],
   },
   images: {
+    // Liste consolidée des domaines autorisés
     domains: [
       'api.dicebear.com', 
       'raw.githubusercontent.com', 
