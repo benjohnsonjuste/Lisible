@@ -54,13 +54,13 @@ export default function AuthForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return; // Empêche les soumissions multiples
     setLoading(true);
 
     try {
       const emailClean = formData.email.trim().toLowerCase();
-      const passwordClean = formData.password.trim(); // Nettoyage du mot de passe
+      const passwordClean = formData.password.trim();
 
-      // Gestion du mot de passe oublié via l'API unifiée
       if (mode === "forgot") {
         const res = await fetch("/api/github-db", {
           method: "POST",
@@ -74,10 +74,10 @@ export default function AuthForm() {
         if (!res.ok) throw new Error(result.error || "Compte inconnu");
         toast.success(`Indice : ${result.hint}. Alerte de sécurité envoyée.`);
         setMode("login");
+        setLoading(false);
         return;
       }
 
-      // Inscription ou Connexion via l'API unifiée
       const authAction = mode === "register" ? "register" : "login";
       const res = await fetch("/api/github-db", {
         method: "POST",
@@ -93,34 +93,28 @@ export default function AuthForm() {
 
       const result = await res.json();
       
-      // Si l'API renvoie une erreur spécifique (comme "Mot de passe incorrect")
       if (!res.ok) {
         throw new Error(result.error || result.message || "Identifiants invalides");
       }
 
       const userData = result.user;
       
-      // Bonus visuel si parrainage réussi
       if (mode === "register" && refCode) {
         toast.success("Bienvenue ! +200 Li crédités sur votre compte.");
       }
 
       await checkAndNotifyBirthday(userData);
       
-      // 1. Stockage local pour l'UI
       localStorage.setItem("lisible_user", JSON.stringify(userData));
-      
-      // 2. Création du cookie de session
       document.cookie = "lisible_session=true; path=/; max-age=86400; SameSite=Lax";
       
       toast.success(`Heureux de vous voir, ${userData.penName || userData.name || "Auteur"}`);
       
-      // Forcer le rechargement pour mettre à jour l'état de l'app
-      window.location.href = "/dashboard";
+      // Utilisation du router Next.js au lieu de window.location pour éviter les boucles infinies
+      router.push("/dashboard");
 
     } catch (err) {
       toast.error(err.message);
-    } finally {
       setLoading(false);
     }
   };
