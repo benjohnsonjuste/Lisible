@@ -1,9 +1,8 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "lisible"
 pages_build_output_dir = ".vercel/output"
+compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# Tes variables sont déjà dans le dashboard, pas besoin de les mettre ici.
-
-[compatibility_flags]
-nodejs_compat = true
+# Tes variables sont déjà dans le dashboard.
