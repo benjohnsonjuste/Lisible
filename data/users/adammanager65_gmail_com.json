@@ -4,6 +4,13 @@
   "li": 63,
   "notifications": [
     {
+      "id": "like_1770964508909",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"AFRIAMEURASIOCE\" !",
+      "date": "2026-02-13T06:35:08.909Z",
+      "read": false
+    },
+    {
       "id": "cert_1770964501781",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"AFRIAMEURASIOCE\" (+1 Li).",
