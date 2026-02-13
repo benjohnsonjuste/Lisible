@@ -1,4 +1,8 @@
 // app/sitemap.xml/route.js
+
+// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
+export const runtime = 'edge';
+
 export async function GET() {
   const baseUrl = "https://lisible.biz";
 
