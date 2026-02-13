@@ -6,9 +6,11 @@ import {
   ShieldCheck, AlertCircle, Share2, Download, Award
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 export default function AuthorDashboard() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,47 +20,58 @@ export default function AuthorDashboard() {
     async function loadStudio() {
       try {
         const loggedUser = localStorage.getItem("lisible_user");
+        
         if (!loggedUser) {
-          window.location.replace("/login");
+          router.replace("/login");
           return;
         }
-        const { email } = JSON.parse(loggedUser);
+
+        const parsedUser = JSON.parse(loggedUser);
+        const email = parsedUser.email;
         
         // Synchro profil
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
-        const userData = await userRes.json();
-        if (userData && userData.content) {
-          setUser(userData.content);
-          localStorage.setItem("lisible_user", JSON.stringify(userData.content));
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData && userData.content) {
+            setUser(userData.content);
+            localStorage.setItem("lisible_user", JSON.stringify(userData.content));
+          }
         }
 
-        // Synchro œuvres avec Tri Universel (Certifications > Likes > Date)
+        // Synchro œuvres avec Tri Universel
         const libraryRes = await fetch(`/api/github-db?type=library`);
-        const libraryData = await libraryRes.json();
-        if (libraryData && libraryData.content) {
-          const authorWorks = libraryData.content
-            .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
-            .sort((a, b) => {
-              const certA = Number(a.certified || a.totalCertified || 0);
-              const certB = Number(b.certified || b.totalCertified || 0);
-              if (certB !== certA) return certB - certA;
+        if (libraryRes.ok) {
+          const libraryData = await libraryRes.json();
+          if (libraryData && libraryData.content) {
+            const authorWorks = libraryData.content
+              .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
+              .sort((a, b) => {
+                const certA = Number(a.certified || a.totalCertified || 0);
+                const certB = Number(b.certified || b.totalCertified || 0);
+                if (certB !== certA) return certB - certA;
 
-              const likesA = Number(a.likes || a.totalLikes || 0);
-              const likesB = Number(b.likes || b.totalLikes || 0);
-              if (likesB !== likesA) return likesB - likesA;
+                const likesA = Number(a.likes || a.totalLikes || 0);
+                const likesB = Number(b.likes || b.totalLikes || 0);
+                if (likesB !== likesA) return likesB - likesA;
 
-              return new Date(b.date) - new Date(a.date);
-            });
-          setWorks(authorWorks);
+                // Sécurité sur la date pour éviter les crashs
+                const dateA = a.date ? new Date(a.date).getTime() : 0;
+                const dateB = b.date ? new Date(b.date).getTime() : 0;
+                return dateB - dateA;
+              });
+            setWorks(authorWorks);
+          }
         }
       } catch (e) {
+        console.error("Sync error:", e);
         toast.error("Erreur de synchronisation.");
       } finally {
         setLoading(false);
       }
     }
     loadStudio();
-  }, []);
+  }, [router]);
 
   // Générateur de Badge JPG via Canvas
   const generateBadge = (download = false) => {
@@ -78,12 +91,13 @@ export default function AuthorDashboard() {
     ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
     ctx.fillStyle = '#14b8a6';
-    ctx.font = 'black 30px Arial';
+    ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'italic bold 50px serif';
+    ctx.font = 'italic bold 45px serif';
+    
     const words = name.split(' ');
     let line = '';
     let y = 280;
@@ -164,7 +178,8 @@ export default function AuthorDashboard() {
   );
 
   if (!user) return null;
-  const canWithdraw = (user.li >= 25000) && (user.followers?.length >= 250);
+  const followerCount = user.followers?.length || 0;
+  const canWithdraw = (user.li >= 25000) && (followerCount >= 250);
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
@@ -200,7 +215,7 @@ export default function AuthorDashboard() {
             <AlertCircle size={20} className="shrink-0" />
             <p className="text-[11px] font-bold uppercase tracking-tight">
               Monétisation inactive : 25 000 Li et 250 abonnés requis. 
-              ({user.li || 0}/25000 Li • {user.followers?.length || 0}/250 abonnés)
+              ({user.li || 0}/25000 Li • {followerCount}/250 abonnés)
             </p>
           </div>
         )}
@@ -230,7 +245,7 @@ export default function AuthorDashboard() {
           </div>
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
             <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-teal-600 mb-6"><BookOpen size={24} /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Abonnés</p><h2 className="text-4xl font-black italic text-slate-900">{user.followers?.length || 0}</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Abonnés</p><h2 className="text-4xl font-black italic text-slate-900">{followerCount}</h2></div>
           </div>
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-6"><TrendingUp size={24} /></div>
@@ -259,7 +274,7 @@ export default function AuthorDashboard() {
                         <span>•</span>
                         <span className="text-teal-600">{work.certified || work.totalCertified || 0} Sceaux</span>
                         <span>•</span>
-                        <span>{new Date(work.date).toLocaleDateString()}</span>
+                        <span>{work.date ? new Date(work.date).toLocaleDateString() : 'Date inconnue'}</span>
                       </div>
                     </div>
                   </div>
