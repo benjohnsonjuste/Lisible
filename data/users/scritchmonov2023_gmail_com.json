@@ -1,8 +1,15 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "",
-  "li": 87,
+  "li": 88,
   "notifications": [
+    {
+      "id": "cert_1770944767557",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Pour te dire je t'aime\" (+1 Li).",
+      "date": "2026-02-13T01:06:07.557Z",
+      "read": false
+    },
     {
       "id": "like_1770944736603",
       "type": "like",
