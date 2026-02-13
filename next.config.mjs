@@ -8,19 +8,20 @@ const withPWA = withPWAInit({
   reloadOnOnline: true,
   swcMinify: true,
   disable: process.env.NODE_ENV === "development",
-  // Suppression du bloc workboxOptions.expiration erroné
-  // Le plugin gère déjà une mise en cache par défaut très efficace
 });
 
 const nextConfig = {
   reactStrictMode: true,
+  // Force le runtime Edge pour toutes les routes (requis par Cloudflare Pages)
+  experimental: {
+    runtime: 'edge',
+  },
   images: {
-    // Liste consolidée des domaines autorisés
     domains: [
       'api.dicebear.com', 
       'raw.githubusercontent.com', 
       'avatars.githubusercontent.com',
-      'res.cloudinary.com' // Recommandé si tu héberges des couvertures plus tard
+      'res.cloudinary.com'
     ],
   },
   logging: {
