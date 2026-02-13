@@ -97,7 +97,7 @@ export default function NotificationsPage() {
         pusher.unsubscribe(`user-${userKey}`);
       };
     } else {
-      router.push("/auth");
+      router.push("/login");
     }
   }, [fetchNotifications, router]);
 
