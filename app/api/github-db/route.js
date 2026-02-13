@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import NodeCache from 'node-cache';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt-ts'; // CHANGÉ : Utilisation de bcrypt-ts compatible Edge
 
 // Note: NodeCache fonctionne en mémoire locale sur chaque "Isolate". 
-// Sur Cloudflare, le cache ne sera pas partagé entre les différentes régions du globe.
 const localCache = new NodeCache({ stdTTL: 60 });
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge'; // CHANGÉ : nodejs -> edge
+export const runtime = 'edge'; 
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -39,7 +38,6 @@ async function getFile(path) {
     if (!res.ok) return null;
     const data = await res.json();
     
-    // CHANGÉ : Buffer remplacé par atob + décodage UTF-8 compatible Edge
     const decodedContent = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
     const result = { content: JSON.parse(decodedContent), sha: data.sha };
     
@@ -53,7 +51,6 @@ async function getFile(path) {
 async function updateFile(path, content, sha, message) {
   localCache.del(path);
   
-  // CHANGÉ : Buffer remplacé par btoa + encodage UTF-8 compatible Edge
   const jsonString = JSON.stringify(content, null, 2);
   const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
 
@@ -95,7 +92,10 @@ export async function POST(req) {
     if (action === 'register') {
       const file = await getFile(targetPath);
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+      
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(data.password, salt);
+
       const userData = {
         email: data.email,
         name: data.name || "Nouvel Auteur",
@@ -121,11 +121,12 @@ export async function POST(req) {
       const isHashed = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
 
       if (isHashed) {
-        isMatch = await bcrypt.compare(providedPassword, storedPassword);
+        isMatch = bcrypt.compareSync(providedPassword, storedPassword);
       } else {
         isMatch = (providedPassword === storedPassword);
         if (isMatch) {
-          file.content.password = await bcrypt.hash(providedPassword, 10);
+          const salt = bcrypt.genSaltSync(10);
+          file.content.password = bcrypt.hashSync(providedPassword, salt);
           await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
         }
       }
@@ -140,10 +141,11 @@ export async function POST(req) {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
       
-      const isMatch = await bcrypt.compare(currentPassword, file.content.password);
+      const isMatch = bcrypt.compareSync(currentPassword, file.content.password);
       if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
       
-      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      const salt = bcrypt.genSaltSync(10);
+      const hashedNewPassword = bcrypt.hashSync(newPassword, salt);
       file.content.password = hashedNewPassword;
       
       await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
