@@ -4,6 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
+export const runtime = 'edge';
+
 export default function EditWorkPage() {
   const params = useParams();
   const router = useRouter();
