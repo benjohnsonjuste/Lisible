@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link"; // Correction ici : next/link au lieu de next/navigation
+import Link from "next/link";
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
   Search, Sparkles, Megaphone, AlignLeft
@@ -11,11 +11,13 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const [texts, setTexts] = useState(initialTexts);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [mounted, setMounted] = useState(false); // Pour éviter les erreurs d'hydratation sur les dates
   
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
   useEffect(() => {
+    setMounted(true);
     fetchInitial();
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
@@ -37,7 +39,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const likesB = Number(b.likes || b.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
 
-          return new Date(b.date) - new Date(a.date);
+          return new Date(b.date || 0) - new Date(a.date || 0);
         });
         setTexts(sorted);
       }
@@ -50,7 +52,9 @@ export default function Bibliotheque({ initialTexts = [] }) {
   };
 
   const filteredTexts = useMemo(() => {
+    if (!texts) return [];
     return texts.filter(t => {
+      if (!t) return false;
       const matchesSearch = 
         (t.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.author || t.authorName || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -110,6 +114,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
+          if (!item) return null;
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(item.authorEmail);
           const isOtherAdmin = ["jb7management@gmail.com"].includes(item.authorEmail);
@@ -165,7 +170,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
                     <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
-                      {item.date ? new Date(item.date).getFullYear() : "2026"}
+                      {mounted && item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
                     {hasSceau && (
                         <span className="ml-auto text-teal-600 animate-pulse">
