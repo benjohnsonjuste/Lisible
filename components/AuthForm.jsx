@@ -58,6 +58,7 @@ export default function AuthForm() {
 
     try {
       const emailClean = formData.email.trim().toLowerCase();
+      const passwordClean = formData.password.trim(); // Nettoyage du mot de passe
 
       // Gestion du mot de passe oublié via l'API unifiée
       if (mode === "forgot") {
@@ -83,15 +84,19 @@ export default function AuthForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: authAction,
-          name: formData.name,
+          name: formData.name.trim(),
           email: emailClean,
-          password: formData.password,
+          password: passwordClean,
           referralCode: refCode
         })
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Identifiants invalides");
+      
+      // Si l'API renvoie une erreur spécifique (comme "Mot de passe incorrect")
+      if (!res.ok) {
+        throw new Error(result.error || result.message || "Identifiants invalides");
+      }
 
       const userData = result.user;
       
@@ -109,7 +114,9 @@ export default function AuthForm() {
       document.cookie = "lisible_session=true; path=/; max-age=86400; SameSite=Lax";
       
       toast.success(`Heureux de vous voir, ${userData.penName || userData.name || "Auteur"}`);
-      router.push("/dashboard");
+      
+      // Forcer le rechargement pour mettre à jour l'état de l'app
+      window.location.href = "/dashboard";
 
     } catch (err) {
       toast.error(err.message);
@@ -134,7 +141,7 @@ export default function AuthForm() {
             type="text"
             placeholder="Nom complet"
             required
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500/10 focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
@@ -147,7 +154,7 @@ export default function AuthForm() {
           type="email"
           placeholder="Email"
           required
-          className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500/10 focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
+          className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
         />
@@ -160,7 +167,7 @@ export default function AuthForm() {
             type="password"
             placeholder="Mot de passe"
             required
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500/10 focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
