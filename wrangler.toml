@@ -1,0 +1,10 @@
+name = "lisible"
+compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NEXT_FORCE_EDGE_RUNTIME = "1"
+
+[[env.production.services]]
+binding = "ASSETS"
+service = "lisible"
