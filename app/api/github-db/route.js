@@ -40,21 +40,23 @@ async function getFile(path) {
       cache: 'no-store'
     });
     
+    if (res.status === 404) return null;
     if (res.status === 429) throw new Error("THROTTLED");
     if (!res.ok) return null;
     
     const data = await res.json();
-    // Décodage Base64 compatible UTF-8 pour le Edge
-    const binary = atob(data.content.replace(/\s/g, ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    
+    // Décodage Base64 robuste pour l'Edge Runtime (gère l'UTF-8)
+    const b64 = data.content.replace(/\s/g, '');
+    const binString = atob(b64);
+    const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
     const decodedContent = new TextDecoder().decode(bytes);
     
     const result = { content: JSON.parse(decodedContent), sha: data.sha };
     localCache.set(path, { data: result, timestamp: now });
     return result;
   } catch (err) {
-    console.error("Fetch error:", err.message);
+    console.error(`Fetch error [${path}]:`, err.message);
     return null;
   }
 }
@@ -63,28 +65,32 @@ async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   
   const jsonString = JSON.stringify(content, null, 2);
-  // Encodage Base64 compatible UTF-8 pour le Edge
   const bytes = new TextEncoder().encode(jsonString);
-  const binary = String.fromCharCode(...bytes);
-  const encodedContent = btoa(binary);
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+  const encodedContent = btoa(binString);
 
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: { 
-      'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
-      'Content-Type': 'application/json',
-      'User-Agent': 'Lisible-App'
-    },
-    body: JSON.stringify({
-      message: `[DATA] ${message}`,
-      content: encodedContent,
-      sha: sha || undefined
-    }),
-  });
-  return res.ok;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
+        'Content-Type': 'application/json',
+        'User-Agent': 'Lisible-App'
+      },
+      body: JSON.stringify({
+        message: `[DATA] ${message}`,
+        content: encodedContent,
+        sha: sha || undefined
+      }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error(`Update error [${path}]:`, err.message);
+    return false;
+  }
 }
 
-const getSafePath = (email) => `data/users/${email?.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+const getSafePath = (email) => `data/users/${email?.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
 
 const globalSort = (list) => {
   if (!Array.isArray(list)) return [];
@@ -103,6 +109,8 @@ const globalSort = (list) => {
 
 export async function POST(req) {
   try {
+    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
+
     const body = await req.json();
     const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
     const targetPath = getSafePath(userEmail || data.email);
@@ -136,7 +144,7 @@ export async function POST(req) {
       const providedPassword = data.password.trim();
       let isMatch = false;
 
-      const isHashed = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
+      const isHashed = typeof storedPassword === 'string' && (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$'));
 
       if (isHashed) {
         isMatch = bcrypt.compareSync(providedPassword, storedPassword);
@@ -263,7 +271,12 @@ export async function GET(req) {
   const id = searchParams.get('id');
   
   try {
-    if (type === 'text') return NextResponse.json(await getFile(`data/texts/${id}.json`));
+    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
+
+    if (type === 'text') {
+        const text = await getFile(`data/texts/${id}.json`);
+        return NextResponse.json(text);
+    }
     
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
@@ -284,6 +297,7 @@ export async function GET(req) {
     }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
+    console.error("GET Error:", e.message);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
@@ -344,6 +358,7 @@ export async function PATCH(req) {
       count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) 
     });
   } catch (e) {
+    console.error("PATCH Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
