@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import NodeCache from 'node-cache';
-import * as bcrypt from 'bcrypt-ts'; // CHANGÉ : Utilisation de bcrypt-ts compatible Edge
+import * as bcrypt from 'bcrypt-ts';
 
-// Note: NodeCache fonctionne en mémoire locale sur chaque "Isolate". 
-const localCache = new NodeCache({ stdTTL: 60 });
+// Remplacement de node-cache par un cache mémoire compatible Edge
+const localCache = new Map();
+const CACHE_TTL = 60000; // 60 secondes
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge'; 
 
@@ -23,8 +24,12 @@ const ECONOMY = {
 // --- HELPERS CORE ---
 
 async function getFile(path) {
+  const now = Date.now();
   const cached = localCache.get(path);
-  if (cached) return cached;
+  if (cached && (now - cached.timestamp < CACHE_TTL)) {
+    return cached.data;
+  }
+
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
       headers: { 
@@ -34,29 +39,42 @@ async function getFile(path) {
       },
       cache: 'no-store'
     });
+    
     if (res.status === 429) throw new Error("THROTTLED");
     if (!res.ok) return null;
+    
     const data = await res.json();
+    // Décodage Base64 compatible UTF-8 pour le Edge
+    const binary = atob(data.content.replace(/\s/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const decodedContent = new TextDecoder().decode(bytes);
     
-    const decodedContent = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ''))));
     const result = { content: JSON.parse(decodedContent), sha: data.sha };
-    
-    localCache.set(path, result);
+    localCache.set(path, { data: result, timestamp: now });
     return result;
   } catch (err) {
-    return err.message === "THROTTLED" ? { error: "THROTTLED" } : null;
+    console.error("Fetch error:", err.message);
+    return null;
   }
 }
 
 async function updateFile(path, content, sha, message) {
-  localCache.del(path);
+  localCache.delete(path);
   
   const jsonString = JSON.stringify(content, null, 2);
-  const encodedContent = btoa(unescape(encodeURIComponent(jsonString)));
+  // Encodage Base64 compatible UTF-8 pour le Edge
+  const bytes = new TextEncoder().encode(jsonString);
+  const binary = String.fromCharCode(...bytes);
+  const encodedContent = btoa(binary);
 
   const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
     method: 'PUT',
-    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+    headers: { 
+      'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
+      'Content-Type': 'application/json',
+      'User-Agent': 'Lisible-App'
+    },
     body: JSON.stringify({
       message: `[DATA] ${message}`,
       content: encodedContent,
@@ -77,7 +95,7 @@ const globalSort = (list) => {
     const likesA = Number(a.likes || a.totalLikes || 0);
     const likesB = Number(b.likes || b.totalLikes || 0);
     if (likesB !== likesA) return likesB - likesA;
-    return new Date(b.date) - new Date(a.date);
+    return new Date(b.date || 0) - new Date(a.date || 0);
   });
 };
 
@@ -94,10 +112,10 @@ export async function POST(req) {
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
       
       const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(data.password, salt);
+      const hashedPassword = bcrypt.hashSync(data.password.trim(), salt);
 
       const userData = {
-        email: data.email,
+        email: data.email.toLowerCase().trim(),
         name: data.name || "Nouvel Auteur",
         li: data.referralCode ? 250 : 50,
         notifications: [], followers: [], following: [], works: [],
@@ -115,7 +133,7 @@ export async function POST(req) {
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
       
       const storedPassword = file.content.password;
-      const providedPassword = data.password;
+      const providedPassword = data.password.trim();
       let isMatch = false;
 
       const isHashed = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
@@ -141,11 +159,11 @@ export async function POST(req) {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
       
-      const isMatch = bcrypt.compareSync(currentPassword, file.content.password);
+      const isMatch = bcrypt.compareSync(currentPassword.trim(), file.content.password);
       if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
       
       const salt = bcrypt.genSaltSync(10);
-      const hashedNewPassword = bcrypt.hashSync(newPassword, salt);
+      const hashedNewPassword = bcrypt.hashSync(newPassword.trim(), salt);
       file.content.password = hashedNewPassword;
       
       await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
@@ -154,9 +172,9 @@ export async function POST(req) {
 
     if (action === 'user_sync' || action === 'update_user') {
       const file = await getFile(targetPath);
-      const userData = file ? { ...file.content, ...data } : null;
-      if (!userData) return NextResponse.json({ error: "Sync impossible" }, { status: 404 });
-      await updateFile(targetPath, userData, file?.sha, `👤 User Sync/Update`);
+      if (!file) return NextResponse.json({ error: "Sync impossible" }, { status: 404 });
+      const userData = { ...file.content, ...data };
+      await updateFile(targetPath, userData, file.sha, `👤 User Sync/Update`);
       const { password, ...safeUser } = userData;
       return NextResponse.json({ success: true, user: safeUser });
     }
@@ -165,6 +183,7 @@ export async function POST(req) {
       const follower = await getFile(getSafePath(userEmail));
       const target = await getFile(getSafePath(data.targetEmail));
       if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      
       if (action === 'follow') {
         if (!follower.content.following.includes(data.targetEmail)) {
           follower.content.following.push(data.targetEmail);
@@ -189,16 +208,17 @@ export async function POST(req) {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
       const indexPath = `data/publications/index.json`;
-      const isConcours = data.isConcours === true || data.isConcours === "true" || data.genre === "Battle Poétique";
+      const isConcours = data.isConcours === true || data.genre === "Battle Poétique";
       const finalImage = isConcours ? null : (data.image || data.imageBase64);
-      const newPub = { ...data, id: pubId, isConcours: isConcours, image: finalImage, imageBase64: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      const newPub = { ...data, id: pubId, isConcours, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
       
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
       indexContent.unshift({ 
         id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, 
-        category: data.category, genre: data.genre, isConcours: isConcours, 
+        category: data.category, genre: data.genre, isConcours, 
         image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 
       });
       
@@ -213,15 +233,24 @@ export async function POST(req) {
       const receiver = await getFile(getSafePath(data.recipientEmail));
       if (!sender || !receiver) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
+      
       sender.content.li -= amount;
       receiver.content.li += amount;
-      receiver.content.notifications.unshift({ id: `notif_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
+      receiver.content.notifications.unshift({ 
+        id: `notif_${Date.now()}`, 
+        type: "gift", 
+        message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, 
+        date: new Date().toISOString(), read: false 
+      });
+      
       await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
       await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
       return NextResponse.json({ success: true });
     }
+    
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   } catch (e) {
+    console.error("POST Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
@@ -232,8 +261,10 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type');
   const id = searchParams.get('id');
+  
   try {
     if (type === 'text') return NextResponse.json(await getFile(`data/texts/${id}.json`));
+    
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
         if (user) {
@@ -243,6 +274,7 @@ export async function GET(req) {
         }
         return NextResponse.json(user);
     }
+    
     if (type === 'library' || type === 'publications') {
       const index = await getFile(`data/publications/index.json`);
       if (index && Array.isArray(index.content)) {
@@ -282,7 +314,7 @@ export async function PATCH(req) {
         indexFile.content[itemIndex].likes = textFile.content.likes;
         indexFile.content[itemIndex].certified = textFile.content.certified;
         indexFile.content = globalSort(indexFile.content);
-        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync & Re-sort Index: ${id} (${action})`);
+        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
       }
     }
 
