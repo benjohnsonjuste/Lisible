@@ -7,6 +7,9 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 
+// Ajout pour la compatibilité Cloudflare Pages
+export const runtime = 'edge';
+
 export default function AuthorCataloguePage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
@@ -93,7 +96,7 @@ export default function AuthorCataloguePage({ params }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          action: "follow", // Utilise "follow" conformément à la structure de l'API
+          action: "follow", 
           userEmail: currentUser.email, 
           targetEmail: author.email 
         })
