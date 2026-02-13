@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles } from "lucide-react";
 
+// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
+export const runtime = 'edge';
+
 export default function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
