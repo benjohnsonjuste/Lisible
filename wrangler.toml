@@ -1,8 +1,7 @@
 name = "lisible"
-pages_build_output_dir = ".vercel/output/static"
+pages_build_output_dir = ".vercel/output/static" # Doit correspondre à la config Cloudflare
 compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-# Ne pas forcer l'edge runtime ici, laisser Next.js gérer
-# Ajoute tes autres variables ici si besoin
+# Tes variables ici
