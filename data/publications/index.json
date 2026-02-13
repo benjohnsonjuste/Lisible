@@ -105,6 +105,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1770824772287",
+    "title": "La beauté d'une nymphe",
+    "author": "Mbuya Ephraïm",
+    "authorEmail": "ephraimmbuya17@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:46:12.287Z",
+    "views": 12,
+    "likes": 5,
+    "certified": 2
+  },
+  {
     "id": "txt_1770822169168",
     "title": "Ville en béton",
     "author": "Cesarin Jhonson Maykerly Woods",
@@ -201,16 +214,6 @@
     "genre": "Poésie",
     "isConcours": false,
     "date": "2026-02-11T22:27:38.745Z"
-  },
-  {
-    "id": "txt_1770824772287",
-    "title": "La beauté d'une nymphe",
-    "author": "Mbuya Ephraïm",
-    "authorEmail": "ephraimmbuya17@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:46:12.287Z"
   },
   {
     "id": "txt_1770824616682",
