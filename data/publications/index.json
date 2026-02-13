@@ -91,19 +91,6 @@
     "certified": 4
   },
   {
-    "id": "txt_1770822169168",
-    "title": "Ville en béton",
-    "author": "Cesarin Jhonson Maykerly Woods",
-    "authorEmail": "jhonsonwmaykerlycesarin@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:02:49.168Z",
-    "views": 13,
-    "likes": 4,
-    "certified": 2
-  },
-  {
     "id": "1770881884883",
     "title": "Femme en silence",
     "author": "Romuald Douanla MELONG",
@@ -115,6 +102,19 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 3,
     "likes": 2,
+    "certified": 3
+  },
+  {
+    "id": "txt_1770822169168",
+    "title": "Ville en béton",
+    "author": "Cesarin Jhonson Maykerly Woods",
+    "authorEmail": "jhonsonwmaykerlycesarin@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:02:49.168Z",
+    "views": 13,
+    "likes": 4,
     "certified": 2
   },
   {
