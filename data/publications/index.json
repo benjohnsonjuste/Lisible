@@ -105,6 +105,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1770823066946",
+    "title": "Mon départ",
+    "author": "Adama Junior Cissokho",
+    "authorEmail": "adamacissokho15@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:17:46.946Z",
+    "views": 14,
+    "likes": 6,
+    "certified": 2
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -129,19 +142,6 @@
     "views": 14,
     "likes": 4,
     "certified": 2
-  },
-  {
-    "id": "txt_1770823066946",
-    "title": "Mon départ",
-    "author": "Adama Junior Cissokho",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:17:46.946Z",
-    "views": 14,
-    "likes": 6,
-    "certified": 1
   },
   {
     "id": "1770908907554",
