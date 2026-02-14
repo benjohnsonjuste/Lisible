@@ -45,6 +45,7 @@ async function getFile(path) {
     if (!res.ok) return null;
     
     const data = await res.json();
+    if (!data.content) return null;
     
     // Décodage Base64 robuste pour l'Edge Runtime (gère l'UTF-8)
     const b64 = data.content.replace(/\s/g, '');
@@ -91,18 +92,23 @@ async function updateFile(path, content, sha, message) {
   }
 }
 
-const getSafePath = (email) => `data/users/${email?.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+const getSafePath = (email) => {
+  if (!email) return null;
+  return `data/users/${email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+};
 
 const globalSort = (list) => {
   if (!Array.isArray(list)) return [];
   return [...list].sort((a, b) => {
-    const certA = Number(a.certified || a.totalCertified || 0);
-    const certB = Number(b.certified || b.totalCertified || 0);
+    const certA = Number(a?.certified || a?.totalCertified || 0);
+    const certB = Number(b?.certified || b?.totalCertified || 0);
     if (certB !== certA) return certB - certA;
-    const likesA = Number(a.likes || a.totalLikes || 0);
-    const likesB = Number(b.likes || b.totalLikes || 0);
+    const likesA = Number(a?.likes || a?.totalLikes || 0);
+    const likesB = Number(b?.likes || b?.totalLikes || 0);
     if (likesB !== likesA) return likesB - likesA;
-    return new Date(b.date || 0) - new Date(a.date || 0);
+    const dateA = a?.date ? new Date(a.date).getTime() : 0;
+    const dateB = b?.date ? new Date(b.date).getTime() : 0;
+    return dateB - dateA;
   });
 };
 
