@@ -6,6 +6,9 @@ import {
   BookOpen, Users, Sparkles, ArrowRight, Star 
 } from "lucide-react";
 
+// Obligatoire pour optimiser les performances sur Cloudflare Edge
+export const runtime = "edge";
+
 export default function Home() {
   return (
     <div className="bg-white dark:bg-slate-950 font-sans selection:bg-teal-100 dark:selection:bg-teal-900/30 transition-colors duration-500">
@@ -85,7 +88,6 @@ export default function Home() {
               "Fondé par <span className="font-black text-slate-900 dark:text-white not-italic">Ben Johnson Juste</span>, ce label accompagne et valorise les jeunes plumes à travers des publications et des événements culturels majeurs."
             </p>
           </div>
-          {/* Filigrane décoratif discret */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] dark:opacity-[0.05] pointer-events-none">
             <Sparkles size={400} />
           </div>
