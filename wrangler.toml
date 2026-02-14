@@ -1,7 +1,4 @@
-#:schema node_modules/wrangler/config-schema.json
 name = "lisible"
-compatibility_date = "2024-04-03"
+compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-
-# LE RÉGLAGE CRUCIAL :
 pages_build_output_dir = ".vercel/output"
