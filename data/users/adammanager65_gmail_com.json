@@ -1,8 +1,15 @@
 {
   "email": "adammanager65@gmail.com",
   "name": "Adam Ibrahim",
-  "li": 86,
+  "li": 87,
   "notifications": [
+    {
+      "id": "cert_1771093637975",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"AFRIAMEURASIOCE\" (+1 Li).",
+      "date": "2026-02-14T18:27:17.975Z",
+      "read": false
+    },
     {
       "id": "like_1771093534964",
       "type": "like",
