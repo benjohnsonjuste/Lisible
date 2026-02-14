@@ -8,10 +8,11 @@ import {
 import { toast } from "sonner";
 
 export default function Bibliotheque({ initialTexts = [] }) {
-  const [texts, setTexts] = useState(initialTexts);
+  // Sécurité : s'assurer que texts est toujours un tableau
+  const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [mounted, setMounted] = useState(false); // Pour éviter les erreurs d'hydratation sur les dates
+  const [mounted, setMounted] = useState(false);
   
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
@@ -24,48 +25,59 @@ export default function Bibliotheque({ initialTexts = [] }) {
   }, []);
 
   const fetchInitial = async () => {
-    if (texts.length === 0) setLoading(true);
+    // On ne met loading=true que si on n'a vraiment rien à afficher
+    if (!texts || texts.length === 0) setLoading(true);
     
     try {
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
-      if (json && json.content) {
-        const sorted = json.content.sort((a, b) => {
-          const certA = Number(a.certified || a.totalCertified || 0);
-          const certB = Number(b.certified || b.totalCertified || 0);
+      
+      if (json && Array.isArray(json.content)) {
+        const sorted = [...json.content].sort((a, b) => {
+          const certA = Number(a?.certified || a?.totalCertified || 0);
+          const certB = Number(b?.certified || b?.totalCertified || 0);
           if (certB !== certA) return certB - certA;
 
-          const likesA = Number(a.likes || a.totalLikes || 0);
-          const likesB = Number(b.likes || b.totalLikes || 0);
+          const likesA = Number(a?.likes || a?.totalLikes || 0);
+          const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
 
-          return new Date(b.date || 0) - new Date(a.date || 0);
+          // Sécurité sur la date pour le tri
+          const dateA = a?.date ? new Date(a.date).getTime() : 0;
+          const dateB = b?.date ? new Date(b.date).getTime() : 0;
+          return dateB - dateA;
         });
         setTexts(sorted);
       }
     } catch (e) { 
-      console.error(e); 
-      if (texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
+      console.error("Fetch error:", e); 
+      if (!texts || texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
     } finally { 
       setLoading(false); 
     }
   };
 
   const filteredTexts = useMemo(() => {
-    if (!texts) return [];
+    if (!Array.isArray(texts)) return [];
     return texts.filter(t => {
       if (!t) return false;
-      const matchesSearch = 
-        (t.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (t.author || t.authorName || "").toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGenre = 
-        activeGenre === "Tous" || 
-        (t.genre === activeGenre || t.category === activeGenre);
+      const title = (t.title || "").toLowerCase();
+      const author = (t.author || t.authorName || "").toLowerCase();
+      const search = searchTerm.toLowerCase();
+      
+      const matchesSearch = title.includes(search) || author.includes(search);
+      const matchesGenre = activeGenre === "Tous" || 
+                           t.genre === activeGenre || 
+                           t.category === activeGenre;
+                           
       return matchesSearch && matchesGenre;
     });
   }, [texts, searchTerm, activeGenre]);
 
-  if (loading && texts.length === 0) return (
+  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
+  if (!mounted && initialTexts.length === 0) return null;
+
+  if (loading && (!texts || texts.length === 0)) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
@@ -114,10 +126,12 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
-          if (!item) return null;
+          if (!item || !item.id) return null;
+          
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
-          const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(item.authorEmail);
-          const isOtherAdmin = ["jb7management@gmail.com"].includes(item.authorEmail);
+          const authorEmail = item.authorEmail || "";
+          const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
+          const isOtherAdmin = ["jb7management@gmail.com"].includes(authorEmail);
           const hasSceau = (item.certified || item.totalCertified || 0) > 0;
 
           const displayViews = item.views || item.totalViews || 0;
@@ -180,7 +194,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                   </div>
 
                   <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
-                    {item.title}
+                    {item.title || "Sans titre"}
                   </h2>
 
                   <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
@@ -194,7 +208,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
-                          {item.author || item.authorName}
+                          {item.author || item.authorName || "Anonyme"}
                         </span>
                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">
                           {isAnnouncementAccount ? "Compte Officiel" : hasSceau ? "Plume Certifiée" : "Auteur Scellé"}
@@ -210,11 +224,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
                         <span className="flex items-center gap-2 transition-colors hover:text-rose-500">
                           <Heart size={18} /> {displayLikes}
                         </span>
-                        {hasSceau && (
-                          <span className="flex items-center gap-1 text-teal-600">
-                            <ShieldCheck size={18} /> {displayCerts}
-                          </span>
-                        )}
                       </div>
                     )}
                   </div>
@@ -225,7 +234,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
         })}
       </div>
 
-      {filteredTexts.length === 0 && !loading && (
+      {filteredTexts.length === 0 && !loading && mounted && (
         <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
            <Search className="text-slate-100 mx-auto mb-6" size={64} />
            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
