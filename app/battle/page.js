@@ -96,7 +96,8 @@ export default function BattlePoetique() {
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <div className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-2xl border border-slate-700">
-                <Trophy size={14} className="text-amber-400 fill-amber-400" /> Battle Saison 1
+                <Trophy size={14} className="text-amber-400 fill-amber-400" /> Battle Poétique 
+Saison 2
               </div>
               {isRefreshing && (
                 <div className="flex items-center gap-2 text-teal-600 animate-in fade-in">
