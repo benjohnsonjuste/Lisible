@@ -4,6 +4,13 @@
   "li": 92,
   "notifications": [
     {
+      "id": "like_1771099239936",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"AFRIAMEURASIOCE\" !",
+      "date": "2026-02-14T20:00:39.936Z",
+      "read": false
+    },
+    {
       "id": "like_1771097133993",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"AFRIAMEURASIOCE\" !",
