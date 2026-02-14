@@ -9,14 +9,12 @@ import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
-// Font Sans-Serif pour l'interface UI (Atelier, Menu, Dash)
 const inter = Inter({ 
   subsets: ['latin'], 
   variable: '--font-inter',
   display: 'swap',
 });
 
-// Font Serif pour la lecture immersive (Textes, Prose, Poésie)
 const lora = Lora({ 
   subsets: ['latin'], 
   style: ['italic', 'normal'], 
@@ -24,11 +22,20 @@ const lora = Lora({
   display: 'swap',
 });
 
+// 1. Exportation séparée pour le Viewport (Correctif Next.js 14)
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#0f172a",
+};
+
+// 2. Metadata nettoyées
 export const metadata = {
   title: "Lisible | L'Élite de la Plume",
   description: "Le sanctuaire numérique de la littérature moderne et du streaming littéraire.",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover",
-  themeColor: "#0f172a",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
@@ -46,7 +53,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${inter.variable} ${lora.variable} h-full`} suppressHydrationWarning>
       <head>
-        {/* Script d'injection du thème pour éviter le Flash of Unstyled Content (FOUC) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -66,20 +72,12 @@ export default function RootLayout({ children }) {
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-teal-100 selection:text-teal-900">
         <AuthProvider>
           <ServiceWorkerRegistration />
-          
-          {/* Interface Globale */}
           <Navbar />
-          
-          {/* Main Content : pt-20 pour laisser respirer la Navbar fixée */}
           <main className="flex-1 w-full pt-20 relative">
             {children}
           </main>
-          
-          {/* Outils & Notifications */}
           <InstallPrompt />
           <Footer />
-          
-          {/* Toaster stylisé Lisible */}
           <Toaster 
             position="top-center" 
             richColors 
@@ -93,7 +91,6 @@ export default function RootLayout({ children }) {
               },
             }}
           />
-          
           <Analytics />
         </AuthProvider>
       </body>
