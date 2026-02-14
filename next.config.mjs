@@ -12,10 +12,14 @@ const withPWA = withPWAInit({
 
 const nextConfig = {
   reactStrictMode: true,
-  // Bloc expérimental nettoyé pour éviter les erreurs de build
+  // Indique à Next.js où mettre les fichiers de build
+  distDir: '.next',
+  
+  // Bloc expérimental pour bcrypt et les fonctions edge
   experimental: {
     serverComponentsExternalPackages: ['bcrypt'],
   },
+
   images: {
     // Liste consolidée des domaines autorisés
     domains: [
@@ -25,11 +29,15 @@ const nextConfig = {
       'res.cloudinary.com'
     ],
   },
+
   logging: {
     fetches: {
       fullUrl: true,
     },
   },
+
+  // Optionnel mais recommandé pour les déploiements Cloudflare/Vercel
+  output: 'standalone', 
 };
 
 export default withPWA(nextConfig);
