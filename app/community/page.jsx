@@ -4,7 +4,7 @@ import {
   UserPlus, UserMinus, Users as UsersIcon, ArrowRight, 
   Search, Loader2, ShieldCheck, Gem, Coins, TrendingUp, 
   Crown, Briefcase, ChevronDown, PenTool, BarChart3, Star, Settings
-} from "lucide-react"; // Corrigé : lucide-react au lieu de lucide-center
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -15,34 +15,60 @@ export default function UsersPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [submitting, setSubmitting] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const loggedUser = localStorage.getItem("lisible_user");
-    if (loggedUser) setCurrentUser(JSON.parse(loggedUser));
+    if (loggedUser) {
+      try {
+        setCurrentUser(JSON.parse(loggedUser));
+      } catch (e) {
+        console.error("Erreur parsing user");
+      }
+    }
     loadUsers();
   }, []);
 
   async function loadUsers() {
     try {
-      const res = await fetch(`/api/github-db?type=users_list`); 
+      // Correction du type : l'API attend 'library' ou 'publications' pour l'index, 
+      // mais nous avons besoin des profils. On utilise un fetch vers l'API globale.
+      const res = await fetch(`/api/github-db?type=publications`); 
       const data = await res.json();
       
-      if (data && data.users) {
-        // Tri Universel appliqué au Cercle : Certifications > Likes > Fortune (Li)
-        const sorted = data.users.sort((a, b) => {
-          const certA = Number(a.certified || a.totalCertified || 0);
-          const certB = Number(b.certified || b.totalCertified || 0);
+      if (data && data.content) {
+        // Dans ton architecture actuelle, l'index contient les auteurs des publications.
+        // Pour une vraie liste d'utilisateurs, il faudrait scanner data/users/.
+        // En attendant, on déduplique les auteurs de l'index.
+        const uniqueAuthors = [];
+        const seenEmails = new Set();
+
+        data.content.forEach(pub => {
+          if (pub.authorEmail && !seenEmails.has(pub.authorEmail)) {
+            seenEmails.add(pub.authorEmail);
+            uniqueAuthors.push({
+              name: pub.author,
+              penName: pub.author,
+              email: pub.authorEmail,
+              followers: pub.followers || [],
+              certified: pub.certified || 0,
+              li: pub.li || 0
+            });
+          }
+        });
+
+        const sorted = uniqueAuthors.sort((a, b) => {
+          const certA = Number(a.certified || 0);
+          const certB = Number(b.certified || 0);
           if (certB !== certA) return certB - certA;
-
-          const likesA = Number(a.likes || a.totalLikes || 0);
-          const likesB = Number(b.likes || b.totalLikes || 0);
-          if (likesB !== likesA) return likesB - likesA;
-
           return (Number(b.li) || 0) - (Number(a.li) || 0);
         });
+        
         setAuthors(sorted);
       }
     } catch (e) { 
+      console.error(e);
       toast.error("Le registre des auteurs est momentanément scellé."); 
     } finally { 
       setLoading(false); 
@@ -51,36 +77,25 @@ export default function UsersPage() {
 
   const handleFollow = async (targetEmail) => {
     if (!currentUser) return toast.error("Connectez-vous pour suivre cette plume");
-    if (currentUser.email === targetEmail) return toast.error("Vous ne pouvez pas vous suivre vous-même");
+    if (currentUser.email === targetEmail) return toast.error("Action impossible sur soi-même");
     
     setSubmitting(targetEmail);
     try {
+      const isCurrentlyFollowing = authors.find(a => a.email === targetEmail)?.followers?.includes(currentUser.email);
+      
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          action: "toggle_follow", 
+          action: isCurrentlyFollowing ? "unfollow" : "follow", 
           userEmail: currentUser.email, 
           targetEmail: targetEmail 
         })
       });
 
       if (res.ok) {
-        const result = await res.json();
-        toast.success(result.isFollowing ? "Abonnement réussi" : "Abonnement retiré");
-        
-        setAuthors(prev => prev.map(auth => {
-          if (auth.email === targetEmail) {
-            const currentFollowers = auth.followers || [];
-            return {
-              ...auth,
-              followers: result.isFollowing 
-                ? [...currentFollowers, currentUser.email] 
-                : currentFollowers.filter(e => e !== currentUser.email)
-            };
-          }
-          return auth;
-        }));
+        toast.success(!isCurrentlyFollowing ? "Abonnement réussi" : "Abonnement retiré");
+        loadUsers(); // Recharger pour synchroniser les compteurs
       }
     } catch (err) { 
       toast.error("Le Grand Livre n'a pas pu valider cette action."); 
@@ -99,24 +114,12 @@ export default function UsersPage() {
     else if (email === "jb7management@gmail.com") {
       badges.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400 border border-amber-500/20" });
     }
-    else if (email === "robergeaurodley97@gmail.com") {
-      badges.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-indigo-600 text-white" });
-    }
-    else if (email === "woolsleypierre01@gmail.com") {
-      badges.push({ icon: <PenTool size={10} />, label: "Dir. Éditoriale", color: "bg-purple-600 text-white" });
-    }
-    else if (email === "jeanpierreborlhaïniedarha@gmail.com") {
-      badges.push({ icon: <BarChart3 size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
-    }
-    else if (email === "cmo.lablitteraire7@gmail.com") {
-      badges.push({ icon: <ShieldCheck size={10} />, label: "Support Team", color: "bg-teal-600 text-white" });
-    }
     
     if ((author.followers?.length || 0) > 10) {
       badges.push({ icon: <Star size={10} />, label: "Plume d'Or", color: "bg-amber-100 text-amber-700" });
     }
 
-    if ((author.certified || author.totalCertified || 0) > 0) {
+    if (Number(author.certified) > 0) {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Certifié", color: "bg-teal-100 text-teal-700 border border-teal-200" });
     }
     
@@ -128,6 +131,8 @@ export default function UsersPage() {
       (a.penName || a.name || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [authors, searchTerm]);
+
+  if (!mounted) return null;
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-[#FCFBF9]">
@@ -142,7 +147,7 @@ export default function UsersPage() {
     <div className="max-w-7xl mx-auto px-6 py-16 bg-[#FCFBF9] min-h-screen">
       <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-20 gap-8">
         <div className="space-y-4">
-          <h1 className="text-7xl md:text-9xl font-black italic tracking-tighter text-slate-900">Cercle.</h1>
+          <h1 className="text-7xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.8]">Cercle.</h1>
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-teal-600 flex items-center gap-2">
             <TrendingUp size={14} /> Réseau des auteurs de Lisible
           </p>
@@ -162,7 +167,8 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {filteredAuthors.slice(0, visibleCount).map((a) => {
           const isFollowing = a.followers?.includes(currentUser?.email);
-          const emailBase64 = btoa(a.email);
+          // Utilisation de l'email directement ou encodage URL-safe
+          const authorId = a.email; 
 
           return (
             <div key={a.email} className="group bg-white rounded-[3rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:border-teal-500/20 transition-all relative overflow-hidden">
@@ -177,8 +183,8 @@ export default function UsersPage() {
               <div className="flex flex-col sm:flex-row items-center gap-8 relative">
                 <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl bg-slate-50 flex-shrink-0">
                   <img 
-                    src={a.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${a.email}`} 
-                    alt={a.penName}
+                    src={`https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${encodeURIComponent(a.email)}`} 
+                    alt=""
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
@@ -188,7 +194,7 @@ export default function UsersPage() {
                     <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-none">
                       {a.penName || a.name || "Plume Anonyme"}
                     </h2>
-                    {(a.certified || a.totalCertified) > 0 && <ShieldCheck size={20} className="text-teal-500" />}
+                    {Number(a.certified) > 0 && <ShieldCheck size={20} className="text-teal-500" />}
                   </div>
                   
                   <div className="flex flex-wrap justify-center sm:justify-start gap-4">
@@ -210,13 +216,13 @@ export default function UsersPage() {
                         : "bg-slate-950 text-white hover:bg-teal-600 shadow-lg shadow-slate-900/10"
                       }`}
                     >
-                      {submitting === a.email ? <Loader2 size={12} className="animate-spin"/> : (isFollowing ? "Se désabonner" : "Suivre la plume")}
+                      {submitting === a.email ? <Loader2 size={12} className="animate-spin"/> : (isFollowing ? "Désabonner" : "Suivre")}
                     </button>
                     <Link 
-                      href={`/author/${emailBase64}`}
+                      href={`/author/${encodeURIComponent(a.email)}`}
                       className="px-6 py-3 bg-white border border-slate-100 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
                     >
-                      Catalogue <ArrowRight size={12} />
+                      Profil <ArrowRight size={12} />
                     </Link>
                   </div>
                 </div>
@@ -232,7 +238,7 @@ export default function UsersPage() {
             onClick={() => setVisibleCount(v => v + 10)}
             className="group flex flex-col items-center gap-4"
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 group-hover:text-teal-600 transition-colors">Explorer plus d'horizons</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 group-hover:text-teal-600 transition-colors">Explorer plus</span>
             <div className="p-5 bg-white rounded-full shadow-xl border border-slate-50 group-hover:bg-teal-600 group-hover:text-white transition-all transform group-hover:translate-y-2">
               <ChevronDown size={28} />
             </div>
