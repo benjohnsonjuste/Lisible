@@ -5,7 +5,7 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
-// Utilise le flag standard reconnu par Cloudflare et Next.js 14+
+// Correction du flag runtime pour éviter l'erreur de build
 export const config = {
-  runtime: 'edge',
+  runtime: 'experimental-edge',
 };
