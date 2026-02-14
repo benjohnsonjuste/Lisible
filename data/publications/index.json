@@ -144,6 +144,19 @@
     "certified": 2
   },
   {
+    "id": "1770881283839",
+    "title": "Jeunesse",
+    "author": "Hassoumi",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-12T07:28:06.895Z",
+    "views": 5,
+    "likes": 1,
+    "certified": 2
+  },
+  {
     "id": "1770908907554",
     "title": "La beauté d'une nymphe",
     "author": "Une Plume",
@@ -183,16 +196,6 @@
     "isConcours": true,
     "image": null,
     "date": "2026-02-12T07:35:46.319Z"
-  },
-  {
-    "id": "1770881283839",
-    "title": "Jeunesse",
-    "author": "Hassoumi",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-12T07:28:06.895Z"
   },
   {
     "id": "1770850500145",
