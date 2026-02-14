@@ -1,4 +1,11 @@
 name = "lisible"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
+
+[site]
+bucket = ".vercel/output"
+
+[build]
+command = "npm install --legacy-peer-deps && npx @cloudflare/next-on-pages@1"
+# C'EST CETTE LIGNE QUI VA ÉCRASER L'INTERFACE :
 pages_build_output_dir = ".vercel/output"
