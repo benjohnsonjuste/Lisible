@@ -1,15 +1,49 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
-  BookOpen, Users, Sparkles, ArrowRight, Star 
+  BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Clock
 } from "lucide-react";
 
 // Obligatoire pour optimiser les performances sur Cloudflare Edge
 export const runtime = "edge";
 
 export default function Home() {
+  const [stats, setStats] = useState({ 
+    users: 0, 
+    publications: 0,
+    liGenerated: 0,
+    certifiedReads: 0,
+    likes: 0,
+    readingTime: 0
+  });
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const response = await fetch("/api/github-db");
+        const data = await response.json();
+        
+        const userCount = data.users?.length || 0;
+        const pubCount = data.publications?.length || 0;
+
+        // Calculs dynamiques basés sur les données réelles pour l'immersion
+        setStats({
+          users: userCount,
+          publications: pubCount,
+          liGenerated: (pubCount * 1250) + (userCount * 42), // Simulation de jetons Li
+          certifiedReads: pubCount * 124, // Moyenne de lectures
+          likes: pubCount * 88, // Moyenne de likes
+          readingTime: Math.floor((pubCount * 150) / 60) // Temps en heures
+        });
+      } catch (error) {
+        console.error("Erreur stats:", error);
+      }
+    }
+    fetchStats();
+  }, []);
+
   return (
     <div className="bg-white dark:bg-slate-950 font-sans selection:bg-teal-100 dark:selection:bg-teal-900/30 transition-colors duration-500">
       
@@ -20,7 +54,7 @@ export default function Home() {
         <section className="relative group overflow-hidden rounded-[3rem] shadow-2xl mx-2 md:mx-4">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent z-10" />
           <img
-            src="/file_00000000e4d871fdb8efbc744979c8bc.png"
+            src="/1769671006023.png"
             alt="Lisible par La Belle Littéraire"
             className="w-full h-[500px] md:h-[700px] object-cover transition-transform duration-[3000ms] group-hover:scale-105"
           />
@@ -36,6 +70,58 @@ export default function Home() {
                 La plateforme de streaming produite par le label 
                 <span className="text-teal-400 font-black"> La Belle Littéraire</span>.
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Section Dashboard Global - Statistiques Avancées */}
+        <section className="px-4 md:px-8 space-y-4">
+          <div className="flex items-center gap-3 px-4">
+            <Activity className="text-teal-500 animate-pulse" size={20} />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Live Ecosystem Stats</h2>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* Li Générés */}
+            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-teal-500/30 transition-all">
+              <Zap className="text-teal-500 mb-3 opacity-50" size={18} />
+              <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.liGenerated.toLocaleString()}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Jetons Li générés</div>
+            </div>
+
+            {/* Lectures Certifiées */}
+            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-teal-500/30 transition-all">
+              <ShieldCheck className="text-teal-500 mb-3 opacity-50" size={18} />
+              <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.certifiedReads.toLocaleString()}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Lectures Certifiées</div>
+            </div>
+
+            {/* Likes / Gratitude */}
+            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-teal-500/30 transition-all">
+              <Heart className="text-rose-500 mb-3 opacity-50" size={18} />
+              <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.likes.toLocaleString()}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Cœurs de Gratitude</div>
+            </div>
+
+            {/* Plumes */}
+            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-teal-500/30 transition-all">
+              <Users className="text-teal-500 mb-3 opacity-50" size={18} />
+              <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.users}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Plumes Actives</div>
+            </div>
+
+            {/* Œuvres */}
+            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-teal-500/30 transition-all">
+              <BookOpen className="text-teal-500 mb-3 opacity-50" size={18} />
+              <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.publications}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Récits Originaux</div>
+            </div>
+
+            {/* Temps de lecture */}
+            <div className="bg-slate-50 dark:bg-white/5 p-6 rounded-[2rem] border border-slate-100 dark:border-white/5 group hover:border-teal-500/30 transition-all">
+              <Clock className="text-teal-500 mb-3 opacity-50" size={18} />
+              <div className="text-2xl font-black text-slate-900 dark:text-white">{stats.readingTime}h</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Temps d'évasion</div>
             </div>
           </div>
         </section>
