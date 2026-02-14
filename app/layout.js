@@ -1,8 +1,8 @@
 // app/layout.js
-import "@/styles/globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import "./globals.css";
+import { AuthProvider } from "../context/AuthContext";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import InstallPrompt from "@/components/InstallPrompt";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
