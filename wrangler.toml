@@ -1,11 +1,9 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "lisible"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-
-[site]
-bucket = ".vercel/output"
-
-[build]
-command = "npm install --legacy-peer-deps && npx @cloudflare/next-on-pages@1"
-# C'EST CETTE LIGNE QUI VA ÉCRASER L'INTERFACE :
 pages_build_output_dir = ".vercel/output"
+
+[vars]
+# Ne mets pas tes secrets ici, mais vérifie qu'ils sont bien dans le Dashboard
+NEXT_PUBLIC_BASE_URL = "https://lisible.biz"
