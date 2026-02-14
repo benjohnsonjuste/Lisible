@@ -32,43 +32,45 @@ export default function UsersPage() {
 
   async function loadUsers() {
     try {
-      // Correction du type : l'API attend 'library' ou 'publications' pour l'index, 
-      // mais nous avons besoin des profils. On utilise un fetch vers l'API globale.
-      const res = await fetch(`/api/github-db?type=publications`); 
-      const data = await res.json();
+      // On utilise 'library' qui est le type supporté par ton API pour récupérer l'index
+      const res = await fetch(`/api/github-db?type=library`); 
+      const json = await res.json();
       
-      if (data && data.content) {
-        // Dans ton architecture actuelle, l'index contient les auteurs des publications.
-        // Pour une vraie liste d'utilisateurs, il faudrait scanner data/users/.
-        // En attendant, on déduplique les auteurs de l'index.
-        const uniqueAuthors = [];
-        const seenEmails = new Set();
+      // json.content contient la liste des textes de l'index
+      if (json && Array.isArray(json.content)) {
+        const uniqueAuthorsMap = new Map();
 
-        data.content.forEach(pub => {
-          if (pub.authorEmail && !seenEmails.has(pub.authorEmail)) {
-            seenEmails.add(pub.authorEmail);
-            uniqueAuthors.push({
-              name: pub.author,
-              penName: pub.author,
-              email: pub.authorEmail,
-              followers: pub.followers || [],
-              certified: pub.certified || 0,
-              li: pub.li || 0
-            });
+        json.content.forEach(pub => {
+          if (pub.authorEmail) {
+            const email = pub.authorEmail.toLowerCase().trim();
+            if (!uniqueAuthorsMap.has(email)) {
+              uniqueAuthorsMap.set(email, {
+                name: pub.author || "Plume Anonyme",
+                penName: pub.author || "Plume Anonyme",
+                email: email,
+                followers: pub.followers || [],
+                certified: Number(pub.certified || pub.totalCertified || 0),
+                li: Number(pub.li || 0),
+                likes: Number(pub.likes || 0)
+              });
+            } else {
+              // On cumule les stats si l'auteur apparaît plusieurs fois dans l'index
+              const existing = uniqueAuthorsMap.get(email);
+              existing.certified = Math.max(existing.certified, Number(pub.certified || 0));
+              existing.likes += Number(pub.likes || 0);
+            }
           }
         });
 
-        const sorted = uniqueAuthors.sort((a, b) => {
-          const certA = Number(a.certified || 0);
-          const certB = Number(b.certified || 0);
-          if (certB !== certA) return certB - certA;
-          return (Number(b.li) || 0) - (Number(a.li) || 0);
+        const sorted = Array.from(uniqueAuthorsMap.values()).sort((a, b) => {
+          if (b.certified !== a.certified) return b.certified - a.certified;
+          return b.likes - a.likes;
         });
         
         setAuthors(sorted);
       }
     } catch (e) { 
-      console.error(e);
+      console.error("Load users error:", e);
       toast.error("Le registre des auteurs est momentanément scellé."); 
     } finally { 
       setLoading(false); 
@@ -95,10 +97,19 @@ export default function UsersPage() {
 
       if (res.ok) {
         toast.success(!isCurrentlyFollowing ? "Abonnement réussi" : "Abonnement retiré");
-        loadUsers(); // Recharger pour synchroniser les compteurs
+        // Mise à jour locale immédiate de l'UI pour la réactivité
+        setAuthors(prev => prev.map(auth => {
+          if (auth.email === targetEmail) {
+            const newFollowers = isCurrentlyFollowing 
+              ? auth.followers.filter(e => e !== currentUser.email)
+              : [...(auth.followers || []), currentUser.email];
+            return { ...auth, followers: newFollowers };
+          }
+          return auth;
+        }));
       }
     } catch (err) { 
-      toast.error("Le Grand Livre n'a pas pu valider cette action."); 
+      toast.error("Erreur de liaison avec les archives."); 
     } finally { 
       setSubmitting(null); 
     }
@@ -110,16 +121,15 @@ export default function UsersPage() {
     
     if (email === "adm.lablitteraire7@gmail.com") {
       badges.push({ icon: <Settings size={10} />, label: "Admin", color: "bg-rose-600 text-white shadow-lg" });
-    }
-    else if (email === "jb7management@gmail.com") {
+    } else if (email === "jb7management@gmail.com") {
       badges.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400 border border-amber-500/20" });
     }
     
-    if ((author.followers?.length || 0) > 10) {
+    if ((author.followers?.length || 0) >= 5) {
       badges.push({ icon: <Star size={10} />, label: "Plume d'Or", color: "bg-amber-100 text-amber-700" });
     }
 
-    if (Number(author.certified) > 0) {
+    if (author.certified > 0) {
       badges.push({ icon: <ShieldCheck size={10} />, label: "Certifié", color: "bg-teal-100 text-teal-700 border border-teal-200" });
     }
     
@@ -167,8 +177,6 @@ export default function UsersPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {filteredAuthors.slice(0, visibleCount).map((a) => {
           const isFollowing = a.followers?.includes(currentUser?.email);
-          // Utilisation de l'email directement ou encodage URL-safe
-          const authorId = a.email; 
 
           return (
             <div key={a.email} className="group bg-white rounded-[3rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:border-teal-500/20 transition-all relative overflow-hidden">
@@ -194,7 +202,7 @@ export default function UsersPage() {
                     <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-none">
                       {a.penName || a.name || "Plume Anonyme"}
                     </h2>
-                    {Number(a.certified) > 0 && <ShieldCheck size={20} className="text-teal-500" />}
+                    {a.certified > 0 && <ShieldCheck size={20} className="text-teal-500" />}
                   </div>
                   
                   <div className="flex flex-wrap justify-center sm:justify-start gap-4">
@@ -231,6 +239,12 @@ export default function UsersPage() {
           );
         })}
       </div>
+
+      {filteredAuthors.length === 0 && !loading && (
+        <div className="text-center py-20">
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Aucun auteur trouvé dans le Cercle.</p>
+        </div>
+      )}
 
       {visibleCount < filteredAuthors.length && (
         <div className="mt-24 flex justify-center">
