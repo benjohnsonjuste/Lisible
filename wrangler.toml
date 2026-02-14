@@ -2,8 +2,9 @@
 name = "lisible"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".vercel/output"
+
+# AJOUTE /static ICI :
+pages_build_output_dir = ".vercel/output/static"
 
 [vars]
-# Ne mets pas tes secrets ici, mais vérifie qu'ils sont bien dans le Dashboard
 NEXT_PUBLIC_BASE_URL = "https://lisible.biz"
