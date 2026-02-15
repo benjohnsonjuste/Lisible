@@ -25,24 +25,32 @@ export default function Home() {
         const response = await fetch("/api/github-db");
         const data = await response.json();
         
-        const userCount = data.users?.length || 0;
-        const pubCount = data.publications?.length || 0;
+        const users = data.users || [];
+        const publications = data.publications || [];
 
-        // Calculs dynamiques basés sur les données réelles
+        // Calculs basés sur les données réelles de l'API
+        const totalLikes = publications.reduce((acc, pub) => acc + (Number(pub.likes) || 0), 0);
+        const totalCertified = publications.reduce((acc, pub) => acc + (Number(pub.certified) || 0), 0);
+        const totalContentLength = publications.reduce((acc, pub) => acc + (pub.content?.length || 0), 0);
+        
+        // Estimation du temps de lecture global (mots/min moyen)
+        const estimatedHours = Math.floor((totalContentLength / 1000) / 60);
+
         setStats({
-          users: userCount,
-          publications: pubCount,
-          liGenerated: (pubCount * 1250) + (userCount * 42),
-          certifiedReads: pubCount * 124,
-          likes: pubCount * 88,
-          readingTime: Math.floor((pubCount * 150) / 60)
+          users: users.length,
+          publications: publications.length,
+          // Formule hybride pour les Li (Tokens) basés sur l'activité réelle
+          liGenerated: (publications.length * 1000) + (totalLikes * 10) + (totalCertified * 50),
+          certifiedReads: totalCertified,
+          likes: totalLikes,
+          readingTime: estimatedHours > 0 ? estimatedHours : 1
         });
       } catch (error) {
         console.error("Erreur stats:", error);
       }
     }
     fetchStats();
-    // Rafraîchissement toutes le 30 secondes pour le côté "temps réel"
+    // Rafraîchissement toutes les 30 secondes pour le côté "temps réel"
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -56,7 +64,7 @@ export default function Home() {
         <section className="relative group overflow-hidden rounded-[3rem] shadow-2xl mx-2 md:mx-4">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent z-10" />
           <img
-            src="/1769671006023.png"
+            src="/file_00000000e4d871fdb8efbc744979c8bc.png"
             alt="Lisible par La Belle Littéraire"
             className="w-full h-[500px] md:h-[700px] object-cover transition-transform duration-[3000ms] group-hover:scale-105"
           />
@@ -179,4 +187,5 @@ function StatCard({ icon, value, label, sub, color }) {
       </div>
     </div>
   );
-}
+    }
+              
