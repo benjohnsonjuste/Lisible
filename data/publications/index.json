@@ -13,19 +13,6 @@
     "certified": 95
   },
   {
-    "id": "txt_1770823644100",
-    "title": "Et si la femme était un objet",
-    "author": "Ayissi Noah Lucien",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:27:24.100Z",
-    "views": 167,
-    "likes": 140,
-    "certified": 77
-  },
-  {
     "id": "txt_1770823524319",
     "title": "L'inaltérable",
     "author": "Duclaire Dahana",
@@ -36,6 +23,19 @@
     "date": "2026-02-11T15:25:24.319Z",
     "views": 105,
     "likes": 138,
+    "certified": 78
+  },
+  {
+    "id": "txt_1770823644100",
+    "title": "Et si la femme était un objet",
+    "author": "Ayissi Noah Lucien",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:27:24.100Z",
+    "views": 167,
+    "likes": 140,
     "certified": 77
   },
   {
