@@ -26,6 +26,19 @@
     "certified": 77
   },
   {
+    "id": "txt_1770823524319",
+    "title": "L'inaltérable",
+    "author": "Duclaire Dahana",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:25:24.319Z",
+    "views": 99,
+    "likes": 131,
+    "certified": 66
+  },
+  {
     "id": "txt_1770863741099",
     "title": "Le silence est d'or, la parole est sacrée",
     "author": "Ntchanna Josiane Ève",
@@ -37,19 +50,6 @@
     "views": 100,
     "likes": 106,
     "certified": 66
-  },
-  {
-    "id": "txt_1770823524319",
-    "title": "L'inaltérable",
-    "author": "Duclaire Dahana",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:25:24.319Z",
-    "views": 99,
-    "likes": 131,
-    "certified": 65
   },
   {
     "id": "txt_1770822380909",
