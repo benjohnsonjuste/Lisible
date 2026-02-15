@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { 
   User, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info, KeyRound
+  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info, KeyRound, Feather
 } from "lucide-react";
 
 // Sous-composant pour les statistiques
@@ -72,30 +72,19 @@ export default function AccountPage() {
         if (libraryData && libraryData.content) {
           sortedWorks = libraryData.content
             .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
-            .sort((a, b) => {
-              const certA = Number(a.certified || a.totalCertified || 0);
-              const certB = Number(b.certified || b.totalCertified || 0);
-              if (certB !== certA) return certB - certA;
-
-              const likesA = Number(a.likes || a.totalLikes || 0);
-              const likesB = Number(b.likes || b.totalLikes || 0);
-              if (likesB !== likesA) return likesB - likesA;
-
-              return new Date(b.date) - new Date(a.date);
-            });
+            .sort((a, b) => (Number(b.certified || 0) + Number(b.likes || 0)) - (Number(a.certified || 0) + Number(a.likes || 0)));
         }
 
         const freshUser = {
           ...data.content,
           works: sortedWorks,
-          li: (data.content && data.content.li !== undefined && data.content.li !== null) 
-              ? data.content.li 
-              : 0
+          li: data.content?.li || 0,
+          followers: data.content?.followers || []
         };
         
         setUser(freshUser);
         setFormData({ 
-            penName: freshUser.penName || "",
+            penName: freshUser.penName || freshUser.name || "",
             birthday: freshUser.birthday || "",
             profilePic: freshUser.profilePic || freshUser.image || ""
         });
@@ -103,18 +92,16 @@ export default function AccountPage() {
       }
     } catch (e) { 
       const local = JSON.parse(localStorage.getItem("lisible_user"));
-      if (local) {
-        local.li = local.li !== undefined ? local.li : 0;
-        setUser(local);
-      }
+      if (local) setUser(local);
     } finally { 
       setLoading(false); 
     }
   };
 
   const saveProfile = async () => {
+    if (isSaving) return;
     setIsSaving(true);
-    const t = toast.loading("Mise à jour du manuscrit d'identité...");
+    const t = toast.loading("Mise à jour du profil...");
     try {
       const res = await fetch('/api/github-db', { 
         method: 'POST', 
@@ -130,12 +117,12 @@ export default function AccountPage() {
         const updated = { ...user, ...formData };
         localStorage.setItem("lisible_user", JSON.stringify(updated));
         setUser(updated);
-        toast.success("Profil scellé avec succès", { id: t });
+        toast.success("Profil mis à jour", { id: t });
       } else {
         throw new Error();
       }
     } catch (e) { 
-      toast.error("Échec de la synchronisation", { id: t }); 
+      toast.error("Erreur de sauvegarde", { id: t }); 
     } finally { 
       setIsSaving(false); 
     }
@@ -143,10 +130,10 @@ export default function AccountPage() {
 
   const updatePassword = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword) {
-      return toast.error("Veuillez remplir tous les champs de sécurité.");
+      return toast.error("Veuillez remplir les deux champs.");
     }
     setIsChangingPassword(true);
-    const t = toast.loading("Modification du sceau de sécurité...");
+    const t = toast.loading("Sécurisation du compte...");
     try {
       const res = await fetch('/api/github-db', {
         method: 'POST',
@@ -160,23 +147,33 @@ export default function AccountPage() {
       });
       
       const data = await res.json();
-      if (res.ok) {
-        toast.success("Sceau de sécurité mis à jour", { id: t });
+      if (res.ok && data.success) {
+        toast.success("Mot de passe modifié", { id: t });
         setPasswordData({ currentPassword: "", newPassword: "" });
       } else {
-        toast.error(data.message || "Ancien mot de passe incorrect", { id: t });
+        toast.error(data.message || "Erreur lors du changement", { id: t });
       }
     } catch (e) {
-      toast.error("Échec de la mise à jour de sécurité", { id: t });
+      toast.error("Échec de l'opération", { id: t });
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) return toast.error("Image trop lourde (max 2Mo)");
+      const reader = new FileReader();
+      reader.onloadend = () => setFormData({ ...formData, profilePic: reader.result });
+      reader.readAsDataURL(file);
     }
   };
 
   if (loading || !user) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9]">
       <Loader2 className="animate-spin text-teal-600 mb-4" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Authentification...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Accès au registre...</p>
     </div>
   );
 
@@ -184,10 +181,7 @@ export default function AccountPage() {
   const balance = user.li || 0;
   const followersCount = user?.followers?.length || 0;
   const rank = getRank(balance);
-  
-  const hasEnoughLi = balance >= 25000;
-  const hasEnoughFollowers = followersCount >= 250;
-  const isEligibleForWithdraw = hasEnoughLi && hasEnoughFollowers;
+  const isEligibleForWithdraw = balance >= 25000 && followersCount >= 250;
   const progressToWithdraw = Math.min((balance / 25000) * 100, 100);
 
   return (
@@ -204,14 +198,7 @@ export default function AccountPage() {
               </div>
               <label className="absolute -bottom-2 -right-2 p-3 bg-teal-600 text-white rounded-2xl cursor-pointer hover:bg-slate-900 shadow-lg transition-all active:scale-90">
                 <Camera size={18} />
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => setFormData({ ...formData, profilePic: reader.result });
-                    reader.readAsDataURL(file);
-                  }
-                }} />
+                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
               </label>
            </div>
            <div>
@@ -219,7 +206,7 @@ export default function AccountPage() {
               {rank.icon} {rank.name}
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none mb-2">
-              {formData.penName || user.name || "Ma Plume"}
+              {formData.penName || "Ma Plume"}
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user.email}</p>
           </div>
@@ -237,10 +224,9 @@ export default function AccountPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <section className="lg:col-span-2 space-y-12">
-          {/* Section Profil */}
           <div className="bg-white rounded-[3.5rem] p-10 md:p-14 shadow-2xl shadow-slate-200/60 border border-slate-100">
             <h2 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.5em] mb-12 flex items-center gap-3">
-              <Edit3 size={18} /> Paramètres de l'auteur
+              <Edit3 size={18} /> Identité d'Auteur
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 mb-12">
@@ -254,14 +240,13 @@ export default function AccountPage() {
               className="w-full py-6 bg-slate-950 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] hover:bg-teal-600 transition-all flex justify-center items-center gap-4 shadow-xl active:scale-95 disabled:opacity-50"
             >
               {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} 
-              Sceller les changements
+              Enregistrer le profil
             </button>
           </div>
 
-          {/* Section Sécurité (Changement de mot de passe) */}
           <div className="bg-white rounded-[3.5rem] p-10 md:p-14 shadow-2xl shadow-slate-200/60 border border-slate-100">
             <h2 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.5em] mb-12 flex items-center gap-3">
-              <KeyRound size={18} /> Sécurité du registre
+              <KeyRound size={18} /> Sceau de Sécurité
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 mb-12">
@@ -293,12 +278,12 @@ export default function AccountPage() {
         <aside className="space-y-8">
           <div className="bg-slate-950 rounded-[3.5rem] p-10 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden">
             <h2 className="text-xl font-black flex items-center gap-3 text-teal-400 italic mb-12">
-              <Wallet size={24} /> Coffre-fort
+              <Wallet size={24} /> Coffre Li
             </h2>
             
             <div className="space-y-8 relative z-10">
               <div className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10">
-                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Solde actuel</p>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Mon Solde</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-black italic tracking-tighter text-white">{balance.toLocaleString()}</span>
                   <span className="text-sm font-bold text-teal-400 uppercase">Li</span>
@@ -306,12 +291,12 @@ export default function AccountPage() {
 
                 <div className="mt-8 space-y-3">
                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-slate-500">Progression Monétaire</span>
+                    <span className="text-slate-500">Objectif 25k</span>
                     <span className="text-teal-400">{Math.floor(progressToWithdraw)}%</span>
                   </div>
-                  <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden border border-white/5">
+                  <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-teal-600 to-teal-400 transition-all duration-1000 ease-out" 
+                      className="h-full bg-gradient-to-r from-teal-600 to-teal-400 transition-all duration-1000" 
                       style={{ width: `${progressToWithdraw}%` }} 
                     />
                   </div>
@@ -319,36 +304,24 @@ export default function AccountPage() {
               </div>
 
               <div className="space-y-4">
-                <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-3">
-                  <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
-                    <span className={hasEnoughLi ? "text-teal-400" : "text-slate-500"}>● 25,000 Li</span>
-                    <span className={hasEnoughFollowers ? "text-teal-400" : "text-slate-500"}>● 250 Abonnés</span>
-                  </div>
-                  {!isEligibleForWithdraw && (
-                    <div className="flex items-start gap-2 text-[8px] font-bold text-amber-500/80 uppercase leading-tight">
-                      <Info size={12} className="shrink-0" />
-                      Critères de monétisation non atteints pour débloquer les transferts.
-                    </div>
-                  )}
-                </div>
-
                 <button 
                   disabled={!isEligibleForWithdraw}
                   onClick={() => router.push("/withdraw")}
                   className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${
                     isEligibleForWithdraw 
-                    ? 'bg-teal-500 text-slate-950 hover:scale-[1.02] shadow-xl shadow-teal-500/20 active:scale-95' 
-                    : 'bg-white/5 text-slate-600 cursor-not-allowed border border-white/5'
+                    ? 'bg-teal-500 text-slate-950 hover:scale-[1.02] shadow-xl' 
+                    : 'bg-white/5 text-slate-600 cursor-not-allowed'
                   }`}
                 >
                   {!isEligibleForWithdraw && <Lock size={14} />}
-                  Demander un retrait (5 USD)
+                  Demander Retrait (5 USD)
                 </button>
+                {!isEligibleForWithdraw && (
+                    <p className="text-[8px] text-center font-bold text-slate-500 uppercase tracking-tighter">
+                      Requis: 25k Li & 250 Abonnés
+                    </p>
+                )}
               </div>
-            </div>
-
-            <div className="absolute right-[-20px] top-[-20px] opacity-[0.03] pointer-events-none">
-                <Sparkles size={200} />
             </div>
           </div>
 
@@ -358,7 +331,7 @@ export default function AccountPage() {
                 <ShieldCheck size={24} />
                 <h3 className="font-black uppercase text-xs tracking-widest italic">Accès Admin</h3>
               </div>
-              <p className="text-[10px] font-bold leading-relaxed opacity-80 uppercase tracking-tighter">
+              <p className="text-[10px] font-bold opacity-80 uppercase tracking-tighter">
                 Accès prioritaire aux registres de l'Atelier.
               </p>
             </div>
