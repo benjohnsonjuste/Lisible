@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import * as bcrypt from 'bcrypt-ts';
 
-// Remplacement de node-cache par un cache mémoire compatible Edge
+// Cache désactivé pour permettre la mise à jour des données sans déploiement
 const localCache = new Map();
-const CACHE_TTL = 60000; // 60 secondes
+const CACHE_TTL = 0; 
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge'; 
+// Utilisation du runtime nodejs pour une meilleure compatibilité avec l'API GitHub et bcrypt sur Vercel
+export const runtime = 'nodejs'; 
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -37,6 +38,7 @@ async function getFile(path) {
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'Lisible-App'
       },
+      // Force la lecture de données fraîches sur GitHub
       cache: 'no-store'
     });
     
@@ -47,14 +49,14 @@ async function getFile(path) {
     const data = await res.json();
     if (!data.content) return null;
     
-    // Décodage Base64 robuste pour l'Edge Runtime (gère l'UTF-8)
+    // Décodage Base64
     const b64 = data.content.replace(/\s/g, '');
     const binString = atob(b64);
     const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
     const decodedContent = new TextDecoder().decode(bytes);
     
     const result = { content: JSON.parse(decodedContent), sha: data.sha };
-    localCache.set(path, { data: result, timestamp: now });
+    if (CACHE_TTL > 0) localCache.set(path, { data: result, timestamp: now });
     return result;
   } catch (err) {
     console.error(`Fetch error [${path}]:`, err.message);
@@ -66,7 +68,6 @@ async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   
   const jsonString = JSON.stringify(content, null, 2);
-  // Encodage Base64 compatible Edge
   const bytes = new TextEncoder().encode(jsonString);
   const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
   const encodedContent = btoa(binString);
@@ -80,6 +81,7 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({
+        // Le préfixe [DATA] est conservé pour ton script d'exclusion de build Vercel
         message: `[DATA] ${message}`,
         content: encodedContent,
         sha: sha || undefined
@@ -112,12 +114,11 @@ const globalSort = (list) => {
   });
 };
 
-// --- ROUTE PRINCIPALE POST ---
+// --- ROUTES ---
 
 export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
-
     const body = await req.json();
     const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
     const targetPath = getSafePath(userEmail || data.email);
@@ -125,10 +126,8 @@ export async function POST(req) {
     if (action === 'register') {
       const file = await getFile(targetPath);
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
-      
       const salt = bcrypt.genSaltSync(10);
       const hashedPassword = bcrypt.hashSync(data.password.trim(), salt);
-
       const userData = {
         email: data.email.toLowerCase().trim(),
         name: data.name || "Nouvel Auteur",
@@ -146,13 +145,10 @@ export async function POST(req) {
     if (action === 'login') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      
       const storedPassword = file.content.password;
       const providedPassword = data.password.trim();
       let isMatch = false;
-
       const isHashed = typeof storedPassword === 'string' && (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$'));
-
       if (isHashed) {
         isMatch = bcrypt.compareSync(providedPassword, storedPassword);
       } else {
@@ -163,9 +159,7 @@ export async function POST(req) {
           await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
         }
       }
-
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
-      
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
     }
@@ -173,14 +167,10 @@ export async function POST(req) {
     if (action === 'change_password') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      
       const isMatch = bcrypt.compareSync(currentPassword.trim(), file.content.password);
       if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
-      
       const salt = bcrypt.genSaltSync(10);
-      const hashedNewPassword = bcrypt.hashSync(newPassword.trim(), salt);
-      file.content.password = hashedNewPassword;
-      
+      file.content.password = bcrypt.hashSync(newPassword.trim(), salt);
       await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
       return NextResponse.json({ success: true });
     }
@@ -198,14 +188,12 @@ export async function POST(req) {
       const follower = await getFile(getSafePath(userEmail));
       const target = await getFile(getSafePath(data.targetEmail));
       if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      
       if (action === 'follow') {
         if (!follower.content.following.includes(data.targetEmail)) {
           follower.content.following.push(data.targetEmail);
           target.content.followers.push(userEmail);
           target.content.notifications.unshift({
-            id: `follow_${Date.now()}`,
-            type: "follow",
+            id: `follow_${Date.now()}`, type: "follow",
             message: `${follower.content.name} s'est abonné à vous !`,
             date: new Date().toISOString(), read: false
           });
@@ -226,17 +214,13 @@ export async function POST(req) {
       const isConcours = data.isConcours === true || data.genre === "Battle Poétique";
       const finalImage = isConcours ? null : (data.image || data.imageBase64);
       const newPub = { ...data, id: pubId, isConcours, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
-      
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
-      
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
       indexContent.unshift({ 
         id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, 
-        category: data.category, genre: data.genre, isConcours, 
-        image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 
+        category: data.category, genre: data.genre, isConcours, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 
       });
-      
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
       return NextResponse.json({ success: true, id: pubId });
@@ -248,43 +232,29 @@ export async function POST(req) {
       const receiver = await getFile(getSafePath(data.recipientEmail));
       if (!sender || !receiver) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
-      
       sender.content.li -= amount;
       receiver.content.li += amount;
-      receiver.content.notifications.unshift({ 
-        id: `notif_${Date.now()}`, 
-        type: "gift", 
-        message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, 
-        date: new Date().toISOString(), read: false 
-      });
-      
+      receiver.content.notifications.unshift({ id: `notif_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
       await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
       await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
       return NextResponse.json({ success: true });
     }
-    
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   } catch (e) {
-    console.error("POST Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
-
-// --- MÉTHODE GET ---
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type');
   const id = searchParams.get('id');
-  
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
-
     if (type === 'text') {
         const text = await getFile(`data/texts/${id}.json`);
         return NextResponse.json(text);
     }
-    
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
         if (user) {
@@ -294,22 +264,16 @@ export async function GET(req) {
         }
         return NextResponse.json(user);
     }
-    
     if (type === 'library' || type === 'publications') {
       const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) {
-          index.content = globalSort(index.content);
-      }
+      if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
       return NextResponse.json(index);
     }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
-    console.error("GET Error:", e.message);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
-
-// --- MÉTHODE PATCH ---
 
 export async function PATCH(req) {
   try {
@@ -317,10 +281,8 @@ export async function PATCH(req) {
     const { id, action } = body;
     const path = `data/texts/${id}.json`;
     const indexPath = `data/publications/index.json`;
-    
     const textFile = await getFile(path);
     if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
-
     const authorPath = getSafePath(textFile.content.authorEmail);
     const authorFile = await getFile(authorPath);
     const indexFile = await getFile(indexPath);
@@ -339,34 +301,19 @@ export async function PATCH(req) {
         await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
       }
     }
-
     if (authorFile) {
       if (action === 'like') {
-        authorFile.content.notifications.unshift({
-          id: `like_${Date.now()}`, type: "like",
-          message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`,
-          date: new Date().toISOString(), read: false
-        });
+        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`, date: new Date().toISOString(), read: false });
       }
       if (action === 'certify') {
         authorFile.content.li = (authorFile.content.li || 0) + 1;
-        authorFile.content.notifications.unshift({
-          id: `cert_${Date.now()}`, type: "certification",
-          message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`,
-          date: new Date().toISOString(), read: false
-        });
+        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`, date: new Date().toISOString(), read: false });
       }
       await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
     }
-
     await updateFile(path, textFile.content, textFile.sha, `📈 Text Update: ${action}`);
-    
-    return NextResponse.json({ 
-      success: true, 
-      count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) 
-    });
+    return NextResponse.json({ success: true, count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) });
   } catch (e) {
-    console.error("PATCH Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
