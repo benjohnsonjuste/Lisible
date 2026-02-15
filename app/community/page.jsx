@@ -120,7 +120,7 @@ export default function CommunautePage() {
     const b = [];
     const mail = author.email?.toLowerCase();
 
-    // --- Rôles Officiels (Badges demandés) ---
+    // --- Rôles Officiels ---
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Admin", color: "bg-rose-600 text-white shadow-rose-200" });
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400 border border-amber-500/20" });
     if (mail === "robergeaurodley97@gmail.com") b.push({ icon: <Briefcase size={10} />, label: "DG", color: "bg-indigo-600 text-white" });
