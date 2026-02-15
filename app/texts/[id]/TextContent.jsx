@@ -6,14 +6,10 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Feather, Ghost, Sparkles, Megaphone, ShieldCheck,
-  Volume2, VolumeX
+  Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
-
-// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
-export const runtime = 'edge';
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -54,9 +50,6 @@ export default function TextContent() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
-
-  // ÉTAT AUDIO
-  const [isPlaying, setIsPlaying] = useState(false);
 
   const saveToLocal = useCallback((id, data) => {
     try {
@@ -120,9 +113,6 @@ export default function TextContent() {
 
   useEffect(() => {
     loadContent();
-    return () => {
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-    };
   }, [loadContent]);
 
   useEffect(() => {
@@ -156,28 +146,6 @@ export default function TextContent() {
     }
   }, [id, text, isOffline]);
 
-  // LOGIQUE AUDIO (API SYNTHESIS)
-  const toggleSpeech = () => {
-    if (!text?.content) return;
-    if (!window.speechSynthesis) return toast.error("Navigateur non compatible audio.");
-
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      return;
-    }
-
-    const plainText = text.content.replace(/<[^>]*>/g, '');
-    const speech = new SpeechSynthesisUtterance(plainText);
-    speech.lang = 'fr-FR';
-    speech.rate = 0.9;
-    speech.onend = () => setIsPlaying(false);
-    speech.onerror = () => setIsPlaying(false);
-
-    window.speechSynthesis.speak(speech);
-    setIsPlaying(true);
-  };
-
   const handleCertification = async () => {
     const certKey = `c_${id}`;
     if (localStorage.getItem(certKey)) return toast.info("Déjà scellé.");
@@ -197,7 +165,10 @@ export default function TextContent() {
   };
 
   const handleLike = async () => {
+    const likeKey = `l_${id}`;
+    if (localStorage.getItem(likeKey)) return toast.info("Vous avez déjà aimé ce texte.");
     if (isLiking || isOffline) return;
+    
     setIsLiking(true);
     try {
       const res = await fetch('/api/github-db', {
@@ -206,7 +177,10 @@ export default function TextContent() {
         body: JSON.stringify({ id, action: "like" })
       });
       const data = await res.json();
-      if (data.success) toast.success("Apprécié");
+      if (data.success) {
+        localStorage.setItem(likeKey, "1");
+        toast.success("Apprécié");
+      }
     } catch (e) { toast.error("Erreur"); }
     finally { setIsLiking(false); }
   };
@@ -215,11 +189,24 @@ export default function TextContent() {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
     const shareText = `Découvrez "${shareTitle}" sur Lisible.biz ✨`;
+    
     if (navigator.share) {
-      try { await navigator.share({ title: shareTitle, text: shareText, url: shareUrl }); } catch (err) {}
+      try { 
+        await navigator.share({ 
+          title: shareTitle, 
+          text: shareText, 
+          url: shareUrl 
+        }); 
+      } catch (err) {
+        // En cas d'annulation ou d'erreur, on ne fait rien
+      }
     } else {
-      navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-      toast.success("Lien copié !");
+      try {
+        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+        toast.success("Lien copié ! Partagez-le partout.");
+      } catch (err) {
+        toast.error("Impossible de copier le lien.");
+      }
     }
   };
 
@@ -257,17 +244,9 @@ export default function TextContent() {
             <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
               <ArrowLeft size={20} />
             </button>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={toggleSpeech} 
-                className={`p-4 rounded-2xl transition-all border shadow-sm ${isPlaying ? 'bg-teal-600 text-white border-teal-600 animate-pulse' : 'bg-white text-slate-900 border-slate-100'}`}
-              >
-                {isPlaying ? <VolumeX size={20} /> : <Volume2 size={20} />}
-              </button>
-              <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
-                <Maximize2 size={20} />
-              </button>
-            </div>
+            <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
+              <Maximize2 size={20} />
+            </button>
           </div>
         </nav>
 
