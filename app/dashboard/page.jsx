@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Share2, Download, Award
+  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -154,6 +154,27 @@ export default function AuthorDashboard() {
     }
   };
 
+  // Nouvelle fonction pour partager le profil personnel
+  const handleProfileShare = async () => {
+    const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
+    const shareData = {
+      title: `Profil de ${user.penName || user.name} | Lisible`,
+      text: `Découvrez mes œuvres et suivez ma plume sur Lisible !`,
+      url: profileUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(profileUrl);
+        toast.success("Lien du profil copié !");
+      }
+    } catch (err) {
+      console.log("Erreur de partage");
+    }
+  };
+
   const handleDelete = async (id, title) => {
     if (!confirm(`Voulez-vous vraiment retirer "${title}" des archives ?`)) return;
     const toastId = toast.loading("Retrait...");
@@ -195,17 +216,28 @@ export default function AuthorDashboard() {
             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Mon Studio.</h1>
           </div>
 
-          <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-            <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
-              <Award size={20} />
-            </div>
-            <div className="pr-4">
-              <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Badge</p>
-              <p className="text-[11px] font-bold text-slate-900">Compte Officiel</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={handleUniversalShare} className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors" title="Partager mon badge"><Share2 size={16} /></button>
-              <button onClick={() => generateBadge(true)} className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors" title="Télécharger"><Download size={16} /></button>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Section Partage Profil */}
+            <button 
+              onClick={handleProfileShare}
+              className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"
+            >
+              <LinkIcon size={14} /> Partager mon Profil
+            </button>
+
+            {/* Badge Section */}
+            <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Award size={20} />
+              </div>
+              <div className="pr-4 hidden sm:block">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Badge</p>
+                <p className="text-[11px] font-bold text-slate-900">Compte Officiel</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleUniversalShare} className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors" title="Partager mon badge"><Share2 size={16} /></button>
+                <button onClick={() => generateBadge(true)} className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors" title="Télécharger"><Download size={16} /></button>
+              </div>
             </div>
           </div>
         </header>
