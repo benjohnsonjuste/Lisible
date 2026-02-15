@@ -206,7 +206,7 @@ export default function BattlePoetique() {
           ) : (
             <div className="py-24 sm:py-40 px-4 text-center space-y-10 bg-white rounded-[3rem] sm:rounded-[5rem] border-2 border-dashed border-slate-100">
               <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mx-auto">
-                 <Zap size={30} sm:size={40} className="text-slate-200" />
+                 <Zap size={30} className="text-slate-200 sm:w-10 sm:h-10" />
               </div>
               <div className="space-y-3 px-4">
                 <h3 className="font-black uppercase text-slate-900 tracking-[0.2em] sm:tracking-[0.3em] text-md sm:text-lg">L'arène est vide</h3>
