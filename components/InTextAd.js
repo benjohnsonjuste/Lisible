@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useId } from "react";
-import { X, Sparkles } from "lucide-center";
+import { X, Sparkles } from "lucide-react";
 
 /**
  * Composant de publicité native intégrée au texte (In-Text).
