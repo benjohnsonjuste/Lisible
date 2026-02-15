@@ -38,7 +38,6 @@ async function getFile(path) {
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'Lisible-App'
       },
-      // Force la lecture de données fraîches sur GitHub
       cache: 'no-store'
     });
     
@@ -49,7 +48,6 @@ async function getFile(path) {
     const data = await res.json();
     if (!data.content) return null;
     
-    // Décodage Base64
     const b64 = data.content.replace(/\s/g, '');
     const binString = atob(b64);
     const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
@@ -81,7 +79,6 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({
-        // Le préfixe [DATA] est conservé pour ton script d'exclusion de build Vercel
         message: `[DATA] ${message}`,
         content: encodedContent,
         sha: sha || undefined
@@ -188,10 +185,14 @@ export async function POST(req) {
       const follower = await getFile(getSafePath(userEmail));
       const target = await getFile(getSafePath(data.targetEmail));
       if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      
+      const targetEmailClean = data.targetEmail.toLowerCase().trim();
+      const userEmailClean = userEmail.toLowerCase().trim();
+
       if (action === 'follow') {
-        if (!follower.content.following.includes(data.targetEmail)) {
-          follower.content.following.push(data.targetEmail);
-          target.content.followers.push(userEmail);
+        if (!follower.content.following.includes(targetEmailClean)) {
+          follower.content.following.push(targetEmailClean);
+          target.content.followers.push(userEmailClean);
           target.content.notifications.unshift({
             id: `follow_${Date.now()}`, type: "follow",
             message: `${follower.content.name} s'est abonné à vous !`,
@@ -199,8 +200,8 @@ export async function POST(req) {
           });
         }
       } else {
-        follower.content.following = follower.content.following.filter(e => e !== data.targetEmail);
-        target.content.followers = target.content.followers.filter(e => e !== userEmail);
+        follower.content.following = follower.content.following.filter(e => e !== targetEmailClean);
+        target.content.followers = target.content.followers.filter(e => e !== userEmailClean);
       }
       await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
       await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
