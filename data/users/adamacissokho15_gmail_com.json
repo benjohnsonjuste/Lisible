@@ -4,6 +4,13 @@
   "li": 52,
   "notifications": [
     {
+      "id": "like_1771155655332",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Mon départ\" !",
+      "date": "2026-02-15T11:40:55.332Z",
+      "read": false
+    },
+    {
       "id": "cert_1771028689374",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Mon départ\" (+1 Li).",
