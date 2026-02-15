@@ -3,10 +3,11 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import Head from "next/head";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck
+  Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck, Ghost
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
@@ -197,9 +198,7 @@ export default function TextContent() {
           text: shareText, 
           url: shareUrl 
         }); 
-      } catch (err) {
-        // En cas d'annulation ou d'erreur, on ne fait rien
-      }
+      } catch (err) {}
     } else {
       try {
         await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
@@ -223,6 +222,40 @@ export default function TextContent() {
     return scores.reduce((p, c) => (p.score > c.score) ? p : c);
   }, [text?.content]);
 
+  const renderedContent = useMemo(() => {
+    if (!text?.content) return null;
+    const paragraphs = text.content.split('\n');
+    
+    if (paragraphs.length <= 4) {
+      return (
+        <div 
+          className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}
+          dangerouslySetInnerHTML={{ __html: text.content }} 
+        />
+      );
+    }
+
+    const middle = Math.ceil(paragraphs.length / 2);
+    const firstHalf = paragraphs.slice(0, middle).join('\n');
+    const secondHalf = paragraphs.slice(middle).join('\n');
+
+    return (
+      <>
+        <div 
+          className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}
+          dangerouslySetInnerHTML={{ __html: firstHalf }} 
+        />
+        <div className="my-12 transition-opacity duration-1000">
+           <InTextAd />
+        </div>
+        <div 
+          className="whitespace-pre-wrap"
+          dangerouslySetInnerHTML={{ __html: secondHalf }} 
+        />
+      </>
+    );
+  }, [text?.content, isFocusMode]);
+
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
@@ -232,9 +265,22 @@ export default function TextContent() {
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
   const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
+  const shareImage = text.image || "file_00000000e4d871fdb8efbc744979c8bc.png";
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
+        {text && (
+          <Head>
+            <title>{text.title} | Lisible</title>
+            <meta property="og:title" content={text.title} />
+            <meta property="og:description" content={`Découvrez ce texte de ${text.authorName} sur Lisible.biz`} />
+            <meta property="og:image" content={shareImage} />
+            <meta property="og:type" content="article" />
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:image" content={shareImage} />
+          </Head>
+        )}
+
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
            <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
         </div>
@@ -302,10 +348,7 @@ export default function TextContent() {
            </header>
 
            <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
-              <div 
-                className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}
-                dangerouslySetInnerHTML={{ __html: text.content }} 
-              />
+              {renderedContent}
            </article>
 
            <div className={`h-px w-full my-32 transition-opacity duration-1000 ${isFocusMode ? 'bg-white/5 opacity-50' : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'}`} />
@@ -314,7 +357,6 @@ export default function TextContent() {
               {!isAnnouncementAccount && (
                 <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
               )}
-              <InTextAd />
               <SmartRecommendations currentId={id} allTexts={allTexts} />
               <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
            </section>
