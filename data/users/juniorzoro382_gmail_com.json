@@ -4,6 +4,13 @@
   "li": 56,
   "notifications": [
     {
+      "id": "like_1771172096705",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Une lettre pour le futur\" !",
+      "date": "2026-02-15T16:14:56.705Z",
+      "read": false
+    },
+    {
       "id": "cert_1771072798692",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Une lettre pour le futur\" (+1 Li).",
