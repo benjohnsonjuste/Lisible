@@ -3,54 +3,52 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
-  BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Clock, Globe, Cpu
+  BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Globe, PenTool, TrendingUp
 } from "lucide-react";
 
 // Obligatoire pour optimiser les performances sur Cloudflare Edge
 export const runtime = "edge";
 
 export default function Home() {
-  const [stats, setStats] = useState({ 
-    users: 0, 
-    publications: 0,
-    liGenerated: 0,
-    certifiedReads: 0,
+  const [stats, setStats] = useState({
+    views: 0,
     likes: 0,
-    readingTime: 0
+    texts: 0,
+    authors: 0,
+    engagement: 0,
+    certified: 0
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch("/api/github-db");
+        const response = await fetch("/api/github-db?type=library");
         const data = await response.json();
         
-        const users = data.users || [];
-        const publications = data.publications || [];
-
-        // Calculs basés sur les données réelles de l'API
-        const totalLikes = publications.reduce((acc, pub) => acc + (Number(pub.likes) || 0), 0);
-        const totalCertified = publications.reduce((acc, pub) => acc + (Number(pub.certified) || 0), 0);
-        const totalContentLength = publications.reduce((acc, pub) => acc + (pub.content?.length || 0), 0);
-        
-        // Estimation du temps de lecture global (mots/min moyen)
-        const estimatedHours = Math.floor((totalContentLength / 1000) / 60);
-
-        setStats({
-          users: users.length,
-          publications: publications.length,
-          // Formule hybride pour les Li (Tokens) basés sur l'activité réelle
-          liGenerated: (publications.length * 1000) + (totalLikes * 10) + (totalCertified * 50),
-          certifiedReads: totalCertified,
-          likes: totalLikes,
-          readingTime: estimatedHours > 0 ? estimatedHours : 1
-        });
+        if (data && Array.isArray(data.content)) {
+          const content = data.content;
+          const totalViews = content.reduce((acc, p) => acc + (Number(p.views) || 0), 0);
+          const totalLikes = content.reduce((acc, p) => acc + (Number(p.likes) || 0), 0);
+          const uniqueAuthors = new Set(content.map(p => p.authorEmail)).size;
+          const certifiedCount = content.filter(p => p.certified > 0).length;
+          
+          setStats({
+            views: totalViews,
+            likes: totalLikes,
+            texts: content.length,
+            authors: uniqueAuthors,
+            engagement: ((totalLikes / (totalViews || 1)) * 100).toFixed(1),
+            certified: certifiedCount
+          });
+        }
       } catch (error) {
         console.error("Erreur stats:", error);
+      } finally {
+        setLoading(false);
       }
     }
     fetchStats();
-    // Rafraîchissement toutes les 30 secondes pour le côté "temps réel"
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -135,27 +133,81 @@ export default function Home() {
           </div>
         </section>
 
-        {/* --- SECTION STATISTIQUES HIGH-TECH (JUSTE AVANT LE FOOTER) --- */}
-        <section className="px-4 md:px-8 space-y-10 py-20 border-t border-slate-100 dark:border-white/5">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="flex items-center gap-3 px-6 py-2 bg-slate-900 dark:bg-teal-500/10 rounded-full border border-teal-500/20">
-              <Activity className="text-teal-400 animate-pulse" size={16} />
-              <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-500">Live Quantum Dashboard</h2>
+        {/* --- SECTION GLOBAL STATS HIGH-TECH --- */}
+        <section className="py-20 px-6 max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-teal-500 font-black text-[10px] uppercase tracking-[0.3em]">
+                <Activity size={14} className="animate-pulse" /> Live Network Pulse
+              </div>
+              <h2 className="text-6xl md:text-7xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-[0.8]">Metrics.</h2>
             </div>
-            <p className="text-slate-400 text-sm font-medium">Flux de données de l'écosystème en temps réel</p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            <StatCard icon={<Zap size={18}/>} value={stats.liGenerated.toLocaleString()} label="Li Mintés" sub="Tokens Actifs" color="text-teal-500" />
-            <StatCard icon={<ShieldCheck size={18}/>} value={stats.certifiedReads.toLocaleString()} label="Certifiés" sub="Lectures Validées" color="text-blue-500" />
-            <StatCard icon={<Heart size={18}/>} value={stats.likes.toLocaleString()} label="Gratitude" sub="Feedback Positif" color="text-rose-500" />
-            <StatCard icon={<Globe size={18}/>} value={stats.users} label="Network" sub="Plumes Connectées" color="text-emerald-500" />
-            <StatCard icon={<Cpu size={18}/>} value={stats.publications} label="Archives" sub="Protocoles Uniques" color="text-indigo-500" />
-            <StatCard icon={<Clock size={18}/>} value={`${stats.readingTime}h`} label="Uptime" sub="Temps d'évasion" color="text-amber-500" />
+            <div className="hidden md:block text-right">
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Dernière mise à jour</p>
+              <p className="font-black text-slate-900 dark:text-white">INSTANT TÉLÉMÉTRIE</p>
+            </div>
           </div>
 
-          <div className="flex justify-center">
-             <div className="h-px w-32 bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="md:col-span-2 md:row-span-2 relative group p-10 rounded-[3rem] bg-slate-950 text-white overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 p-8 opacity-20">
+                <Globe size={200} className="animate-[spin_20s_linear_infinite]" />
+              </div>
+              <div className="relative z-10 h-full flex flex-col justify-between">
+                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full w-fit">
+                  <TrendingUp size={16} className="text-teal-400" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Audience Globale</span>
+                </div>
+                <div>
+                  <p className="text-6xl md:text-8xl font-black italic tracking-tighter leading-none mb-4 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
+                    {loading ? "..." : stats.views.toLocaleString()}
+                  </p>
+                  <p className="text-teal-400 font-black uppercase tracking-[0.4em] text-xs">Lectures cumulées sur Lisible</p>
+                </div>
+              </div>
+            </div>
+
+            <StatCard 
+              icon={PenTool} 
+              label="Manuscrits" 
+              value={stats.texts} 
+              color="from-blue-500 to-cyan-400" 
+              loading={loading}
+            />
+            
+            <StatCard 
+              icon={Heart} 
+              label="Appréciations" 
+              value={stats.likes} 
+              color="from-rose-500 to-orange-400" 
+              loading={loading}
+            />
+
+            <StatCard 
+              icon={Users} 
+              label="Plumes" 
+              value={stats.authors} 
+              color="from-indigo-500 to-purple-400" 
+              loading={loading}
+            />
+
+            <StatCard 
+              icon={ShieldCheck} 
+              label="Certifiés" 
+              value={stats.certified} 
+              color="from-teal-500 to-emerald-400" 
+              loading={loading}
+            />
+
+            <div className="md:col-span-2 p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-white/5 flex items-center justify-between shadow-lg">
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taux d'engagement</p>
+                <h4 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">{stats.engagement}%</h4>
+              </div>
+              <div className="w-24 h-24 rounded-full border-8 border-teal-500/10 border-t-teal-500 flex items-center justify-center relative">
+                 <Zap size={24} className="text-teal-500 fill-current" />
+              </div>
+            </div>
           </div>
         </section>
 
@@ -164,28 +216,23 @@ export default function Home() {
   );
 }
 
-// Composant Interne pour les cartes Stats High-Tech
-function StatCard({ icon, value, label, sub, color }) {
+function StatCard({ icon: Icon, label, value, color, loading }) {
   return (
-    <div className="relative group overflow-hidden bg-white dark:bg-slate-900/40 p-8 rounded-[2.5rem] border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-2xl hover:shadow-teal-500/10 hover:-translate-y-2 transition-all duration-500">
-      <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 group-hover:scale-150 transition-all duration-700 ${color}`}>
-        {icon}
+    <div className={`relative group p-6 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 shadow-xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl`}>
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${color} -z-10`} />
+      <div className="absolute -right-4 -bottom-4 text-slate-50 dark:text-slate-800 group-hover:text-white group-hover:opacity-20 transition-all duration-500">
+        <Icon size={120} strokeWidth={1} />
       </div>
-      <div className="relative z-10 space-y-4">
-        <div className={`w-10 h-10 rounded-xl bg-slate-50 dark:bg-white/5 flex items-center justify-center ${color}`}>
-          {icon}
+
+      <div className="relative z-10">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 shadow-lg bg-gradient-to-br ${color} text-white`}>
+          <Icon size={24} />
         </div>
-        <div>
-          <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter italic">
-            {value}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-            <span className="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase mt-1">{sub}</span>
-          </div>
-        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">{label}</p>
+        <h3 className="text-4xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none">
+          {loading ? "---" : value.toLocaleString()}
+        </h3>
       </div>
     </div>
   );
-    }
-              
+}
