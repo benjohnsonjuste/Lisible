@@ -4,6 +4,13 @@
   "li": 130,
   "notifications": [
     {
+      "id": "like_1771180206976",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'inaltérable\" !",
+      "date": "2026-02-15T18:30:06.976Z",
+      "read": false
+    },
+    {
       "id": "cert_1771180138159",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"L'inaltérable\" (+1 Li).",
