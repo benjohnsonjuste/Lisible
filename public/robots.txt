@@ -1,23 +1,15 @@
 # https://www.robotstxt.org/robotstxt.html
 
 User-agent: *
-Allow: /
+Allow: /battle
+Allow: /lisible-club
 Allow: /library
-Allow: /api/og          # Autorise l'accès aux images de partage
-Disallow: /api/         # Protège vos endpoints de base de données
-Disallow: /admin        # Zone administrative
-Disallow: /_next/       # Fichiers système de Next.js
-Disallow: /settings     # Paramètres utilisateur
+Allow: /texts/          # Autorise l'indexation de texts/[id]
+Allow: /api/og
+Disallow: /api/github-db
+Disallow: /admin
+Disallow: /_next/
+Disallow: /settings
+Disallow: /dashboard 
 
-# Optimisation pour le partage social et Google Images
-User-agent: Googlebot-Image
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-# Indiquez ici l'URL de votre Sitemap pour aider l'indexation
 Sitemap: https://lisible.biz/sitemap.xml
