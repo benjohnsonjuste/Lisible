@@ -21,7 +21,15 @@ const nextConfig = {
   },
 
   images: {
-    // Liste consolidée des domaines autorisés
+    // Liste consolidée des domaines autorisés via remotePatterns (plus sécurisé et flexible)
+    remotePatterns: [
+      { protocol: 'https', hostname: 'api.dicebear.com' },
+      { protocol: 'https', hostname: 'raw.githubusercontent.com' },
+      { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: '**.googleusercontent.com' } // Pour les images de profil Google si besoin
+    ],
+    // Rétrocompatibilité
     domains: [
       'api.dicebear.com', 
       'raw.githubusercontent.com', 
