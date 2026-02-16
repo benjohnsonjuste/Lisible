@@ -12,19 +12,22 @@ export async function generateMetadata({ params }) {
   const baseUrl = "https://lisible.biz";
 
   try {
-    // Appel à l'API unifiée qui renvoie { content: {...}, sha: "..." }
+    // Appel à l'API unifiée
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
     const data = await res.json();
     
-    // Extraction des données du texte depuis l'enveloppe 'content'
-    const text = data?.content;
+    // Déballage sécurisé identique à la partie Client
+    // Si data.content est un objet avec un titre, c'est l'enveloppe API, sinon c'est data lui-même
+    const text = (data?.content && typeof data.content === 'object' && data.content.title) 
+      ? data.content 
+      : data;
 
-    if (!text) return { title: "Manuscrit introuvable | Lisible" };
+    if (!text || !text.title) return { title: "Manuscrit introuvable | Lisible" };
 
-    const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
+    const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique" || text.category === "Battle Poétique";
     const ogImage = (isBattle || !text.image) ? `${baseUrl}/og-default.jpg` : text.image;
-    const shareTitle = `${text.title} — ${text.authorName}`;
-    const shareDesc = `Découvrez ce texte magnifique de ${text.authorName} sur Lisible. ✨`;
+    const shareTitle = `${text.title} — ${text.authorName || text.author}`;
+    const shareDesc = `Découvrez ce texte magnifique sur Lisible. ✨`;
 
     return {
       title: shareTitle,
