@@ -166,7 +166,7 @@ export default function BattlePoetique() {
                              <AlignLeft size={10} className="inline mr-1" /> {item.category || item.genre || "Battle"}
                            </span>
                            <span className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest truncate max-w-[150px]">
-                             {item.authorName || 'Anonyme'}
+                             {item.author || item.authorName || 'Anonyme'}
                            </span>
                         </div>
 
