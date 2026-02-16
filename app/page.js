@@ -56,10 +56,10 @@ export default function Home() {
   return (
     <div className="bg-white dark:bg-slate-950 font-sans selection:bg-teal-100 dark:selection:bg-teal-900/30 transition-colors duration-500">
       
-      <main className="pt-24 space-y-24 pb-12 animate-in fade-in duration-1000">
+      <main className="space-y-24 pb-12 animate-in fade-in duration-1000">
         
-        {/* Section Hero */}
-        <section className="relative group overflow-hidden rounded-[3rem] shadow-2xl mx-2 md:mx-4">
+        {/* Section Hero - Ajustée à mt-0 pour coller au navbar */}
+        <section className="relative group overflow-hidden rounded-b-[3rem] shadow-2xl mx-2 md:mx-4 mt-0">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent z-10" />
           <img
             src="/file_00000000e4d871fdb8efbc744979c8bc.png"
