@@ -3,11 +3,16 @@ import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import InstallPrompt from "@/components/InstallPrompt";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import dynamic from "next/dynamic";
+
+// Chargement dynamique du composant InstallPrompt pour éviter l'erreur "window is not defined" (SSR)
+const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { 
+  ssr: false 
+});
 
 const inter = Inter({ 
   subsets: ['latin'], 
