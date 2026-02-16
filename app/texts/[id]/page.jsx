@@ -1,43 +1,43 @@
 import React from "react";
-import TextContent from "./TextContent";
+import TextContent from "./TextContent"; 
 
-export const runtime = 'nodejs';
+// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
+export const runtime = 'edge';
 
+/**
+ * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
+ */
 export async function generateMetadata({ params }) {
   const { id } = params;
   const baseUrl = "https://lisible.biz";
 
   try {
-    const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { 
-      cache: 'no-store' 
-    });
-    
-    if (!res.ok) throw new Error();
+    const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
     const data = await res.json();
-
-    // Déballage sécurisé
-    const text = (data?.content && typeof data.content === 'object' && data.content.title) 
-      ? data.content 
-      : (data?.title ? data : null);
+    const text = data?.content;
 
     if (!text) return { title: "Manuscrit introuvable | Lisible" };
 
     const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
     const ogImage = (isBattle || !text.image) ? `${baseUrl}/og-default.jpg` : text.image;
-    const shareTitle = `${text.title} — ${text.authorName || text.author || "Auteur"}`;
+    const shareTitle = `${text.title} — ${text.authorName}`;
+    const shareDesc = `Je vous invite à apprécier ce magnifique texte sur Lisible. ✨`;
 
     return {
       title: shareTitle,
-      description: "Découvrez ce texte magnifique sur Lisible. ✨",
+      description: shareDesc,
       openGraph: {
         title: shareTitle,
+        description: shareDesc,
         url: `${baseUrl}/texts/${id}`,
-        images: [{ url: ogImage }],
+        siteName: 'Lisible',
+        images: [{ url: ogImage, width: 1200, height: 630 }],
         type: 'article',
       },
       twitter: {
         card: 'summary_large_image',
         title: shareTitle,
+        description: shareDesc,
         images: [ogImage],
       },
     };
@@ -46,6 +46,9 @@ export async function generateMetadata({ params }) {
   }
 }
 
+/**
+ * COMPOSANT PRINCIPAL (SERVEUR)
+ */
 export default function Page({ params }) {
   return <TextContent params={params} />;
 }
