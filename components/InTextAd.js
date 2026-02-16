@@ -13,6 +13,11 @@ export function InTextAd() {
 
   useEffect(() => {
     if (isVisible) {
+      // Nettoyage préalable du conteneur
+      const container = document.getElementById("container-874a186feecd3e968c16a58bb085fd56");
+      if (container) container.innerHTML = "";
+
+      // Configuration globale requise par le script Adsterra
       window.atOptions = {
         'key' : '874a186feecd3e968c16a58bb085fd56',
         'format' : 'iframe',
@@ -22,11 +27,11 @@ export function InTextAd() {
       };
 
       const script = document.createElement("script");
+      script.type = "text/javascript";
       script.src = "//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
       script.async = true;
       script.setAttribute("data-cfasync", "false");
       
-      const container = document.getElementById("container-874a186feecd3e968c16a58bb085fd56");
       if (container) {
         container.appendChild(script);
       }
