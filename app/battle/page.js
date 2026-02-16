@@ -175,7 +175,7 @@ export default function BattlePoetique() {
                         </h2>
                         
                         <p className="text-slate-500 line-clamp-4 font-serif italic mb-8 sm:mb-10 text-sm sm:text-lg leading-relaxed flex-grow">
-                          {item.content?.replace(/<[^>]*>/g, '').substring(0, 300)}...
+                          {item.content ? item.content.replace(/<[^>]*>/g, '').substring(0, 300) : 'Lire la suite...'}
                         </p>
                         
                         <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between pt-6 sm:pt-8 border-t border-slate-50">
