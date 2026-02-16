@@ -149,18 +149,19 @@ export default function AuthorCataloguePage({ params }) {
           <ArrowLeft size={20} />
         </button>
 
+        {/* Photo de profil synchronisée */}
         <div className="w-40 h-40 rounded-[2.5rem] bg-slate-100 border-4 border-white shadow-2xl overflow-hidden flex-shrink-0">
           <img 
-            src={author?.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author?.email}`} 
+            src={author?.image || author?.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author?.email}`} 
             className="w-full h-full object-cover" 
-            alt="Profile" 
+            alt={`Profil de ${author?.name}`} 
           />
         </div>
 
         <div className="text-center md:text-left grow space-y-4">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter italic">
-              {author?.penName || author?.name || "Plume Anonyme"}
+              {author?.penName || author?.name || author?.authorName || "Plume Anonyme"}
             </h1>
             {author?.certified > 0 && <ShieldCheck className="text-teal-500 mx-auto md:mx-0" size={28} />}
           </div>
@@ -180,24 +181,26 @@ export default function AuthorCataloguePage({ params }) {
         </div>
 
         <div className="flex flex-col gap-3 w-full md:w-auto min-w-[200px]">
+            {/* Bouton Suivre réadapté */}
             <button 
               disabled={submitting} 
               onClick={handleFollow} 
               className={`w-full px-8 py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-widest transition-all ${
                 isFollowing 
                 ? "bg-slate-100 text-slate-400" 
-                : "bg-slate-950 text-white hover:bg-teal-600"
+                : "bg-slate-950 text-white hover:bg-teal-600 shadow-lg shadow-slate-900/10"
               }`}
             >
               {submitting ? <Loader2 size={16} className="animate-spin" /> : (isFollowing ? <UserMinus size={16} /> : <UserPlus size={16} />)} 
               {isFollowing ? "Désabonner" : "Suivre"}
             </button>
             
+            {/* Bouton Soutenir / Profil rendu bien visible */}
             <Link 
               href={`/donate?to=${btoa(author?.email || "")}`} 
-              className="w-full bg-white border-2 border-slate-50 text-slate-900 px-8 py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-slate-50 transition-all font-black text-[10px] uppercase tracking-widest"
+              className="w-full bg-rose-50 border-2 border-rose-100 text-rose-600 px-8 py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-100 transition-all font-black text-[10px] uppercase tracking-widest shadow-sm"
             >
-              <HeartHandshake size={18} className="text-rose-500" /> Soutenir
+              <HeartHandshake size={18} /> Soutenir l'Auteur
             </Link>
         </div>
       </header>
