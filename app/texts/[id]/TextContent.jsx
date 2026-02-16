@@ -90,6 +90,7 @@ export default function TextContent({ params: propsParams }) {
 
       const data = await res.json();
       // On extrait l'objet contenu dans la clé 'content' renvoyée par l'API
+      // Changement ici : data.content contient les infos du texte
       const finalData = data.content;
       if (!finalData || !finalData.content) throw new Error("Contenu vide");
 
@@ -101,6 +102,7 @@ export default function TextContent({ params: propsParams }) {
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
+        // L'API renvoie également une enveloppe { content: [...] } pour la library
         setAllTexts(indexData.content || []);
       }
     } catch (e) {
