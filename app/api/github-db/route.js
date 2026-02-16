@@ -79,7 +79,8 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({
-        message: `[DATA] ${message}`,
+        // Ajout de [skip ci] pour empêcher les déploiements Vercel automatiques à chaque changement de data
+        message: `[DATA] ${message} [skip ci]`,
         content: encodedContent,
         sha: sha || undefined
       }),
