@@ -224,35 +224,36 @@ export default function TextContent() {
 
   const renderedContent = useMemo(() => {
     if (!text?.content) return null;
-    const paragraphs = text.content.split('\n');
+    const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
-    if (paragraphs.length <= 4) {
+    // Si le texte est court, on affiche tout sans pub au milieu
+    if (paragraphs.length <= 3) {
       return (
-        <div 
-          className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}
-          dangerouslySetInnerHTML={{ __html: text.content }} 
-        />
+        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
+          {paragraphs.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
+        </div>
       );
     }
 
-    const middle = Math.ceil(paragraphs.length / 2);
-    const firstHalf = paragraphs.slice(0, middle).join('\n');
-    const secondHalf = paragraphs.slice(middle).join('\n');
+    // Insertion après environ 1/3 du texte pour maximiser la visibilité
+    const adIndex = Math.max(1, Math.floor(paragraphs.length / 3));
+    const firstPart = paragraphs.slice(0, adIndex);
+    const secondPart = paragraphs.slice(adIndex);
 
     return (
-      <>
-        <div 
-          className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}
-          dangerouslySetInnerHTML={{ __html: firstHalf }} 
-        />
-        <div className="my-12 transition-opacity duration-1000">
+      <div className="space-y-6">
+        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
+           {firstPart.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
+        </div>
+        
+        <div className="my-12 py-4">
            <InTextAd />
         </div>
-        <div 
-          className="whitespace-pre-wrap"
-          dangerouslySetInnerHTML={{ __html: secondHalf }} 
-        />
-      </>
+
+        <div className="whitespace-pre-wrap space-y-6">
+           {secondPart.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
+        </div>
+      </div>
     );
   }, [text?.content, isFocusMode]);
 
