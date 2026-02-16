@@ -46,6 +46,7 @@ export default function CommunautePage() {
             acc[email] = {
               name: pub.author || "Plume Anonyme",
               email: email,
+              image: pub.image || pub.authorImage || null, // Récupération de l'image de profil
               followers: pub.followers || [], 
               certified: 0,
               likes: 0,
@@ -57,6 +58,8 @@ export default function CommunautePage() {
           acc[email].certified += Number(pub.certified || 0);
           acc[email].likes += Number(pub.likes || 0);
           acc[email].views += Number(pub.views || 0);
+          // Prioriser l'image la plus récente si disponible
+          if (pub.image) acc[email].image = pub.image;
           return acc;
         }, {});
 
@@ -194,11 +197,12 @@ export default function CommunautePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
-                {/* Avatar */}
-                <div className="w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-50 flex-shrink-0">
+                {/* Avatar Synchronisé */}
+                <div className="w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100 flex-shrink-0">
                   <img 
-                    src={`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
-                    alt="Avatar" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    src={a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
+                    alt={`Profil de ${a.name}`} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                 </div>
 
@@ -242,7 +246,7 @@ export default function CommunautePage() {
                     </button>
                     <Link 
                       href={`/author/${encodeURIComponent(a.email)}`}
-                      className="px-8 py-3 bg-white border-2 border-slate-950 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-950 hover:text-white transition-all flex items-center gap-2"
+                      className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 shadow-lg shadow-teal-600/20 transition-all flex items-center gap-2"
                     >
                       Profil <ArrowRight size={14} />
                     </Link>
