@@ -55,6 +55,7 @@ export default function TextContent({ params: propsParams }) {
   const [isOffline, setIsOffline] = useState(false);
 
   const saveToLocal = useCallback((id, data) => {
+    if (typeof window === "undefined") return;
     try {
       const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
       cache[id] = { ...data, savedAt: Date.now() };
@@ -64,14 +65,15 @@ export default function TextContent({ params: propsParams }) {
 
   const getFromLocal = useCallback((id) => {
     if (typeof window === "undefined") return null;
-    const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
-    return cache[id] || null;
+    try {
+        const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
+        return cache[id] || null;
+    } catch(e) { return null; }
   }, []);
 
   const loadContent = useCallback(async (forceRefresh = false) => {
     if (!id) return;
     
-    // Stratégie "Cache First" pour éviter les erreurs client-side et l'absence de réseau
     const localVersion = getFromLocal(id);
     if (localVersion && !forceRefresh) {
         setText(localVersion);
@@ -81,38 +83,28 @@ export default function TextContent({ params: propsParams }) {
 
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
-      
-      // Gestion de la limite de taux (Rate Limit) ou absence de réseau
       if (!res.ok) {
-        if (localVersion) {
-          setIsOffline(true);
-          return;
-        }
-        throw new Error("Impossible de récupérer le manuscrit.");
+        if (localVersion) { setIsOffline(true); return; }
+        throw new Error("Inaccessible");
       }
 
       const data = await res.json();
-      if (!data || !data.content) throw new Error("Contenu vide");
+      // On extrait l'objet contenu dans la clé 'content' renvoyée par l'API
+      const finalData = data.content;
+      if (!finalData || !finalData.content) throw new Error("Contenu vide");
 
-      setText(data.content);
-      setLiveViews(data.content.views || 0);
-      saveToLocal(id, data.content);
+      setText(finalData);
+      setLiveViews(finalData.views || 0);
+      saveToLocal(id, finalData);
       setIsOffline(false);
 
-      // Chargement de l'index de la bibliothèque pour les recommandations
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
-        const sortedLibrary = (indexData.content || []).sort((a, b) => {
-            const certA = Number(a.certified || 0);
-            const certB = Number(b.certified || 0);
-            if (certB !== certA) return certB - certA;
-            return new Date(b.date) - new Date(a.date);
-        });
-        setAllTexts(sortedLibrary);
+        setAllTexts(indexData.content || []);
       }
     } catch (e) {
-      if (!localVersion) toast.error("Le manuscrit est inaccessible sans connexion.");
+      if (!localVersion) toast.error("Erreur de chargement.");
       else setIsOffline(true);
     } finally {
       setLoading(false);
@@ -137,8 +129,7 @@ export default function TextContent({ params: propsParams }) {
   useEffect(() => {
     if (id && text && !viewLogged.current && !isOffline) {
       const viewedKey = `v_${id}`;
-      const alreadyViewed = localStorage.getItem(viewedKey);
-      if (!alreadyViewed) {
+      if (!localStorage.getItem(viewedKey)) {
         viewLogged.current = true;
         fetch('/api/github-db', {
           method: 'PATCH',
@@ -155,7 +146,7 @@ export default function TextContent({ params: propsParams }) {
   }, [id, text, isOffline]);
 
   const handleCertification = async () => {
-    if (isOffline) return toast.error("Connexion requise pour sceller ce texte.");
+    if (isOffline) return toast.error("Connexion requise.");
     const certKey = `c_${id}`;
     if (localStorage.getItem(certKey)) return toast.info("Déjà scellé.");
     try {
@@ -164,8 +155,7 @@ export default function TextContent({ params: propsParams }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action: "certify", authorEmail: text.authorEmail, reward: 1 })
       });
-      const data = await res.json();
-      if (data.success) {
+      if ((await res.json()).success) {
         localStorage.setItem(certKey, "1");
         toast.success("Sceau apposé !");
         loadContent(true);
@@ -174,11 +164,7 @@ export default function TextContent({ params: propsParams }) {
   };
 
   const handleLike = async () => {
-    if (isOffline) return toast.error("Mode hors-ligne : Action impossible.");
-    const likeKey = `l_${id}`;
-    if (localStorage.getItem(likeKey)) return toast.info("Déjà aimé.");
-    if (isLiking) return;
-    
+    if (isOffline || isLiking || localStorage.getItem(`l_${id}`)) return;
     setIsLiking(true);
     try {
       const res = await fetch('/api/github-db', {
@@ -186,9 +172,8 @@ export default function TextContent({ params: propsParams }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, action: "like" })
       });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem(likeKey, "1");
+      if ((await res.json()).success) {
+        localStorage.setItem(`l_${id}`, "1");
         toast.success("Apprécié");
       }
     } catch (e) { toast.error("Erreur"); }
@@ -196,17 +181,13 @@ export default function TextContent({ params: propsParams }) {
   };
 
   const handleShare = async () => {
-    const shareTitle = text.title;
+    if (!text) return;
     const shareUrl = window.location.href;
-    const shareText = `Découvrez "${shareTitle}" sur Lisible ✨`;
-    
     if (navigator.share) {
-      try { await navigator.share({ title: shareTitle, text: shareText, url: shareUrl }); } catch (err) {}
+      try { await navigator.share({ title: text.title, url: shareUrl }); } catch (err) {}
     } else {
-      try {
-        await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-        toast.success("Lien copié !");
-      } catch (err) { toast.error("Impossible de copier le lien."); }
+      navigator.clipboard.writeText(shareUrl);
+      toast.success("Lien copié !");
     }
   };
 
@@ -221,7 +202,7 @@ export default function TextContent({ params: propsParams }) {
     ];
     const scores = moods.map(m => ({ ...m, score: m.words.reduce((acc, word) => acc + (content.split(word).length - 1), 0) }));
     return scores.reduce((p, c) => (p.score > c.score) ? p : c);
-  }, [text?.content]);
+  }, [text]);
 
   const renderedContent = useMemo(() => {
     if (!text?.content) return null;
@@ -233,28 +214,22 @@ export default function TextContent({ params: propsParams }) {
       </SocialMargins>
     ));
 
-    const fullContent = (
-      <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-        {paragraphs.length <= 3 ? (
-          contentJSX(paragraphs)
-        ) : (
-          <>
-            {contentJSX(paragraphs.slice(0, Math.max(1, Math.floor(paragraphs.length / 3))))}
-            <div className="my-16 py-4">
-               <InTextAd />
-            </div>
-            {contentJSX(paragraphs.slice(Math.max(1, Math.floor(paragraphs.length / 3))))}
-          </>
-        )}
-      </div>
-    );
-
     return (
       <LumiReader title={text.title} isFocusMode={isFocusMode}>
-        {fullContent}
+        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
+          {paragraphs.length <= 3 ? (
+            contentJSX(paragraphs)
+          ) : (
+            <>
+              {contentJSX(paragraphs.slice(0, Math.floor(paragraphs.length / 3)))}
+              <div className="my-16 py-4"><InTextAd /></div>
+              {contentJSX(paragraphs.slice(Math.floor(paragraphs.length / 3)))}
+            </>
+          )}
+        </div>
       </LumiReader>
     );
-  }, [text?.content, isFocusMode, text?.title, id]);
+  }, [text, isFocusMode, id]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
@@ -266,46 +241,34 @@ export default function TextContent({ params: propsParams }) {
   if (!text) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center p-8 text-center">
       <h2 className="text-2xl font-black mb-4">Oups...</h2>
-      <p className="text-slate-500 mb-8">Ce manuscrit semble introuvable dans nos archives actuelles.</p>
       <button onClick={() => router.push('/library')} className="px-8 py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Voir la bibliothèque</button>
     </div>
   );
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
   const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
-  const shareImage = text.image || "file_00000000e4d871fdb8efbc744979c8bc.png";
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
-        <Head>
-          <title>{text.title} | Lisible</title>
-        </Head>
-
         {isOffline && (
-          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[110] bg-amber-100 text-amber-800 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl border border-amber-200 animate-in slide-in-from-top-4">
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[110] bg-amber-100 text-amber-800 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl border border-amber-200">
             <WifiOff size={14} /> Lecture Hors-Ligne
           </div>
         )}
 
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
-           <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
+           <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
         </div>
 
-        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
+        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3' : 'bg-transparent py-8'}`}>
           <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-            <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
-              <ArrowLeft size={20} />
-            </button>
-            <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
-              <Maximize2 size={20} />
-            </button>
+            <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all"><ArrowLeft size={20} /></button>
+            <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm"><Maximize2 size={20} /></button>
           </div>
         </nav>
 
         {isFocusMode && (
-          <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
-            <Minimize2 size={24} />
-          </button>
+          <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white transition-all"><Minimize2 size={24} /></button>
         )}
 
         <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
@@ -313,10 +276,8 @@ export default function TextContent({ params: propsParams }) {
 
            <header className={`mb-20 space-y-10 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 grayscale' : 'opacity-100'}`}>
               <div className="flex flex-wrap items-center gap-4">
-                 <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">
-                   {text.category || text.genre || "Inédit"}
-                 </span>
-                 {mood?.score > 0 && (
+                 <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">{text.category || text.genre || "Inédit"}</span>
+                 {mood && (
                    <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-current/10 ${mood.color}`}>
                      {mood.icon} {mood.label}
                    </span>
@@ -333,18 +294,14 @@ export default function TextContent({ params: propsParams }) {
                 </div>
               )}
 
-              <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>
-                {text.title}
-              </h1>
+              <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.title}</h1>
 
               <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
-                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative">
-                    <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt={text.authorName} />
+                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden">
+                    <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt="" />
                  </div>
                  <div className="text-left">
-                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
-                      <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Certifié"}
-                    </p>
+                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2"><Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Certifié"}</p>
                     <div className="flex items-center gap-2">
                       <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName}</p>
                       <ShieldCheck size={18} className="text-teal-500" />
@@ -353,7 +310,7 @@ export default function TextContent({ params: propsParams }) {
               </div>
            </header>
 
-           <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased`}>
+           <article className="relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased">
               {renderedContent}
            </article>
 
@@ -369,20 +326,14 @@ export default function TextContent({ params: propsParams }) {
         </main>
 
         <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
-            <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}>
-              <Heart size={22} className={isLiking ? "fill-current" : ""} />
-            </button>
+            <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}><Heart size={22} className={isLiking ? "fill-current" : ""} /></button>
             <div className="w-px h-8 bg-white/10 mx-1" />
-            <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90">
-              <Share2 size={22} />
-            </button>
+            <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all"><Share2 size={22} /></button>
             <div className="w-px h-8 bg-white/10 mx-1" />
-            <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full">
-              <AlertTriangle size={22} />
-            </button>
+            <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full"><AlertTriangle size={22} /></button>
         </div>
 
-        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
+        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text?.title} />
     </div>
   );
 }
