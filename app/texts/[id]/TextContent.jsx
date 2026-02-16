@@ -7,12 +7,12 @@ import Head from "next/head";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck, Ghost
+  Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck, Ghost, WifiOff
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
 import LumiReader from "@/components/reader/LumiReader";
-import SocialMargins from "@/components/reader/SocialMargins"; // Importation du composant de marges sociales
+import SocialMargins from "@/components/reader/SocialMargins";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -37,10 +37,10 @@ function BadgeAnnonce() {
   );
 }
 
-export default function TextContent() {
+export default function TextContent({ params: propsParams }) {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id;
+  const nextParams = useParams();
+  const id = propsParams?.id || nextParams?.id;
 
   const [text, setText] = useState(null);
   const [allTexts, setAllTexts] = useState([]);
@@ -63,6 +63,7 @@ export default function TextContent() {
   }, []);
 
   const getFromLocal = useCallback((id) => {
+    if (typeof window === "undefined") return null;
     const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
     return cache[id] || null;
   }, []);
@@ -70,6 +71,7 @@ export default function TextContent() {
   const loadContent = useCallback(async (forceRefresh = false) => {
     if (!id) return;
     
+    // Stratégie "Cache First" pour éviter les erreurs client-side et l'absence de réseau
     const localVersion = getFromLocal(id);
     if (localVersion && !forceRefresh) {
         setText(localVersion);
@@ -79,44 +81,47 @@ export default function TextContent() {
 
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
-      if (res.status === 429) {
-        setIsOffline(true);
-        if (!localVersion) throw new Error("Accès limité.");
-        return;
+      
+      // Gestion de la limite de taux (Rate Limit) ou absence de réseau
+      if (!res.ok) {
+        if (localVersion) {
+          setIsOffline(true);
+          return;
+        }
+        throw new Error("Impossible de récupérer le manuscrit.");
       }
 
       const data = await res.json();
-      if (!data || !data.content) throw new Error("Manuscrit introuvable");
+      if (!data || !data.content) throw new Error("Contenu vide");
 
       setText(data.content);
       setLiveViews(data.content.views || 0);
       saveToLocal(id, data.content);
       setIsOffline(false);
 
+      // Chargement de l'index de la bibliothèque pour les recommandations
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
         const sortedLibrary = (indexData.content || []).sort((a, b) => {
-            const certA = Number(a.certified || a.totalCertified || 0);
-            const certB = Number(b.certified || b.totalCertified || 0);
+            const certA = Number(a.certified || 0);
+            const certB = Number(b.certified || 0);
             if (certB !== certA) return certB - certA;
-            const likesA = Number(a.likes || a.totalLikes || 0);
-            const likesB = Number(b.likes || b.totalLikes || 0);
-            if (likesB !== likesA) return likesB - likesA;
             return new Date(b.date) - new Date(a.date);
         });
         setAllTexts(sortedLibrary);
       }
     } catch (e) {
-      if (!localVersion) toast.error("Ce manuscrit a été retiré des archives.");
+      if (!localVersion) toast.error("Le manuscrit est inaccessible sans connexion.");
+      else setIsOffline(true);
     } finally {
       setLoading(false);
     }
   }, [id, saveToLocal, getFromLocal]);
 
   useEffect(() => {
-    loadContent();
-  }, [loadContent]);
+    if (id) loadContent();
+  }, [id, loadContent]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -144,12 +149,13 @@ export default function TextContent() {
             setLiveViews(data.count);
             localStorage.setItem(viewedKey, "1");
           }
-        });
+        }).catch(() => {});
       }
     }
   }, [id, text, isOffline]);
 
   const handleCertification = async () => {
+    if (isOffline) return toast.error("Connexion requise pour sceller ce texte.");
     const certKey = `c_${id}`;
     if (localStorage.getItem(certKey)) return toast.info("Déjà scellé.");
     try {
@@ -168,9 +174,10 @@ export default function TextContent() {
   };
 
   const handleLike = async () => {
+    if (isOffline) return toast.error("Mode hors-ligne : Action impossible.");
     const likeKey = `l_${id}`;
-    if (localStorage.getItem(likeKey)) return toast.info("Vous avez déjà aimé ce texte.");
-    if (isLiking || isOffline) return;
+    if (localStorage.getItem(likeKey)) return toast.info("Déjà aimé.");
+    if (isLiking) return;
     
     setIsLiking(true);
     try {
@@ -194,20 +201,12 @@ export default function TextContent() {
     const shareText = `Découvrez "${shareTitle}" sur Lisible ✨`;
     
     if (navigator.share) {
-      try { 
-        await navigator.share({ 
-          title: shareTitle, 
-          text: shareText, 
-          url: shareUrl 
-        }); 
-      } catch (err) {}
+      try { await navigator.share({ title: shareTitle, text: shareText, url: shareUrl }); } catch (err) {}
     } else {
       try {
         await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-        toast.success("Lien copié ! Partagez-le partout.");
-      } catch (err) {
-        toast.error("Impossible de copier le lien.");
-      }
+        toast.success("Lien copié !");
+      } catch (err) { toast.error("Impossible de copier le lien."); }
     }
   };
 
@@ -228,7 +227,6 @@ export default function TextContent() {
     if (!text?.content) return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
-    // On enveloppe chaque paragraphe dans SocialMargins pour l'interactivité
     const contentJSX = (paras) => paras.map((p, i) => (
       <SocialMargins key={i} paragraphId={`${id}_p${i}`}>
         <p className="text-2xl leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
@@ -265,22 +263,28 @@ export default function TextContent() {
     </div>
   );
 
+  if (!text) return (
+    <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center p-8 text-center">
+      <h2 className="text-2xl font-black mb-4">Oups...</h2>
+      <p className="text-slate-500 mb-8">Ce manuscrit semble introuvable dans nos archives actuelles.</p>
+      <button onClick={() => router.push('/library')} className="px-8 py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Voir la bibliothèque</button>
+    </div>
+  );
+
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
   const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
   const shareImage = text.image || "file_00000000e4d871fdb8efbc744979c8bc.png";
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
-        {text && (
-          <Head>
-            <title>{text.title} | Lisible</title>
-            <meta property="og:title" content={text.title} />
-            <meta property="og:description" content={`Découvrez ce texte de ${text.authorName} sur Lisible.biz`} />
-            <meta property="og:image" content={shareImage} />
-            <meta property="og:type" content="article" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:image" content={shareImage} />
-          </Head>
+        <Head>
+          <title>{text.title} | Lisible</title>
+        </Head>
+
+        {isOffline && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[110] bg-amber-100 text-amber-800 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl border border-amber-200 animate-in slide-in-from-top-4">
+            <WifiOff size={14} /> Lecture Hors-Ligne
+          </div>
         )}
 
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
@@ -360,7 +364,7 @@ export default function TextContent() {
                 <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
               )}
               <SmartRecommendations currentId={id} allTexts={allTexts} />
-              <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
+              {!isOffline && <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />}
            </section>
         </main>
 
