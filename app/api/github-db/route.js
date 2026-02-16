@@ -22,6 +22,13 @@ const ECONOMY = {
   LI_VALUE_USD: 0.0002 
 };
 
+// Configuration pour l'API Web Audio / Synthèse vocale
+const AUDIO_CONFIG = {
+  ENABLED: true,
+  DEFAULT_VOICE_TYPE: "crystal", // Utilisé par le front-end pour le synthétiseur
+  DAMPING: 0.15
+};
+
 // --- HELPERS CORE ---
 
 async function getFile(path) {
@@ -79,7 +86,6 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({
-        // Ajout de [skip ci] pour empêcher les déploiements Vercel automatiques à chaque changement de data
         message: `[DATA] ${message} [skip ci]`,
         content: encodedContent,
         sha: sha || undefined
@@ -215,13 +221,25 @@ export async function POST(req) {
       const indexPath = `data/publications/index.json`;
       const isConcours = data.isConcours === true || data.genre === "Battle Poétique";
       const finalImage = isConcours ? null : (data.image || data.imageBase64);
-      const newPub = { ...data, id: pubId, isConcours, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      const newPub = { 
+        ...data, 
+        id: pubId, 
+        isConcours, 
+        image: finalImage, 
+        date: new Date().toISOString(), 
+        views: 0, 
+        likes: 0, 
+        comments: [], 
+        certified: 0,
+        audio_frequency: 440 + Math.floor(Math.random() * 440) // Fréquence unique pour la galerie 3D
+      };
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
       indexContent.unshift({ 
         id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, 
-        category: data.category, genre: data.genre, isConcours, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 
+        category: data.category, genre: data.genre, isConcours, image: finalImage, date: newPub.date, 
+        views: 0, likes: 0, certified: 0, audio_frequency: newPub.audio_frequency
       });
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
@@ -262,6 +280,7 @@ export async function GET(req) {
         if (user) {
             user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
             user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
+            user.content.audio_signature = AUDIO_CONFIG.ENABLED; // Signal au client que l'audio est activé
             delete user.content.password;
         }
         return NextResponse.json(user);
