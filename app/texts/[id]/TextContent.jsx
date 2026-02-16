@@ -89,10 +89,20 @@ export default function TextContent({ params: propsParams }) {
       }
 
       const data = await res.json();
-      // On extrait l'objet contenu dans la clé 'content' renvoyée par l'API
-      // Changement ici : data.content contient les infos du texte
-      const finalData = data.content;
-      if (!finalData || !finalData.content) throw new Error("Contenu vide");
+      
+      /**
+       * LOGIQUE DE DÉBALLAGE SÉCURISÉE
+       * Si data.content est un objet, c'est l'enveloppe API.
+       * Si data.content est une chaîne, c'est le texte directement (ton cas dans l'exemple).
+       */
+      let finalData = null;
+      if (data.content && typeof data.content === 'object' && data.content.title) {
+        finalData = data.content;
+      } else {
+        finalData = data;
+      }
+
+      if (!finalData || !finalData.content) throw new Error("Format inconnu");
 
       setText(finalData);
       setLiveViews(finalData.views || 0);
@@ -102,11 +112,12 @@ export default function TextContent({ params: propsParams }) {
       const indexRes = await fetch(`/api/github-db?type=library`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
-        // L'API renvoie également une enveloppe { content: [...] } pour la library
-        setAllTexts(indexData.content || []);
+        const libraryList = indexData.content || indexData;
+        setAllTexts(Array.isArray(libraryList) ? libraryList : []);
       }
     } catch (e) {
-      if (!localVersion) toast.error("Erreur de chargement.");
+      console.error("Erreur lecture:", e);
+      if (!localVersion) toast.error("Erreur de déchiffrement.");
       else setIsOffline(true);
     } finally {
       setLoading(false);
@@ -194,7 +205,7 @@ export default function TextContent({ params: propsParams }) {
   };
 
   const mood = useMemo(() => {
-    if (!text?.content) return null;
+    if (!text?.content || typeof text.content !== 'string') return null;
     const content = text.content.toLowerCase();
     const moods = [
         { label: "Mélancolique", icon: <Ghost size={12}/>, color: "bg-indigo-50 text-indigo-600", words: ['ombre', 'triste', 'nuit', 'mort', 'seul'] },
@@ -207,7 +218,7 @@ export default function TextContent({ params: propsParams }) {
   }, [text]);
 
   const renderedContent = useMemo(() => {
-    if (!text?.content) return null;
+    if (!text?.content || typeof text.content !== 'string') return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
     const contentJSX = (paras) => paras.map((p, i) => (
@@ -248,7 +259,7 @@ export default function TextContent({ params: propsParams }) {
   );
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
-  const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
+  const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique" || text.category === "Battle Poétique";
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
@@ -305,7 +316,7 @@ export default function TextContent({ params: propsParams }) {
                  <div className="text-left">
                     <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2"><Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Certifié"}</p>
                     <div className="flex items-center gap-2">
-                      <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName}</p>
+                      <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName || text.author}</p>
                       <ShieldCheck size={18} className="text-teal-500" />
                     </div>
                  </div>
@@ -320,7 +331,7 @@ export default function TextContent({ params: propsParams }) {
 
            <section className={`space-y-48 transition-all duration-1000 ${isFocusMode ? 'opacity-10 pointer-events-none blur-sm' : 'opacity-100'}`}>
               {!isAnnouncementAccount && (
-                <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
+                <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName || text.author} textTitle={text.title} />
               )}
               <SmartRecommendations currentId={id} allTexts={allTexts} />
               {!isOffline && <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />}
