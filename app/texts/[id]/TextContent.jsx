@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-import Head from "next/head";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
@@ -18,24 +17,6 @@ const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: fal
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
-
-function BadgeConcours() {
-  return (
-    <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
-      <Trophy size={14} className="animate-bounce" />
-      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Duel de Plume</span>
-    </div>
-  );
-}
-
-function BadgeAnnonce() {
-  return (
-    <div className="inline-flex items-center gap-2 bg-rose-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
-      <Megaphone size={14} className="animate-pulse" />
-      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Annonce Officielle</span>
-    </div>
-  );
-}
 
 export default function TextContent({ params: propsParams }) {
   const router = useRouter();
@@ -54,73 +35,62 @@ export default function TextContent({ params: propsParams }) {
   const [readingProgress, setReadingProgress] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
 
-  const saveToLocal = useCallback((id, data) => {
-    if (typeof window === "undefined") return;
+  const getFromLocal = useCallback((textId) => {
+    if (typeof window === "undefined" || !textId) return null;
     try {
       const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
-      cache[id] = { ...data, savedAt: Date.now() };
+      return cache[textId] || null;
+    } catch(e) { return null; }
+  }, []);
+
+  const saveToLocal = useCallback((textId, data) => {
+    if (typeof window === "undefined" || !textId) return;
+    try {
+      const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
+      cache[textId] = { ...data, savedAt: Date.now() };
       localStorage.setItem('atelier_local_library', JSON.stringify(cache));
     } catch (e) { console.warn("Cache local saturé"); }
   }, []);
 
-  const getFromLocal = useCallback((id) => {
-    if (typeof window === "undefined") return null;
-    try {
-        const cache = JSON.parse(localStorage.getItem('atelier_local_library') || '{}');
-        return cache[id] || null;
-    } catch(e) { return null; }
-  }, []);
-
   const loadContent = useCallback(async (forceRefresh = false) => {
     if (!id) return;
-    
-    const localVersion = getFromLocal(id);
-    if (localVersion && !forceRefresh) {
-        setText(localVersion);
-        setLiveViews(localVersion.views || 0);
-        setLoading(false);
-    }
 
-    try {
-      const res = await fetch(`/api/github-db?type=text&id=${id}`);
-      if (!res.ok) {
-        if (localVersion) { setIsOffline(true); return; }
-        throw new Error("Inaccessible");
-      }
+    const localVersion = getFromLocal(id);    
+    if (localVersion && !forceRefresh) {    
+      setText(localVersion);    
+      setLiveViews(localVersion.views || 0);    
+      setLoading(false);    
+    }    
 
-      const data = await res.json();
+    try {    
+      const res = await fetch(`/api/github-db?type=text&id=${id}`);    
+      if (!res.ok) throw new Error("Inaccessible");    
+
+      const data = await res.json();    
       
-      /**
-       * LOGIQUE DE DÉBALLAGE SÉCURISÉE
-       * Si data.content est un objet, c'est l'enveloppe API.
-       * Si data.content est une chaîne, c'est le texte directement (ton cas dans l'exemple).
-       */
-      let finalData = null;
-      if (data.content && typeof data.content === 'object' && data.content.title) {
-        finalData = data.content;
-      } else {
-        finalData = data;
-      }
+      // LOGIQUE DE DÉBALLAGE SÉCURISÉE
+      let finalData = (data?.content && typeof data.content === 'object' && data.content.title) 
+        ? data.content 
+        : (data?.title ? data : null);
 
-      if (!finalData || !finalData.content) throw new Error("Format inconnu");
+      if (!finalData || !finalData.content) throw new Error("Format invalide");    
 
-      setText(finalData);
-      setLiveViews(finalData.views || 0);
-      saveToLocal(id, finalData);
-      setIsOffline(false);
+      setText(finalData);    
+      setLiveViews(finalData.views || 0);    
+      saveToLocal(id, finalData);    
+      setIsOffline(false);    
 
-      const indexRes = await fetch(`/api/github-db?type=library`);
-      if (indexRes.ok) {
-        const indexData = await indexRes.json();
-        const libraryList = indexData.content || indexData;
-        setAllTexts(Array.isArray(libraryList) ? libraryList : []);
-      }
-    } catch (e) {
-      console.error("Erreur lecture:", e);
-      if (!localVersion) toast.error("Erreur de déchiffrement.");
-      else setIsOffline(true);
-    } finally {
-      setLoading(false);
+      const indexRes = await fetch(`/api/github-db?type=library`);    
+      if (indexRes.ok) {    
+        const indexData = await indexRes.json();    
+        setAllTexts(Array.isArray(indexData.content) ? indexData.content : (Array.isArray(indexData) ? indexData : []));    
+      }    
+    } catch (e) {    
+      console.error("Erreur lecture:", e);    
+      if (localVersion) setIsOffline(true);
+      else toast.error("Impossible de charger le texte.");    
+    } finally {    
+      setLoading(false);    
     }
   }, [id, saveToLocal, getFromLocal]);
 
@@ -158,26 +128,48 @@ export default function TextContent({ params: propsParams }) {
     }
   }, [id, text, isOffline]);
 
-  const handleCertification = async () => {
-    if (isOffline) return toast.error("Connexion requise.");
-    const certKey = `c_${id}`;
-    if (localStorage.getItem(certKey)) return toast.info("Déjà scellé.");
-    try {
-      const res = await fetch('/api/github-db', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, action: "certify", authorEmail: text.authorEmail, reward: 1 })
-      });
-      if ((await res.json()).success) {
-        localStorage.setItem(certKey, "1");
-        toast.success("Sceau apposé !");
-        loadContent(true);
-      }
-    } catch (e) { toast.error("Échec."); }
-  };
+  const mood = useMemo(() => {
+    if (!text?.content || typeof text.content !== 'string') return null;
+    const content = text.content.toLowerCase();
+    const moods = [
+      { label: "Mélancolique", icon: <Ghost size={12}/>, color: "bg-indigo-50 text-indigo-600", words: ['ombre', 'triste', 'nuit', 'mort', 'seul'] },
+      { label: "Lumineux", icon: <Sun size={12}/>, color: "bg-amber-50 text-amber-600", words: ['soleil', 'joie', 'amour', 'clair', 'vie'] },
+      { label: "Épique", icon: <Zap size={12}/>, color: "bg-rose-50 text-rose-600", words: ['force', 'guerre', 'feu', 'épée', 'sang'] },
+      { label: "Apaisant", icon: <Coffee size={12}/>, color: "bg-emerald-50 text-emerald-600", words: ['silence', 'calme', 'paix', 'vent', 'doux'] }
+    ];
+    const scores = moods.map(m => ({ ...m, score: m.words.reduce((acc, word) => acc + (content.split(word).length - 1), 0) }));
+    return scores.reduce((p, c) => (p.score > c.score) ? p : c);
+  }, [text]);
+
+  const renderedContent = useMemo(() => {
+    if (!text?.content || typeof text.content !== 'string') return null;
+    const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
+
+    const renderParas = (paras) => paras.map((p, i) => (    
+      <SocialMargins key={i} paragraphId={`${id}_p${i}`}>    
+        <p className="text-2xl leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />    
+      </SocialMargins>    
+    ));    
+
+    return (    
+      <LumiReader title={text.title} isFocusMode={isFocusMode}>    
+        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>    
+          {paragraphs.length <= 3 ? (    
+            renderParas(paragraphs)    
+          ) : (    
+            <>    
+              {renderParas(paragraphs.slice(0, Math.floor(paragraphs.length / 3)))}    
+              <div className="my-16 py-4"><InTextAd /></div>    
+              {renderParas(paragraphs.slice(Math.floor(paragraphs.length / 3)))}    
+            </>    
+          )}    
+        </div>    
+      </LumiReader>    
+    );
+  }, [text, isFocusMode, id]);
 
   const handleLike = async () => {
-    if (isOffline || isLiking || localStorage.getItem(`l_${id}`)) return;
+    if (!id || isOffline || isLiking || localStorage.getItem(`l_${id}`)) return;
     setIsLiking(true);
     try {
       const res = await fetch('/api/github-db', {
@@ -195,7 +187,7 @@ export default function TextContent({ params: propsParams }) {
 
   const handleShare = async () => {
     if (!text) return;
-    const shareUrl = window.location.href;
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
     if (navigator.share) {
       try { await navigator.share({ title: text.title, url: shareUrl }); } catch (err) {}
     } else {
@@ -203,46 +195,6 @@ export default function TextContent({ params: propsParams }) {
       toast.success("Lien copié !");
     }
   };
-
-  const mood = useMemo(() => {
-    if (!text?.content || typeof text.content !== 'string') return null;
-    const content = text.content.toLowerCase();
-    const moods = [
-        { label: "Mélancolique", icon: <Ghost size={12}/>, color: "bg-indigo-50 text-indigo-600", words: ['ombre', 'triste', 'nuit', 'mort', 'seul'] },
-        { label: "Lumineux", icon: <Sun size={12}/>, color: "bg-amber-50 text-amber-600", words: ['soleil', 'joie', 'amour', 'clair', 'vie'] },
-        { label: "Épique", icon: <Zap size={12}/>, color: "bg-rose-50 text-rose-600", words: ['force', 'guerre', 'feu', 'épée', 'sang'] },
-        { label: "Apaisant", icon: <Coffee size={12}/>, color: "bg-emerald-50 text-emerald-600", words: ['silence', 'calme', 'paix', 'vent', 'doux'] }
-    ];
-    const scores = moods.map(m => ({ ...m, score: m.words.reduce((acc, word) => acc + (content.split(word).length - 1), 0) }));
-    return scores.reduce((p, c) => (p.score > c.score) ? p : c);
-  }, [text]);
-
-  const renderedContent = useMemo(() => {
-    if (!text?.content || typeof text.content !== 'string') return null;
-    const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
-    
-    const contentJSX = (paras) => paras.map((p, i) => (
-      <SocialMargins key={i} paragraphId={`${id}_p${i}`}>
-        <p className="text-2xl leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
-      </SocialMargins>
-    ));
-
-    return (
-      <LumiReader title={text.title} isFocusMode={isFocusMode}>
-        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-          {paragraphs.length <= 3 ? (
-            contentJSX(paragraphs)
-          ) : (
-            <>
-              {contentJSX(paragraphs.slice(0, Math.floor(paragraphs.length / 3)))}
-              <div className="my-16 py-4"><InTextAd /></div>
-              {contentJSX(paragraphs.slice(Math.floor(paragraphs.length / 3)))}
-            </>
-          )}
-        </div>
-      </LumiReader>
-    );
-  }, [text, isFocusMode, id]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
@@ -253,7 +205,7 @@ export default function TextContent({ params: propsParams }) {
 
   if (!text) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center p-8 text-center">
-      <h2 className="text-2xl font-black mb-4">Oups...</h2>
+      <h2 className="text-2xl font-black mb-4">Texte introuvable</h2>
       <button onClick={() => router.push('/library')} className="px-8 py-4 bg-teal-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Voir la bibliothèque</button>
     </div>
   );
@@ -263,90 +215,86 @@ export default function TextContent({ params: propsParams }) {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
-        {isOffline && (
-          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[110] bg-amber-100 text-amber-800 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl border border-amber-200">
-            <WifiOff size={14} /> Lecture Hors-Ligne
-          </div>
-        )}
-
-        <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
-           <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
+      {isOffline && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[110] bg-amber-100 text-amber-800 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl border border-amber-200">
+          <WifiOff size={14} /> Lecture Hors-Ligne
         </div>
+      )}
 
-        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3' : 'bg-transparent py-8'}`}>
-          <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-            <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all"><ArrowLeft size={20} /></button>
-            <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm"><Maximize2 size={20} /></button>
-          </div>
-        </nav>
+      <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">    
+         <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${readingProgress}%` }} />    
+      </div>    
 
-        {isFocusMode && (
-          <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white transition-all"><Minimize2 size={24} /></button>
-        )}
+      <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3' : 'bg-transparent py-8'}`}>    
+        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">    
+          <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all"><ArrowLeft size={20} /></button>    
+          <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm"><Maximize2 size={20} /></button>    
+        </div>    
+      </nav>    
 
-        <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
-           {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
+      {isFocusMode && (    
+        <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white transition-all"><Minimize2 size={24} /></button>    
+      )}    
 
-           <header className={`mb-20 space-y-10 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-              <div className="flex flex-wrap items-center gap-4">
-                 <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">{text.category || text.genre || "Inédit"}</span>
-                 {mood && (
-                   <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-current/10 ${mood.color}`}>
-                     {mood.icon} {mood.label}
-                   </span>
-                 )}
-                 <div className="ml-auto flex items-center gap-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                    {!isAnnouncementAccount && <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>}
-                    <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>
-                 </div>
-              </div>
+      <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>    
+         <header className={`mb-20 space-y-10 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 grayscale' : 'opacity-100'}`}>    
+            <div className="flex flex-wrap items-center gap-4">    
+               <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">{text.category || text.genre || "Inédit"}</span>    
+               {mood && (    
+                 <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-current/10 ${mood.color}`}>    
+                   {mood.icon} {mood.label}    
+                 </span>    
+               )}    
+               <div className="ml-auto flex items-center gap-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">    
+                  {!isAnnouncementAccount && <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>}    
+                  <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>    
+               </div>    
+            </div>    
 
-              {!isBattle && text.image && (
-                <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
-                  <img src={text.image} className="w-full h-full object-cover" alt="" />
-                </div>
-              )}
+            {!isBattle && text.image && (    
+              <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">    
+                <img src={text.image} className="w-full h-full object-cover" alt="" />    
+              </div>    
+            )}    
 
-              <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.title}</h1>
+            <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.title}</h1>    
 
-              <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
-                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden">
-                    <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt="" />
-                 </div>
-                 <div className="text-left">
-                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2"><Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Certifié"}</p>
-                    <div className="flex items-center gap-2">
-                      <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName || text.author}</p>
-                      <ShieldCheck size={18} className="text-teal-500" />
-                    </div>
-                 </div>
-              </div>
-           </header>
+            <div className="flex items-center gap-5 pt-8 border-t border-slate-100">    
+               <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden">    
+                  <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt="" />    
+               </div>    
+               <div className="text-left">    
+                  <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2"><Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Certifié"}</p>    
+                  <div className="flex items-center gap-2">    
+                    <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName || text.author}</p>    
+                    <ShieldCheck size={18} className="text-teal-500" />    
+                  </div>    
+               </div>    
+            </div>    
+         </header>    
 
-           <article className="relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased">
-              {renderedContent}
-           </article>
+         <article className="relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased">    
+            {renderedContent}    
+         </article>    
 
-           <div className={`h-px w-full my-32 transition-opacity duration-1000 ${isFocusMode ? 'bg-white/5 opacity-50' : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'}`} />
+         <section className={`mt-32 space-y-48 transition-all duration-1000 ${isFocusMode ? 'opacity-10 pointer-events-none blur-sm' : 'opacity-100'}`}>    
+            {!isAnnouncementAccount && (    
+              <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => loadContent(true)} certifiedCount={text.certified || 0} authorName={text.authorName || text.author} textTitle={text.title} />    
+            )}    
+            <SmartRecommendations currentId={id} allTexts={allTexts} />    
+            {!isOffline && <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />}    
+         </section>    
+      </main>    
 
-           <section className={`space-y-48 transition-all duration-1000 ${isFocusMode ? 'opacity-10 pointer-events-none blur-sm' : 'opacity-100'}`}>
-              {!isAnnouncementAccount && (
-                <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName || text.author} textTitle={text.title} />
-              )}
-              <SmartRecommendations currentId={id} allTexts={allTexts} />
-              {!isOffline && <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />}
-           </section>
-        </main>
+      <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>    
+          <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}><Heart size={22} className={isLiking ? "fill-current" : ""} /></button>    
+          <div className="w-px h-8 bg-white/10 mx-1" />    
+          <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all"><Share2 size={22} /></button>    
+          <div className="w-px h-8 bg-white/10 mx-1" />    
+          <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full"><AlertTriangle size={22} /></button>    
+      </div>    
 
-        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
-            <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}><Heart size={22} className={isLiking ? "fill-current" : ""} /></button>
-            <div className="w-px h-8 bg-white/10 mx-1" />
-            <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all"><Share2 size={22} /></button>
-            <div className="w-px h-8 bg-white/10 mx-1" />
-            <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full"><AlertTriangle size={22} /></button>
-        </div>
-
-        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text?.title} />
+      <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text?.title} />    
     </div>
   );
 }
