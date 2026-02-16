@@ -273,7 +273,9 @@ export async function GET(req) {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
     if (type === 'text') {
         const text = await getFile(`data/texts/${id}.json`);
-        return NextResponse.json(text);
+        if (!text) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
+        // CORRECTION ICI : on renvoie text.content au lieu de text
+        return NextResponse.json(text.content);
     }
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
@@ -282,13 +284,18 @@ export async function GET(req) {
             user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
             user.content.audio_signature = AUDIO_CONFIG.ENABLED; // Signal au client que l'audio est activé
             delete user.content.password;
+            // On renvoie le contenu propre
+            return NextResponse.json(user.content);
         }
-        return NextResponse.json(user);
+        return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
     }
     if (type === 'library' || type === 'publications') {
       const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
-      return NextResponse.json(index);
+      if (index && Array.isArray(index.content)) {
+          const sortedContent = globalSort(index.content);
+          return NextResponse.json(sortedContent);
+      }
+      return NextResponse.json([]);
     }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
