@@ -1,8 +1,8 @@
 import React from "react";
 import TextContent from "./TextContent"; 
 
-// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
-export const runtime = 'edge';
+// Utilisation du runtime nodejs pour correspondre à la configuration de l'API github-db
+export const runtime = 'nodejs';
 
 /**
  * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
@@ -12,8 +12,11 @@ export async function generateMetadata({ params }) {
   const baseUrl = "https://lisible.biz";
 
   try {
+    // Appel à l'API unifiée qui renvoie { content: {...}, sha: "..." }
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
     const data = await res.json();
+    
+    // Extraction des données du texte depuis l'enveloppe 'content'
     const text = data?.content;
 
     if (!text) return { title: "Manuscrit introuvable | Lisible" };
@@ -21,7 +24,7 @@ export async function generateMetadata({ params }) {
     const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
     const ogImage = (isBattle || !text.image) ? `${baseUrl}/og-default.jpg` : text.image;
     const shareTitle = `${text.title} — ${text.authorName}`;
-    const shareDesc = `Je vous invite à apprécier ce magnifique texte sur Lisible. ✨`;
+    const shareDesc = `Découvrez ce texte magnifique de ${text.authorName} sur Lisible. ✨`;
 
     return {
       title: shareTitle,
