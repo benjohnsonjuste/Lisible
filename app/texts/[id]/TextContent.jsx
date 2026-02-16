@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
+import LumiReader from "@/components/reader/LumiReader";
+import SocialMargins from "@/components/reader/SocialMargins"; // Importation du composant de marges sociales
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -189,7 +191,7 @@ export default function TextContent() {
   const handleShare = async () => {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
-    const shareText = `Découvrez "${shareTitle}" sur Lisible.biz ✨`;
+    const shareText = `Découvrez "${shareTitle}" sur Lisible ✨`;
     
     if (navigator.share) {
       try { 
@@ -226,36 +228,35 @@ export default function TextContent() {
     if (!text?.content) return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
-    // Si le texte est court, on affiche tout sans pub au milieu
-    if (paragraphs.length <= 3) {
-      return (
-        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-          {paragraphs.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
-        </div>
-      );
-    }
+    // On enveloppe chaque paragraphe dans SocialMargins pour l'interactivité
+    const contentJSX = (paras) => paras.map((p, i) => (
+      <SocialMargins key={i} paragraphId={`${id}_p${i}`}>
+        <p className="text-2xl leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+      </SocialMargins>
+    ));
 
-    // Insertion après environ 1/3 du texte pour maximiser la visibilité
-    const adIndex = Math.max(1, Math.floor(paragraphs.length / 3));
-    const firstPart = paragraphs.slice(0, adIndex);
-    const secondPart = paragraphs.slice(adIndex);
-
-    return (
-      <div className="space-y-6">
-        <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-           {firstPart.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
-        </div>
-        
-        <div className="my-12 py-4">
-           <InTextAd />
-        </div>
-
-        <div className="whitespace-pre-wrap space-y-6">
-           {secondPart.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
-        </div>
+    const fullContent = (
+      <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
+        {paragraphs.length <= 3 ? (
+          contentJSX(paragraphs)
+        ) : (
+          <>
+            {contentJSX(paragraphs.slice(0, Math.max(1, Math.floor(paragraphs.length / 3))))}
+            <div className="my-16 py-4">
+               <InTextAd />
+            </div>
+            {contentJSX(paragraphs.slice(Math.max(1, Math.floor(paragraphs.length / 3))))}
+          </>
+        )}
       </div>
     );
-  }, [text?.content, isFocusMode]);
+
+    return (
+      <LumiReader title={text.title} isFocusMode={isFocusMode}>
+        {fullContent}
+      </LumiReader>
+    );
+  }, [text?.content, isFocusMode, text?.title, id]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
@@ -338,7 +339,7 @@ export default function TextContent() {
                  </div>
                  <div className="text-left">
                     <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
-                      <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
+                      <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Certifié"}
                     </p>
                     <div className="flex items-center gap-2">
                       <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName}</p>
@@ -348,7 +349,7 @@ export default function TextContent() {
               </div>
            </header>
 
-           <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
+           <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased`}>
               {renderedContent}
            </article>
 
