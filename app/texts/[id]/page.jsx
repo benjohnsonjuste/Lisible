@@ -49,6 +49,6 @@ export async function generateMetadata({ params }) {
 /**
  * COMPOSANT PRINCIPAL (SERVEUR)
  */
-export default function Page() {
-  return <TextContent />;
+export default function Page({ params }) {
+  return <TextContent params={params} />;
 }
