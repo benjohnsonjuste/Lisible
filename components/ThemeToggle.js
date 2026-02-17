@@ -34,7 +34,7 @@ export default function ThemeToggle() {
 
     // 2. Audio - Isolé dans un bloc try/catch pour ne pas casser le toggle
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         const audioCtx = new AudioCtx();
         const osc = audioCtx.createOscillator();
