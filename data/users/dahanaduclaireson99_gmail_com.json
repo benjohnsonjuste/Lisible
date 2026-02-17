@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "",
-  "li": 152,
+  "li": 153,
   "notifications": [
+    {
+      "id": "cert_1771291383348",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"L'inaltérable\" (+1 Li).",
+      "date": "2026-02-17T01:23:03.348Z",
+      "read": false
+    },
     {
       "id": "like_1771291207327",
       "type": "like",
