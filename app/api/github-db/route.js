@@ -174,7 +174,7 @@ export async function POST(req) {
         }
       }
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
-      const { password, ...safeUser } = file.content;
+      const { password, ...safeUser = file.content } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
     }
 
@@ -182,19 +182,25 @@ export async function POST(req) {
 
     if (action === 'sync-battle') {
       const time = getHaitiTime();
-      // VERROUILLAGE AUTOMATIQUE : Si Dimanche et après 15h20 Haïti
       if (time.isSunday && (time.h > 15 || (time.h === 15 && time.m >= 20))) {
-        return NextResponse.json({ error: "Duel verrouillé : Temps écoulé" }, { status: 403 });
+        return NextResponse.json({ error: "Duel verrouillé" }, { status: 403 });
       }
 
       const battlePath = `data/battles/${duelId}.json`;
       const battleFile = await getFile(battlePath);
       if (!battleFile) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
       
-      if (battleFile.content.player_a.id === playerId) battleFile.content.player_a.text = text;
-      else if (battleFile.content.player_b.id === playerId) battleFile.content.player_b.text = text;
+      const player = battleFile.content.player_a.id === playerId ? 'player_a' : (battleFile.content.player_b.id === playerId ? 'player_b' : null);
+      if (!player) return NextResponse.json({ error: "Joueur non autorisé" }, { status: 403 });
+
+      // Gestion des Points d'Impact (Votes) vs Texte
+      if (data.vote) {
+          battleFile.content[player].votes = (battleFile.content[player].votes || 0) + 1;
+      } else {
+          battleFile.content[player].text = text;
+      }
       
-      await updateFile(battlePath, battleFile.content, battleFile.sha, `⚔️ Battle Sync: ${playerId}`);
+      await updateFile(battlePath, battleFile.content, battleFile.sha, `⚔️ Battle Update: ${player}`);
       return NextResponse.json({ success: true });
     }
 
@@ -222,23 +228,44 @@ export async function POST(req) {
       if (!battleFile) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
 
       const winnerEmail = data.winnerEmail;
-      const winnerFile = await getFile(getSafePath(winnerEmail));
+      const winnerChoice = battleFile.content.player_a.email === winnerEmail ? 'A' : 'B';
 
+      // 1. Récompense Pen d'Or
+      const winnerFile = await getFile(getSafePath(winnerEmail));
       if (winnerFile) {
         winnerFile.content.li += ECONOMY.BATTLE_REWARD;
         if (!winnerFile.content.badges) winnerFile.content.badges = [];
         winnerFile.content.badges.push({ type: "Pen d'Or", date: new Date().toISOString() });
         winnerFile.content.notifications.unshift({
           id: `win_${Date.now()}`, type: "victory",
-          message: `Félicitations ! Vous gagnez le duel et le Pen d'Or (+${ECONOMY.BATTLE_REWARD} Li)`,
+          message: `Félicitations ! Pen d'Or remporté (+${ECONOMY.BATTLE_REWARD} Li)`,
           date: new Date().toISOString(), read: false
         });
-        await updateFile(getSafePath(winnerEmail), winnerFile.content, winnerFile.sha, `🏆 Victory: Pen d'Or`);
+        await updateFile(getSafePath(winnerEmail), winnerFile.content, winnerFile.sha, `🏆 Pen d'Or`);
+      }
+
+      // 2. Payout des parieurs (Cote fixe x2)
+      if (battleFile.content.bets) {
+          for (const bet of battleFile.content.bets) {
+              if (bet.choice === winnerChoice) {
+                  const bettorPath = getSafePath(bet.user);
+                  const bettorFile = await getFile(bettorPath);
+                  if (bettorFile) {
+                      bettorFile.content.li += (bet.amount * 2);
+                      bettorFile.content.notifications.unshift({
+                          id: `gain_${Date.now()}`, type: "gain",
+                          message: `Pari gagné ! Vous recevez ${bet.amount * 2} Li.`,
+                          date: new Date().toISOString(), read: false
+                      });
+                      await updateFile(bettorPath, bettorFile.content, bettorFile.sha, `💰 Bet Payout`);
+                  }
+              }
+          }
       }
 
       battleFile.content.status = "finished";
       battleFile.content.winner = winnerEmail;
-      await updateFile(battlePath, battleFile.content, battleFile.sha, `🏁 Battle Resolved`);
+      await updateFile(battlePath, battleFile.content, battleFile.sha, `🏁 Resolved & Paid`);
       return NextResponse.json({ success: true });
     }
 
