@@ -8,17 +8,17 @@ export default function BattleArena({ duelData, currentUser }) {
   const [opponentText, setOpponentText] = useState("");
   const [timeLeft, setTimeLeft] = useState(900);
   const [isFinished, setIsFinished] = useState(false);
+  const [votesA, setVotesA] = useState(0);
+  const [votesB, setVotesB] = useState(0);
   const [spectators, setSpectators] = useState(Math.floor(Math.random() * 50) + 10);
 
   // --- AUTOMATE TEMPOREL (HAÏTI) ---
   const checkTimeAndStatus = useCallback(() => {
-    // Calcul de l'heure actuelle à Port-au-Prince
     const htTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Port-au-Prince"}));
     const h = htTime.getHours();
     const m = htTime.getMinutes();
     const isSunday = htTime.getDay() === 0;
 
-    // Verrouillage automatique : Dimanche à partir de 15h20
     if (isSunday && (h > 15 || (h === 15 && m >= 20))) {
       if (!isFinished) {
         setIsFinished(true);
@@ -32,7 +32,7 @@ export default function BattleArena({ duelData, currentUser }) {
     return () => clearInterval(timer);
   }, [checkTimeAndStatus]);
 
-  // Sync avec l'API toutes les 2 secondes
+  // Sync complète (Texte + Votes + Status)
   useEffect(() => {
     if (isFinished) return;
     const interval = setInterval(async () => {
@@ -43,6 +43,8 @@ export default function BattleArena({ duelData, currentUser }) {
           const battle = data.content;
           const otherPlayer = battle.player_a.id === currentUser.id ? battle.player_b : battle.player_a;
           setOpponentText(otherPlayer.text || "");
+          setVotesA(battle.player_a.votes || 0);
+          setVotesB(battle.player_b.votes || 0);
           
           if (battle.status === "finished") {
             setIsFinished(true);
@@ -53,7 +55,7 @@ export default function BattleArena({ duelData, currentUser }) {
     return () => clearInterval(interval);
   }, [duelData.id, currentUser.id, isFinished]);
 
-  // Envoi du texte local vers la DB
+  // Envoi du texte
   const handleTyping = (e) => {
     if (isFinished) return;
     const val = e.target.value;
@@ -72,7 +74,23 @@ export default function BattleArena({ duelData, currentUser }) {
     }
   };
 
-  // Gestion des paris via l'API
+  // Système de Points d'Impact (Vote)
+  const castVote = async (targetPlayerId) => {
+    if (isFinished) return;
+    toast.success("Point d'Impact envoyé ! ⚡");
+    try {
+      await fetch(`/api/github-db`, {
+        method: "POST",
+        body: JSON.stringify({ 
+          action: "sync-battle", 
+          duelId: duelData.id, 
+          playerId: targetPlayerId, 
+          vote: true 
+        })
+      });
+    } catch (e) { console.error("Vote error"); }
+  };
+
   const handleBet = async (choice) => {
     try {
       const res = await fetch(`/api/github-db`, {
@@ -86,7 +104,7 @@ export default function BattleArena({ duelData, currentUser }) {
         })
       });
       const data = await res.json();
-      if (data.success) toast.success(`Pari de 10 Li enregistré sur ${choice} !`);
+      if (data.success) toast.success(`Pari enregistré sur ${choice} !`);
       else toast.error(data.error || "Erreur lors du pari");
     } catch (e) { toast.error("Serveur indisponible"); }
   };
@@ -120,7 +138,7 @@ export default function BattleArena({ duelData, currentUser }) {
         <div className="flex items-center gap-4 text-right">
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-400">Adversaire</p>
-            <p className="font-bold text-xl italic text-white">En attente...</p>
+            <p className="font-bold text-xl italic text-white">L'Opposant</p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-slate-800 border-2 border-emerald-500/30 flex items-center justify-center">
             <ShieldCheck className="text-emerald-500" />
@@ -130,9 +148,13 @@ export default function BattleArena({ duelData, currentUser }) {
 
       {/* L'ARÈNE : DOUBLE ÉCRAN */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 mt-12 h-[65vh]">
+        {/* MON ÉCRAN */}
         <div className="relative group flex flex-col">
           <div className="flex justify-between items-center mb-4 px-4">
-             <span className="text-[10px] font-black tracking-widest text-blue-500/50 uppercase">Ma Stèle</span>
+             <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black tracking-widest text-blue-500 uppercase">Ma Stèle</span>
+                <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px] font-mono border border-blue-500/20">⚡ {votesA} IMPACTS</span>
+             </div>
              <span className="text-[10px] font-mono text-slate-500">{text.split('\n').filter(l => l.length > 5).length} VERS</span>
           </div>
           <textarea 
@@ -144,12 +166,22 @@ export default function BattleArena({ duelData, currentUser }) {
           />
         </div>
 
-        <div className="relative flex flex-col opacity-80">
+        {/* ÉCRAN ADVERSAIRE */}
+        <div className="relative flex flex-col">
           <div className="flex justify-between items-center mb-4 px-4">
-             <span className="text-[10px] font-black tracking-widest text-emerald-500/50 uppercase">Stèle Adverse</span>
-             <span className="text-[10px] font-mono text-slate-500">{opponentText.split('\n').filter(l => l.length > 5).length} VERS</span>
+             <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black tracking-widest text-emerald-500 uppercase">Stèle Adverse</span>
+                <span className="bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-mono border border-emerald-500/20">⚡ {votesB} IMPACTS</span>
+             </div>
+             <button 
+               onClick={() => castVote(duelData.player_a.id === currentUser.id ? duelData.player_b.id : duelData.player_a.id)}
+               disabled={isFinished}
+               className="text-[10px] bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white px-3 py-1 rounded-full transition-all uppercase font-black border border-emerald-500/20"
+             >
+               Voter
+             </button>
           </div>
-          <div className="w-full h-full bg-slate-950/40 backdrop-blur-md border border-white/5 rounded-[2.5rem] p-10 font-serif text-2xl leading-[1.8] overflow-y-auto pointer-events-none italic text-emerald-50/50 whitespace-pre-wrap">
+          <div className="w-full h-full bg-slate-950/40 backdrop-blur-md border border-white/5 rounded-[2.5rem] p-10 font-serif text-2xl leading-[1.8] overflow-y-auto italic text-emerald-50/50 whitespace-pre-wrap">
             {opponentText || "L'adversaire prépare sa plume..."}
           </div>
         </div>
@@ -194,16 +226,18 @@ export default function BattleArena({ duelData, currentUser }) {
         </div>
       </div>
 
-      {/* OVERLAY VICTOIRE (PEN D'OR) */}
+      {/* OVERLAY VICTOIRE */}
       {isFinished && (
-        <div className="fixed inset-0 bg-slate-950/95 z-[300] flex flex-col items-center justify-center p-6 animate-in fade-in duration-700">
+        <div className="fixed inset-0 bg-slate-950/98 z-[300] flex flex-col items-center justify-center p-6 animate-in fade-in duration-700">
            <Trophy size={100} className="text-yellow-500 mb-8 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)]" />
            <h2 className="text-[12px] font-black uppercase tracking-[1em] text-yellow-500/50 mb-4">Duel Terminé</h2>
-           <p className="text-5xl font-serif italic text-white font-black mb-10 text-center">Calcul du Pen d'Or...</p>
+           <p className="text-5xl font-serif italic text-white font-black mb-10 text-center">
+             {votesA >= votesB ? currentUser.name : "L'adversaire"} triomphe !
+           </p>
            <div className="bg-white/5 border border-white/10 px-10 py-5 rounded-full text-center">
-              <span className="text-2xl font-bold text-yellow-500 tracking-tighter italic">VÉRIFICATION DES VERS...</span>
+              <span className="text-2xl font-bold text-yellow-500 tracking-tighter italic uppercase">Pen d'Or Attribué</span>
            </div>
-           <button onClick={() => window.location.reload()} className="mt-12 text-slate-500 hover:text-white transition-all uppercase text-[10px] font-black tracking-widest underline underline-offset-8">Actualiser les résultats</button>
+           <button onClick={() => window.location.href = '/'} className="mt-12 text-slate-500 hover:text-white transition-all uppercase text-[10px] font-black tracking-widest underline underline-offset-8">Retourner à l'accueil</button>
         </div>
       )}
     </div>
