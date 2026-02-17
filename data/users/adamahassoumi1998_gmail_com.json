@@ -1,8 +1,15 @@
 {
   "email": "adamahassoumi1998@gmail.com",
   "name": "",
-  "li": 162,
+  "li": 163,
   "notifications": [
+    {
+      "id": "cert_1771362871886",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"À toi mon étoile filante\" (+1 Li).",
+      "date": "2026-02-17T21:14:31.886Z",
+      "read": false
+    },
     {
       "id": "cert_1771362865818",
       "type": "certification",
