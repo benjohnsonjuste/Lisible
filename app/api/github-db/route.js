@@ -19,10 +19,26 @@ const ECONOMY = {
   MIN_TRANSFER: 1000,
   WITHDRAWAL_THRESHOLD: 25000, 
   REQUIRED_FOLLOWERS: 250,      
-  LI_VALUE_USD: 0.0002 
+  LI_VALUE_USD: 0.0002,
+  BATTLE_REWARD: 50 // Gain pour le Pen d'Or
 };
 
 // --- HELPERS CORE ---
+
+// Helper pour obtenir l'heure exacte d'Haïti (Port-au-Prince)
+const getHaitiTime = () => {
+  const now = new Date();
+  const options = { timeZone: 'America/Port-au-Prince', hour12: false };
+  const haitiString = now.toLocaleString('en-US', options);
+  const haitiDate = new Date(haitiString);
+  
+  return {
+    h: haitiDate.getHours(),
+    m: haitiDate.getMinutes(),
+    day: haitiDate.getDay(), // 0 = Dimanche
+    isSunday: haitiDate.getDay() === 0
+  };
+};
 
 async function getFile(path) {
   const now = Date.now();
@@ -79,7 +95,6 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({
-        // Ajout de [skip ci] pour empêcher les déploiements Vercel automatiques à chaque changement de data
         message: `[DATA] ${message} [skip ci]`,
         content: encodedContent,
         sha: sha || undefined
@@ -118,7 +133,7 @@ export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
-    const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
+    const { action, userEmail, textId, amount, currentPassword, newPassword, duelId, playerId, text, ...data } = body;
     const targetPath = getSafePath(userEmail || data.email);
 
     if (action === 'register') {
@@ -131,6 +146,7 @@ export async function POST(req) {
         name: data.name || "Nouvel Auteur",
         li: data.referralCode ? 250 : 50,
         notifications: [], followers: [], following: [], works: [],
+        badges: [],
         created_at: new Date().toISOString(),
         ...data,
         password: hashedPassword 
@@ -162,17 +178,71 @@ export async function POST(req) {
       return NextResponse.json({ success: true, user: safeUser });
     }
 
-    if (action === 'change_password') {
-      const file = await getFile(targetPath);
-      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      const isMatch = bcrypt.compareSync(currentPassword.trim(), file.content.password);
-      if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
-      const salt = bcrypt.genSaltSync(10);
-      file.content.password = bcrypt.hashSync(newPassword.trim(), salt);
-      await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
+    // --- AUTOMATE BATTLE ARENA ---
+
+    if (action === 'sync-battle') {
+      const time = getHaitiTime();
+      // VERROUILLAGE AUTOMATIQUE : Si Dimanche et après 15h20 Haïti
+      if (time.isSunday && (time.h > 15 || (time.h === 15 && time.m >= 20))) {
+        return NextResponse.json({ error: "Duel verrouillé : Temps écoulé" }, { status: 403 });
+      }
+
+      const battlePath = `data/battles/${duelId}.json`;
+      const battleFile = await getFile(battlePath);
+      if (!battleFile) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+      
+      if (battleFile.content.player_a.id === playerId) battleFile.content.player_a.text = text;
+      else if (battleFile.content.player_b.id === playerId) battleFile.content.player_b.text = text;
+      
+      await updateFile(battlePath, battleFile.content, battleFile.sha, `⚔️ Battle Sync: ${playerId}`);
       return NextResponse.json({ success: true });
     }
 
+    if (action === 'place-bet') {
+      const userFile = await getFile(getSafePath(userEmail));
+      const battlePath = `data/battles/${duelId}.json`;
+      const battleFile = await getFile(battlePath);
+
+      if (!userFile || !battleFile) return NextResponse.json({ error: "Données introuvables" }, { status: 404 });
+      if (userFile.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
+
+      userFile.content.li -= amount;
+      battleFile.content.pot_total = (battleFile.content.pot_total || 0) + amount;
+      if (!battleFile.content.bets) battleFile.content.bets = [];
+      battleFile.content.bets.push({ user: userEmail, amount, choice: data.choice, date: new Date().toISOString() });
+
+      await updateFile(getSafePath(userEmail), userFile.content, userFile.sha, `💸 Bet Placed: ${amount} Li`);
+      await updateFile(battlePath, battleFile.content, battleFile.sha, `🎰 Pot Updated: +${amount}`);
+      return NextResponse.json({ success: true, newBalance: userFile.content.li });
+    }
+
+    if (action === 'resolve-duel') {
+      const battlePath = `data/battles/${duelId}.json`;
+      const battleFile = await getFile(battlePath);
+      if (!battleFile) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+
+      const winnerEmail = data.winnerEmail;
+      const winnerFile = await getFile(getSafePath(winnerEmail));
+
+      if (winnerFile) {
+        winnerFile.content.li += ECONOMY.BATTLE_REWARD;
+        if (!winnerFile.content.badges) winnerFile.content.badges = [];
+        winnerFile.content.badges.push({ type: "Pen d'Or", date: new Date().toISOString() });
+        winnerFile.content.notifications.unshift({
+          id: `win_${Date.now()}`, type: "victory",
+          message: `Félicitations ! Vous gagnez le duel et le Pen d'Or (+${ECONOMY.BATTLE_REWARD} Li)`,
+          date: new Date().toISOString(), read: false
+        });
+        await updateFile(getSafePath(winnerEmail), winnerFile.content, winnerFile.sha, `🏆 Victory: Pen d'Or`);
+      }
+
+      battleFile.content.status = "finished";
+      battleFile.content.winner = winnerEmail;
+      await updateFile(battlePath, battleFile.content, battleFile.sha, `🏁 Battle Resolved`);
+      return NextResponse.json({ success: true });
+    }
+
+    // --- ACTIONS CLASSIQUES ---
     if (action === 'user_sync' || action === 'update_user') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Sync impossible" }, { status: 404 });
@@ -241,6 +311,7 @@ export async function POST(req) {
       await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
       return NextResponse.json({ success: true });
     }
+
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -256,6 +327,10 @@ export async function GET(req) {
     if (type === 'text') {
         const text = await getFile(`data/texts/${id}.json`);
         return NextResponse.json(text);
+    }
+    if (type === 'battle') {
+        const battle = await getFile(`data/battles/${id}.json`);
+        return NextResponse.json(battle);
     }
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
