@@ -1,85 +1,56 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Moon, Sun, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sun, Moon } from "lucide-react";
 
 export default function ThemeToggle() {
-  const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [theme, setTheme] = useState("light");
 
-  // 1. Initialisation au montage
   useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem("theme");
-    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = savedTheme === "dark" || (!savedTheme && systemPrefersDark);
-    
-    setIsDark(shouldBeDark);
-    if (shouldBeDark) {
-      document.documentElement.classList.add("dark");
-    }
+    const savedTheme = localStorage.getItem("theme") || "light";
+    setTheme(savedTheme);
+    document.documentElement.classList.toggle("dark", savedTheme === "dark");
   }, []);
 
   const toggleTheme = () => {
-    const newMode = !isDark;
-    setIsDark(newMode);
-    
-    // Application immédiate de la classe
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.documentElement.classList.toggle("dark", newTheme === "dark");
 
-    // 2. Audio - Isolé dans un bloc try/catch pour ne pas casser le toggle
+    // --- AUDIO FIX (SYNTAXE JS PURE) ---
     try {
+      // Suppression du "as any" qui causait l'erreur de build
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         const audioCtx = new AudioCtx();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
+
         osc.type = "sine";
-        osc.frequency.setValueAtTime(newMode ? 440 : 880, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(newTheme === "dark" ? 220 : 440, audioCtx.currentTime);
+        
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
         osc.connect(gain);
         gain.connect(audioCtx.destination);
+
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.1);
+        osc.stop(audioCtx.currentTime + 0.5);
       }
     } catch (e) {
-      // On ignore silencieusement les erreurs audio (ex: autoplay policy)
-      console.log("Audio feedback non supporté ou bloqué");
+      console.log("Audio non supporté ou bloqué");
     }
   };
-
-  if (!mounted) return <div className="p-3 w-11 h-11" />;
 
   return (
     <button
       onClick={toggleTheme}
-      type="button" // Toujours préciser le type pour éviter des comportements de formulaire
+      className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 transition-all hover:scale-110 active:scale-95 shadow-sm"
       aria-label="Changer de thème"
-      className="group relative p-3 rounded-2xl bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-slate-100 dark:border-white/10 shadow-sm transition-all duration-500 overflow-hidden active:scale-95"
     >
-      <div className="absolute inset-0 bg-gradient-to-tr from-teal-500/0 via-teal-500/0 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-      
-      <div className="relative w-5 h-5 flex items-center justify-center">
-        <Sun 
-          size={20} 
-          className={`absolute transform transition-all duration-700 ease-in-out text-amber-500 ${
-            isDark ? "rotate-[120deg] scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"
-          }`} 
-        />
-        
-        <div className={`absolute transform transition-all duration-700 ease-in-out ${
-            isDark ? "rotate-0 scale-100 opacity-100" : "-rotate-[120deg] scale-0 opacity-0"
-          }`}>
-          <Moon size={20} className="text-teal-400 fill-teal-400/10" />
-          <Sparkles size={8} className="absolute -top-1 -right-1 text-teal-200 animate-pulse" />
-        </div>
-      </div>
+      {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
     </button>
   );
 }
