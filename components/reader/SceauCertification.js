@@ -12,14 +12,14 @@ export default function SceauCertification({
   authorName, 
   textTitle 
 }) {
-  // Calcul du temps de lecture (1s pour 15 mots, min 8s)
   const waitTime = Math.max(8, Math.floor((wordCount || 50) / 15)); 
   const [seconds, setSeconds] = useState(waitTime);
   const [isValidated, setIsValidated] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Synchronisation avec le stockage local
+  const MIN_CERTIFICATIONS = 50;
+
   useEffect(() => {
     const deviceKey = `cert_${fileName}`;
     if (localStorage.getItem(deviceKey)) {
@@ -29,7 +29,6 @@ export default function SceauCertification({
     }
   }, [fileName]);
 
-  // Chronomètre de lecture
   useEffect(() => {
     if (isValidated || seconds <= 0) return;
     const timer = setInterval(() => {
@@ -42,7 +41,6 @@ export default function SceauCertification({
     return () => clearInterval(timer);
   }, [seconds, isValidated, waitTime]);
 
-  // Génération du Parchemin Officiel (jsPDF)
   const generateCertificate = async () => {
     try {
       const { default: confetti } = await import("canvas-confetti");
@@ -57,42 +55,63 @@ export default function SceauCertification({
 
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       
-      // Design du Parchemin
+      // Fond Ivoire Premium
       doc.setFillColor(252, 251, 249); 
       doc.rect(0, 0, 297, 210, "F");
-      doc.setLineWidth(1); 
-      doc.setDrawColor(226, 232, 240); 
-      doc.rect(8, 8, 281, 194);
-      doc.setLineWidth(0.5);
-      doc.rect(12, 12, 273, 186);
       
+      // Bordure Double Ornementale
+      doc.setLineWidth(1.5); 
+      doc.setDrawColor(13, 148, 136); // Teal 600
+      doc.rect(10, 10, 277, 190);
+      doc.setLineWidth(0.5);
+      doc.setDrawColor(200, 200, 200);
+      doc.rect(13, 13, 271, 184);
+
+      // Filigrane "LS" en arrière-plan
+      doc.setTextColor(240, 240, 240);
+      doc.setFont("times", "bolditalic");
+      doc.setFontSize(150);
+      doc.text("LS", 148.5, 125, { align: "center", angle: 0 });
+      
+      // Titre Principal
       doc.setTextColor(15, 23, 42); 
       doc.setFont("times", "bolditalic"); 
-      doc.setFontSize(48);
-      doc.text("Parchemin de Publication", 148.5, 60, { align: "center" });
+      doc.setFontSize(42);
+      doc.text("Parchemin de Publication", 148.5, 55, { align: "center" });
       
+      // Sous-titre
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(14); 
-      doc.setTextColor(100);
-      doc.text("L'ARCHIVE LISIBLE ATTESTE QUE L'ŒUVRE", 148.5, 80, { align: "center" });
+      doc.setFontSize(12); 
+      doc.setTextColor(120);
+      doc.text("L'ARCHIVE LISIBLE ATTESTE PAR LE PRÉSENT SCEAU QUE L'ŒUVRE", 148.5, 75, { align: "center" });
       
+      // Titre de l'œuvre (Dynamique)
       doc.setFont("times", "bolditalic"); 
-      doc.setFontSize(32);
+      doc.setFontSize(36);
       doc.setTextColor(13, 148, 136);
-      doc.text(`${(textTitle || "Sans Titre").toUpperCase()}`, 148.5, 105, { align: "center" });
+      const displayTitle = (textTitle || "Sans Titre").toUpperCase();
+      doc.text(displayTitle, 148.5, 100, { align: "center" });
       
+      // Auteur
       doc.setFont("helvetica", "normal");
       doc.setFontSize(14); 
-      doc.setTextColor(100);
-      doc.text(`Une création originale de la plume de ${authorName || "Anonyme"}`, 148.5, 125, { align: "center" });
+      doc.setTextColor(80);
+      doc.text(`Une création originale de la plume de ${authorName || "Anonyme"}`, 148.5, 120, { align: "center" });
       
-      doc.setFontSize(12);
-      doc.text(`Scellé avec ${certifiedCount} certifications de lecture vérifiées`, 148.5, 150, { align: "center" });
+      // Stats Réelles
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Scellé avec un total de ${Number(certifiedCount) || 0} certifications vérifiées`, 148.5, 145, { align: "center" });
       
+      // Pied de page / Signature
       doc.setDrawColor(13, 148, 136);
-      doc.line(110, 165, 187, 165);
+      doc.line(100, 160, 197, 160);
       doc.setFontSize(10);
-      doc.text("SCEAU OFFICIEL LISIBLE.BIZ", 148.5, 172, { align: "center" });
+      doc.setTextColor(150);
+      doc.text("AUTHENTIFIÉ PAR LISIBLE", 148.5, 168, { align: "center" });
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(13, 148, 136);
+      doc.text("lisible.biz", 148.5, 175, { align: "center" });
 
       doc.save(`Lisible_Certificat_${fileName}.pdf`);
     } catch (error) {
@@ -108,7 +127,6 @@ export default function SceauCertification({
     const t = toast.loading("Application du sceau de cire...");
     
     try {
-      // Utilisation de PATCH pour l'action 'certify' sur l'API github-db
       const res = await fetch('/api/github-db', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -138,9 +156,7 @@ export default function SceauCertification({
 
   return (
     <div className="my-32 flex flex-col items-center gap-10 animate-in fade-in zoom-in duration-1000">
-      
       <div className="relative group">
-        {/* Anneau de Progression */}
         <svg className="w-56 h-56 -rotate-90 drop-shadow-2xl">
           <circle cx="112" cy="112" r="100" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-slate-100" />
           <circle cx="112" cy="112" r="100" stroke="currentColor" strokeWidth="8" fill="transparent" 
@@ -150,7 +166,6 @@ export default function SceauCertification({
           />
         </svg>
 
-        {/* Sceau de Cire Central */}
         <div 
           onClick={validate} 
           className={`absolute inset-8 rounded-full flex flex-col items-center justify-center cursor-pointer transition-all duration-700 shadow-2xl ${
@@ -177,7 +192,6 @@ export default function SceauCertification({
       </div>
 
       <div className="flex flex-col items-center gap-8">
-        {/* Statut des certifications */}
         <div className="flex items-center gap-4 bg-white px-8 py-4 rounded-[2rem] border border-slate-100 shadow-sm">
           <Sparkles size={18} className="text-amber-500 animate-pulse" />
           <div className="flex flex-col">
@@ -188,22 +202,21 @@ export default function SceauCertification({
           </div>
         </div>
 
-        {/* Bouton du Parchemin */}
         <div className="relative group">
           <button 
             onClick={generateCertificate} 
-            disabled={Number(certifiedCount) < 5}
+            disabled={Number(certifiedCount) < MIN_CERTIFICATIONS}
             className={`flex items-center gap-3 px-10 py-6 rounded-[2.2rem] font-black text-[11px] uppercase tracking-[0.2em] transition-all shadow-2xl relative z-10 ${
-              Number(certifiedCount) >= 5 
+              Number(certifiedCount) >= MIN_CERTIFICATIONS 
               ? "bg-slate-950 text-white hover:bg-teal-600 hover:-translate-y-1 active:translate-y-0" 
               : "bg-slate-50 text-slate-300 cursor-not-allowed border border-slate-100"
             }`}
           >
-            {Number(certifiedCount) >= 5 ? <Download size={18} /> : <Lock size={18} />}
-            {Number(certifiedCount) >= 5 ? "Invoquer le Parchemin" : "Palier de 5 certifications requis"}
+            {Number(certifiedCount) >= MIN_CERTIFICATIONS ? <Download size={18} /> : <Lock size={18} />}
+            {Number(certifiedCount) >= MIN_CERTIFICATIONS ? "Invoquer le Parchemin" : `Palier de ${MIN_CERTIFICATIONS} certifications requis`}
           </button>
           
-          {Number(certifiedCount) >= 5 && (
+          {Number(certifiedCount) >= MIN_CERTIFICATIONS && (
             <div className="absolute inset-0 bg-teal-400 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
           )}
         </div>
