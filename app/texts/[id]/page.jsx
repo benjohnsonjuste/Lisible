@@ -13,6 +13,10 @@ export async function generateMetadata({ params }) {
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
+    
+    // Sécurité : Vérification si la réponse est valide
+    if (!res.ok) return { title: "Chargement du manuscrit... | Lisible" };
+    
     const data = await res.json();
     const text = data?.content;
 
@@ -50,5 +54,7 @@ export async function generateMetadata({ params }) {
  * COMPOSANT PRINCIPAL (SERVEUR)
  */
 export default function Page({ params }) {
+  // Le suspense ou la gestion d'état de TextContent s'occupera du rendu
   return <TextContent params={params} />;
 }
+  
