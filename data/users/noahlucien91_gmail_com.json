@@ -1,8 +1,15 @@
 {
   "email": "noahlucien91@gmail.com",
   "name": "",
-  "li": 458,
+  "li": 459,
   "notifications": [
+    {
+      "id": "cert_1771447608386",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Et si la femme était un objet\" (+1 Li).",
+      "date": "2026-02-18T20:46:48.386Z",
+      "read": false
+    },
     {
       "id": "cert_1771447604295",
       "type": "certification",
