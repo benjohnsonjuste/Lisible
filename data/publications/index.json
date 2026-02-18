@@ -1,5 +1,18 @@
 [
   {
+    "id": "txt_1770823644100",
+    "title": "Et si la femme était un objet",
+    "author": "Ayissi Noah Lucien",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:27:24.100Z",
+    "views": 247,
+    "likes": 145,
+    "certified": 208
+  },
+  {
     "id": "txt_1770824079276",
     "title": "À toi mon étoile filante",
     "author": "Hassoumi Adama",
@@ -17,19 +30,6 @@
     "imageBase64": null,
     "concurrentId": "HAAD4629",
     "comments": []
-  },
-  {
-    "id": "txt_1770823644100",
-    "title": "Et si la femme était un objet",
-    "author": "Ayissi Noah Lucien",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:27:24.100Z",
-    "views": 247,
-    "likes": 145,
-    "certified": 207
   },
   {
     "id": "txt_1770823524319",
