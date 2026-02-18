@@ -1,5 +1,18 @@
 [
   {
+    "id": "txt_1770823524319",
+    "title": "L'inaltérable",
+    "author": "Duclaire Dahana",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:25:24.319Z",
+    "views": 188,
+    "likes": 194,
+    "certified": 171
+  },
+  {
     "id": "txt_1770824079276",
     "title": "À toi mon étoile filante",
     "author": "Hassoumi Adama",
@@ -17,19 +30,6 @@
     "imageBase64": null,
     "concurrentId": "HAAD4629",
     "comments": []
-  },
-  {
-    "id": "txt_1770823524319",
-    "title": "L'inaltérable",
-    "author": "Duclaire Dahana",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:25:24.319Z",
-    "views": 188,
-    "likes": 194,
-    "certified": 170
   },
   {
     "id": "txt_1770823644100",
