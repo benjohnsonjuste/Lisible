@@ -76,7 +76,9 @@ export default function TextContent() {
     }
 
     try {
-      const res = await fetch(`/api/github-db?type=text&id=${id}`);
+      // Ajout d'un paramètre de timestamp pour forcer la fraîcheur des données GitHub
+      const res = await fetch(`/api/github-db?type=text&id=${id}&t=${Date.now()}`);
+      
       if (res.status === 429) {
         setIsOffline(true);
         if (!localVersion) throw new Error("Accès limité.");
@@ -91,7 +93,7 @@ export default function TextContent() {
       saveToLocal(id, data.content);
       setIsOffline(false);
 
-      const indexRes = await fetch(`/api/github-db?type=library`);
+      const indexRes = await fetch(`/api/github-db?type=library&t=${Date.now()}`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
         const sortedLibrary = (indexData.content || []).sort((a, b) => {
@@ -106,7 +108,7 @@ export default function TextContent() {
         setAllTexts(sortedLibrary);
       }
     } catch (e) {
-      if (!localVersion) toast.error("Ce manuscrit a été retiré des archives.");
+      if (!localVersion) toast.error("Ce manuscrit est en cours de scellement ou a été retiré.");
     } finally {
       setLoading(false);
     }
@@ -226,16 +228,14 @@ export default function TextContent() {
     if (!text?.content) return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
-    // Si le texte est court, on affiche tout sans pub au milieu
     if (paragraphs.length <= 3) {
       return (
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-          {paragraphs.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
+          {paragraphs.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
       );
     }
 
-    // Insertion après environ 1/3 du texte pour maximiser la visibilité
     const adIndex = Math.max(1, Math.floor(paragraphs.length / 3));
     const firstPart = paragraphs.slice(0, adIndex);
     const secondPart = paragraphs.slice(adIndex);
@@ -243,7 +243,7 @@ export default function TextContent() {
     return (
       <div className="space-y-6">
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-           {firstPart.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
+           {firstPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
         
         <div className="my-12 py-4">
@@ -251,7 +251,7 @@ export default function TextContent() {
         </div>
 
         <div className="whitespace-pre-wrap space-y-6">
-           {secondPart.map((p, i) => <p key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: p }} />)}
+           {secondPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
       </div>
     );
@@ -266,22 +266,11 @@ export default function TextContent() {
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
   const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
-  const shareImage = text.image || "file_00000000e4d871fdb8efbc744979c8bc.png";
+  // Gestion de l'image Base64 ou URL par défaut
+  const displayImage = text.image || "/og-default.jpg";
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
-        {text && (
-          <Head>
-            <title>{text.title} | Lisible</title>
-            <meta property="og:title" content={text.title} />
-            <meta property="og:description" content={`Découvrez ce texte de ${text.authorName} sur Lisible.biz`} />
-            <meta property="og:image" content={shareImage} />
-            <meta property="og:type" content="article" />
-            <meta name="twitter:card" content="summary_large_image" />
-            <meta name="twitter:image" content={shareImage} />
-          </Head>
-        )}
-
         <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
            <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
         </div>
@@ -322,9 +311,9 @@ export default function TextContent() {
                  </div>
               </div>
 
-              {!isBattle && text.image && (
+              {text.image && (
                 <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
-                  <img src={text.image} className="w-full h-full object-cover" alt="" />
+                  <img src={displayImage} className="w-full h-full object-cover" alt="" />
                 </div>
               )}
 
@@ -380,4 +369,5 @@ export default function TextContent() {
         <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
     </div>
   );
-}
+      }
+         
