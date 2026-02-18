@@ -1,196 +1,201 @@
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { 
-  Float, Text, ContactShadows, OrbitControls, 
-  MeshTransmissionMaterial, Sparkles, PerspectiveCamera,
-  Environment, MeshDistortMaterial
+  Text, PerspectiveCamera, Sparkles, 
+  MeshTransmissionMaterial, Float 
 } from "@react-three/drei";
-import { EffectComposer, Bloom, Noise, Vignette } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, Vignette, Noise } from "@react-three/postprocessing";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowUp, ArrowLeft, ArrowRight, ArrowDown } from "lucide-react";
+import * as THREE from "three";
 
-// --- STÈLE HOLOGRAPHIQUE ---
-function HolographicStele({ txt, position, index }) {
-  const mesh = useRef();
+// --- GÉNÉRATEUR DE SONS SYNTHÉTIQUES (Zéro fichier externe) ---
+const playSynth = (type) => {
+  if (typeof window === "undefined") return;
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  if (type === 'step') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(120, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    osc.start(); osc.stop(ctx.currentTime + 0.1);
+  } else if (type === 'door') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(100, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(300, ctx.currentTime + 1.2);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
+    osc.start(); osc.stop(ctx.currentTime + 1.2);
+  }
+};
+
+// --- COMPOSANT PORTE ---
+function TextDoor({ txt, position }) {
   const router = useRouter();
   const [hovered, setHovered] = useState(false);
 
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    // Petite lévitation fluide
-    mesh.current.position.y = position[1] + Math.sin(t + index) * 0.1;
-  });
-
   return (
     <group position={position}>
-      <Float speed={2} rotationIntensity={0.1} floatIntensity={0.2}>
-        <mesh
-          ref={mesh}
-          onPointerOver={() => (setHovered(true), (document.body.style.cursor = "pointer"))}
-          onPointerOut={() => (setHovered(false), (document.body.style.cursor = "auto"))}
-          onClick={() => router.push(`/texts/${txt.id}`)}
-        >
-          <boxGeometry args={[0.8, 3, 0.05]} />
-          {/* Matériau Cristal Teal (comme sur l'image) */}
-          <MeshTransmissionMaterial 
-            backside
-            samples={4}
-            thickness={0.2}
-            chromaticAberration={0.05}
-            anisotropy={0.1}
-            distortion={0.1}
-            distortionScale={0.1}
-            temporalDistortion={0.1}
-            color={hovered ? "#5eead4" : "#14b8a6"}
-            attenuationDistance={0.5}
-            attenuationColor="#ffffff"
-            transmission={1}
-          />
-
-          {/* Cœur lumineux interne (le trait vertical) */}
-          <mesh position={[0, 0, 0.03]}>
-            <planeGeometry args={[0.02, 2.5]} />
-            <meshStandardMaterial 
-              emissive="#2dd4bf" 
-              emissiveIntensity={hovered ? 10 : 2} 
-              transparent 
-              opacity={0.8}
-            />
-          </mesh>
-        </mesh>
-
-        {/* Texte Holographique Vertical/Centre */}
-        <Text
-          position={[0, 0, 0.1]}
-          fontSize={0.12}
-          color="white"
-          maxWidth={0.7}
-          textAlign="center"
-          fontStyle="italic"
-          fontWeight="900"
-          anchorY="middle"
-        >
+      <mesh 
+        onPointerOver={() => (setHovered(true), document.body.style.cursor = "pointer")}
+        onPointerOut={() => (setHovered(false), document.body.style.cursor = "auto")}
+        onClick={() => {
+            playSynth('door');
+            router.push(`/texts/${txt.id}`);
+        }}
+      >
+        <boxGeometry args={[2.5, 4.5, 0.1]} />
+        <MeshTransmissionMaterial 
+          thickness={0.5} 
+          anisotropy={0.1}
+          chromaticAberration={0.04}
+          color={hovered ? "#5eead4" : "#0a0a0a"} 
+          transmission={0.9}
+        />
+        
+        <Text position={[0, 2.8, 0]} fontSize={0.22} color="white" fontWeight="900">
           {txt.title.toUpperCase()}
-          <meshStandardMaterial emissive="white" emissiveIntensity={2} />
         </Text>
-      </Float>
 
-      {/* Halo lumineux à la base */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.5, 0]}>
-        <planeGeometry args={[1.2, 1.2]} />
-        <meshBasicMaterial color="#14b8a6" transparent opacity={hovered ? 0.3 : 0.1} />
+        {hovered && (
+          <group position={[0, -0.5, 0.2]}>
+            <mesh><sphereGeometry args={[0.1]} /><meshBasicMaterial color="#2dd4bf" /></mesh>
+            <Text position={[0, -0.4, 0]} fontSize={0.12} color="white">CLIQUER POUR OUVRIR</Text>
+          </group>
+        )}
       </mesh>
     </group>
   );
 }
 
-// --- COMPOSANT PRINCIPAL ---
-export default function GalerieScanner() {
+// --- LOGIQUE DE NAVIGATION ---
+function SceneManager({ phase, setPhase, texts }) {
+  const { camera } = useThree();
+  const doorRef = useRef();
+  const [keys, setKeys] = useState({});
+  const stepInterval = useRef(0);
+
+  useEffect(() => {
+    const handleKey = (e) => setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: e.type === "keydown" }));
+    window.addEventListener("keydown", handleKey);
+    window.addEventListener("keyup", handleKey);
+    return () => { window.removeEventListener("keydown", handleKey); window.removeEventListener("keyup", handleKey); };
+  }, []);
+
+  useFrame((state, delta) => {
+    if (phase === "intro") {
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, 15, 0.02);
+      if (camera.position.z < 15.2) setPhase("door");
+    }
+
+    if (phase === "door") {
+      if (doorRef.current) doorRef.current.rotation.y = THREE.MathUtils.lerp(doorRef.current.rotation.y, -Math.PI/1.5, 0.02);
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, 8, 0.02);
+      if (camera.position.z < 8.2) setPhase("explore");
+    }
+
+    if (phase === "explore") {
+      const speed = 0.12;
+      const isMoving = keys["w"] || keys["s"] || keys["a"] || keys["d"] || keys["arrowup"] || keys["arrowdown"] || keys["arrowleft"] || keys["arrowright"];
+      
+      if (keys["w"] || keys["arrowup"]) camera.position.z -= speed;
+      if (keys["s"] || keys["arrowdown"]) camera.position.z += speed;
+      if (keys["a"] || keys["arrowleft"]) camera.position.x -= speed;
+      if (keys["d"] || keys["arrowright"]) camera.position.x += speed;
+
+      if (isMoving) {
+        stepInterval.current += delta;
+        if (stepInterval.current > 0.5) { playSynth('step'); stepInterval.current = 0; }
+      }
+      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -10, 10);
+      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -20, 12);
+    }
+  });
+
+  return (
+    <>
+      <group position={[0, 0, 12]} ref={doorRef}>
+        <mesh position={[1.25, 2.25, 0]}>
+          <boxGeometry args={[2.5, 4.5, 0.2]} />
+          <meshStandardMaterial color="#050505" metalness={1} roughness={0.1} />
+          <Text position={[0, 1, 0.12]} fontSize={0.4} color="#2dd4bf">LISIBLE</Text>
+        </mesh>
+      </group>
+
+      <group position={[0, 2.25, 0]}>
+        {texts.map((txt, i) => (
+          <TextDoor key={txt.id} txt={txt} position={[(i % 2 === 0 ? -6 : 6), 0, -i * 5]} />
+        ))}
+      </group>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[100, 100]} />
+        <meshStandardMaterial color="#020202" roughness={0.1} metalness={0.8} />
+      </mesh>
+    </>
+  );
+}
+
+// --- EXPORT PRINCIPAL ---
+export default function GalerieVirtuelle() {
+  const [phase, setPhase] = useState("intro");
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Connexion directe à votre API github-db
     fetch("/api/github-db?type=library")
       .then(res => res.json())
       .then(data => {
-        setTexts(data.content?.slice(0, 12) || []);
+        const content = Array.isArray(data.content) ? data.content : [];
+        setTexts(content.slice(0, 12));
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   if (loading) return (
-    <div className="w-full h-[600px] flex flex-col items-center justify-center bg-[#050505] rounded-[3rem]">
-      <Loader2 className="animate-spin text-teal-400 mb-4" size={32} />
-      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-900">Synchronisation Matrix...</p>
+    <div className="w-full h-screen flex items-center justify-center bg-black">
+      <Loader2 className="animate-spin text-teal-400" size={32} />
     </div>
   );
 
   return (
-    <div className="w-full h-[700px] bg-black rounded-[4rem] overflow-hidden relative shadow-2xl border border-white/5">
-      <Canvas shadows dpr={[1, 2]}>
-        <PerspectiveCamera makeDefault position={[0, 1.5, 10]} fov={35} />
-        <color attach="background" args={["#000000"]} />
-        <fog attach="fog" args={["#000000", 8, 20]} />
-        
+    <div className="w-full h-screen bg-black relative overflow-hidden">
+      <Canvas shadows>
+        <PerspectiveCamera makeDefault position={[0, 1.7, 40]} fov={45} />
+        <fog attach="fog" args={["#000", 5, 30]} />
         <Suspense fallback={null}>
-          <ambientLight intensity={0.2} />
-          <pointLight position={[0, 10, 0]} intensity={1.5} color="#2dd4bf" />
-
-          <group position={[0, -0.5, 0]}>
-            {texts.map((txt, i) => {
-              // Disposition en arc de cercle frontale
-              const spacing = 2;
-              const x = (i - (texts.length - 1) / 2) * spacing;
-              const z = -Math.abs(x) * 0.5; // Effet courbe vers l'arrière
-              
-              return (
-                <HolographicStele 
-                  key={txt.id} 
-                  txt={txt} 
-                  index={i} 
-                  position={[x, 1, z]} 
-                />
-              );
-            })}
-            
-            {/* Sol Miroir Noir */}
-            <ContactShadows 
-              position={[0, -0.5, 0]} 
-              opacity={0.6} 
-              scale={40} 
-              blur={2} 
-              far={10} 
-              color="#14b8a6" 
-            />
-          </group>
-
-          {/* Particules Teal en suspension */}
-          <Sparkles count={150} scale={15} size={1} speed={0.3} color="#2dd4bf" />
-          
-          <OrbitControls 
-            enableZoom={false} 
-            maxPolarAngle={Math.PI / 2} 
-            minPolarAngle={Math.PI / 2.5}
-            enablePan={false}
-          />
-
-          {/* Rendu Post-Processing (Bloom + HUD Look) */}
+          <SceneManager phase={phase} setPhase={setPhase} texts={texts} />
+          <ambientLight intensity={0.4} />
+          <pointLight position={[0, 10, 5]} intensity={2} color="#2dd4bf" />
+          <Sparkles count={200} scale={20} size={2} color="#2dd4bf" />
           <EffectComposer>
-            <Bloom luminanceThreshold={0.5} mipmapBlur intensity={1.5} radius={0.4} />
-            <Noise opacity={0.05} />
-            <Vignette eskil={false} offset={0.1} darkness={1.1} />
+            <Bloom intensity={1.5} luminanceThreshold={0.1} />
+            <Vignette darkness={0.8} />
           </EffectComposer>
         </Suspense>
       </Canvas>
 
-      {/* --- INTERFACE HUD (OVERLAY) --- */}
-      <div className="absolute inset-0 pointer-events-none p-12 flex flex-col justify-between">
-        <div className="flex justify-between items-start">
-          <div className="space-y-1">
-            <h2 className="text-teal-400 font-black text-xs tracking-[0.5em] uppercase">Archive Scanner v2.0</h2>
-            <p className="text-teal-900 text-[8px] font-mono tracking-widest uppercase">NODE: {texts.length} / ACTIVE_STREAMS</p>
-          </div>
-          <div className="h-8 w-8 border border-teal-500/20 rounded-full flex items-center justify-center">
-            <div className="w-1 h-1 bg-teal-500 rounded-full animate-ping" />
-          </div>
-        </div>
-
-        {/* Barre de scan inférieure */}
-        <div className="w-full flex flex-col items-center">
-          <div className="w-64 h-[2px] bg-teal-950 relative overflow-hidden">
-             <div className="absolute top-0 left-0 h-full w-1/3 bg-teal-400 shadow-[0_0_15px_#2dd4bf] animate-[scan_2s_linear_infinite]" />
-          </div>
-          <p className="mt-4 text-[7px] text-teal-800 font-mono tracking-[0.8em] uppercase">Ready for selective extraction</p>
-        </div>
+      {/* Interface HUD */}
+      <div className="absolute top-10 left-10 pointer-events-none">
+        <h1 className="text-teal-500 font-black text-2xl tracking-tighter italic">LISIBLE / VIRTUAL_GALLERY</h1>
+        <p className="text-teal-900 font-mono text-[10px] uppercase tracking-widest">Status: {phase}</p>
       </div>
 
-      <style jsx global>{`
-        @keyframes scan {
-          0% { left: -100%; }
-          100% { left: 100%; }
-        }
-      `}</style>
+      {phase === "explore" && (
+        <div className="absolute bottom-10 right-10 flex gap-4 items-center bg-black/50 p-4 rounded-full border border-teal-900">
+          <ArrowUp className="text-teal-500 animate-bounce" size={20} />
+          <span className="text-teal-500 font-mono text-[10px] uppercase">Utilisez ZQSD pour marcher</span>
+        </div>
+      )}
     </div>
   );
 }
