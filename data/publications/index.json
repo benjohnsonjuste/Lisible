@@ -19,19 +19,6 @@
     "comments": []
   },
   {
-    "id": "txt_1770823524319",
-    "title": "L'inaltérable",
-    "author": "Duclaire Dahana",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:25:24.319Z",
-    "views": 204,
-    "likes": 203,
-    "certified": 191
-  },
-  {
     "id": "txt_1770823644100",
     "title": "Et si la femme était un objet",
     "author": "Ayissi Noah Lucien",
@@ -42,6 +29,19 @@
     "date": "2026-02-11T15:27:24.100Z",
     "views": 241,
     "likes": 145,
+    "certified": 192
+  },
+  {
+    "id": "txt_1770823524319",
+    "title": "L'inaltérable",
+    "author": "Duclaire Dahana",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:25:24.319Z",
+    "views": 204,
+    "likes": 203,
     "certified": 191
   },
   {
