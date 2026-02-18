@@ -18,7 +18,7 @@ export default function Conditions() {
           Conditions d’utilisation
         </h1>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600">
-          Mise à jour : Janvier 2026 • Système Financier v2
+          Mise à jour : Février 2026
         </p>
       </header>
 
@@ -26,7 +26,7 @@ export default function Conditions() {
         <div className="space-y-12 text-slate-600 leading-relaxed relative z-10">
           
           <p className="text-lg font-medium text-slate-800 border-l-8 border-teal-500 pl-8 py-2 italic bg-slate-50 rounded-r-3xl">
-            Bienvenue sur <span className="text-teal-600 font-black">Lisible.biz</span>, plateforme produite par le label littéraire <span className="font-bold">La Belle Littéraire</span>, structure légale reconnue par l'État haïtien.
+            Bienvenue sur <span className="text-teal-600 font-black">Lisible</span>, plateforme de streaming littéraire produite par le label littéraire <span className="font-bold">La Belle Littéraire</span>, structure légale reconnue par l'État haïtien.
           </p>
 
           <section>
@@ -90,7 +90,7 @@ export default function Conditions() {
             </h2>
             <div className="flex flex-col md:flex-row gap-4">
               <a href="mailto:cmo.lablitteraire7@gmail.com" className="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-3xl font-black text-[10px] uppercase tracking-widest flex-1 hover:shadow-xl transition-all group">
-                <span className="flex items-center gap-3"><Mail className="text-teal-600" /> Support Team (CMO)</span>
+                <span className="flex items-center gap-3"><Mail className="text-teal-600" /> Lisible Support Team</span>
                 <ArrowLeft className="rotate-180 text-slate-300 group-hover:text-teal-500 transition-transform" size={16} />
               </a>
               <a href="https://www.facebook.com/labellelitteraire" target="_blank" className="flex items-center justify-between p-6 bg-blue-50/30 border border-blue-100 rounded-3xl font-black text-[10px] uppercase tracking-widest flex-1 hover:bg-blue-50 transition-all group">
@@ -105,7 +105,7 @@ export default function Conditions() {
 
       {/* Boutons d'action */}
       <footer className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
-        <Link href="/signup" className="px-10 py-5 bg-slate-950 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-teal-600 transition-all shadow-2xl active:scale-95">
+        <Link href="/login" className="px-10 py-5 bg-slate-950 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-[0.3em] hover:bg-teal-600 transition-all shadow-2xl active:scale-95">
           M'INSCRIRE ET PUBLIER
         </Link>
         <Link href="/" className="flex items-center gap-2 px-8 py-5 bg-white text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-[1.5rem] border border-slate-100 hover:text-slate-900 transition-all">
