@@ -1,325 +1,254 @@
-import { NextResponse } from 'next/server';
-import * as bcrypt from 'bcrypt-ts';
+"use client";
 
-const localCache = new Map();
-const CACHE_TTL = 0; 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Loader2,
+  Image as ImageIcon,
+  X,
+  Feather,
+  Sparkles,
+  Trophy,
+  ArrowRight
+} from "lucide-react";
+import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs'; 
+export default function PublishPage() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState("Poésie");
+  const [imagePreview, setImagePreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
-const GITHUB_CONFIG = {
-  owner: "benjohnsonjuste",
-  repo: "Lisible",
-  token: process.env.GITHUB_TOKEN
-};
+  // Catégories mises à jour
+  const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
 
-const ECONOMY = {
-  MIN_TRANSFER: 1000,
-  WITHDRAWAL_THRESHOLD: 25000, 
-  REQUIRED_FOLLOWERS: 250,      
-  LI_VALUE_USD: 0.0002,
-  BATTLE_REWARD: 50 
-};
-
-// --- HELPERS CORE ---
-
-const getHaitiTime = () => {
-  const now = new Date();
-  const options = { timeZone: 'America/Port-au-Prince', hour12: false };
-  const haitiString = now.toLocaleString('en-US', options);
-  const haitiDate = new Date(haitiString);
-  
-  return {
-    h: haitiDate.getHours(),
-    m: haitiDate.getMinutes(),
-    day: haitiDate.getDay(),
-    isSunday: haitiDate.getDay() === 0
-  };
-};
-
-async function getFile(path) {
-  const now = Date.now();
-  const cached = localCache.get(path);
-  if (cached && (now - cached.timestamp < CACHE_TTL)) {
-    return cached.data;
-  }
-
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-      headers: { 
-        'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'Lisible-App'
-      },
-      cache: 'no-store'
-    });
+  useEffect(() => {
+    const loggedUser = localStorage.getItem("lisible_user");
+    if (!loggedUser) {
+      router.push("/login");
+      return;
+    }
+    setUser(JSON.parse(loggedUser));
     
-    if (res.status === 404) return null;
-    if (res.status === 429) throw new Error("THROTTLED");
-    if (!res.ok) return null;
-    
-    const data = await res.json();
-    if (!data.content) return null;
-    
-    const b64 = data.content.replace(/\s/g, '');
-    const binString = atob(b64);
-    const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
-    const decodedContent = new TextDecoder().decode(bytes);
-    
-    const result = { content: JSON.parse(decodedContent), sha: data.sha };
-    if (CACHE_TTL > 0) localCache.set(path, { data: result, timestamp: now });
-    return result;
-  } catch (err) {
-    console.error(`Fetch error [${path}]:`, err.message);
-    return null;
-  }
-}
+    setTitle(localStorage.getItem("atelier_draft_title") || "");
+    setContent(localStorage.getItem("atelier_draft_content") || "");
+    setIsChecking(false);
+  }, [router]);
 
-async function updateFile(path, content, sha, message) {
-  localCache.delete(path);
-  
-  const jsonString = JSON.stringify(content, null, 2);
-  const bytes = new TextEncoder().encode(jsonString);
-  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
-  const encodedContent = btoa(binString);
+  useEffect(() => {
+    if (!isChecking) {
+      localStorage.setItem("atelier_draft_title", title);
+      localStorage.setItem("atelier_draft_content", content);
+    }
+  }, [title, content, isChecking]);
 
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: { 
-        'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
-        'Content-Type': 'application/json',
-        'User-Agent': 'Lisible-App'
-      },
-      body: JSON.stringify({
-        message: `[DATA] ${message} [skip ci]`,
-        content: encodedContent,
-        sha: sha || undefined
-      }),
-    });
-    
-    if (res.status === 409) return { success: false, conflict: true };
-    return { success: res.ok, status: res.status };
-  } catch (err) {
-    console.error(`Update error [${path}]:`, err.message);
-    return { success: false, error: err.message };
-  }
-}
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-const getSafePath = (email) => {
-  if (!email) return null;
-  return `data/users/${email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
-};
-
-const globalSort = (list) => {
-  if (!Array.isArray(list)) return [];
-  return [...list].sort((a, b) => {
-    const certA = Number(a?.certified || a?.totalCertified || 0);
-    const certB = Number(b?.certified || b?.totalCertified || 0);
-    if (certB !== certA) return certB - certA;
-    const likesA = Number(a?.likes || a?.totalLikes || 0);
-    const likesB = Number(b?.likes || b?.totalLikes || 0);
-    if (likesB !== likesA) return likesB - likesA;
-    const dateA = a?.date ? new Date(a.date).getTime() : 0;
-    const dateB = b?.date ? new Date(b.date).getTime() : 0;
-    return dateB - dateA;
-  });
-};
-
-// --- ROUTES ---
-
-export async function POST(req) {
-  try {
-    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
-    const body = await req.json();
-    const { action, userEmail, textId, amount, currentPassword, newPassword, duelId, playerId, text, ...data } = body;
-    const targetPath = getSafePath(userEmail || data.email);
-
-    if (action === 'register') {
-      const file = await getFile(targetPath);
-      if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(data.password.trim(), salt);
-      const userData = {
-        email: data.email.toLowerCase().trim(),
-        name: data.name || "Nouvel Auteur",
-        li: data.referralCode ? 250 : 50,
-        notifications: [], followers: [], following: [], works: [],
-        badges: [],
-        created_at: new Date().toISOString(),
-        ...data,
-        password: hashedPassword 
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800; 
+        const scale = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Compression pour stockage direct en JSON sans déploiement
+        setImagePreview(canvas.toDataURL("image/jpeg", 0.6));
       };
-      await updateFile(targetPath, userData, null, `👤 User Register: ${data.email}`);
-      const { password, ...safeUser } = userData;
-      return NextResponse.json({ success: true, user: safeUser });
-    }
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
-    if (action === 'login') {
-      const file = await getFile(targetPath);
-      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      const storedPassword = file.content.password;
-      const providedPassword = data.password.trim();
-      let isMatch = false;
-      const isHashed = typeof storedPassword === 'string' && (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$'));
-      if (isHashed) {
-        isMatch = bcrypt.compareSync(providedPassword, storedPassword);
-      } else {
-        isMatch = (providedPassword === storedPassword);
-        if (isMatch) {
-          const salt = bcrypt.genSaltSync(10);
-          file.content.password = bcrypt.hashSync(providedPassword, salt);
-          await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
-        }
-      }
-      if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
-      const { password, ...safeUser = file.content } = file.content;
-      return NextResponse.json({ success: true, user: safeUser });
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (loading) return;
 
-    if (action === 'follow' || action === 'unfollow') {
-      let attempts = 0;
-      while (attempts < 3) {
-        const follower = await getFile(getSafePath(userEmail));
-        const target = await getFile(getSafePath(data.targetEmail));
-        if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-        
-        const targetEmailClean = data.targetEmail.toLowerCase().trim();
-        const userEmailClean = userEmail.toLowerCase().trim();
+    const cleanContent = content.trim();
+    
+    if (!title.trim()) return toast.error("Votre œuvre a besoin d'un titre.");
+    if (cleanContent.length === 0) return toast.error("Le Grand Livre ne peut pas sceller une page blanche.");
+    if (cleanContent.length > 5000) return toast.error("Ce manuscrit est trop volumineux.");
 
-        if (action === 'follow') {
-          if (!follower.content.following.includes(targetEmailClean)) {
-            follower.content.following.push(targetEmailClean);
-            target.content.followers.push(userEmailClean);
-            target.content.notifications.unshift({
-              id: `follow_${Date.now()}`, type: "follow",
-              message: `${follower.content.name} s'est abonné à vous !`,
-              date: new Date().toISOString(), read: false
-            });
-          }
-        } else {
-          follower.content.following = follower.content.following.filter(e => e !== targetEmailClean);
-          target.content.followers = target.content.followers.filter(e => e !== userEmailClean);
-        }
-        
-        const res1 = await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
-        const res2 = await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
-        
-        if (res1.success && res2.success) return NextResponse.json({ success: true, followersCount: target.content.followers.length });
-        attempts++;
-      }
-      return NextResponse.json({ error: "Conflit de synchronisation" }, { status: 409 });
-    }
+    setLoading(true);
+    const toastId = toast.loading("Publication instantanée dans le registre...");
 
-    if (action === 'publish') {
-      const pubId = data.id || `txt_${Date.now()}`;
-      const pubPath = `data/texts/${pubId}.json`;
-      const indexPath = `data/publications/index.json`;
-      const isConcours = data.isConcours === true || data.genre === "Battle Poétique";
-      const finalImage = isConcours ? null : (data.image || data.imageBase64);
-      const newPub = { ...data, id: pubId, isConcours, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
-      
-      await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
-
-      let attempts = 0;
-      while (attempts < 3) {
-        const indexFile = await getFile(indexPath) || { content: [] };
-        let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
-        indexContent.unshift({ 
-          id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, 
-          category: data.category, genre: data.genre, isConcours, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 
-        });
-        indexContent = globalSort(indexContent);
-        const res = await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update`);
-        if (res.success) return NextResponse.json({ success: true, id: pubId });
-        attempts++;
-      }
-      return NextResponse.json({ error: "Erreur Index (Conflit)" }, { status: 409 });
-    }
-
-    // (Reste du code POST inchangé pour sync-battle, transfer, etc.)
-    return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
-  } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
-}
-
-export async function GET(req) {
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get('type');
-  const id = searchParams.get('id');
-  try {
-    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
-    if (type === 'text') {
-        const text = await getFile(`data/texts/${id}.json`);
-        return NextResponse.json(text);
-    }
-    if (type === 'user') {
-        const user = await getFile(getSafePath(id));
-        if (user) {
-            user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
-            user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
-            delete user.content.password;
-        }
-        return NextResponse.json(user);
-    }
-    if (type === 'library' || type === 'publications') {
-      const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
-      return NextResponse.json(index);
-    }
-    return NextResponse.json({ error: "Type invalide" }, { status: 400 });
-  } catch (e) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
-  }
-}
-
-export async function PATCH(req) {
-  let attempts = 0;
-  while (attempts < 3) {
     try {
-      const body = await req.json();
-      const { id, action } = body;
-      const path = `data/texts/${id}.json`;
-      const indexPath = `data/publications/index.json`;
-      
-      const textFile = await getFile(path);
-      const indexFile = await getFile(indexPath);
-      if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
+      const id = Date.now().toString();
 
-      if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
-      if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
-      if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
+      const payload = {
+        action: "publish", 
+        id,
+        title: title.trim(),
+        content: cleanContent,
+        authorName: user.penName || user.name || "Une Plume",
+        authorEmail: user.email.toLowerCase().trim(),
+        authorPic: user.profilePic || null,
+        genre: category,
+        category: category,
+        image: imagePreview, // Image Base64 intégrée
+        isConcours: false,
+        date: new Date().toISOString(),
+        views: 0,
+        likes: 0,
+        comments: [],
+        certified: 0
+      };
 
-      // Update Index
-      if (indexFile && Array.isArray(indexFile.content)) {
-        const itemIndex = indexFile.content.findIndex(t => t.id === id);
-        if (itemIndex > -1) {
-          indexFile.content[itemIndex].views = textFile.content.views;
-          indexFile.content[itemIndex].likes = textFile.content.likes;
-          indexFile.content[itemIndex].certified = textFile.content.certified;
-          indexFile.content = globalSort(indexFile.content);
-        }
-      }
+      const res = await fetch("/api/github-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      const resText = await updateFile(path, textFile.content, textFile.sha, `📈 Text ${action}`);
-      const resIndex = await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync ${action}`);
+      if (!res.ok) throw new Error("Échec de la synchronisation avec le registre.");
 
-      if (resText.success && resIndex.success) {
-        // Notifs et Gain Li (Optionnel, on ne boucle pas dessus pour alléger)
-        const authorPath = getSafePath(textFile.content.authorEmail);
-        const authorFile = await getFile(authorPath);
-        if (authorFile) {
-           if (action === 'certify') authorFile.content.li = (authorFile.content.li || 0) + 1;
-           await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync`);
-        }
-        return NextResponse.json({ success: true });
-      }
-      attempts++;
-    } catch (e) {
-      attempts++;
+      toast.success("Manuscrit publié avec succès ! ✨", { id: toastId });
+
+      localStorage.removeItem("atelier_draft_title");
+      localStorage.removeItem("atelier_draft_content");
+
+      // Délai de courtoisie pour laisser le CDN GitHub se mettre à jour
+      // et éviter l'erreur client-side sur la page de lecture
+      setTimeout(() => {
+        router.refresh();
+        router.push(`/texts/${id}`);
+      }, 2000);
+
+    } catch (err) {
+      toast.error(err.message, { id: toastId });
+      setLoading(false);
     }
-  }
-  return NextResponse.json({ error: "Conflit" }, { status: 409 });
-}
-  
+  };
+
+  if (isChecking) return (
+    <div className="h-screen flex items-center justify-center bg-[#FCFBF9]">
+      <Loader2 className="animate-spin text-teal-600" size={30} />
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#FCFBF9] pb-32">
+      <div className="max-w-3xl mx-auto px-6 pt-12">
+        
+        <header className="flex items-center justify-between mb-16">
+          <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Sparkles size={12} className="text-teal-600" />
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Nouvelle Inspiration</span>
+            </div>
+            <h1 className="font-serif font-black italic text-3xl tracking-tighter text-slate-900">Le Studio.</h1>
+          </div>
+          <div className="w-12" />
+        </header>
+
+        {/* Section Battle Poétique */}
+        <div className="mb-12 p-8 bg-teal-50 rounded-[3rem] border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/20">
+              <Trophy size={28} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black italic text-slate-900 tracking-tight">Battle Poétique International</h3>
+              <p className="text-[10px] font-bold text-teal-700 uppercase tracking-widest">Entrez dans l'arène des plumes.</p>
+            </div>
+          </div>
+          <Link href="/battle/close" className="flex items-center gap-3 px-6 py-4 bg-white text-teal-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100">
+            Rejoindre le Duel <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-10">
+          
+          <div className="relative group">
+            {imagePreview ? (
+              <div className="relative h-72 rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white">
+                <img src={imagePreview} className="w-full h-full object-cover" alt="Couverture" />
+                <button 
+                  type="button"
+                  onClick={() => setImagePreview(null)}
+                  className="absolute top-6 right-6 p-3 bg-slate-950 text-white rounded-2xl hover:bg-rose-600 transition-colors shadow-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center h-56 border-2 border-dashed border-slate-200 bg-white rounded-[3rem] cursor-pointer hover:border-teal-400 hover:bg-teal-50/30 transition-all group">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <ImageIcon size={28} className="text-slate-300 group-hover:text-teal-500" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Enluminer votre œuvre</span>
+                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+              </label>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 justify-center">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                  category === cat 
+                  ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105" 
+                  : "bg-white text-slate-400 border-slate-100 hover:border-teal-200"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white p-10 md:p-14 rounded-[3.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 space-y-10">
+            <div className="flex flex-col gap-4 border-b border-slate-50 pb-8">
+               <input 
+                type="text"
+                placeholder="Titre du manuscrit"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full text-4xl md:text-5xl font-serif font-black italic tracking-tighter outline-none placeholder:text-slate-100 text-slate-900"
+              />
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest">Registre de l'Atelier</p>
+                <div className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-colors ${content.length > 4500 ? 'text-rose-500 border-rose-100 bg-rose-50' : 'text-slate-300 border-slate-100'}`}>
+                  {content.length.toLocaleString()} caractères
+                </div>
+              </div>
+            </div>
+            
+            <textarea 
+              placeholder="Laissez votre plume glisser sur le parchemin..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full min-h-[500px] text-xl md:text-2xl font-serif leading-[1.8] outline-none placeholder:text-slate-100 resize-none text-slate-800"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-4 py-7 bg-slate-950 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50 hover:-translate-y-1 active:scale-95"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Feather size={20}/>Publier</>}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+    }
+    
