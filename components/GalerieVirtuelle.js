@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, ArrowUp, ArrowLeft, ArrowRight, ArrowDown } from "lucide-react";
 import * as THREE from "three";
 
-// --- GÉNÉRATEUR DE SONS SYNTHÉTIQUES (Zéro fichier externe) ---
+// --- GÉNÉRATEUR DE SONS SYNTHÉTIQUES ---
 const playSynth = (type) => {
   if (typeof window === "undefined") return;
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -75,7 +75,7 @@ function TextDoor({ txt, position }) {
   );
 }
 
-// --- LOGIQUE DE NAVIGATION ---
+// --- LOGIQUE DE NAVIGATION (GAMEPLAY) ---
 function SceneManager({ phase, setPhase, texts }) {
   const { camera } = useThree();
   const doorRef = useRef();
@@ -90,17 +90,20 @@ function SceneManager({ phase, setPhase, texts }) {
   }, []);
 
   useFrame((state, delta) => {
+    // Phase 1 : Introduction cinématique
     if (phase === "intro") {
       camera.position.z = THREE.MathUtils.lerp(camera.position.z, 15, 0.02);
       if (camera.position.z < 15.2) setPhase("door");
     }
 
+    // Phase 2 : Animation de la porte principale
     if (phase === "door") {
       if (doorRef.current) doorRef.current.rotation.y = THREE.MathUtils.lerp(doorRef.current.rotation.y, -Math.PI/1.5, 0.02);
       camera.position.z = THREE.MathUtils.lerp(camera.position.z, 8, 0.02);
       if (camera.position.z < 8.2) setPhase("explore");
     }
 
+    // Phase 3 : Mode Jeu (Exploration libre)
     if (phase === "explore") {
       const speed = 0.12;
       const isMoving = keys["w"] || keys["s"] || keys["a"] || keys["d"] || keys["arrowup"] || keys["arrowdown"] || keys["arrowleft"] || keys["arrowright"];
@@ -110,10 +113,13 @@ function SceneManager({ phase, setPhase, texts }) {
       if (keys["a"] || keys["arrowleft"]) camera.position.x -= speed;
       if (keys["d"] || keys["arrowright"]) camera.position.x += speed;
 
+      // Déclenchement du son des pas
       if (isMoving) {
         stepInterval.current += delta;
         if (stepInterval.current > 0.5) { playSynth('step'); stepInterval.current = 0; }
       }
+
+      // Limites de la salle
       camera.position.x = THREE.MathUtils.clamp(camera.position.x, -10, 10);
       camera.position.z = THREE.MathUtils.clamp(camera.position.z, -20, 12);
     }
@@ -121,6 +127,7 @@ function SceneManager({ phase, setPhase, texts }) {
 
   return (
     <>
+      {/* PORTE D'ENTRÉE LISIBLE */}
       <group position={[0, 0, 12]} ref={doorRef}>
         <mesh position={[1.25, 2.25, 0]}>
           <boxGeometry args={[2.5, 4.5, 0.2]} />
@@ -129,12 +136,18 @@ function SceneManager({ phase, setPhase, texts }) {
         </mesh>
       </group>
 
+      {/* DISPOSITION DES PORTES DE TEXTES */}
       <group position={[0, 2.25, 0]}>
         {texts.map((txt, i) => (
-          <TextDoor key={txt.id} txt={txt} position={[(i % 2 === 0 ? -6 : 6), 0, -i * 5]} />
+          <TextDoor 
+            key={txt.id} 
+            txt={txt} 
+            position={[(i % 2 === 0 ? -6 : 6), 0, -i * 5]} 
+          />
         ))}
       </group>
 
+      {/* SOL MIROIR */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[100, 100]} />
         <meshStandardMaterial color="#020202" roughness={0.1} metalness={0.8} />
@@ -143,14 +156,14 @@ function SceneManager({ phase, setPhase, texts }) {
   );
 }
 
-// --- EXPORT PRINCIPAL ---
+// --- EXPORT DU COMPOSANT GALERIE VIRTUELLE ---
 export default function GalerieVirtuelle() {
   const [phase, setPhase] = useState("intro");
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Connexion directe à votre API github-db
+    // Appel à votre API github-db existante
     fetch("/api/github-db?type=library")
       .then(res => res.json())
       .then(data => {
@@ -162,8 +175,9 @@ export default function GalerieVirtuelle() {
   }, []);
 
   if (loading) return (
-    <div className="w-full h-screen flex items-center justify-center bg-black">
-      <Loader2 className="animate-spin text-teal-400" size={32} />
+    <div className="w-full h-screen flex flex-col items-center justify-center bg-black">
+      <Loader2 className="animate-spin text-teal-400 mb-4" size={32} />
+      <p className="text-teal-900 font-mono text-[10px] uppercase tracking-widest">Initialisation 3D...</p>
     </div>
   );
 
@@ -172,28 +186,36 @@ export default function GalerieVirtuelle() {
       <Canvas shadows>
         <PerspectiveCamera makeDefault position={[0, 1.7, 40]} fov={45} />
         <fog attach="fog" args={["#000", 5, 30]} />
+        
         <Suspense fallback={null}>
           <SceneManager phase={phase} setPhase={setPhase} texts={texts} />
           <ambientLight intensity={0.4} />
           <pointLight position={[0, 10, 5]} intensity={2} color="#2dd4bf" />
           <Sparkles count={200} scale={20} size={2} color="#2dd4bf" />
+          
           <EffectComposer>
             <Bloom intensity={1.5} luminanceThreshold={0.1} />
             <Vignette darkness={0.8} />
+            <Noise opacity={0.05} />
           </EffectComposer>
         </Suspense>
       </Canvas>
 
-      {/* Interface HUD */}
+      {/* HUD INTERFACE */}
       <div className="absolute top-10 left-10 pointer-events-none">
-        <h1 className="text-teal-500 font-black text-2xl tracking-tighter italic">LISIBLE / VIRTUAL_GALLERY</h1>
-        <p className="text-teal-900 font-mono text-[10px] uppercase tracking-widest">Status: {phase}</p>
+        <h1 className="text-teal-500 font-black text-2xl tracking-tighter italic">LISIBLE / GALERIE_VIRTUELLE</h1>
+        <p className="text-teal-900 font-mono text-[10px] uppercase tracking-widest">SÉCURISÉ // PHASE: {phase.toUpperCase()}</p>
       </div>
 
       {phase === "explore" && (
-        <div className="absolute bottom-10 right-10 flex gap-4 items-center bg-black/50 p-4 rounded-full border border-teal-900">
-          <ArrowUp className="text-teal-500 animate-bounce" size={20} />
-          <span className="text-teal-500 font-mono text-[10px] uppercase">Utilisez ZQSD pour marcher</span>
+        <div className="absolute bottom-10 right-10 flex gap-4 items-center bg-black/50 backdrop-blur-md p-4 px-6 rounded-full border border-teal-900/50">
+          <div className="flex gap-2">
+            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">Z</kbd>
+            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">Q</kbd>
+            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">S</kbd>
+            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">D</kbd>
+          </div>
+          <span className="text-teal-500 font-mono text-[10px] uppercase tracking-tighter">Déplacement autorisé</span>
         </div>
       )}
     </div>
