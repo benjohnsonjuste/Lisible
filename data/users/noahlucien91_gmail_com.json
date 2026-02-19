@@ -4,6 +4,13 @@
   "li": 645,
   "notifications": [
     {
+      "id": "like_1771509275200",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Et si la femme était un objet\" !",
+      "date": "2026-02-19T13:54:35.201Z",
+      "read": false
+    },
+    {
       "id": "like_1771509165381",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Et si la femme était un objet\" !",
