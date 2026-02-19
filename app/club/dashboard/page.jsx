@@ -1,10 +1,22 @@
 "use client";
-import { useState } from "react";
-import ClubDashboard from "@/components/ClubDashboard"; // Utilise le code du dashboard généré précédemment
+import { useState, useEffect } from "react";
+import ClubDashboard from "@/components/ClubDashboard";
 
-export default function HostPage({ currentUser }) {
-  // Ici vous récupérez votre user via votre système de session existant
-  const user = { name: "Ben Johnson", email: "ben@lisible.com", avatar: "..." };
+export default function HostPage() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Récupération de l'utilisateur depuis le localStorage (ou ta session)
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      // Fallback ou redirection si non connecté
+      setUser({ name: "Auteur Lisible", email: "guest@lisible.com", avatar: "" });
+    }
+  }, []);
+
+  if (!user) return <div className="min-h-screen bg-[#020617]" />;
 
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
