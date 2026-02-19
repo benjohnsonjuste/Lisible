@@ -1,8 +1,15 @@
 {
   "email": "ismailwoolfenden@yahoo.com",
   "name": "Ismail Woolfenden",
-  "li": 50,
+  "li": 51,
   "notifications": [
+    {
+      "id": "cert_1771466676314",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Affûtage\" (+1 Li).",
+      "date": "2026-02-19T02:04:36.314Z",
+      "read": false
+    },
     {
       "id": "like_1771466623026",
       "type": "like",
