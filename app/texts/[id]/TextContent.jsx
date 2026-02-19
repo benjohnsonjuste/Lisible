@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-import Head from "next/head";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
   Maximize2, Minimize2, Clock, AlertTriangle,
@@ -76,7 +75,6 @@ export default function TextContent() {
     }
 
     try {
-      // Ajout d'un paramètre de timestamp pour forcer la fraîcheur des données GitHub
       const res = await fetch(`/api/github-db?type=text&id=${id}&t=${Date.now()}`);
       
       if (res.status === 429) {
@@ -97,11 +95,11 @@ export default function TextContent() {
       if (indexRes.ok) {
         const indexData = await indexRes.json();
         const sortedLibrary = (indexData.content || []).sort((a, b) => {
-            const certA = Number(a.certified || a.totalCertified || 0);
-            const certB = Number(b.certified || b.totalCertified || 0);
+            const certA = Number(a.certified || 0);
+            const certB = Number(b.certified || 0);
             if (certB !== certA) return certB - certA;
-            const likesA = Number(a.likes || a.totalLikes || 0);
-            const likesB = Number(b.likes || b.totalLikes || 0);
+            const likesA = Number(a.likes || 0);
+            const likesB = Number(b.likes || 0);
             if (likesB !== likesA) return likesB - likesA;
             return new Date(b.date) - new Date(a.date);
         });
@@ -141,7 +139,7 @@ export default function TextContent() {
           body: JSON.stringify({ id, action: "view" })
         }).then(res => res.json()).then(data => {
           if (data.success) {
-            setLiveViews(data.count);
+            setLiveViews(prev => prev + 1);
             localStorage.setItem(viewedKey, "1");
           }
         });
@@ -228,7 +226,7 @@ export default function TextContent() {
     if (!text?.content) return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
-    if (paragraphs.length <= 3) {
+    if (paragraphs.length <= 4) {
       return (
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
           {paragraphs.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
@@ -236,9 +234,9 @@ export default function TextContent() {
       );
     }
 
-    const adIndex = Math.max(1, Math.floor(paragraphs.length / 3));
-    const firstPart = paragraphs.slice(0, adIndex);
-    const secondPart = paragraphs.slice(adIndex);
+    const midPoint = Math.floor(paragraphs.length / 2);
+    const firstPart = paragraphs.slice(0, midPoint);
+    const secondPart = paragraphs.slice(midPoint);
 
     return (
       <div className="space-y-6">
@@ -246,9 +244,8 @@ export default function TextContent() {
            {firstPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
         
-        <div className="my-12 py-4">
-           <InTextAd />
-        </div>
+        {/* Insertion de la publicité au milieu du texte */}
+        <InTextAd />
 
         <div className="whitespace-pre-wrap space-y-6">
            {secondPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
@@ -264,10 +261,11 @@ export default function TextContent() {
     </div>
   );
 
+  if (!text) return null;
+
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
   const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
-  // Gestion de l'image Base64 ou URL par défaut
-  const displayImage = text.image || "/og-default.jpg";
+  const displayImage = text.image || null;
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
@@ -311,7 +309,7 @@ export default function TextContent() {
                  </div>
               </div>
 
-              {text.image && (
+              {displayImage && (
                 <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
                   <img src={displayImage} className="w-full h-full object-cover" alt="" />
                 </div>
@@ -369,5 +367,4 @@ export default function TextContent() {
         <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
     </div>
   );
-      }
-         
+}
