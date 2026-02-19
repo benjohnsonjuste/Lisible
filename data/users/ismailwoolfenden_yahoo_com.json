@@ -2,7 +2,15 @@
   "email": "ismailwoolfenden@yahoo.com",
   "name": "Ismail Woolfenden",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1771466623026",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Affûtage\" !",
+      "date": "2026-02-19T02:03:43.026Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
