@@ -223,6 +223,24 @@
     "certified": 0
   },
   {
+    "id": "txt_1770823878615",
+    "title": "Affûtage",
+    "author": "Ismail Woolfenden",
+    "authorEmail": "ismailwoolfenden@yahoo.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:31:18.615Z",
+    "content": "Le jet de l'eau mouille la lame, \n\nMais la meule jette sa flamme\n\nDe l'un de l'autre nait le fil\n\nIl l'a bat, martelle la faux,, Puis la souligne, pierre à chaud\n\nIl glisse, sensuel, si habile\n\nVoilà l'amour du rémouleur, Pour l'objet juste, juste à coeur\n\nPrécis, concentré, avec style\n\nDe l'eau, du feu, du fer, Passions, Sa main glisse sur les sillons\n\nD'une belle aux formes nubiles\n\nL'eau coule qui tout rafraichit, Et surtout ce feu à l'envi\n\nSoupirs et vapeurs si fragiles\n\nTout prend forme qui forme Vie, Ivre et ensemble à l'Infini\n\nEt des nuits, pas une mais mille\n\nLui(t) le feu qui mouille notre Ame, \n\nSoif de tendresse pour Sa Dame\n\nS'adonne à la caresse agile\n\nCe travailleur a bel Esprit, Savoirs, Sagesse, pas de prix\n\nSon empreinte est indélébile",
+    "authorName": "Ismail Woolfenden",
+    "imageBase64": null,
+    "concurrentId": "ISWO1050",
+    "views": 15,
+    "likes": 1,
+    "comments": [],
+    "certified": 0
+  },
+  {
     "id": "1771439708279",
     "title": "Fin du premier tour",
     "author": "Lisible Support Team",
@@ -297,23 +315,5 @@
     "isConcours": true,
     "image": null,
     "date": "2026-02-11T15:34:39.276Z"
-  },
-  {
-    "id": "txt_1770823878615",
-    "title": "Affûtage",
-    "author": "Ismail Woolfenden",
-    "authorEmail": "ismailwoolfenden@yahoo.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:31:18.615Z",
-    "content": "Le jet de l'eau mouille la lame, \n\nMais la meule jette sa flamme\n\nDe l'un de l'autre nait le fil\n\nIl l'a bat, martelle la faux,, Puis la souligne, pierre à chaud\n\nIl glisse, sensuel, si habile\n\nVoilà l'amour du rémouleur, Pour l'objet juste, juste à coeur\n\nPrécis, concentré, avec style\n\nDe l'eau, du feu, du fer, Passions, Sa main glisse sur les sillons\n\nD'une belle aux formes nubiles\n\nL'eau coule qui tout rafraichit, Et surtout ce feu à l'envi\n\nSoupirs et vapeurs si fragiles\n\nTout prend forme qui forme Vie, Ivre et ensemble à l'Infini\n\nEt des nuits, pas une mais mille\n\nLui(t) le feu qui mouille notre Ame, \n\nSoif de tendresse pour Sa Dame\n\nS'adonne à la caresse agile\n\nCe travailleur a bel Esprit, Savoirs, Sagesse, pas de prix\n\nSon empreinte est indélébile",
-    "authorName": "Ismail Woolfenden",
-    "imageBase64": null,
-    "concurrentId": "ISWO1050",
-    "views": 15,
-    "likes": 0,
-    "comments": [],
-    "certified": 0
   }
 ]
