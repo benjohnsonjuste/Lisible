@@ -1,8 +1,15 @@
 {
   "email": "juniorzoro382@gmail.com",
   "name": "",
-  "li": 57,
+  "li": 58,
   "notifications": [
+    {
+      "id": "cert_1771466575334",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Une lettre pour le futur\" (+1 Li).",
+      "date": "2026-02-19T02:02:55.334Z",
+      "read": false
+    },
     {
       "id": "cert_1771466573442",
       "type": "certification",
