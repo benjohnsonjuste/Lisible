@@ -5542,7 +5542,9 @@
     }
   ],
   "followers": [],
-  "following": [],
+  "following": [
+    "noahlucien91@gmail.com"
+  ],
   "works": [],
   "created_at": "2026-02-11T15:26:40.601Z",
   "password": "$2b$10$.Z3w3nImW4xcLHYBcbmqh.IlAf1W5uFG6vyfvHakFqi5xKUsP0NUG",
