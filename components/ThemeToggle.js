@@ -19,7 +19,7 @@ export default function ThemeToggle() {
 
     // --- AUDIO FIX (SYNTAXE JS PURE) ---
     try {
-      // Suppression du "as any" qui causait l'erreur de build
+      // Accès sécurisé aux API Web Audio sans syntaxe de cast TypeScript
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         const audioCtx = new AudioCtx();
