@@ -73,7 +73,7 @@ html {
 }
 
 /* =========================================
-   ANIMATIONS D'IMMERSION
+   ANIMATIONS D'IMMERSION & GALERIE
 ========================================= */
 @keyframes thinking-flow {
   0% { transform: translateY(20px) scale(0.95); opacity: 0; }
@@ -101,6 +101,25 @@ html {
 
 .pulse-seal {
   animation: seal-pulse 3s infinite ease-in-out;
+}
+
+/* ANIMATIONS TRANSITION 3D */
+@keyframes scan {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+.animate-scan {
+  animation: scan 3s linear infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
 }
 
 /* =========================================
