@@ -4,6 +4,13 @@
   "li": 56,
   "notifications": [
     {
+      "id": "like_1771466503525",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Une lettre pour le futur\" !",
+      "date": "2026-02-19T02:01:43.525Z",
+      "read": false
+    },
+    {
       "id": "like_1771172096705",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Une lettre pour le futur\" !",
