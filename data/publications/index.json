@@ -89,6 +89,19 @@
     "certified": 50
   },
   {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Plume Anonyme",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 39,
+    "likes": 7,
+    "certified": 7
+  },
+  {
     "id": "1770850500145",
     "title": "Femme du Cameroun, lumière d’Afrique",
     "author": "Romuald Douanla MELONG",
@@ -100,19 +113,6 @@
     "date": "2026-02-11T22:55:03.076Z",
     "views": 11,
     "likes": 8,
-    "certified": 6
-  },
-  {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Plume Anonyme",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z",
-    "views": 39,
-    "likes": 7,
     "certified": 6
   },
   {
