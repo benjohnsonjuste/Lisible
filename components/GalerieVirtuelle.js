@@ -3,221 +3,299 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { 
   Text, PerspectiveCamera, Sparkles, 
-  MeshTransmissionMaterial, Float 
+  MeshTransmissionMaterial, Stars, Sky
 } from "@react-three/drei";
-import { EffectComposer, Bloom, Vignette, Noise } from "@react-three/postprocessing";
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowUp, ArrowLeft, ArrowRight, ArrowDown } from "lucide-react";
+import { Loader2, Fingerprint } from "lucide-react";
 import * as THREE from "three";
 
-// --- GÉNÉRATEUR DE SONS SYNTHÉTIQUES ---
-const playSynth = (type) => {
+// --- EFFET DE BUÉE (OVERLAY HTML/CSS) ---
+function FogOverlay({ active }) {
+  const [opacity, setOpacity] = useState(0);
+
+  useEffect(() => {
+    if (active) {
+      setOpacity(0.9);
+      const timer = setTimeout(() => {
+        const interval = setInterval(() => {
+          setOpacity((prev) => {
+            if (prev <= 0) { clearInterval(interval); return 0; }
+            return prev - 0.01;
+          });
+        }, 60);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [active]);
+
+  if (opacity <= 0) return null;
+
+  return (
+    <div 
+      className="fixed inset-0 z-[150] pointer-events-none transition-opacity duration-1000"
+      style={{
+        opacity: opacity,
+        background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.5) 100%)',
+        backdropFilter: `blur(${opacity * 20}px)`,
+        WebkitBackdropFilter: `blur(${opacity * 20}px)`,
+      }}
+    />
+  );
+}
+
+// --- GÉNÉRATEUR DE SONS ---
+const playSound = (type) => {
   if (typeof window === "undefined") return;
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
+  osc.connect(gain); gain.connect(ctx.destination);
 
   if (type === 'step') {
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(120, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.05, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(80, ctx.currentTime);
+    gain.gain.setValueAtTime(0.02, ctx.currentTime);
     osc.start(); osc.stop(ctx.currentTime + 0.1);
-  } else if (type === 'door') {
+  } else if (type === 'open') {
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(100, ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(300, ctx.currentTime + 1.2);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 1);
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
-    osc.start(); osc.stop(ctx.currentTime + 1.2);
+    osc.start(); osc.stop(ctx.currentTime + 1);
   }
 };
 
-// --- COMPOSANT PORTE ---
-function TextDoor({ txt, position }) {
-  const router = useRouter();
-  const [hovered, setHovered] = useState(false);
+// --- MAINS GANTÉES (VUE SUBJECTIVE) ---
+function FirstPersonHands({ isWalking, isOpening }) {
+  const group = useRef();
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    if (isWalking) {
+      group.current.position.y = Math.sin(t * 10) * 0.02;
+      group.current.position.x = Math.cos(t * 5) * 0.01;
+    }
+    group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, isOpening ? -0.5 : 0, 0.1);
+  });
 
   return (
-    <group position={position}>
-      <mesh 
-        onPointerOver={() => (setHovered(true), document.body.style.cursor = "pointer")}
-        onPointerOut={() => (setHovered(false), document.body.style.cursor = "auto")}
-        onClick={() => {
-            playSynth('door');
-            router.push(`/texts/${txt.id}`);
-        }}
-      >
-        <boxGeometry args={[2.5, 4.5, 0.1]} />
-        <MeshTransmissionMaterial 
-          thickness={0.5} 
-          anisotropy={0.1}
-          chromaticAberration={0.04}
-          color={hovered ? "#5eead4" : "#0a0a0a"} 
-          transmission={0.9}
-        />
-        
-        <Text position={[0, 2.8, 0]} fontSize={0.22} color="white" fontWeight="900">
-          {txt.title.toUpperCase()}
-        </Text>
-
-        {hovered && (
-          <group position={[0, -0.5, 0.2]}>
-            <mesh><sphereGeometry args={[0.1]} /><meshBasicMaterial color="#2dd4bf" /></mesh>
-            <Text position={[0, -0.4, 0]} fontSize={0.12} color="white">CLIQUER POUR OUVRIR</Text>
-          </group>
-        )}
+    <group ref={group}>
+      <mesh position={[-0.6, -0.4, -0.8]} rotation={[0.2, 0.4, 0]}>
+        <capsuleGeometry args={[0.07, 0.2, 4, 8]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={1} />
+      </mesh>
+      <mesh position={[0.6, -0.4, -0.8]} rotation={[0.2, -0.4, 0]}>
+        <capsuleGeometry args={[0.07, 0.2, 4, 8]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={1} />
       </mesh>
     </group>
   );
 }
 
-// --- LOGIQUE DE NAVIGATION (GAMEPLAY) ---
-function SceneManager({ phase, setPhase, texts }) {
+// --- PORTE DE TEXTE AVEC DÉTECTION ---
+function TextDoor({ txt, position, onNear }) {
   const { camera } = useThree();
-  const doorRef = useRef();
+  const [active, setActive] = useState(false);
+
+  useFrame(() => {
+    const dist = camera.position.distanceTo(new THREE.Vector3(...position));
+    if (dist < 3.5) {
+      if (!active) { setActive(true); onNear(txt); }
+    } else if (active) {
+      setActive(false); onNear(null);
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh>
+        <boxGeometry args={[2.8, 4.8, 0.15]} />
+        <MeshTransmissionMaterial 
+          thickness={0.5} 
+          color={active ? "#2dd4bf" : "#050505"} 
+          transmission={0.7}
+        />
+        <Text position={[0, 3, 0.2]} fontSize={0.18} color="white" maxWidth={2.2} textAlign="center">
+          {txt.title.toUpperCase()}
+        </Text>
+      </mesh>
+    </group>
+  );
+}
+
+// --- SCÈNE ET GAMEPLAY ---
+function SceneManager({ phase, setPhase, texts, setTargetText }) {
+  const { camera } = useThree();
+  const mainDoorRef = useRef();
   const [keys, setKeys] = useState({});
-  const stepInterval = useRef(0);
+  const [isWalking, setIsWalking] = useState(false);
+  const stepTimer = useRef(0);
 
   useEffect(() => {
-    const handleKey = (e) => setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: e.type === "keydown" }));
-    window.addEventListener("keydown", handleKey);
-    window.addEventListener("keyup", handleKey);
-    return () => { window.removeEventListener("keydown", handleKey); window.removeEventListener("keyup", handleKey); };
+    const h = (e) => setKeys(p => ({ ...p, [e.key.toLowerCase()]: e.type === "keydown" }));
+    window.addEventListener("keydown", h); window.addEventListener("keyup", h);
+    return () => { window.removeEventListener("keydown", h); window.removeEventListener("keyup", h); };
   }, []);
 
   useFrame((state, delta) => {
-    // Phase 1 : Introduction cinématique
+    const t = state.clock.getElapsedTime();
+    
+    // Head Bobbing (Tremblement de caméra réaliste)
+    if (isWalking) {
+      camera.position.y = 1.7 + Math.sin(t * 10) * 0.03;
+    }
+
     if (phase === "intro") {
-      camera.position.z = THREE.MathUtils.lerp(camera.position.z, 15, 0.02);
-      if (camera.position.z < 15.2) setPhase("door");
+      camera.position.z -= 0.06;
+      setIsWalking(true);
+      if (camera.position.z < 16.5) setPhase("at_door");
     }
 
-    // Phase 2 : Animation de la porte principale
-    if (phase === "door") {
-      if (doorRef.current) doorRef.current.rotation.y = THREE.MathUtils.lerp(doorRef.current.rotation.y, -Math.PI/1.5, 0.02);
-      camera.position.z = THREE.MathUtils.lerp(camera.position.z, 8, 0.02);
-      if (camera.position.z < 8.2) setPhase("explore");
+    if (phase === "at_door") {
+      setIsWalking(false);
+      if (keys["w"] || keys["arrowup"] || keys[" "]) {
+        setPhase("entering");
+        playSound('open');
+      }
     }
 
-    // Phase 3 : Mode Jeu (Exploration libre)
+    if (phase === "entering") {
+      if (mainDoorRef.current) mainDoorRef.current.rotation.y = THREE.MathUtils.lerp(mainDoorRef.current.rotation.y, -Math.PI/1.8, 0.04);
+      camera.position.z -= 0.08;
+      if (camera.position.z < 10) setPhase("explore");
+    }
+
     if (phase === "explore") {
       const speed = 0.12;
-      const isMoving = keys["w"] || keys["s"] || keys["a"] || keys["d"] || keys["arrowup"] || keys["arrowdown"] || keys["arrowleft"] || keys["arrowright"];
-      
+      const move = keys["w"] || keys["s"] || keys["a"] || keys["d"] || keys["arrowup"] || keys["arrowdown"] || keys["arrowleft"] || keys["arrowright"];
+      setIsWalking(move);
+
       if (keys["w"] || keys["arrowup"]) camera.position.z -= speed;
       if (keys["s"] || keys["arrowdown"]) camera.position.z += speed;
       if (keys["a"] || keys["arrowleft"]) camera.position.x -= speed;
       if (keys["d"] || keys["arrowright"]) camera.position.x += speed;
 
-      // Déclenchement du son des pas
-      if (isMoving) {
-        stepInterval.current += delta;
-        if (stepInterval.current > 0.5) { playSynth('step'); stepInterval.current = 0; }
+      if (move) {
+        stepTimer.current += delta;
+        if (stepTimer.current > 0.5) { playSound('step'); stepTimer.current = 0; }
       }
-
-      // Limites de la salle
-      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -10, 10);
-      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -20, 12);
+      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -14, 14);
+      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -60, 11);
     }
   });
 
   return (
     <>
-      {/* PORTE D'ENTRÉE LISIBLE */}
-      <group position={[0, 0, 12]} ref={doorRef}>
-        <mesh position={[1.25, 2.25, 0]}>
-          <boxGeometry args={[2.5, 4.5, 0.2]} />
-          <meshStandardMaterial color="#050505" metalness={1} roughness={0.1} />
-          <Text position={[0, 1, 0.12]} fontSize={0.4} color="#2dd4bf">LISIBLE</Text>
+      <FirstPersonHands isWalking={isWalking} isOpening={phase === "entering"} />
+      
+      {(phase === "intro" || phase === "at_door") && (
+        <>
+          <Sky sunPosition={[100, 10, 100]} />
+          <Stars radius={100} depth={50} count={5000} factor={4} />
+        </>
+      )}
+
+      <group position={[0, 0, 12]}>
+        <mesh position={[0, 5, -0.2]}>
+           <boxGeometry args={[40, 20, 1]} />
+           <meshStandardMaterial color="#050505" />
         </mesh>
+        <Text position={[0, 8.5, 0.6]} fontSize={1.2} color="#2dd4bf">GALERIE LISIBLE</Text>
+        <group position={[0, 0, 0]} ref={mainDoorRef}>
+           <mesh position={[1.5, 2.5, 0.1]}>
+              <boxGeometry args={[3, 5, 0.25]} />
+              <meshStandardMaterial color="#0a0a0a" metalness={0.9} roughness={0.1} />
+           </mesh>
+        </group>
       </group>
 
-      {/* DISPOSITION DES PORTES DE TEXTES */}
-      <group position={[0, 2.25, 0]}>
+      <group position={[0, 2.4, 0]}>
         {texts.map((txt, i) => (
           <TextDoor 
             key={txt.id} 
             txt={txt} 
-            position={[(i % 2 === 0 ? -6 : 6), 0, -i * 5]} 
+            position={[(i % 2 === 0 ? -7.5 : 7.5), 0, -i * 7]} 
+            onNear={setTargetText}
           />
         ))}
       </group>
 
-      {/* SOL MIROIR */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[100, 100]} />
-        <meshStandardMaterial color="#020202" roughness={0.1} metalness={0.8} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[300, 300]} />
+        <meshStandardMaterial color={phase === "intro" ? "#ffffff" : "#020202"} metalness={0.2} roughness={0.8} />
       </mesh>
+      <Sparkles count={1200} scale={60} size={2} speed={0.4} color="white" />
     </>
   );
 }
 
-// --- EXPORT DU COMPOSANT GALERIE VIRTUELLE ---
+// --- EXPORT ---
 export default function GalerieVirtuelle() {
   const [phase, setPhase] = useState("intro");
   const [texts, setTexts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [targetText, setTargetText] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
-    // Appel à votre API github-db existante
-    fetch("/api/github-db?type=library")
-      .then(res => res.json())
-      .then(data => {
-        const content = Array.isArray(data.content) ? data.content : [];
-        setTexts(content.slice(0, 12));
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetch("/api/github-db?type=library").then(res => res.json()).then(data => {
+      setTexts(Array.isArray(data.content) ? data.content.slice(0, 20) : []);
+    });
   }, []);
 
-  if (loading) return (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-black">
-      <Loader2 className="animate-spin text-teal-400 mb-4" size={32} />
-      <p className="text-teal-900 font-mono text-[10px] uppercase tracking-widest">Initialisation 3D...</p>
-    </div>
-  );
+  const handleOpenDoor = () => {
+    if (targetText) {
+      playSound('open');
+      router.push(`/texts/${targetText.id}`);
+    }
+  };
 
   return (
     <div className="w-full h-screen bg-black relative overflow-hidden">
+      <FogOverlay active={phase === "entering"} />
+      
       <Canvas shadows>
-        <PerspectiveCamera makeDefault position={[0, 1.7, 40]} fov={45} />
-        <fog attach="fog" args={["#000", 5, 30]} />
-        
+        <PerspectiveCamera makeDefault position={[0, 1.7, 45]} fov={50} />
         <Suspense fallback={null}>
-          <SceneManager phase={phase} setPhase={setPhase} texts={texts} />
+          <SceneManager phase={phase} setPhase={setPhase} texts={texts} setTargetText={setTargetText} />
           <ambientLight intensity={0.4} />
-          <pointLight position={[0, 10, 5]} intensity={2} color="#2dd4bf" />
-          <Sparkles count={200} scale={20} size={2} color="#2dd4bf" />
-          
+          <pointLight position={[0, 10, 15]} intensity={1.5} color="#2dd4bf" />
           <EffectComposer>
-            <Bloom intensity={1.5} luminanceThreshold={0.1} />
+            <Bloom intensity={1.5} />
             <Vignette darkness={0.8} />
-            <Noise opacity={0.05} />
           </EffectComposer>
         </Suspense>
       </Canvas>
 
-      {/* HUD INTERFACE */}
-      <div className="absolute top-10 left-10 pointer-events-none">
-        <h1 className="text-teal-500 font-black text-2xl tracking-tighter italic">LISIBLE / GALERIE_VIRTUELLE</h1>
-        <p className="text-teal-900 font-mono text-[10px] uppercase tracking-widest">SÉCURISÉ // PHASE: {phase.toUpperCase()}</p>
-      </div>
-
-      {phase === "explore" && (
-        <div className="absolute bottom-10 right-10 flex gap-4 items-center bg-black/50 backdrop-blur-md p-4 px-6 rounded-full border border-teal-900/50">
-          <div className="flex gap-2">
-            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">Z</kbd>
-            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">Q</kbd>
-            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">S</kbd>
-            <kbd className="px-2 py-1 border border-teal-500 rounded text-teal-500 text-[10px]">D</kbd>
-          </div>
-          <span className="text-teal-500 font-mono text-[10px] uppercase tracking-tighter">Déplacement autorisé</span>
+      <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-12">
+        <div className="text-center">
+          <h1 className="text-teal-500 font-black tracking-[0.6em] text-2xl uppercase">Lisible 3D</h1>
+          {phase === "at_door" && <p className="text-white animate-pulse mt-6 font-mono text-sm tracking-widest">APPUYEZ SUR [W] POUR ENTRER</p>}
         </div>
-      )}
+
+        {targetText && phase === "explore" && (
+          <div className="animate-in fade-in slide-in-from-bottom-8 flex flex-col items-center gap-6">
+            <p className="text-white font-serif italic text-3xl bg-black/60 backdrop-blur-md px-10 py-4 rounded-2xl border border-white/10">
+              {targetText.title}
+            </p>
+            <button 
+              onClick={handleOpenDoor}
+              className="pointer-events-auto bg-teal-500 hover:bg-teal-400 text-black font-black px-12 py-5 rounded-full flex items-center gap-4 shadow-[0_0_50px_rgba(45,212,191,0.4)] transition-all scale-110"
+            >
+              <Fingerprint size={24} /> OUVRIR LA PORTE
+            </button>
+          </div>
+        )}
+
+        <div className="w-full flex justify-between items-end opacity-40">
+          <div className="font-mono text-[10px] text-teal-700 leading-loose">
+            SYSTEM: OK <br />
+            AMBIENT: {phase === "intro" ? "EXT_SNOW" : "INT_GALLERY"} <br />
+            FPS: 60
+          </div>
+          <div className="flex gap-3">
+            {['W','A','S','D'].map(k => <kbd key={k} className="border border-teal-900 px-3 py-1.5 text-teal-800 rounded-lg text-xs">{k}</kbd>)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
