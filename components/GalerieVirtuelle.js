@@ -1,16 +1,16 @@
 "use client";
-import React, { useEffect, useState, useRef, Suspense } from "react";
+import React, { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { 
-  Text, PerspectiveCamera, Sparkles, 
+  Text, PerspectiveCamera, Sparkles, Cloud,
   MeshTransmissionMaterial, Sky, Environment, ContactShadows
 } from "@react-three/drei";
 import { EffectComposer, Bloom, Vignette, Noise } from "@react-three/postprocessing";
 import { useRouter } from "next/navigation";
-import { Fingerprint, Loader2, MapPin } from "lucide-react";
+import { Fingerprint, Loader2, ThermometerSnowflake } from "lucide-react";
 import * as THREE from "three";
 
-// --- JOYSTICK TACTILE URBAIN ---
+// --- JOYSTICK TACTILE ---
 const VirtualJoystick = ({ onMove }) => {
   const [active, setActive] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -37,13 +37,13 @@ const VirtualJoystick = ({ onMove }) => {
       ref={containerRef}
       onMouseDown={handleStart} onMouseMove={handleMove} onMouseUp={handleEnd} onMouseLeave={handleEnd}
       onTouchStart={handleStart} onTouchMove={handleMove} onTouchEnd={handleEnd}
-      className="w-32 h-32 rounded-full bg-slate-900/20 border-2 border-slate-900/30 backdrop-blur-sm relative touch-none pointer-events-auto"
+      className="w-32 h-32 rounded-full bg-black/20 border border-white/30 backdrop-blur-md relative touch-none pointer-events-auto shadow-2xl"
     >
       <div 
-        className="w-12 h-12 bg-slate-800 rounded-full absolute shadow-xl"
+        className="w-12 h-12 bg-white/80 rounded-full absolute shadow-xl"
         style={{ 
           left: `calc(50% + ${pos.x}px)`, top: `calc(50% + ${pos.y}px)`,
-          transform: 'translate(-50%, -50%)', transition: active ? 'none' : 'all 0.1s'
+          transform: 'translate(-50%, -50%)', transition: active ? 'none' : 'all 0.2s'
         }}
       />
     </div>
@@ -57,41 +57,37 @@ const playSound = (type) => {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain); gain.connect(ctx.destination);
-  if (type === 'step') {
-    osc.frequency.setValueAtTime(60, ctx.currentTime);
+
+  if (type === 'snow_step') {
+    osc.frequency.setValueAtTime(50, ctx.currentTime);
     gain.gain.setValueAtTime(0.01, ctx.currentTime);
     osc.start(); osc.stop(ctx.currentTime + 0.1);
-  } else if (type === 'open') {
-    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.5);
-    gain.gain.setValueAtTime(0.05, ctx.currentTime);
-    osc.start(); osc.stop(ctx.currentTime + 0.8);
+  } else if (type === 'creak_door') {
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 1);
+    gain.gain.setValueAtTime(0.03, ctx.currentTime);
+    osc.start(); osc.stop(ctx.currentTime + 1.2);
   }
 };
 
-// --- MAINS (VÊTEMENTS URBAINS) ---
-function FirstPersonHands({ walking }) {
+// --- MAINS ---
+function WinterHands({ walking, phase }) {
   const ref = useRef();
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
-    ref.current.position.y = walking ? Math.sin(t * 10) * 0.015 - 0.45 : -0.45;
-    ref.current.position.x = walking ? Math.cos(t * 5) * 0.01 : 0;
+    ref.current.position.y = walking ? Math.sin(t * 8) * 0.02 - 0.45 : -0.45;
+    ref.current.position.x = walking ? Math.cos(t * 4) * 0.015 : 0;
+    if (phase === "entering") ref.current.position.z = THREE.MathUtils.lerp(ref.current.position.z, -1, 0.05);
   });
   return (
     <group ref={ref}>
-      <mesh position={[-0.55, 0, -0.7]} rotation={[0.2, 0.3, 0]}>
-        <capsuleGeometry args={[0.06, 0.25, 4, 8]} />
-        <meshStandardMaterial color="#334155" roughness={1} />
-      </mesh>
-      <mesh position={[0.55, 0, -0.7]} rotation={[0.2, -0.3, 0]}>
-        <capsuleGeometry args={[0.06, 0.25, 4, 8]} />
-        <meshStandardMaterial color="#334155" roughness={1} />
-      </mesh>
+      <mesh position={[-0.55, 0, -0.7]}><capsuleGeometry args={[0.07, 0.18]} /><meshStandardMaterial color="#111" /></mesh>
+      <mesh position={[0.55, 0, -0.7]}><capsuleGeometry args={[0.07, 0.18]} /><meshStandardMaterial color="#111" /></mesh>
     </group>
   );
 }
 
-// --- PORTES INTÉRIEURES ---
-function InteriorDoor({ txt, position, onNear }) {
+// --- PORTE TEXTE ---
+function BookDoor({ txt, position, onNear }) {
   const { camera } = useThree();
   const [active, setActive] = useState(false);
   useFrame(() => {
@@ -103,107 +99,105 @@ function InteriorDoor({ txt, position, onNear }) {
     <group position={position}>
       <mesh castShadow>
         <boxGeometry args={[2.8, 4.8, 0.1]} />
-        <MeshTransmissionMaterial thickness={0.1} color={active ? "#bae6fd" : "#f1f5f9"} />
-        <Text position={[0, 2.6, 0.06]} fontSize={0.18} color="#1e293b" maxWidth={2} textAlign="center">
-          {txt.title.toUpperCase()}
-        </Text>
+        <MeshTransmissionMaterial thickness={0.3} color={active ? "#2dd4bf" : "#ffffff"} />
       </mesh>
+      <Text position={[0, 3, 0.12]} fontSize={0.2} color="white" maxWidth={2} textAlign="center">
+        {txt.title.toUpperCase()}
+      </Text>
     </group>
   );
 }
 
-// --- MOTEUR DE VILLE ---
-function CityScene({ phase, setPhase, texts, setTargetText, moveData }) {
+// --- WORLD MANAGER ---
+function World({ phase, setPhase, texts, setTargetText, moveData }) {
   const { camera } = useThree();
-  const mainDoor = useRef();
-  const [keys, setKeys] = useState({});
+  const mainDoorRef = useRef();
   const stepTimer = useRef(0);
-
-  useEffect(() => {
-    const h = (e) => setKeys(p => ({ ...p, [e.key.toLowerCase()]: e.type === "keydown" }));
-    window.addEventListener("keydown", h); window.addEventListener("keyup", h);
-    return () => { window.removeEventListener("keydown", h); window.removeEventListener("keyup", h); };
-  }, []);
+  const [isWalking, setIsWalking] = useState(false);
 
   useFrame((state, delta) => {
-    const speed = 0.16;
-    let mx = moveData.x || (keys["d"] ? 1 : keys["a"] ? -1 : 0);
-    let mz = -moveData.y || (keys["s"] ? 1 : keys["w"] ? -1 : 0);
+    const speed = 0.12;
+    const collisionZ = 22.5; // Mur du bâtiment
 
+    // Intro automatique
     if (phase === "intro") {
       camera.position.z -= 0.06;
-      if (camera.position.z < 25) setPhase("at_door");
-    } else if (phase === "entering") {
-      mainDoor.current.rotation.y = THREE.MathUtils.lerp(mainDoor.current.rotation.y, -1.5, 0.04);
-      camera.position.z -= 0.1;
-      if (camera.position.z < 10) setPhase("explore");
-    } else if (phase === "explore") {
-      camera.position.x += mx * speed;
-      camera.position.z += mz * speed;
+      setIsWalking(true);
+      if (camera.position.z < 26) setPhase("at_main_door");
+    } 
+    // Animation porte
+    else if (phase === "entering") {
+      mainDoorRef.current.rotation.y = THREE.MathUtils.lerp(mainDoorRef.current.rotation.y, -1.7, 0.04);
+      camera.position.z -= 0.08;
+      if (camera.position.z < 18) setPhase("library");
+    }
+    // Mouvement libre (Joystick)
+    else if (phase === "library") {
+      const mx = moveData.x * speed;
+      const mz = -moveData.y * speed;
+      
+      if (Math.abs(mx) > 0.01 || Math.abs(mz) > 0.01) {
+        setIsWalking(true);
+        // Collisions simples
+        const newX = camera.position.x + mx;
+        const newZ = camera.position.z + mz;
+        
+        if (newX > -12 && newX < 12) camera.position.x = newX;
+        if (newZ > -60 && newZ < 18) camera.position.z = newZ;
+
+        stepTimer.current += delta;
+        if (stepTimer.current > 0.5) { playSound('snow_step'); stepTimer.current = 0; }
+      } else {
+        setIsWalking(false);
+      }
     }
 
-    if ((mx !== 0 || mz !== 0 || phase === "intro") && phase !== "at_door") {
-      stepTimer.current += delta;
-      if (stepTimer.current > 0.6) { playSound('step'); stepTimer.current = 0; }
-    }
-    camera.position.x = THREE.MathUtils.clamp(camera.position.x, -14, 14);
-    camera.position.z = THREE.MathUtils.clamp(camera.position.z, -100, 30);
+    if (phase === "at_main_door") setIsWalking(false);
   });
 
   return (
     <>
-      <Sky sunPosition={[100, 40, 100]} turbidity={0.05} rayleigh={0.5} />
-      <Environment preset="park" />
-      <FirstPersonHands walking={phase !== "at_door"} />
+      <Sky sunPosition={[20, 5, 10]} />
+      <Sparkles count={800} scale={60} size={1} speed={0.3} color="white" />
       
-      {/* RUE ET BÂTIMENT LISIBLE */}
-      <group position={[0, 0, 15]}>
-        {/* Façade principale (Pierre Grise) */}
-        <mesh position={[0, 10, -2]} receiveShadow>
+      {/* MONTRÉAL (EXTÉRIEUR) */}
+      <group position={[0, 0, 20]}>
+        {/* Façade pierre */}
+        <mesh position={[0, 10, 0]} receiveShadow>
           <boxGeometry args={[60, 25, 4]} />
-          <meshStandardMaterial color="#94a3b8" roughness={0.7} />
+          <meshStandardMaterial color="#333" roughness={0.8} />
         </mesh>
-        
-        {/* Fenêtres hautes */}
-        {[ -10, 0, 10 ].map((x) => (
-            <mesh key={x} position={[x, 12, 0.1]}>
-                <planeGeometry args={[4, 8]} />
-                <meshStandardMaterial color="#0f172a" metalness={0.9} roughness={0.1} />
-            </mesh>
-        ))}
-
-        <Text position={[0, 10, 0.2]} fontSize={2} color="#f8fafc" font="/fonts/Inter-Bold.woff">GALERIE LISIBLE</Text>
-        
-        {/* Porte d'Entrée */}
-        <group ref={mainDoor} position={[2, 0, 0]}>
-          <mesh position={[0, 3.5, 0.2]} castShadow>
-            <boxGeometry args={[4, 7, 0.4]} />
-            <meshStandardMaterial color="#451a03" roughness={0.6} /> 
-          </mesh>
-        </group>
+        {/* Porte bois */}
+        <mesh ref={mainDoorRef} position={[2.1, 2.5, 2.1]} castShadow>
+          <boxGeometry args={[4.2, 5.5, 0.4]} />
+          <meshStandardMaterial color="#1a0f08" />
+          <Text position={[-0.8, 3.5, 0.25]} fontSize={0.3} color="#ccc">GALERIE LISIBLE</Text>
+        </mesh>
       </group>
 
-      {/* RANGÉES DE TEXTES INTÉRIEURES */}
+      {/* BIBLIOTHÈQUE (INTÉRIEUR) */}
       <group position={[0, 0, 0]}>
+        <ambientLight intensity={phase === "library" ? 0.3 : 0.8} />
+        <pointLight position={[0, 10, 10]} intensity={1.5} color="#2dd4bf" />
         {texts.map((t, i) => (
-          <InteriorDoor key={t.id} txt={t} position={[(i%2===0?-8:8), 2.4, -i*10]} onNear={setTargetText} />
+          <BookDoor key={t.id} txt={t} position={[(i % 2 === 0 ? -7 : 7), 2.4, 10 - i * 10]} onNear={setTargetText} />
         ))}
       </group>
-      
-      {/* SOL URBAIN (Bitume puis Parquet) */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[400, 400]} />
-        <meshStandardMaterial color={phase === "intro" || phase === "at_door" ? "#334155" : "#cbd5e1"} />
+
+      {/* SOL */}
+      <mesh rotation={[-Math.PI/2, 0, 0]} receiveShadow>
+        <planeGeometry args={[300, 300]} />
+        <meshStandardMaterial color={phase === "library" ? "#0a0a0a" : "#ffffff"} roughness={0.1} />
       </mesh>
 
-      <Sparkles count={400} scale={50} size={1.5} speed={0.2} color="white" />
-      <ContactShadows opacity={0.4} scale={40} blur={2} far={15} />
+      <WinterHands walking={isWalking} phase={phase} />
+      <ContactShadows opacity={0.4} scale={40} blur={2} />
     </>
   );
 }
 
 // --- EXPORT ---
-export default function GalerieUrbaine() {
+export default function GalerieLisible() {
   const [phase, setPhase] = useState("intro");
   const [texts, setTexts] = useState([]);
   const [targetText, setTargetText] = useState(null);
@@ -211,77 +205,71 @@ export default function GalerieUrbaine() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/github-db?type=library").then(res => res.json()).then(data => {
-      setTexts(Array.isArray(data.content) ? data.content.slice(0, 25) : []);
-    });
+    fetch("/api/github-db?type=library")
+      .then(res => res.json())
+      .then(data => setTexts(Array.isArray(data.content) ? data.content : []));
   }, []);
 
   return (
-    <div className="w-full h-screen bg-slate-300 relative touch-none overflow-hidden select-none">
-      <Canvas shadows dpr={[1, 2]}>
-        <PerspectiveCamera makeDefault position={[0, 1.7, 50]} fov={45} />
+    <div className="w-full h-screen bg-white relative overflow-hidden select-none">
+      <Canvas shadows>
+        <PerspectiveCamera makeDefault position={[0, 1.7, 45]} fov={50} />
         <Suspense fallback={null}>
-          <CityScene phase={phase} setPhase={setPhase} texts={texts} setTargetText={setTargetText} moveData={moveData} />
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[50, 50, 25]} intensity={1} castShadow />
+          <World phase={phase} setPhase={setPhase} texts={texts} setTargetText={setTargetText} moveData={moveData} />
           <EffectComposer>
-            <Bloom intensity={0.1} />
-            <Vignette darkness={0.3} />
-            <Noise opacity={0.02} />
+            <Bloom intensity={0.5} />
+            <Vignette darkness={0.7} />
           </EffectComposer>
         </Suspense>
       </Canvas>
 
-      {/* HUD RÉALISTE */}
-      <div className="absolute inset-0 pointer-events-none p-10 flex flex-col justify-between">
+      {/* OVERLAY UI */}
+      <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-10">
         <div className="flex justify-between items-start">
-          <div className="bg-slate-900 text-white p-5 rounded-sm shadow-2xl">
-            <h1 className="font-black text-2xl tracking-tight leading-none">LISIBLE</h1>
-            <div className="flex items-center gap-2 mt-2 text-slate-400 font-mono text-[10px] uppercase">
-                <MapPin size={10} /> 45° N, 73° W • MTL
-            </div>
+          <div className="bg-black/10 backdrop-blur-md px-5 py-2 rounded-full flex items-center gap-3 border border-white/20">
+            <ThermometerSnowflake className="text-blue-400" size={20} />
+            <span className="text-slate-800 font-bold tracking-tighter italic">Montréal VR</span>
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-8">
-          {phase === "at_door" && (
+        <div className="flex flex-col items-center">
+          {phase === "at_main_door" && (
             <button 
-              onClick={() => { setPhase("entering"); playSound('open'); }} 
-              className="pointer-events-auto bg-blue-600 hover:bg-blue-500 text-white font-bold px-12 py-5 rounded-full shadow-[0_15px_30px_rgba(37,99,235,0.4)] transition-all active:scale-95"
+              onClick={() => { setPhase("entering"); playSound('creak_door'); }}
+              className="pointer-events-auto bg-slate-900 text-white px-12 py-6 rounded-full font-black text-xl shadow-2xl animate-bounce"
             >
-              ENTRER DANS LA BIBLIOTHÈQUE
+              OUVRIR LA PORTE
             </button>
           )}
 
-          {targetText && phase === "explore" && (
-            <div className="flex flex-col items-center gap-5 animate-in fade-in slide-in-from-bottom-5">
-              <div className="bg-white px-10 py-5 rounded-lg shadow-2xl border-l-4 border-blue-600">
-                <p className="text-slate-400 text-[10px] uppercase font-bold mb-1 tracking-widest">Document sélectionné</p>
-                <h2 className="text-slate-900 text-xl font-serif italic font-medium">{targetText.title}</h2>
+          {targetText && (
+            <div className="flex flex-col items-center gap-5 translate-y-[-50px]">
+              <div className="bg-white/90 backdrop-blur-xl px-10 py-5 rounded-2xl shadow-2xl border-b-4 border-teal-500 text-center">
+                <p className="text-[10px] text-teal-600 font-black uppercase tracking-[0.3em] mb-2">Manuscrit</p>
+                <h2 className="text-2xl font-serif italic text-slate-900">{targetText.title}</h2>
               </div>
               <button 
-                onClick={() => { playSound('open'); router.push(`/texts/${targetText.id}`); }} 
-                className="pointer-events-auto bg-slate-900 text-white font-black px-14 py-6 rounded-lg flex items-center gap-4 hover:bg-slate-800 transition-all shadow-xl"
+                onClick={() => router.push(`/texts/${targetText.id}`)}
+                className="pointer-events-auto bg-teal-500 text-black px-12 py-5 rounded-full font-black flex items-center gap-4 shadow-[0_0_40px_rgba(45,212,191,0.5)] active:scale-95 transition-all"
               >
-                <Fingerprint size={24} /> LIRE LE MANUSCRIT
+                <Fingerprint size={24} /> SCANNER L'EMPREINTE
               </button>
             </div>
           )}
         </div>
 
         <div className="flex justify-between items-end">
-          <VirtualJoystick onMove={setMoveData} />
-          <div className="text-right text-slate-400 font-mono text-[9px] uppercase tracking-tighter">
-            System Status: Online <br />
-            Location: {phase.replace('_',' ')}
+          {phase === "library" && <VirtualJoystick onMove={setMoveData} />}
+          <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
+            {phase} mode
           </div>
         </div>
       </div>
 
       {texts.length === 0 && (
-        <div className="absolute inset-0 bg-slate-100 z-[200] flex flex-col items-center justify-center">
-          <Loader2 className="animate-spin text-blue-600 mb-4" size={32} />
-          <p className="font-mono text-xs text-slate-500 uppercase tracking-widest">Chargement de la rue...</p>
+        <div className="absolute inset-0 bg-white z-[100] flex flex-col items-center justify-center">
+          <Loader2 className="animate-spin text-teal-500 mb-4" size={40} />
+          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.5em]">Sync Library</p>
         </div>
       )}
     </div>
