@@ -267,6 +267,19 @@
     "certified": 0
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 1,
+    "likes": 1,
+    "certified": 0
+  },
+  {
     "id": "txt_1771698224267",
     "title": "Sonnet pour les victimes de la guerre",
     "author": "Adama Junior Cissokho ",
@@ -277,19 +290,6 @@
     "date": "2026-02-21T18:23:44.267Z",
     "views": 3,
     "likes": 1,
-    "certified": 0
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 1,
-    "likes": 0,
     "certified": 0
   },
   {
