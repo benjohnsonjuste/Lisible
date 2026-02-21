@@ -143,6 +143,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1771696391430",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T17:53:11.430Z",
+    "views": 3,
+    "likes": 0,
+    "certified": 3
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -224,19 +237,6 @@
     "views": 16,
     "likes": 1,
     "comments": [],
-    "certified": 2
-  },
-  {
-    "id": "txt_1771696391430",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T17:53:11.430Z",
-    "views": 3,
-    "likes": 0,
     "certified": 2
   },
   {
