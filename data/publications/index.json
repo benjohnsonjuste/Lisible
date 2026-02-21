@@ -208,6 +208,19 @@
     "certified": 2
   },
   {
+    "id": "1771714246871",
+    "title": "Au champ de bataille",
+    "author": "Une Plume",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-21T22:50:47.232Z",
+    "views": 3,
+    "likes": 2,
+    "certified": 2
+  },
+  {
     "id": "1770881283839",
     "title": "Jeunesse",
     "author": "Hassoumi",
@@ -218,19 +231,6 @@
     "date": "2026-02-12T07:28:06.895Z",
     "views": 5,
     "likes": 2,
-    "certified": 2
-  },
-  {
-    "id": "1771714246871",
-    "title": "Au champ de bataille",
-    "author": "Une Plume",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-21T22:50:47.232Z",
-    "views": 3,
-    "likes": 1,
     "certified": 2
   },
   {
