@@ -227,6 +227,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771696391430",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T17:53:11.430Z",
+    "views": 1,
+    "likes": 0,
+    "certified": 1
+  },
+  {
     "id": "1771120386909",
     "title": "Ta lumière dans mes ombres",
     "author": "Une Plume",
@@ -238,19 +251,6 @@
     "date": "2026-02-15T01:55:20.506Z",
     "views": 3,
     "likes": 2,
-    "certified": 0
-  },
-  {
-    "id": "txt_1771696391430",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T17:53:11.430Z",
-    "views": 1,
-    "likes": 0,
     "certified": 0
   },
   {
