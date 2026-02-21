@@ -27,23 +27,30 @@ export default function EditWorkPage() {
       const res = await fetch(`/api/github-db?type=text&id=${workId}`);
       const data = await res.json();
       
-      if (!data || !data.content) throw new Error("Le manuscrit est introuvable");
+      if (!data) throw new Error("Le manuscrit est introuvable");
       
-      const content = data.content;
+      // Sécurité : gère à la fois le cas où l'API renvoie l'objet directement 
+      // et le cas où elle l'enveloppe dans un champ 'content'
+      const manuscript = (data.content && typeof data.content === 'object') ? data.content : data;
 
-      if (content.authorEmail?.toLowerCase().trim() !== currentUser.email?.toLowerCase().trim()) {
+      // Protection contre les valeurs undefined avant d'utiliser toLowerCase() et trim()
+      const authorEmail = manuscript.authorEmail || "";
+      const userEmail = currentUser.email || "";
+
+      if (authorEmail.toLowerCase().trim() !== userEmail.toLowerCase().trim()) {
         toast.error("Violation d'accès : Ce manuscrit appartient à une autre plume.");
         router.push("/dashboard");
         return;
       }
 
       setFormData({
-        title: content.title || "",
-        content: content.content || "",
-        genre: content.genre || content.category || "Poésie",
-        summary: content.summary || ""
+        title: manuscript.title || "",
+        content: manuscript.content || "",
+        genre: manuscript.genre || manuscript.category || "Poésie",
+        summary: manuscript.summary || ""
       });
     } catch (err) {
+      console.error(err); // Utile pour déboguer si le problème persiste
       toast.error("Échec de l'ouverture du parchemin.");
       router.push("/dashboard");
     } finally {
