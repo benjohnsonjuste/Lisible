@@ -79,7 +79,6 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({
-        // Ajout de [skip ci] pour empêcher les déploiements Vercel automatiques à chaque changement de data
         message: `[DATA] ${message} [skip ci]`,
         content: encodedContent,
         sha: sha || undefined
@@ -124,8 +123,11 @@ export async function POST(req) {
     if (action === 'register') {
       const file = await getFile(targetPath);
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
+      
+      // On utilise le mot de passe brut pour le hachage pour éviter les erreurs de trim() asymétriques
       const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(data.password.trim(), salt);
+      const hashedPassword = bcrypt.hashSync(data.password, salt);
+      
       const userData = {
         email: data.email.toLowerCase().trim(),
         name: data.name || "Nouvel Auteur",
@@ -143,21 +145,31 @@ export async function POST(req) {
     if (action === 'login') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+      
       const storedPassword = file.content.password;
-      const providedPassword = data.password.trim();
+      const providedPassword = data.password; // On ne trim pas ici pour correspondre à la saisie réelle
+      
       let isMatch = false;
       const isHashed = typeof storedPassword === 'string' && (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$'));
+      
       if (isHashed) {
         isMatch = bcrypt.compareSync(providedPassword, storedPassword);
+        // Fallback de sécurité si l'utilisateur avait créé son compte avec un mot de passe trimé
+        if (!isMatch) {
+          isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
+        }
       } else {
-        isMatch = (providedPassword === storedPassword);
+        // Pour les anciens mots de passe en texte brut
+        isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
         if (isMatch) {
           const salt = bcrypt.genSaltSync(10);
           file.content.password = bcrypt.hashSync(providedPassword, salt);
           await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
         }
       }
+      
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
+      
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
     }
@@ -165,10 +177,10 @@ export async function POST(req) {
     if (action === 'change_password') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      const isMatch = bcrypt.compareSync(currentPassword.trim(), file.content.password);
+      const isMatch = bcrypt.compareSync(currentPassword, file.content.password);
       if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
       const salt = bcrypt.genSaltSync(10);
-      file.content.password = bcrypt.hashSync(newPassword.trim(), salt);
+      file.content.password = bcrypt.hashSync(newPassword, salt);
       await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
       return NextResponse.json({ success: true });
     }
