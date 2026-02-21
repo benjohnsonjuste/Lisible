@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; 
 import { toast } from "sonner";
@@ -12,20 +11,16 @@ export default function WorkForm({
   submitLabel = "Diffuser",
 }) {
   const router = useRouter();
-
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState(initialData.title || "");
   const [content, setContent] = useState(initialData.content || "");
   const [category, setCategory] = useState(initialData.category || (isConcours ? "Battle Poétique" : "Poésie"));
-  const [concurrentId, setConcurrentId] = useState(initialData.concurrentId || "");
   const [isBattlePoetic, setIsBattlePoetic] = useState(requireBattleAcceptance || false);
-
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(initialData.imageBase64 || null);
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // ===== Authentification & Gestion des Brouillons =====
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (!storedUser) {
@@ -38,14 +33,12 @@ export default function WorkForm({
     } catch (e) {
       router.push("/login");
     }
-
     if (!isConcours) {
       const draftTitle = localStorage.getItem("draft_title");
       const draftContent = localStorage.getItem("draft_content");
       if (draftTitle && !title) setTitle(draftTitle);
       if (draftContent && !content) setContent(draftContent);
     }
-
     setIsChecking(false);
   }, [router, isConcours]);
 
@@ -56,15 +49,12 @@ export default function WorkForm({
     }
   }, [title, content, isChecking, isConcours]);
 
-  // ===== Gestion de l'Image =====
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > 2 * 1024 * 1024) {
       return toast.error("Le parchemin est trop lourd (max 2Mo)");
     }
-
     setImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
@@ -79,23 +69,19 @@ export default function WorkForm({
       reader.onerror = (err) => reject(err);
     });
 
-  // ===== Soumission =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
     if (!user?.email) return toast.error("Identité introuvable.");
     if (requireBattleAcceptance && !isBattlePoetic) return toast.error("Veuillez accepter le duel.");
     if (content.trim().length < 50) return toast.error("Le texte est trop court pour être archivé.");
-
     setLoading(true);
     const toastId = toast.loading("Scellement du manuscrit...");
-
     try {
       let imageBase64 = imagePreview;
       if (imageFile) imageBase64 = await toBase64(imageFile);
-
       const payload = {
-        action: "publish", // Action pour l'API unifiée
+        action: "publish",
         title: title.trim(),
         content: content.trim(),
         category,
@@ -103,34 +89,25 @@ export default function WorkForm({
         authorEmail: user.email.toLowerCase().trim(),
         imageBase64,
         isConcours: isConcours || category === "Battle Poétique",
-        concurrentId: concurrentId?.toUpperCase().trim() || null,
         date: new Date().toISOString()
       };
-
-      // Appel à l'API centralisée github-db
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec de l'archivage");
-
       toast.success(isConcours ? "Défi lancé avec succès !" : "Œuvre immortalisée ✨", { id: toastId });
-
       if (!isConcours) {
         localStorage.removeItem("draft_title");
         localStorage.removeItem("draft_content");
       }
-
-      // Redirection vers le texte ou la bibliothèque
       if (data.id) {
         router.push(`/texts/${data.id}`);
       } else {
         router.push("/bibliotheque");
       }
-
     } catch (err) {
       toast.error(err.message, { id: toastId });
     } finally {
@@ -149,12 +126,10 @@ export default function WorkForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-12 font-sans max-w-4xl mx-auto px-4">
-      
-      {/* Duel / Battle */}
       {requireBattleAcceptance && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in zoom-in duration-700">
+        <div className="flex justify-center animate-in fade-in zoom-in duration-700">
           <div 
-            className={`p-10 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 ${
+            className={`p-10 w-full max-w-md rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 ${
               isBattlePoetic ? 'border-teal-500 bg-teal-50 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-200'
             }`}
             onClick={() => setIsBattlePoetic(!isBattlePoetic)}
@@ -164,24 +139,11 @@ export default function WorkForm({
             </div>
             <p className="text-[11px] font-black uppercase text-slate-900 tracking-[0.2em]">Accepter le Duel</p>
           </div>
-
-          <div className="bg-white p-10 rounded-[2.5rem] border-2 border-slate-100 flex flex-col justify-center gap-4 shadow-sm">
-             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">ID du Concurrent</label>
-             <input
-              type="text"
-              value={concurrentId}
-              onChange={(e) => setConcurrentId(e.target.value.toUpperCase())}
-              placeholder="CODE DUEL"
-              className="w-full bg-slate-50 border-none py-4 px-6 rounded-2xl text-2xl font-black outline-none focus:ring-4 ring-teal-500/10 transition-all text-center tracking-[0.3em] placeholder:opacity-20"
-            />
-          </div>
         </div>
       )}
 
-      {/* Manuscrit */}
       <div className="bg-white p-8 md:p-14 rounded-[3.5rem] border border-slate-100 shadow-xl space-y-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50/50 rounded-bl-[100px] -z-0 opacity-50" />
-        
         <div className="space-y-4 relative z-10">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
             <Type size={14} className="text-teal-500" /> Titre du manuscrit
@@ -195,7 +157,6 @@ export default function WorkForm({
             className="w-full bg-slate-50 border-none rounded-2xl px-8 py-6 text-3xl font-serif font-black italic outline-none focus:bg-white focus:ring-4 ring-teal-500/5 transition shadow-inner"
           />
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -211,7 +172,6 @@ export default function WorkForm({
                 ))}
               </select>
             </div>
-
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                 <PenTool size={14} className="text-teal-500" /> État du Scribe
@@ -221,7 +181,6 @@ export default function WorkForm({
               </div>
             </div>
         </div>
-
         <div className="space-y-4 relative z-10">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
             <PenTool size={14} className="text-teal-500" /> Corps de l'œuvre
@@ -242,14 +201,11 @@ export default function WorkForm({
         </div>
       </div>
 
-      {/* Illustration */}
       <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-lg space-y-6">
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
           <ImageIcon size={14} className="text-teal-500" /> Couverture du manuscrit
         </label>
-        
         <input type="file" accept="image/*" id="cover" className="hidden" onChange={handleImageChange} />
-        
         {imagePreview ? (
           <div className="relative h-80 rounded-[2.5rem] overflow-hidden shadow-2xl group border-4 border-white">
             <img src={imagePreview} alt="Preview" className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1" />
@@ -273,7 +229,6 @@ export default function WorkForm({
         )}
       </div>
 
-      {/* Action */}
       <div className="pt-6 pb-20">
         <button
           type="submit"
