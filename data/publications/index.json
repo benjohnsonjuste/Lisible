@@ -195,6 +195,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 3,
+    "likes": 2,
+    "certified": 2
+  },
+  {
     "id": "1770881283839",
     "title": "Jeunesse",
     "author": "Hassoumi",
@@ -205,19 +218,6 @@
     "date": "2026-02-12T07:28:06.895Z",
     "views": 5,
     "likes": 2,
-    "certified": 2
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 3,
-    "likes": 1,
     "certified": 2
   },
   {
