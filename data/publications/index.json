@@ -142,6 +142,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 5,
+    "likes": 4,
+    "certified": 4
+  },
+  {
     "id": "1770881884883",
     "title": "Femme en silence",
     "author": "Romuald Douanla MELONG",
@@ -153,19 +166,6 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 10,
     "likes": 4,
-    "certified": 4
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 5,
-    "likes": 3,
     "certified": 4
   },
   {
