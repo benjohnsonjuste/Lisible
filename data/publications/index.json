@@ -208,6 +208,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 1,
+    "likes": 1,
+    "certified": 2
+  },
+  {
     "id": "1770882254944",
     "title": "L'Ombre Invisible",
     "author": "Romuald Douanla MELONG",
@@ -238,19 +251,6 @@
     "likes": 1,
     "comments": [],
     "certified": 2
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 1,
-    "likes": 1,
-    "certified": 1
   },
   {
     "id": "txt_1771697362898",
