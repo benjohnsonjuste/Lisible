@@ -45,19 +45,6 @@
     "certified": 225
   },
   {
-    "id": "txt_1770863741099",
-    "title": "Le silence est d'or, la parole est sacrée",
-    "author": "Ntchanna Josiane Ève",
-    "authorEmail": "amougouefficace123@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-12T02:35:41.099Z",
-    "views": 104,
-    "likes": 106,
-    "certified": 68
-  },
-  {
     "id": "txt_1771698329950",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Lucien AYISSI NOAH ",
@@ -68,6 +55,19 @@
     "date": "2026-02-21T18:25:29.950Z",
     "views": 40,
     "likes": 32,
+    "certified": 69
+  },
+  {
+    "id": "txt_1770863741099",
+    "title": "Le silence est d'or, la parole est sacrée",
+    "author": "Ntchanna Josiane Ève",
+    "authorEmail": "amougouefficace123@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-12T02:35:41.099Z",
+    "views": 104,
+    "likes": 106,
     "certified": 68
   },
   {
