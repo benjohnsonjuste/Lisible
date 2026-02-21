@@ -253,6 +253,19 @@
     "certified": 2
   },
   {
+    "id": "1771714246871",
+    "title": "Au champ de bataille",
+    "author": "Une Plume",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-21T22:50:47.232Z",
+    "views": 1,
+    "likes": 1,
+    "certified": 1
+  },
+  {
     "id": "txt_1771697362898",
     "title": "Subalternes",
     "author": "Hassoumi Adama ",
@@ -290,19 +303,6 @@
     "date": "2026-02-15T01:55:20.506Z",
     "views": 3,
     "likes": 2,
-    "certified": 0
-  },
-  {
-    "id": "1771714246871",
-    "title": "Au champ de bataille",
-    "author": "Une Plume",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-21T22:50:47.232Z",
-    "views": 1,
-    "likes": 1,
     "certified": 0
   },
   {
