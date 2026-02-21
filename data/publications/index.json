@@ -89,19 +89,6 @@
     "certified": 50
   },
   {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Plume Anonyme",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z",
-    "views": 40,
-    "likes": 7,
-    "certified": 8
-  },
-  {
     "id": "txt_1771696391430",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Fils de l’encre noire ",
@@ -112,6 +99,19 @@
     "date": "2026-02-21T17:53:11.430Z",
     "views": 9,
     "likes": 1,
+    "certified": 9
+  },
+  {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Plume Anonyme",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 40,
+    "likes": 7,
     "certified": 8
   },
   {
