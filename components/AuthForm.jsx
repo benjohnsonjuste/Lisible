@@ -54,12 +54,13 @@ export default function AuthForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading) return; // Empêche les soumissions multiples
+    if (loading) return; 
     setLoading(true);
 
     try {
       const emailClean = formData.email.trim().toLowerCase();
-      const passwordClean = formData.password.trim();
+      // On ne trim pas le mot de passe car les espaces font partie du secret
+      const passwordRaw = formData.password;
 
       if (mode === "forgot") {
         const res = await fetch("/api/github-db", {
@@ -86,7 +87,7 @@ export default function AuthForm() {
           action: authAction,
           name: formData.name.trim(),
           email: emailClean,
-          password: passwordClean,
+          password: passwordRaw,
           referralCode: refCode
         })
       });
@@ -110,7 +111,6 @@ export default function AuthForm() {
       
       toast.success(`Heureux de vous voir, ${userData.penName || userData.name || "Auteur"}`);
       
-      // Utilisation du router Next.js au lieu de window.location pour éviter les boucles infinies
       router.push("/dashboard");
 
     } catch (err) {
