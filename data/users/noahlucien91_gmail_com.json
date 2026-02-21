@@ -1,8 +1,15 @@
 {
   "email": "noahlucien91@gmail.com",
   "name": "",
-  "li": 735,
+  "li": 736,
   "notifications": [
+    {
+      "id": "cert_1771705212195",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-21T20:20:12.195Z",
+      "read": false
+    },
     {
       "id": "cert_1771705209947",
       "type": "certification",
