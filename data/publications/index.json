@@ -89,6 +89,19 @@
     "certified": 50
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 9,
+    "likes": 8,
+    "certified": 14
+  },
+  {
     "id": "txt_1771696391430",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Fils de l’encre noire ",
@@ -100,19 +113,6 @@
     "views": 14,
     "likes": 2,
     "certified": 14
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 9,
-    "likes": 8,
-    "certified": 13
   },
   {
     "id": "txt_1770828929024",
