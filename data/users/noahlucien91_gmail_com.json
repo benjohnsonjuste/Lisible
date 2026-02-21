@@ -4,6 +4,13 @@
   "li": 667,
   "notifications": [
     {
+      "id": "like_1771698345132",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Un sonnet pour les victimes de guerre\" !",
+      "date": "2026-02-21T18:25:45.132Z",
+      "read": false
+    },
+    {
       "id": "like_1771631381367",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Et si la femme était un objet\" !",
