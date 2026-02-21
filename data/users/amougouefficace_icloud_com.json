@@ -2,7 +2,15 @@
   "email": "amougouefficace@icloud.com",
   "name": "",
   "li": 50,
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1771714275477",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Au champ de bataille\" !",
+      "date": "2026-02-21T22:51:15.477Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
