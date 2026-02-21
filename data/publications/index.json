@@ -129,6 +129,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1771696391430",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T17:53:11.430Z",
+    "views": 4,
+    "likes": 1,
+    "certified": 5
+  },
+  {
     "id": "1770881884883",
     "title": "Femme en silence",
     "author": "Romuald Douanla MELONG",
@@ -140,19 +153,6 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 10,
     "likes": 4,
-    "certified": 4
-  },
-  {
-    "id": "txt_1771696391430",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T17:53:11.430Z",
-    "views": 4,
-    "likes": 1,
     "certified": 4
   },
   {
