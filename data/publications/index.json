@@ -102,19 +102,6 @@
     "certified": 14
   },
   {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Plume Anonyme",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z",
-    "views": 40,
-    "likes": 7,
-    "certified": 8
-  },
-  {
     "id": "txt_1771698329950",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Lucien AYISSI NOAH ",
@@ -125,6 +112,19 @@
     "date": "2026-02-21T18:25:29.950Z",
     "views": 7,
     "likes": 6,
+    "certified": 9
+  },
+  {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Plume Anonyme",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 40,
+    "likes": 7,
     "certified": 8
   },
   {
