@@ -240,6 +240,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 1,
+    "likes": 1,
+    "certified": 1
+  },
+  {
     "id": "txt_1771697362898",
     "title": "Subalternes",
     "author": "Hassoumi Adama ",
@@ -264,19 +277,6 @@
     "date": "2026-02-15T01:55:20.506Z",
     "views": 3,
     "likes": 2,
-    "certified": 0
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 1,
-    "likes": 1,
     "certified": 0
   },
   {
