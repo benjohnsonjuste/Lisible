@@ -1,8 +1,15 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "",
-  "li": 103,
+  "li": 104,
   "notifications": [
+    {
+      "id": "cert_1771697390027",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-21T18:09:50.027Z",
+      "read": false
+    },
     {
       "id": "cert_1771697388134",
       "type": "certification",
