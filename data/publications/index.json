@@ -115,6 +115,19 @@
     "certified": 8
   },
   {
+    "id": "txt_1771698329950",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Lucien AYISSI NOAH ",
+    "authorEmail": "noahlucien91@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:25:29.950Z",
+    "views": 6,
+    "likes": 5,
+    "certified": 8
+  },
+  {
     "id": "1770850500145",
     "title": "Femme du Cameroun, lumière d’Afrique",
     "author": "Romuald Douanla MELONG",
@@ -126,19 +139,6 @@
     "date": "2026-02-11T22:55:03.076Z",
     "views": 13,
     "likes": 8,
-    "certified": 6
-  },
-  {
-    "id": "txt_1771698329950",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Lucien AYISSI NOAH ",
-    "authorEmail": "noahlucien91@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:25:29.950Z",
-    "views": 6,
-    "likes": 5,
     "certified": 6
   },
   {
