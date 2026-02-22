@@ -305,6 +305,19 @@
     "certified": 2
   },
   {
+    "id": "1771772894224",
+    "title": "La confiance",
+    "author": "Francy yuri",
+    "authorEmail": "oloafrancy@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-22T15:08:23.875Z",
+    "views": 1,
+    "likes": 0,
+    "certified": 1
+  },
+  {
     "id": "txt_1771698224267",
     "title": "Sonnet pour les victimes de la guerre",
     "author": "Adama Junior Cissokho ",
@@ -329,19 +342,6 @@
     "date": "2026-02-15T01:55:20.506Z",
     "views": 3,
     "likes": 2,
-    "certified": 0
-  },
-  {
-    "id": "1771772894224",
-    "title": "La confiance",
-    "author": "Francy yuri",
-    "authorEmail": "oloafrancy@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-22T15:08:23.875Z",
-    "views": 1,
-    "likes": 0,
     "certified": 0
   },
   {
