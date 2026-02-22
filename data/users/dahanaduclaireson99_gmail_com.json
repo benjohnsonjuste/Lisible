@@ -4,6 +4,13 @@
   "li": 314,
   "notifications": [
     {
+      "id": "like_1771770641776",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'innocence sous les Canons\" !",
+      "date": "2026-02-22T14:30:41.776Z",
+      "read": false
+    },
+    {
       "id": "like_1771770116543",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"L'innocence sous les Canons\" !",
