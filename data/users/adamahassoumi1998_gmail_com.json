@@ -1,8 +1,15 @@
 {
   "email": "adamahassoumi1998@gmail.com",
   "name": "",
-  "li": 397,
+  "li": 398,
   "notifications": [
+    {
+      "id": "cert_1771732964261",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Subalternes\" (+1 Li).",
+      "date": "2026-02-22T04:02:44.261Z",
+      "read": false
+    },
     {
       "id": "cert_1771732961808",
       "type": "certification",
