@@ -168,6 +168,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1771697362898",
+    "title": "Subalternes",
+    "author": "Hassoumi Adama ",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:09:22.898Z",
+    "views": 5,
+    "likes": 2,
+    "certified": 5
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -204,19 +217,6 @@
     "isConcours": false,
     "date": "2026-02-21T22:50:47.232Z",
     "views": 3,
-    "likes": 2,
-    "certified": 4
-  },
-  {
-    "id": "txt_1771697362898",
-    "title": "Subalternes",
-    "author": "Hassoumi Adama ",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:09:22.898Z",
-    "views": 5,
     "likes": 2,
     "certified": 4
   },
