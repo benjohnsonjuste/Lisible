@@ -1,8 +1,16 @@
 {
   "email": "oloafrancy@gmail.com",
   "name": "Francy yuri",
-  "li": 50,
-  "notifications": [],
+  "li": 51,
+  "notifications": [
+    {
+      "id": "cert_1771772981843",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La confiance\" (+1 Li).",
+      "date": "2026-02-22T15:09:41.843Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
