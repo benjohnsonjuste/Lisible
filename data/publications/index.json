@@ -181,6 +181,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1771718202653",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T23:56:42.653Z",
+    "views": 7,
+    "likes": 2,
+    "certified": 5
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -205,19 +218,6 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 10,
     "likes": 4,
-    "certified": 4
-  },
-  {
-    "id": "txt_1771718202653",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T23:56:42.653Z",
-    "views": 7,
-    "likes": 2,
     "certified": 4
   },
   {
