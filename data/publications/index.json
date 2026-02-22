@@ -208,6 +208,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1771697362898",
+    "title": "Subalternes",
+    "author": "Hassoumi Adama ",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:09:22.898Z",
+    "views": 4,
+    "likes": 2,
+    "certified": 3
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -231,19 +244,6 @@
     "date": "2026-02-11T15:02:49.168Z",
     "views": 16,
     "likes": 4,
-    "certified": 2
-  },
-  {
-    "id": "txt_1771697362898",
-    "title": "Subalternes",
-    "author": "Hassoumi Adama ",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:09:22.898Z",
-    "views": 4,
-    "likes": 2,
     "certified": 2
   },
   {
