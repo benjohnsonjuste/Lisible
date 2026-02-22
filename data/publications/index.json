@@ -221,6 +221,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1771718202653",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T23:56:42.653Z",
+    "views": 6,
+    "likes": 2,
+    "certified": 3
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -244,19 +257,6 @@
     "date": "2026-02-11T15:02:49.168Z",
     "views": 16,
     "likes": 4,
-    "certified": 2
-  },
-  {
-    "id": "txt_1771718202653",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T23:56:42.653Z",
-    "views": 6,
-    "likes": 2,
     "certified": 2
   },
   {
