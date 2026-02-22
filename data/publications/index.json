@@ -306,19 +306,6 @@
     "certified": 0
   },
   {
-    "id": "txt_1771719204540",
-    "title": "Un sonnet pour les victimes de guerres",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-22T00:13:24.540Z",
-    "views": 1,
-    "likes": 0,
-    "certified": 0
-  },
-  {
     "id": "txt_1771718202653",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Plume Anonyme",
@@ -328,6 +315,19 @@
     "image": null,
     "date": "2026-02-21T23:56:42.653Z",
     "views": 3,
+    "likes": 1,
+    "certified": 0
+  },
+  {
+    "id": "txt_1771719204540",
+    "title": "Un sonnet pour les victimes de guerres",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-22T00:13:24.540Z",
+    "views": 1,
     "likes": 0,
     "certified": 0
   },
