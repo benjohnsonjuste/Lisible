@@ -1,8 +1,15 @@
 {
   "email": "amougouefficace@icloud.com",
   "name": "",
-  "li": 58,
+  "li": 59,
   "notifications": [
+    {
+      "id": "cert_1771757881712",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T10:58:01.712Z",
+      "read": false
+    },
     {
       "id": "cert_1771757717827",
       "type": "certification",
