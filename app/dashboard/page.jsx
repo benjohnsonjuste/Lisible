@@ -139,11 +139,26 @@ export default function AuthorDashboard() {
 
   const handleDelete = async (id, title) => {
     if (!confirm(`Voulez-vous vraiment retirer "${title}" des archives ?`)) return;
-    const toastId = toast.loading("Retrait...");
+    const toastId = toast.loading("Retrait définitif en cours...");
     try {
-      const res = await fetch('/api/github-db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete_text', textId: id }) });
-      if (res.ok) { setWorks(works.filter(w => w.id !== id)); toast.success("Effacé.", { id: toastId }); }
-    } catch (e) { toast.error("Erreur.", { id: toastId }); }
+      const res = await fetch('/api/github-db', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ action: 'delete_text', textId: id }) 
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) { 
+        setWorks(prevWorks => prevWorks.filter(w => w.id !== id)); 
+        toast.success("L'œuvre a été supprimée.", { id: toastId }); 
+      } else {
+        throw new Error(data.error || "Erreur lors de la suppression");
+      }
+    } catch (e) { 
+      console.error("Delete error:", e);
+      toast.error("Échec du retrait.", { id: toastId }); 
+    }
   };
 
   if (loading) return (
