@@ -59,8 +59,8 @@ export default function AuthForm() {
 
     try {
       const emailClean = formData.email.trim().toLowerCase();
-      // On ne trim pas le mot de passe car les espaces font partie du secret
-      const passwordRaw = formData.password;
+      // Correction : Appliquer trim() pour éviter les espaces invisibles fréquents sur mobile
+      const passwordClean = formData.password.trim();
 
       if (mode === "forgot") {
         const res = await fetch("/api/github-db", {
@@ -87,7 +87,7 @@ export default function AuthForm() {
           action: authAction,
           name: formData.name.trim(),
           email: emailClean,
-          password: passwordRaw,
+          password: passwordClean,
           referralCode: refCode
         })
       });
