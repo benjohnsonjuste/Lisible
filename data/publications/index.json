@@ -266,19 +266,6 @@
     "certified": 2
   },
   {
-    "id": "txt_1771697362898",
-    "title": "Subalternes",
-    "author": "Hassoumi Adama ",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:09:22.898Z",
-    "views": 1,
-    "likes": 0,
-    "certified": 1
-  },
-  {
     "id": "txt_1771698224267",
     "title": "Sonnet pour les victimes de la guerre",
     "author": "Adama Junior Cissokho ",
@@ -315,6 +302,19 @@
     "image": null,
     "date": "2026-02-21T23:56:42.653Z",
     "views": 4,
+    "likes": 1,
+    "certified": 0
+  },
+  {
+    "id": "txt_1771697362898",
+    "title": "Subalternes",
+    "author": "Hassoumi Adama ",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:09:22.898Z",
+    "views": 2,
     "likes": 1,
     "certified": 0
   },
