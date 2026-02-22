@@ -4,6 +4,13 @@
   "li": 429,
   "notifications": [
     {
+      "id": "like_1771783339019",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Subalternes\" !",
+      "date": "2026-02-22T18:02:19.019Z",
+      "read": false
+    },
+    {
       "id": "like_1771783227672",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Subalternes\" !",
