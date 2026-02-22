@@ -4,6 +4,13 @@
   "li": 836,
   "notifications": [
     {
+      "id": "like_1771721586854",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Un sonnet pour les victimes de guerre\" !",
+      "date": "2026-02-22T00:53:06.854Z",
+      "read": false
+    },
+    {
       "id": "cert_1771721550811",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
