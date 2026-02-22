@@ -71,6 +71,19 @@
     "certified": 70
   },
   {
+    "id": "txt_1771697362898",
+    "title": "Subalternes",
+    "author": "Hassoumi Adama ",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:09:22.898Z",
+    "views": 44,
+    "likes": 33,
+    "certified": 59
+  },
+  {
     "id": "txt_1770822380909",
     "title": "AFRIAMEURASIOCE",
     "author": "Adam Ibrahim",
@@ -87,19 +100,6 @@
     "imageBase64": null,
     "concurrentId": "ADIB1129",
     "comments": []
-  },
-  {
-    "id": "txt_1771697362898",
-    "title": "Subalternes",
-    "author": "Hassoumi Adama ",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:09:22.898Z",
-    "views": 44,
-    "likes": 33,
-    "certified": 58
   },
   {
     "id": "txt_1770822631261",
