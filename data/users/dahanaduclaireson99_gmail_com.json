@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "",
-  "li": 301,
+  "li": 302,
   "notifications": [
+    {
+      "id": "cert_1771761200151",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"L'innocence sous les Canons\" (+1 Li).",
+      "date": "2026-02-22T11:53:20.151Z",
+      "read": false
+    },
     {
       "id": "like_1771761197555",
       "type": "like",
