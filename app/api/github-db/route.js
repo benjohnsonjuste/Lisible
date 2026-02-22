@@ -124,7 +124,6 @@ export async function POST(req) {
       const file = await getFile(targetPath);
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
       const salt = bcrypt.genSaltSync(10);
-      // On hache sans trim forcé pour capturer la saisie exacte
       const hashedPassword = bcrypt.hashSync(data.password, salt);
       const userData = {
         email: data.email.toLowerCase().trim(),
@@ -150,12 +149,9 @@ export async function POST(req) {
       const isHashed = typeof storedPassword === 'string' && (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$'));
       
       if (isHashed) {
-        // Tentative 1: Brut
         isMatch = bcrypt.compareSync(providedPassword, storedPassword);
-        // Tentative 2: Trim (fallback si l'utilisateur a des espaces invisibles)
         if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
       } else {
-        // Support ancien format plaintext
         isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
         if (isMatch) {
           const salt = bcrypt.genSaltSync(10);
@@ -172,15 +168,34 @@ export async function POST(req) {
     if (action === 'change_password') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      
       let isMatch = bcrypt.compareSync(currentPassword, file.content.password);
       if (!isMatch) isMatch = bcrypt.compareSync(currentPassword.trim(), file.content.password);
-      
       if (!isMatch) return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 401 });
-      
       const salt = bcrypt.genSaltSync(10);
       file.content.password = bcrypt.hashSync(newPassword.trim(), salt);
       await updateFile(targetPath, file.content, file.sha, `🔐 Password Change: ${userEmail}`);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'delete_text') {
+      const idToDelete = textId || data.textId;
+      const path = `data/texts/${idToDelete}.json`;
+      const indexPath = `data/publications/index.json`;
+      
+      const file = await getFile(path);
+      if (file) {
+        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha })
+        });
+      }
+
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const newIndex = indexFile.content.filter(t => t.id !== idToDelete);
+        await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
+      }
       return NextResponse.json({ success: true });
     }
 
@@ -197,10 +212,8 @@ export async function POST(req) {
       const follower = await getFile(getSafePath(userEmail));
       const target = await getFile(getSafePath(data.targetEmail));
       if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      
       const targetEmailClean = data.targetEmail.toLowerCase().trim();
       const userEmailClean = userEmail.toLowerCase().trim();
-
       if (action === 'follow') {
         if (!follower.content.following.includes(targetEmailClean)) {
           follower.content.following.push(targetEmailClean);
