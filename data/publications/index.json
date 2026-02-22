@@ -247,6 +247,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771718202653",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T23:56:42.653Z",
+    "views": 6,
+    "likes": 2,
+    "certified": 2
+  },
+  {
     "id": "1770881283839",
     "title": "Jeunesse",
     "author": "Hassoumi",
@@ -257,19 +270,6 @@
     "date": "2026-02-12T07:28:06.895Z",
     "views": 5,
     "likes": 2,
-    "certified": 2
-  },
-  {
-    "id": "txt_1771718202653",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T23:56:42.653Z",
-    "views": 6,
-    "likes": 1,
     "certified": 2
   },
   {
