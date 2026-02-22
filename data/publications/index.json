@@ -115,19 +115,6 @@
     "certified": 45
   },
   {
-    "id": "txt_1771697362898",
-    "title": "Subalternes",
-    "author": "Hassoumi Adama ",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:09:22.898Z",
-    "views": 15,
-    "likes": 10,
-    "certified": 20
-  },
-  {
     "id": "1771724719525",
     "title": "L'innocence sous les Canons",
     "author": "Dahana DUCLAIRE ",
@@ -138,6 +125,19 @@
     "date": "2026-02-22T01:47:30.876Z",
     "views": 19,
     "likes": 6,
+    "certified": 21
+  },
+  {
+    "id": "txt_1771697362898",
+    "title": "Subalternes",
+    "author": "Hassoumi Adama ",
+    "authorEmail": "adamahassoumi1998@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:09:22.898Z",
+    "views": 15,
+    "likes": 10,
     "certified": 20
   },
   {
