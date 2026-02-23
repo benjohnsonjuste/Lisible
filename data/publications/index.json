@@ -102,19 +102,6 @@
     "comments": []
   },
   {
-    "id": "1771724719525",
-    "title": "L'innocence sous les Canons",
-    "author": "Dahana DUCLAIRE ",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-22T01:47:30.876Z",
-    "views": 56,
-    "likes": 20,
-    "certified": 56
-  },
-  {
     "id": "txt_1771696391430",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Fils de l’encre noire ",
@@ -125,6 +112,19 @@
     "date": "2026-02-21T17:53:11.430Z",
     "views": 64,
     "likes": 10,
+    "certified": 57
+  },
+  {
+    "id": "1771724719525",
+    "title": "L'innocence sous les Canons",
+    "author": "Dahana DUCLAIRE ",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-22T01:47:30.876Z",
+    "views": 56,
+    "likes": 20,
     "certified": 56
   },
   {
