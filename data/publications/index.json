@@ -84,6 +84,19 @@
     "certified": 67
   },
   {
+    "id": "txt_1771696391430",
+    "title": "Un sonnet pour les victimes de guerre",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T17:53:11.430Z",
+    "views": 67,
+    "likes": 11,
+    "certified": 59
+  },
+  {
     "id": "txt_1770822380909",
     "title": "AFRIAMEURASIOCE",
     "author": "Adam Ibrahim",
@@ -100,19 +113,6 @@
     "imageBase64": null,
     "concurrentId": "ADIB1129",
     "comments": []
-  },
-  {
-    "id": "txt_1771696391430",
-    "title": "Un sonnet pour les victimes de guerre",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T17:53:11.430Z",
-    "views": 67,
-    "likes": 11,
-    "certified": 58
   },
   {
     "id": "1771724719525",
