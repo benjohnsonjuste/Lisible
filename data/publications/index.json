@@ -273,6 +273,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 3,
+    "likes": 1,
+    "certified": 2
+  },
+  {
     "id": "1770882254944",
     "title": "L'Ombre Invisible",
     "author": "Romuald Douanla MELONG",
@@ -302,19 +315,6 @@
     "views": 16,
     "likes": 1,
     "comments": [],
-    "certified": 2
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 3,
-    "likes": 0,
     "certified": 2
   },
   {
