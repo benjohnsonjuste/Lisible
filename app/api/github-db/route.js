@@ -6,7 +6,6 @@ const localCache = new Map();
 const CACHE_TTL = 0; 
 
 export const dynamic = 'force-dynamic';
-// Utilisation du runtime nodejs pour une meilleure compatibilité avec l'API GitHub et bcrypt sur Vercel
 export const runtime = 'nodejs'; 
 
 const GITHUB_CONFIG = {
@@ -91,9 +90,17 @@ async function updateFile(path, content, sha, message) {
   }
 }
 
+/**
+ * VERSION OPTIMISÉE :
+ * Remplace l'arobase par un underscore mais garde les points intacts.
+ * dahanaduclaireson99@gmail.com -> dahanaduclaireson99_gmail.com.json
+ */
 const getSafePath = (email) => {
   if (!email) return null;
-  return `data/users/${email.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+  const safeEmail = email.toLowerCase().trim()
+    .replace(/@/g, '_')           // On change l'arobase en underscore
+    .replace(/[^a-z0-9._-]/g, ''); // On garde lettres, chiffres, points, tirets et underscores
+  return `data/users/${safeEmail}.json`;
 };
 
 const globalSort = (list) => {
