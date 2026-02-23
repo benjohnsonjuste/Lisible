@@ -1,8 +1,16 @@
 {
   "email": "entreprendre89@gmail.com",
   "name": "FARADJA MUHUMUZA STÉPHANE",
-  "li": 50,
-  "notifications": [],
+  "li": 51,
+  "notifications": [
+    {
+      "id": "cert_1771870391321",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"MARKETING DE RÉSEAU; MULTI LEVEL MARKETING(MLM)\" (+1 Li).",
+      "date": "2026-02-23T18:13:11.321Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
