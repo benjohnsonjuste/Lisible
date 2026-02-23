@@ -234,6 +234,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 6,
+    "likes": 2,
+    "certified": 3
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -257,19 +270,6 @@
     "date": "2026-02-11T15:02:49.168Z",
     "views": 16,
     "likes": 4,
-    "certified": 2
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 6,
-    "likes": 2,
     "certified": 2
   },
   {
