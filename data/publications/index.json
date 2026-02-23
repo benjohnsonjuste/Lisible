@@ -154,6 +154,19 @@
     "certified": 8
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 8,
+    "likes": 3,
+    "certified": 7
+  },
+  {
     "id": "1770850500145",
     "title": "Femme du Cameroun, lumière d’Afrique",
     "author": "Romuald Douanla MELONG",
@@ -178,19 +191,6 @@
     "date": "2026-02-11T22:27:38.745Z",
     "views": 6,
     "likes": 5,
-    "certified": 6
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 8,
-    "likes": 3,
     "certified": 6
   },
   {
