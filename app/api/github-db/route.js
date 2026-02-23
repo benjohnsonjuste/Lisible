@@ -63,7 +63,7 @@ async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   const jsonString = JSON.stringify(content, null, 2);
   const bytes = new TextEncoder().encode(jsonString);
-  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+  const binString = Array.from(bytes, (byte) => String.fromPoint(byte)).join("");
   const encodedContent = btoa(binString);
 
   try {
@@ -87,16 +87,12 @@ async function updateFile(path, content, sha, message) {
   }
 }
 
-/**
- * RÉPARATION DU CHEMIN :
- * Transforme @ et . en _ pour matcher ramsesromulusromuald_gmail_com.json
- */
 const getSafePath = (email) => {
   if (!email) return null;
   const safeEmail = email.toLowerCase().trim()
     .replace(/@/g, '_')
     .replace(/\./g, '_')
-    .replace(/[^a-z0-9_]/g, ''); // Sécurité : on ne garde que l'essentiel
+    .replace(/[^a-z0-9_]/g, '');
   return `data/users/${safeEmail}.json`;
 };
 
@@ -123,7 +119,8 @@ export async function POST(req) {
     const body = await req.json();
     const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
     
-    const targetPath = getSafePath(userEmail || data.email);
+    const emailToUse = userEmail || data.email;
+    const targetPath = getSafePath(emailToUse);
 
     if (action === 'register') {
       const file = await getFile(targetPath);
@@ -148,7 +145,7 @@ export async function POST(req) {
       let file = await getFile(targetPath);
       
       if (!file) {
-        const legacyPath = `data/users/${(userEmail || data.email).toLowerCase().trim().replace(/@/g, '_')}.json`;
+        const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
         file = await getFile(legacyPath);
       }
 
@@ -180,7 +177,14 @@ export async function POST(req) {
     }
 
     if (action === 'reset-password') {
-      const file = await getFile(targetPath);
+      let file = await getFile(targetPath);
+      
+      // Fallback identique au login pour trouver dahanaduclaireson99_gmail_com.json
+      if (!file) {
+        const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
+        file = await getFile(legacyPath);
+      }
+
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
 
       const tempPassword = "Lisible2026";
@@ -195,7 +199,9 @@ export async function POST(req) {
         read: false
       });
 
-      await updateFile(targetPath, file.content, file.sha, `🔐 Password Reset: ${data.email}`);
+      // On utilise le chemin exact où le fichier a été trouvé
+      const finalPath = file.path ? file.path : targetPath;
+      await updateFile(finalPath, file.content, file.sha, `🔐 Password Reset: ${emailToUse}`);
       return NextResponse.json({ success: true, hint: "Votre nouveau mot de passe est Lisible2026" });
     }
 
