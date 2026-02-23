@@ -318,6 +318,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 3,
+    "likes": 0,
+    "certified": 1
+  },
+  {
     "id": "txt_1771698224267",
     "title": "Sonnet pour les victimes de la guerre",
     "author": "Adama Junior Cissokho ",
@@ -342,19 +355,6 @@
     "date": "2026-02-15T01:55:20.506Z",
     "views": 4,
     "likes": 2,
-    "certified": 0
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 3,
-    "likes": 0,
     "certified": 0
   },
   {
