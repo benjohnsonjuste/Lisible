@@ -194,6 +194,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 6,
+    "likes": 2,
+    "certified": 5
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -218,19 +231,6 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 10,
     "likes": 4,
-    "certified": 4
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 6,
-    "likes": 2,
     "certified": 4
   },
   {
