@@ -4,6 +4,13 @@
   "li": 125,
   "notifications": [
     {
+      "id": "like_1771867660847",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La guerre\" !",
+      "date": "2026-02-23T17:27:40.847Z",
+      "read": false
+    },
+    {
       "id": "like_1771867540266",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"La guerre\" !",
