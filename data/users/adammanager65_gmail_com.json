@@ -4,6 +4,13 @@
   "li": 121,
   "notifications": [
     {
+      "id": "like_1771865605407",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La guerre\" !",
+      "date": "2026-02-23T16:53:25.407Z",
+      "read": false
+    },
+    {
       "id": "cert_1771865594468",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"La guerre\" (+1 Li).",
