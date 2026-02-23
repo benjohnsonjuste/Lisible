@@ -141,19 +141,6 @@
     "certified": 54
   },
   {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Plume Anonyme",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z",
-    "views": 44,
-    "likes": 7,
-    "certified": 8
-  },
-  {
     "id": "txt_1771855803785",
     "title": "La guerre",
     "author": "Adam Ibrahim",
@@ -164,6 +151,19 @@
     "date": "2026-02-23T14:10:03.785Z",
     "views": 9,
     "likes": 6,
+    "certified": 9
+  },
+  {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Plume Anonyme",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 44,
+    "likes": 7,
     "certified": 8
   },
   {
