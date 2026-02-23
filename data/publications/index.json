@@ -305,6 +305,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 3,
+    "likes": 0,
+    "certified": 2
+  },
+  {
     "id": "1771772894224",
     "title": "La confiance",
     "author": "Francy yuri",
@@ -316,19 +329,6 @@
     "views": 2,
     "likes": 0,
     "certified": 2
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 3,
-    "likes": 0,
-    "certified": 1
   },
   {
     "id": "txt_1771698224267",
