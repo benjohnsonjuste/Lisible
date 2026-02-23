@@ -221,6 +221,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 6,
+    "likes": 2,
+    "certified": 4
+  },
+  {
     "id": "1771714246871",
     "title": "Au champ de bataille",
     "author": "Une Plume",
@@ -232,19 +245,6 @@
     "views": 4,
     "likes": 2,
     "certified": 4
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 6,
-    "likes": 2,
-    "certified": 3
   },
   {
     "id": "txt_1770824772287",
