@@ -4,6 +4,13 @@
   "li": 458,
   "notifications": [
     {
+      "id": "like_1771873521936",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Subalternes\" !",
+      "date": "2026-02-23T19:05:21.936Z",
+      "read": false
+    },
+    {
       "id": "cert_1771873492743",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Subalternes\" (+1 Li).",
