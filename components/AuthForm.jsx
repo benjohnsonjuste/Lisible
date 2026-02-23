@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles, Eye, EyeOff } from "lucide-react";
 
 // Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
 export const runtime = 'edge';
@@ -13,6 +13,7 @@ export default function AuthForm() {
   const [mode, setMode] = useState("login");
   const [loading, setLoading] = useState(false);
   const [refCode, setRefCode] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -59,8 +60,8 @@ export default function AuthForm() {
 
     try {
       const emailClean = formData.email.trim().toLowerCase();
-      // Correction : Appliquer trim() pour éviter les espaces invisibles fréquents sur mobile
-      const passwordClean = formData.password.trim();
+      // On garde le mot de passe tel quel pour éviter de casser les hashs existants qui incluraient un espace
+      const passwordRaw = formData.password;
 
       if (mode === "forgot") {
         const res = await fetch("/api/github-db", {
@@ -87,7 +88,7 @@ export default function AuthForm() {
           action: authAction,
           name: formData.name.trim(),
           email: emailClean,
-          password: passwordClean,
+          password: passwordRaw, // Utilisation de la version brute
           referralCode: refCode
         })
       });
@@ -158,13 +159,20 @@ export default function AuthForm() {
         <div className="relative group">
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={18} />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Mot de passe"
             required
-            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-4 outline-none focus:bg-white focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
+            className="w-full bg-slate-50 border-2 border-slate-50 rounded-2xl py-4 pl-12 pr-12 outline-none focus:bg-white focus:border-teal-500 transition-all font-bold text-slate-900 shadow-inner"
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-teal-500 transition-colors"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
         </div>
       )}
 
