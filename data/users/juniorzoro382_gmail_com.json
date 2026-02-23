@@ -4,6 +4,13 @@
   "li": 58,
   "notifications": [
     {
+      "id": "like_1771888514866",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Chant en détresse\" !",
+      "date": "2026-02-23T23:15:14.866Z",
+      "read": false
+    },
+    {
       "id": "reset_1771853092812",
       "type": "security",
       "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
