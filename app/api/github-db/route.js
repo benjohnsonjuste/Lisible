@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import * as bcrypt from 'bcrypt-ts';
 
-// Cache désactivé pour permettre la mise à jour des données sans déploiement
 const localCache = new Map();
 const CACHE_TTL = 0; 
 
@@ -41,7 +40,6 @@ async function getFile(path) {
     });
     
     if (res.status === 404) return null;
-    if (res.status === 429) throw new Error("THROTTLED");
     if (!res.ok) return null;
     
     const data = await res.json();
@@ -63,7 +61,6 @@ async function getFile(path) {
 
 async function updateFile(path, content, sha, message) {
   localCache.delete(path);
-  
   const jsonString = JSON.stringify(content, null, 2);
   const bytes = new TextEncoder().encode(jsonString);
   const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
@@ -91,15 +88,15 @@ async function updateFile(path, content, sha, message) {
 }
 
 /**
- * VERSION OPTIMISÉE :
- * Remplace l'arobase par un underscore mais garde les points intacts.
- * dahanaduclaireson99@gmail.com -> dahanaduclaireson99_gmail.com.json
+ * RÉPARATION DU CHEMIN :
+ * Transforme @ et . en _ pour matcher ramsesromulusromuald_gmail_com.json
  */
 const getSafePath = (email) => {
   if (!email) return null;
   const safeEmail = email.toLowerCase().trim()
-    .replace(/@/g, '_')           // On change l'arobase en underscore
-    .replace(/[^a-z0-9._-]/g, ''); // On garde lettres, chiffres, points, tirets et underscores
+    .replace(/@/g, '_')
+    .replace(/\./g, '_')
+    .replace(/[^a-z0-9_]/g, ''); // Sécurité : on ne garde que l'essentiel
   return `data/users/${safeEmail}.json`;
 };
 
@@ -125,6 +122,7 @@ export async function POST(req) {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
     const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
+    
     const targetPath = getSafePath(userEmail || data.email);
 
     if (action === 'register') {
@@ -147,27 +145,42 @@ export async function POST(req) {
     }
 
     if (action === 'login') {
-      const file = await getFile(targetPath);
+      // 1. On cherche le fichier (format underscores)
+      let file = await getFile(targetPath);
+      
+      // 2. Rétro-compatibilité si le fichier GitHub contient encore un point (ex: email_gmail.com.json)
+      if (!file) {
+        const legacyPath = `data/users/${(userEmail || data.email).toLowerCase().trim().replace(/@/g, '_')}.json`;
+        file = await getFile(legacyPath);
+      }
+
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+
       const storedPassword = file.content.password;
       const providedPassword = data.password;
       
       let isMatch = false;
-      const isHashed = typeof storedPassword === 'string' && (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$'));
+      // Détecte si le mot de passe stocké est un hash Bcrypt ($2a$, $2b$, etc.)
+      const isHashed = typeof storedPassword === 'string' && storedPassword.startsWith('$2');
       
       if (isHashed) {
         isMatch = bcrypt.compareSync(providedPassword, storedPassword);
+        // Second test avec trim() au cas où l'utilisateur a un espace fantôme au login
         if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
       } else {
+        // Cas Ramsès : comparaison en texte clair
         isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
+        
         if (isMatch) {
+          // AUTO-FIX : On hache le mot de passe pour la prochaine fois
           const salt = bcrypt.genSaltSync(10);
           file.content.password = bcrypt.hashSync(providedPassword.trim(), salt);
-          await updateFile(targetPath, file.content, file.sha, `🔐 Auto-fix: Hash plain password`);
+          await updateFile(targetPath, file.content, file.sha, `🔐 Security Fix: Hashing plain password`);
         }
       }
       
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
+      
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
     }
