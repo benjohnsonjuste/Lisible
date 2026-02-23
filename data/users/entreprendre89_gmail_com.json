@@ -1,8 +1,15 @@
 {
   "email": "entreprendre89@gmail.com",
   "name": "FARADJA MUHUMUZA STÉPHANE",
-  "li": 52,
+  "li": 53,
   "notifications": [
+    {
+      "id": "cert_1771870670138",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Tu as toutes les bonnes raisons de commencer maintenant\" (+1 Li).",
+      "date": "2026-02-23T18:17:50.138Z",
+      "read": false
+    },
     {
       "id": "cert_1771870393796",
       "type": "certification",
