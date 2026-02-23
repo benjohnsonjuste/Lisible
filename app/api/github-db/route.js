@@ -145,10 +145,8 @@ export async function POST(req) {
     }
 
     if (action === 'login') {
-      // 1. On cherche le fichier (format underscores)
       let file = await getFile(targetPath);
       
-      // 2. Rétro-compatibilité si le fichier GitHub contient encore un point (ex: email_gmail.com.json)
       if (!file) {
         const legacyPath = `data/users/${(userEmail || data.email).toLowerCase().trim().replace(/@/g, '_')}.json`;
         file = await getFile(legacyPath);
@@ -160,19 +158,15 @@ export async function POST(req) {
       const providedPassword = data.password;
       
       let isMatch = false;
-      // Détecte si le mot de passe stocké est un hash Bcrypt ($2a$, $2b$, etc.)
       const isHashed = typeof storedPassword === 'string' && storedPassword.startsWith('$2');
       
       if (isHashed) {
         isMatch = bcrypt.compareSync(providedPassword, storedPassword);
-        // Second test avec trim() au cas où l'utilisateur a un espace fantôme au login
         if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
       } else {
-        // Cas Ramsès : comparaison en texte clair
         isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
         
         if (isMatch) {
-          // AUTO-FIX : On hache le mot de passe pour la prochaine fois
           const salt = bcrypt.genSaltSync(10);
           file.content.password = bcrypt.hashSync(providedPassword.trim(), salt);
           await updateFile(targetPath, file.content, file.sha, `🔐 Security Fix: Hashing plain password`);
@@ -183,6 +177,26 @@ export async function POST(req) {
       
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
+    }
+
+    if (action === 'reset-password') {
+      const file = await getFile(targetPath);
+      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+
+      const tempPassword = "Lisible2026";
+      const salt = bcrypt.genSaltSync(10);
+      file.content.password = bcrypt.hashSync(tempPassword, salt);
+      
+      file.content.notifications.unshift({
+        id: `reset_${Date.now()}`,
+        type: "security",
+        message: "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+        date: new Date().toISOString(),
+        read: false
+      });
+
+      await updateFile(targetPath, file.content, file.sha, `🔐 Password Reset: ${data.email}`);
+      return NextResponse.json({ success: true, hint: "Votre nouveau mot de passe est Lisible2026" });
     }
 
     if (action === 'change_password') {
