@@ -177,12 +177,15 @@ export async function POST(req) {
     }
 
     if (action === 'reset-password') {
+      // 1. Recherche via le chemin sécurisé (getSafePath)
       let file = await getFile(targetPath);
+      let finalPathUsed = targetPath;
       
-      // Fallback identique au login pour trouver dahanaduclaireson99_gmail_com.json
-      if (!file) {
+      // 2. Fallback si non trouvé (format sans underscores pour les points)
+      if (!file && emailToUse) {
         const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
         file = await getFile(legacyPath);
+        if (file) finalPathUsed = legacyPath;
       }
 
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
@@ -199,9 +202,7 @@ export async function POST(req) {
         read: false
       });
 
-      // On utilise le chemin exact où le fichier a été trouvé
-      const finalPath = file.path ? file.path : targetPath;
-      await updateFile(finalPath, file.content, file.sha, `🔐 Password Reset: ${emailToUse}`);
+      await updateFile(finalPathUsed, file.content, file.sha, `🔐 Password Reset: ${emailToUse}`);
       return NextResponse.json({ success: true, hint: "Votre nouveau mot de passe est Lisible2026" });
     }
 
