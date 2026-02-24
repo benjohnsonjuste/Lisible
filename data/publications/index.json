@@ -1,24 +1,5 @@
 [
   {
-    "id": "txt_1770824079276",
-    "title": "À toi mon étoile filante",
-    "author": "Hassoumi Adama",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "genre": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:34:39.276Z",
-    "views": 309,
-    "likes": 238,
-    "certified": 325,
-    "content": "Ta voix résonne encore aux tréfonds de mon âme. Toi qui as su conquérir le monde par ta seule douceur, tu es la définition même de l'amour.\n\nDans l'effroi comme dans l'allégresse tu étais la lampe qui éclairait mes jours les plus noires telle une étoile brillante dans le ciel.\nAujourd'hui tu n'es plus et je vis avec ce manque que rien ne remplace.\n\nMon bouclier, mon ange gardien, mon phare,\nQuels mots digne pourraient te couvrir de louanges ? J'ai retourné les dictionnaires, mais le mot qui te glorifie n'est pas encore né.",
-    "category": "Battle Poétique",
-    "authorName": "Hassoumi Adama",
-    "imageBase64": null,
-    "concurrentId": "HAAD4629",
-    "comments": []
-  },
-  {
     "id": "txt_1770823524319",
     "title": "L'inaltérable",
     "author": "Duclaire Dahana",
@@ -436,19 +417,6 @@
     "certified": 0
   },
   {
-    "id": "txt_1770824079276",
-    "title": "ELLE ",
-    "author": "Auteur Lisible",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "genre": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-20T14:25:42.455Z",
-    "views": 0,
-    "likes": 0,
-    "certified": 0
-  },
-  {
     "id": "1771439708279",
     "title": "Fin du premier tour",
     "author": "Lisible Support Team",
@@ -483,35 +451,5 @@
     "genre": "Poésie",
     "isConcours": false,
     "date": "2026-02-12T15:09:45.854Z"
-  },
-  {
-    "id": "txt_1770824079276",
-    "title": "        Elle",
-    "author": "Auteur Lisible",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "genre": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-12T07:38:59.974Z"
-  },
-  {
-    "id": "txt_1770824079276",
-    "title": "        ELLE ",
-    "author": "Auteur Lisible",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "genre": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-12T07:35:46.319Z"
-  },
-  {
-    "id": "txt_1770824079276",
-    "title": "À toi mon étoile filante",
-    "author": "Hassoumi Adama",
-    "authorEmail": "adamahassoumi1998@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:34:39.276Z"
   }
 ]
