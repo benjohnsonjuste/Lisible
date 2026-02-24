@@ -84,6 +84,19 @@
     "certified": 63
   },
   {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 69,
+    "likes": 33,
+    "certified": 59
+  },
+  {
     "id": "txt_1770822380909",
     "title": "AFRIAMEURASIOCE",
     "author": "Adam Ibrahim",
@@ -100,19 +113,6 @@
     "imageBase64": null,
     "concurrentId": "ADIB1129",
     "comments": []
-  },
-  {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 69,
-    "likes": 33,
-    "certified": 58
   },
   {
     "id": "1771724719525",
