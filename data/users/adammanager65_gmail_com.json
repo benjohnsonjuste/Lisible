@@ -1,8 +1,15 @@
 {
   "email": "adammanager65@gmail.com",
   "name": "Adam Ibrahim",
-  "li": 165,
+  "li": 166,
   "notifications": [
+    {
+      "id": "cert_1771917011511",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La guerre\" (+1 Li).",
+      "date": "2026-02-24T07:10:11.511Z",
+      "read": false
+    },
     {
       "id": "like_1771915680419",
       "type": "like",
