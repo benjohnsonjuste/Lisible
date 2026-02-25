@@ -1,8 +1,15 @@
 {
   "email": "juniorzoro382@gmail.com",
   "name": "",
-  "li": 59,
+  "li": 60,
   "notifications": [
+    {
+      "id": "cert_1772031713374",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Chant en détresse\" (+1 Li).",
+      "date": "2026-02-25T15:01:53.374Z",
+      "read": false
+    },
     {
       "id": "cert_1772031710761",
       "type": "certification",
