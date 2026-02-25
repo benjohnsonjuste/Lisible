@@ -15,6 +15,7 @@ const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: fal
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
+const SocialMargins = dynamic(() => import("@/components/reader/SocialMargins"), { ssr: false });
 
 function BadgeConcours() {
   return (
@@ -335,9 +336,12 @@ export default function TextContent() {
               </div>
            </header>
 
-           <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
-              {renderedContent}
-           </article>
+           <div className="relative">
+              <SocialMargins textId={id} textTitle={text.title} />
+              <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                  {renderedContent}
+              </article>
+           </div>
 
            <div className={`h-px w-full my-32 transition-opacity duration-1000 ${isFocusMode ? 'bg-white/5 opacity-50' : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'}`} />
 
@@ -345,8 +349,8 @@ export default function TextContent() {
               {!isAnnouncementAccount && (
                 <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
               )}
-              <SmartRecommendations currentId={id} allTexts={allTexts} />
               <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
+              <SmartRecommendations currentId={id} allTexts={allTexts} />
            </section>
         </main>
 
