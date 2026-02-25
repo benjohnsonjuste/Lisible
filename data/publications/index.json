@@ -325,19 +325,6 @@
     "certified": 2
   },
   {
-    "id": "txt_1771698224267",
-    "title": "Sonnet pour les victimes de la guerre",
-    "author": "Adama Junior Cissokho ",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:23:44.267Z",
-    "views": 9,
-    "likes": 3,
-    "certified": 0
-  },
-  {
     "id": "txt_1771853739084",
     "title": "Chant en détresse",
     "author": "Plume Anonyme",
@@ -348,6 +335,19 @@
     "date": "2026-02-23T13:35:39.084Z",
     "views": 8,
     "likes": 2,
+    "certified": 1
+  },
+  {
+    "id": "txt_1771698224267",
+    "title": "Sonnet pour les victimes de la guerre",
+    "author": "Adama Junior Cissokho ",
+    "authorEmail": "adamacissokho15@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-21T18:23:44.267Z",
+    "views": 9,
+    "likes": 3,
     "certified": 0
   },
   {
