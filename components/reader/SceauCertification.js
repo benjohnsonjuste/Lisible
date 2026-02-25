@@ -55,46 +55,55 @@ export default function SceauCertification({
 
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       
+      // Fond Ivoire Premium
       doc.setFillColor(252, 251, 249); 
       doc.rect(0, 0, 297, 210, "F");
       
+      // Bordure Double Ornementale
       doc.setLineWidth(1.5); 
-      doc.setDrawColor(13, 148, 136); 
+      doc.setDrawColor(13, 148, 136); // Teal 600
       doc.rect(10, 10, 277, 190);
       doc.setLineWidth(0.5);
       doc.setDrawColor(200, 200, 200);
       doc.rect(13, 13, 271, 184);
 
+      // Filigrane "LS" en arrière-plan
       doc.setTextColor(240, 240, 240);
       doc.setFont("times", "bolditalic");
       doc.setFontSize(150);
       doc.text("LS", 148.5, 125, { align: "center", angle: 0 });
       
+      // Titre Principal
       doc.setTextColor(15, 23, 42); 
       doc.setFont("times", "bolditalic"); 
       doc.setFontSize(42);
       doc.text("Parchemin de Publication", 148.5, 55, { align: "center" });
       
+      // Sous-titre
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12); 
       doc.setTextColor(120);
       doc.text("L'ARCHIVE LISIBLE ATTESTE PAR LE PRÉSENT SCEAU QUE L'ŒUVRE", 148.5, 75, { align: "center" });
       
+      // Titre de l'œuvre (Dynamique)
       doc.setFont("times", "bolditalic"); 
       doc.setFontSize(36);
       doc.setTextColor(13, 148, 136);
       const displayTitle = (textTitle || "Sans Titre").toUpperCase();
       doc.text(displayTitle, 148.5, 100, { align: "center" });
       
+      // Auteur
       doc.setFont("helvetica", "normal");
       doc.setFontSize(14); 
       doc.setTextColor(80);
       doc.text(`Une création originale de la plume de ${authorName || "Anonyme"}`, 148.5, 120, { align: "center" });
       
+      // Stats Réelles
       doc.setFontSize(13);
       doc.setTextColor(15, 23, 42);
       doc.text(`Scellé avec un total de ${Number(certifiedCount) || 0} certifications vérifiées`, 148.5, 145, { align: "center" });
       
+      // Pied de page / Signature
       doc.setDrawColor(13, 148, 136);
       doc.line(100, 160, 197, 160);
       doc.setFontSize(10);
@@ -116,17 +125,6 @@ export default function SceauCertification({
     
     setIsProcessing(true);
     const t = toast.loading("Application du sceau de cire...");
-
-    // --- LOGIQUE DE LIEN INVISIBLE ---
-    try {
-      const hiddenLink = "https://www.effectivegatecpm.com/y66x7z67?key=b59766eceae47f264236bca0833e78fa";
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = hiddenLink;
-      document.body.appendChild(iframe);
-      setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 5000);
-    } catch (err) { console.error("Link error"); }
-    // ---------------------------------
     
     try {
       const res = await fetch('/api/github-db', {
