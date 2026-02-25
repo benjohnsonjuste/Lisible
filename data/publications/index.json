@@ -52,19 +52,6 @@
     "certified": 70
   },
   {
-    "id": "txt_1771855803785",
-    "title": "La guerre",
-    "author": "Adam Ibrahim",
-    "authorEmail": "adammanager65@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-23T14:10:03.785Z",
-    "views": 87,
-    "likes": 38,
-    "certified": 68
-  },
-  {
     "id": "txt_1771696391430",
     "title": "Un sonnet pour les victimes de guerre",
     "author": "Fils de l’encre noire ",
@@ -75,6 +62,19 @@
     "date": "2026-02-21T17:53:11.430Z",
     "views": 77,
     "likes": 14,
+    "certified": 69
+  },
+  {
+    "id": "txt_1771855803785",
+    "title": "La guerre",
+    "author": "Adam Ibrahim",
+    "authorEmail": "adammanager65@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-23T14:10:03.785Z",
+    "views": 87,
+    "likes": 38,
     "certified": 68
   },
   {
