@@ -392,19 +392,6 @@
     "certified": 0
   },
   {
-    "id": "1771914113264",
-    "title": "CE QUE TU NE CONNAIS PAS",
-    "author": "FARADJA MUHUMUZA STÉPHANE",
-    "authorEmail": "entreprendre89@gmail.com",
-    "category": "Essai",
-    "genre": "Essai",
-    "isConcours": false,
-    "date": "2026-02-24T06:21:54.618Z",
-    "views": 1,
-    "likes": 0,
-    "certified": 0
-  },
-  {
     "id": "txt_1771719204540",
     "title": "Un sonnet pour les victimes de guerres",
     "author": "Plume Anonyme",
@@ -439,32 +426,6 @@
     "isConcours": true,
     "image": null,
     "date": "2026-02-21T18:30:15.965Z",
-    "views": 0,
-    "likes": 0,
-    "certified": 0
-  },
-  {
-    "id": "txt_1771692955986",
-    "title": "Test",
-    "author": "Lisible Support Team",
-    "authorEmail": "cmo.lablitteraire7@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T16:55:55.986Z",
-    "views": 1,
-    "likes": 0,
-    "certified": 0
-  },
-  {
-    "id": "1771439708279",
-    "title": "Fin du premier tour",
-    "author": "Lisible Support Team",
-    "authorEmail": "cmo.lablitteraire7@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-18T18:35:10.949Z",
     "views": 0,
     "likes": 0,
     "certified": 0
