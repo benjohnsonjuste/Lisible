@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon, Sword
+  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon, Sword, Bell
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -35,6 +36,10 @@ export default function AuthorDashboard() {
           if (userData && userData.content) {
             setUser(userData.content);
             localStorage.setItem("lisible_user", JSON.stringify(userData.content));
+            
+            // Calcul des notifications non lues
+            const unread = (userData.content.notifications || []).filter(n => !n.read).length;
+            setUnreadNotifs(unread);
           }
         }
 
@@ -73,56 +78,94 @@ export default function AuthorDashboard() {
     if (!canvas || !user) return;
     const ctx = canvas.getContext('2d');
     const name = user.penName || user.name || "Auteur.e Lisible";
-    canvas.width = 600;
-    canvas.height = 600;
-    ctx.fillStyle = '#0f172a'; 
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#14b8a6'; 
-    ctx.lineWidth = 20;
-    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+    
+    // Setup Canvas
+    canvas.width = 1080;
+    canvas.height = 1080;
+
+    // Background Gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 1080, 1080);
+    bgGrad.addColorStop(0, '#020617');
+    bgGrad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Decorative Circle
+    ctx.beginPath();
+    ctx.arc(1080, 0, 400, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20, 184, 166, 0.05)';
+    ctx.fill();
+
+    // Main Card Border (Glass effect)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(100, 100, 880, 880);
+
+    // Header Tag
     ctx.fillStyle = '#14b8a6';
-    ctx.font = 'bold 30px Arial';
+    ctx.roundRect ? ctx.fillRoundedRect?.(400, 180, 280, 40, 20) : ctx.fillRect(400, 180, 280, 40); 
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
+    ctx.fillText('OFFICIEL', 540, 207);
+
+    // Title
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '900 30px sans-serif';
+    ctx.letterSpacing = "8px";
+    ctx.fillText('MEMBRE DE LA PLUME', 540, 320);
+
+    // Author Name (Large & Elegant)
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'italic bold 45px serif';
-    const words = name.split(' ');
+    ctx.font = 'italic bold 85px serif';
+    const words = name.toUpperCase().split(' ');
     let line = '';
-    let y = 280;
-    const maxWidth = 500;
-    const lineHeight = 60;
+    let y = 500;
+    const maxWidth = 800;
+    const lineHeight = 100;
     for (let n = 0; n < words.length; n++) {
       let testLine = line + words[n] + ' ';
       let metrics = ctx.measureText(testLine);
       if (metrics.width > maxWidth && n > 0) {
-        ctx.fillText(line, canvas.width / 2, y);
+        ctx.fillText(line, 540, y);
         line = words[n] + ' ';
         y += lineHeight;
       } else { line = testLine; }
     }
-    ctx.fillText(line, canvas.width / 2, y);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 25px Arial';
-    ctx.fillText('lisible.biz', canvas.width / 2, 540);
+    ctx.fillText(line, 540, y);
+
+    // Separator
+    ctx.beginPath();
+    ctx.moveTo(440, y + 80);
+    ctx.lineTo(640, y + 80);
+    ctx.strokeStyle = '#14b8a6';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // Footer
+    ctx.fillStyle = '#5eead4';
+    ctx.font = 'bold 35px sans-serif';
+    ctx.fillText('LISIBLE.BIZ', 540, 900);
+
     if (download) {
       const link = document.createElement('a');
-      link.download = `badge-officiel-${name}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.download = `badge-lisible-${name}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
-      toast.success("Badge téléchargé !");
+      toast.success("Badge HD généré !");
     }
   };
 
   const handleUniversalShare = async () => {
     generateBadge();
     const canvas = canvasRef.current;
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
     const file = new File([blob], 'badge-officiel.jpg', { type: 'image/jpeg' });
-    const shareData = { title: 'Compte Officiel Lisible', text: "J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz", files: [file] };
+    const shareData = { title: 'Compte Officiel Lisible', text: "Je rejoins les rangs des auteurs officiels sur Lisible.biz", files: [file] };
     if (navigator.canShare && navigator.canShare(shareData)) {
       try { await navigator.share(shareData); } catch (err) { toast.error("Partage annulé"); }
     } else {
-      const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz`;
+      const shareUrl = `https://twitter.com/intent/tweet?text=Je rejoins les rangs des auteurs officiels sur Lisible.biz`;
       window.open(shareUrl, '_blank');
       toast.info("Lien de partage généré !");
     }
@@ -187,6 +230,14 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
+            <Link href="/notifications" className="relative p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 group">
+              <Bell size={20} className="group-hover:rotate-12 transition-transform" />
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-[#FCFBF9] animate-bounce">
+                  {unreadNotifs}
+                </span>
+              )}
+            </Link>
             <button onClick={handleProfileShare} className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"><LinkIcon size={14} /> Partager mon Profil</button>
             <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20"><Award size={20} /></div>
