@@ -25,7 +25,6 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // Catégories mises à jour
   const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
 
   useEffect(() => {
@@ -75,24 +74,24 @@ export default function PublishPage() {
     if (loading) return;
 
     const cleanContent = content.trim();
-    
     if (!title.trim()) return toast.error("Votre œuvre a besoin d'un titre.");
     if (cleanContent.length === 0) return toast.error("Le Grand Livre ne peut pas sceller une page blanche.");
-    if (cleanContent.length > 3000) return toast.error("Ce manuscrit est trop volumineux pour un seul scellé.");
 
     setLoading(true);
-    const toastId = toast.loading("Scellement du manuscrit dans le Data Lake...");
+    const toastId = toast.loading("Publication et notification des abonnés...");
 
     try {
       const id = Date.now().toString();
+      const authorEmail = user.email.toLowerCase().trim();
 
+      // 1. Publier le texte
       const payload = {
         action: "publish", 
         id,
         title: title.trim(),
         content: cleanContent,
         authorName: user.penName || user.name || "Une Plume",
-        authorEmail: user.email.toLowerCase().trim(),
+        authorEmail: authorEmail,
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
@@ -105,19 +104,58 @@ export default function PublishPage() {
         certified: 0
       };
 
-      const res = await fetch("/api/github-db", {
+      const resPublish = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Échec de la synchronisation avec le registre.");
+      if (!resPublish.ok) throw new Error("Échec de la publication.");
 
-      toast.success("Manuscrit scellé avec succès ! ✨", { id: toastId });
+      // 2. Gérer les Notifications des Followers
+      // On récupère les données fraîches de l'auteur pour avoir la liste des followers
+      const usersRes = await fetch(`/api/github-db?type=users`);
+      const usersData = await usersRes.json();
+      
+      if (usersData?.content) {
+        const authorProfile = usersData.content.find(u => u.email?.toLowerCase() === authorEmail);
+        const followers = authorProfile?.followers || [];
 
+        if (followers.length > 0) {
+          const newNotification = {
+            id: `notif-${Date.now()}`,
+            type: "new_publication",
+            authorName: user.penName || user.name,
+            textTitle: title.trim(),
+            textId: id,
+            date: new Date().toISOString(),
+            read: false
+          };
+
+          // Pour chaque follower, on met à jour son fichier data/users
+          await Promise.all(followers.map(async (followerEmail) => {
+            const followerProfile = usersData.content.find(u => u.email?.toLowerCase() === followerEmail.toLowerCase());
+            if (followerProfile) {
+              await fetch("/api/github-db", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "user",
+                  id: followerEmail,
+                  content: {
+                    ...followerProfile,
+                    notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20) // Garder les 20 dernières
+                  }
+                })
+              });
+            }
+          }));
+        }
+      }
+
+      toast.success("Publié ! Vos abonnés ont été notifiés. ✨", { id: toastId });
       localStorage.removeItem("atelier_draft_title");
       localStorage.removeItem("atelier_draft_content");
-
       router.push(`/texts/${id}`);
 
     } catch (err) {
@@ -143,15 +181,13 @@ export default function PublishPage() {
           </button>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <Sparkles size={12} className="text-teal-600" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Nouvelle Inspiration</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Atelier d'écriture</span>
             </div>
             <h1 className="font-serif font-black italic text-3xl tracking-tighter text-slate-900">Le Studio.</h1>
           </div>
           <div className="w-12" />
         </header>
 
-        {/* Section Battle Poétique */}
         <div className="mb-12 p-8 bg-teal-50 rounded-[3rem] border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 bg-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/20">
@@ -237,9 +273,9 @@ export default function PublishPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-4 py-7 bg-slate-950 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50 hover:-translate-y-1 active:scale-95"
+            className="w-full flex items-center justify-center gap-4 py-7 bg-slate-950 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Feather size={20}/>Publier</>}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Feather size={20}/>Diffuser l'œuvre</>}
           </button>
         </form>
       </div>
