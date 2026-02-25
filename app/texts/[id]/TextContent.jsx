@@ -228,10 +228,16 @@ export default function TextContent() {
     if (!text?.content) return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
+    const renderParagraph = (p, i) => (
+      <SocialMargins key={i} paragraphId={`${id}-p-${i}`}>
+        <p className="mb-6">{p}</p>
+      </SocialMargins>
+    );
+
     if (paragraphs.length <= 4) {
       return (
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-          {paragraphs.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
+          {paragraphs.map((p, i) => renderParagraph(p, i))}
         </div>
       );
     }
@@ -243,18 +249,17 @@ export default function TextContent() {
     return (
       <div className="space-y-6">
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-           {firstPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
+           {firstPart.map((p, i) => renderParagraph(p, i))}
         </div>
         
-        {/* Insertion de la publicité au milieu du texte */}
         <InTextAd />
 
         <div className="whitespace-pre-wrap space-y-6">
-           {secondPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
+           {secondPart.map((p, i) => renderParagraph(p, i + midPoint))}
         </div>
       </div>
     );
-  }, [text?.content, isFocusMode]);
+  }, [text?.content, isFocusMode, id]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
@@ -338,7 +343,6 @@ export default function TextContent() {
            </header>
 
            <div className="relative">
-              <SocialMargins textId={id} textTitle={text.title} />
               <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   {renderedContent}
               </article>
