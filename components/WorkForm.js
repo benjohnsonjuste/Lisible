@@ -9,6 +9,7 @@ export default function WorkForm({
   isConcours = false,
   requireBattleAcceptance = false,
   submitLabel = "Diffuser",
+  onSuccess = null // Ajout de la prop onSuccess
 }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -75,11 +76,14 @@ export default function WorkForm({
     if (!user?.email) return toast.error("Identité introuvable.");
     if (requireBattleAcceptance && !isBattlePoetic) return toast.error("Veuillez accepter le duel.");
     if (content.trim().length < 50) return toast.error("Le texte est trop court pour être archivé.");
+    
     setLoading(true);
-    const toastId = toast.loading("Scellement du manuscrit...");
+    const toastId = toast.loading("Scellement et notification des abonnés...");
+    
     try {
       let imageBase64 = imagePreview;
       if (imageFile) imageBase64 = await toBase64(imageFile);
+      
       const payload = {
         action: "publish",
         title: title.trim(),
@@ -91,23 +95,71 @@ export default function WorkForm({
         isConcours: isConcours || category === "Battle Poétique",
         date: new Date().toISOString()
       };
+
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec de l'archivage");
+
+      // --- LOGIQUE DE NOTIFICATION DES FOLLOWERS ---
+      try {
+        const usersRes = await fetch(`/api/github-db?type=users`);
+        const usersData = await usersRes.json();
+        
+        if (usersData?.content) {
+          const authorProfile = usersData.content.find(u => u.email?.toLowerCase() === user.email.toLowerCase());
+          const followers = authorProfile?.followers || [];
+
+          if (followers.length > 0) {
+            const newNotification = {
+              id: `notif-${Date.now()}`,
+              type: isConcours || category === "Battle Poétique" ? "new_battle" : "new_publication",
+              authorName: user.penName || user.name,
+              textTitle: title.trim(),
+              textId: data.id,
+              date: new Date().toISOString(),
+              read: false
+            };
+
+            await Promise.all(followers.map(async (followerEmail) => {
+              const followerProfile = usersData.content.find(u => u.email?.toLowerCase() === followerEmail.toLowerCase());
+              if (followerProfile) {
+                await fetch("/api/github-db", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "user",
+                    id: followerEmail,
+                    content: {
+                      ...followerProfile,
+                      notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20)
+                    }
+                  })
+                });
+              }
+            }));
+          }
+        }
+      } catch (notifErr) {
+        console.error("Erreur notifications:", notifErr);
+      }
+      // --- FIN LOGIQUE NOTIFICATION ---
+
+      if (onSuccess) await onSuccess(data.id, title.trim());
+
       toast.success(isConcours ? "Défi lancé avec succès !" : "Œuvre immortalisée ✨", { id: toastId });
+      
       if (!isConcours) {
         localStorage.removeItem("draft_title");
         localStorage.removeItem("draft_content");
       }
-      if (data.id) {
-        router.push(`/texts/${data.id}`);
-      } else {
-        router.push("/bibliotheque");
-      }
+
+      router.push(data.id ? `/texts/${data.id}` : "/bibliotheque");
+
     } catch (err) {
       toast.error(err.message, { id: toastId });
     } finally {
