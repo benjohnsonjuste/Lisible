@@ -16,7 +16,6 @@ const SmartRecommendations = dynamic(() => import("@/components/reader/SmartReco
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
 const SocialMargins = dynamic(() => import("@/components/reader/SocialMargins"), { ssr: false });
-const LumiReader = dynamic(() => import("@/components/reader/LumiReader"), { ssr: false });
 
 function BadgeConcours() {
   return (
@@ -228,16 +227,10 @@ export default function TextContent() {
     if (!text?.content) return null;
     const paragraphs = text.content.split('\n').filter(p => p.trim() !== "");
     
-    const renderParagraph = (p, i) => (
-      <SocialMargins key={i} paragraphId={`${id}-p-${i}`}>
-        <p className="mb-6">{p}</p>
-      </SocialMargins>
-    );
-
     if (paragraphs.length <= 4) {
       return (
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-          {paragraphs.map((p, i) => renderParagraph(p, i))}
+          {paragraphs.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
       );
     }
@@ -249,17 +242,18 @@ export default function TextContent() {
     return (
       <div className="space-y-6">
         <div className={`whitespace-pre-wrap first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${isFocusMode ? 'first-letter:text-teal-400' : 'first-letter:text-teal-600'}`}>
-           {firstPart.map((p, i) => renderParagraph(p, i))}
+           {firstPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
         
+        {/* Insertion de la publicité au milieu du texte */}
         <InTextAd />
 
         <div className="whitespace-pre-wrap space-y-6">
-           {secondPart.map((p, i) => renderParagraph(p, i + midPoint))}
+           {secondPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
       </div>
     );
-  }, [text?.content, isFocusMode, id]);
+  }, [text?.content, isFocusMode]);
 
   if (loading) return (
     <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
@@ -343,6 +337,7 @@ export default function TextContent() {
            </header>
 
            <div className="relative">
+              <SocialMargins textId={id} textTitle={text.title} />
               <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
                   {renderedContent}
               </article>
@@ -355,7 +350,6 @@ export default function TextContent() {
                 <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
               )}
               <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
-              <LumiReader text={text.content} title={text.title} author={text.authorName} />
               <SmartRecommendations currentId={id} allTexts={allTexts} />
            </section>
         </main>
