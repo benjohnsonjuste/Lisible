@@ -16,6 +16,7 @@ const SmartRecommendations = dynamic(() => import("@/components/reader/SmartReco
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
 const SocialMargins = dynamic(() => import("@/components/reader/SocialMargins"), { ssr: false });
+const LumiReader = dynamic(() => import("@/components/reader/LumiReader"), { ssr: false });
 
 function BadgeConcours() {
   return (
@@ -350,6 +351,7 @@ export default function TextContent() {
                 <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
               )}
               <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
+              <LumiReader text={text.content} title={text.title} author={text.authorName} />
               <SmartRecommendations currentId={id} allTexts={allTexts} />
            </section>
         </main>
