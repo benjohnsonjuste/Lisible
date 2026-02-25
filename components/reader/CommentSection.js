@@ -124,7 +124,7 @@ export default function CommentSection({ textId, comments = [], user, onCommente
                 if (!sending && msg.trim().length >= 2) postComment();
               }
             }}
-            placeholder={user ? "Une pensée à partager..." : "Connectez-vous pour commenter"}
+            placeholder={user ? "Une pensée à partager..." : "Commentez ici"}
             disabled={!user || sending} 
             className="flex-1 bg-transparent px-4 py-4 text-sm font-bold outline-none text-slate-800 placeholder:text-slate-300" 
           />
