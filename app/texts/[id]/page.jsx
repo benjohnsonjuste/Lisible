@@ -23,7 +23,10 @@ export async function generateMetadata({ params }) {
     if (!text) return { title: "Manuscrit introuvable | Lisible" };
 
     const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
-    const ogImage = (isBattle || !text.image) ? `${baseUrl}/og-default.jpg` : text.image;
+    
+    // Priorité à l'image du texte, sinon image par défaut de la plateforme
+    const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;
+    
     const shareTitle = `${text.title} — ${text.authorName}`;
     const shareDesc = `Je vous invite à apprécier ce magnifique texte sur Lisible. ✨`;
 
@@ -57,4 +60,3 @@ export default function Page({ params }) {
   // Le suspense ou la gestion d'état de TextContent s'occupera du rendu
   return <TextContent params={params} />;
 }
-  
