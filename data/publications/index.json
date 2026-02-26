@@ -338,19 +338,6 @@
     "certified": 2
   },
   {
-    "id": "txt_1771698224267",
-    "title": "Sonnet pour les victimes de la guerre",
-    "author": "Adama Junior Cissokho ",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:23:44.267Z",
-    "views": 9,
-    "likes": 3,
-    "certified": 0
-  },
-  {
     "id": "1771120386909",
     "title": "Ta lumière dans mes ombres",
     "author": "Une Plume",
@@ -414,19 +401,6 @@
     "image": null,
     "date": "2026-02-21T23:17:38.932Z",
     "views": 1,
-    "likes": 0,
-    "certified": 0
-  },
-  {
-    "id": "txt_1771698224267",
-    "title": "Sonnet pour les victimes de la guerre",
-    "author": "Auteur Lisible",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "genre": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-21T18:30:15.965Z",
-    "views": 0,
     "likes": 0,
     "certified": 0
   },
