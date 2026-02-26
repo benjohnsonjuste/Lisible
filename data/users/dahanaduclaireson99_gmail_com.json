@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "Dahana DUCLAIRE",
-  "li": 337,
+  "li": 338,
   "notifications": [
+    {
+      "id": "cert_1772117742964",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"L'innocence sous les Canons\" (+1 Li).",
+      "date": "2026-02-26T14:55:42.964Z",
+      "read": false
+    },
     {
       "id": "like_1772111834952",
       "type": "like",
