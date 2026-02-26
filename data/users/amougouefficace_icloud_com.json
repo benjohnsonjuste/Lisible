@@ -1,0 +1,127 @@
+{
+  "email": "amougouefficace@icloud.com",
+  "name": "",
+  "li": 60,
+  "notifications": [
+    {
+      "id": "follow_1772078595092",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T04:03:15.092Z",
+      "read": false
+    },
+    {
+      "id": "follow_1772078009134",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:53:29.134Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771757883785",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T10:58:03.785Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771757881712",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T10:58:01.712Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771757717827",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T10:55:17.827Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771757715934",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T10:55:15.934Z",
+      "read": false
+    },
+    {
+      "id": "like_1771757684875",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Un sonnet pour les victimes de guerre\" !",
+      "date": "2026-02-22T10:54:44.875Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771720557209",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T00:35:57.209Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771720555460",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
+      "date": "2026-02-22T00:35:55.460Z",
+      "read": false
+    },
+    {
+      "id": "like_1771719544587",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Un sonnet pour les victimes de guerre\" !",
+      "date": "2026-02-22T00:19:04.587Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771715158835",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Au champ de bataille\" (+1 Li).",
+      "date": "2026-02-21T23:05:58.835Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771715156952",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Au champ de bataille\" (+1 Li).",
+      "date": "2026-02-21T23:05:56.952Z",
+      "read": false
+    },
+    {
+      "id": "like_1771715154294",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Au champ de bataille\" !",
+      "date": "2026-02-21T23:05:54.294Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771714301324",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Au champ de bataille\" (+1 Li).",
+      "date": "2026-02-21T22:51:41.324Z",
+      "read": false
+    },
+    {
+      "id": "cert_1771714298829",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Au champ de bataille\" (+1 Li).",
+      "date": "2026-02-21T22:51:38.829Z",
+      "read": false
+    },
+    {
+      "id": "like_1771714275477",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Au champ de bataille\" !",
+      "date": "2026-02-21T22:51:15.477Z",
+      "read": false
+    }
+  ],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
+  "following": [],
+  "works": [],
+  "created_at": "2026-02-12T06:09:54.548Z",
+  "password": "$2b$10$d0O3pgbxF7O/6Gqenl0O8udn7LEbCCHV0Do2NyK34FI4crbnvMx06",
+  "referralCode": null
+}
