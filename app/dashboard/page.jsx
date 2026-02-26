@@ -103,7 +103,7 @@ export default function AuthorDashboard() {
 
     // Header Tag
     ctx.fillStyle = '#14b8a6';
-    ctx.roundRect ? ctx.fillRoundedRect?.(400, 180, 280, 40, 20) : ctx.fillRect(400, 180, 280, 40); 
+    ctx.fillRect(400, 180, 280, 40); 
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 20px sans-serif';
     ctx.textAlign = 'center';
