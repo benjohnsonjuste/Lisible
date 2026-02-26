@@ -152,7 +152,6 @@ export async function POST(req) {
 
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
 
-      // Vérification Soft Delete
       if (file.content.status === "deleted") {
         return NextResponse.json({ 
           error: "Ce compte est en attente de suppression.",
@@ -189,10 +188,8 @@ export async function POST(req) {
     if (action === 'soft_delete_account') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      
       file.content.status = "deleted";
       file.content.deletedAt = new Date().toISOString();
-      
       await updateFile(targetPath, file.content, file.sha, `🗑 Soft Delete Account: ${emailToUse}`);
       return NextResponse.json({ success: true });
     }
@@ -200,11 +197,8 @@ export async function POST(req) {
     if (action === 'restore_account') {
       const file = await getFile(targetPath);
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      
-      // Vérification optionnelle du mot de passe ici si nécessaire
       file.content.status = "active";
       delete file.content.deletedAt;
-      
       file.content.notifications.unshift({
         id: `restore_${Date.now()}`,
         type: "security",
@@ -212,7 +206,6 @@ export async function POST(req) {
         date: new Date().toISOString(),
         read: false
       });
-
       await updateFile(targetPath, file.content, file.sha, `♻️ Restore Account: ${emailToUse}`);
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
@@ -221,19 +214,15 @@ export async function POST(req) {
     if (action === 'reset-password') {
       let file = await getFile(targetPath);
       let finalPathUsed = targetPath;
-      
       if (!file && emailToUse) {
         const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
         file = await getFile(legacyPath);
         if (file) finalPathUsed = legacyPath;
       }
-
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-
       const tempPassword = "Lisible2026";
       const salt = bcrypt.genSaltSync(10);
       file.content.password = bcrypt.hashSync(tempPassword, salt);
-      
       file.content.notifications.unshift({
         id: `reset_${Date.now()}`,
         type: "security",
@@ -241,7 +230,6 @@ export async function POST(req) {
         date: new Date().toISOString(),
         read: false
       });
-
       await updateFile(finalPathUsed, file.content, file.sha, `🔐 Password Reset: ${emailToUse}`);
       return NextResponse.json({ success: true, hint: "Votre nouveau mot de passe est Lisible2026" });
     }
@@ -262,7 +250,6 @@ export async function POST(req) {
       const idToDelete = textId || data.textId;
       const path = `data/texts/${idToDelete}.json`;
       const indexPath = `data/publications/index.json`;
-      
       const file = await getFile(path);
       if (file) {
         await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
@@ -271,11 +258,37 @@ export async function POST(req) {
           body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha })
         });
       }
-
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
         const newIndex = indexFile.content.filter(t => t.id !== idToDelete);
         await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'edit_text') {
+      const idToEdit = textId || data.id;
+      const path = `data/texts/${idToEdit}.json`;
+      const indexPath = `data/publications/index.json`;
+      const file = await getFile(path);
+      if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
+      
+      const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
+      await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
+
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
+        if (itemIndex > -1) {
+          indexFile.content[itemIndex] = { 
+            ...indexFile.content[itemIndex],
+            title: data.title || indexFile.content[itemIndex].title,
+            category: data.category || indexFile.content[itemIndex].category,
+            genre: data.genre || indexFile.content[itemIndex].genre,
+            image: data.image || indexFile.content[itemIndex].image
+          };
+          await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
+        }
       }
       return NextResponse.json({ success: true });
     }
