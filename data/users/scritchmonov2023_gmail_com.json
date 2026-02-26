@@ -4,6 +4,13 @@
   "li": 174,
   "notifications": [
     {
+      "id": "like_1772104976018",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Un sonnet pour les victimes de guerre\" !",
+      "date": "2026-02-26T11:22:56.018Z",
+      "read": false
+    },
+    {
       "id": "follow_1772077969180",
       "type": "follow",
       "message": " s'est abonné à vous !",
