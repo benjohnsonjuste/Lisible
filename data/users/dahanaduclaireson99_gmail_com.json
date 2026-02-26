@@ -4,6 +4,13 @@
   "li": 335,
   "notifications": [
     {
+      "id": "like_1772093417447",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'inaltérable\" !",
+      "date": "2026-02-26T08:10:17.447Z",
+      "read": false
+    },
+    {
       "id": "cert_1772092351380",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"L'innocence sous les Canons\" (+1 Li).",
