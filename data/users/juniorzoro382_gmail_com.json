@@ -4,6 +4,13 @@
   "li": 60,
   "notifications": [
     {
+      "id": "like_1772079113067",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Chant en détresse\" !",
+      "date": "2026-02-26T04:11:53.067Z",
+      "read": false
+    },
+    {
       "id": "follow_1772077993339",
       "type": "follow",
       "message": " s'est abonné à vous !",
