@@ -4,6 +4,13 @@
   "li": 54,
   "notifications": [
     {
+      "id": "follow_1772078000168",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:53:20.168Z",
+      "read": false
+    },
+    {
       "id": "cert_1771717164717",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Mon départ\" (+1 Li).",
@@ -109,7 +116,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [],
   "works": [],
   "created_at": "2026-02-11T15:16:31.196Z",
