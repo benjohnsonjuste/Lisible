@@ -4,6 +4,13 @@
   "li": 60,
   "notifications": [
     {
+      "id": "follow_1772078595092",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T04:03:15.092Z",
+      "read": false
+    },
+    {
       "id": "follow_1772078009134",
       "type": "follow",
       "message": " s'est abonné à vous !",
@@ -109,7 +116,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [],
   "works": [],
   "created_at": "2026-02-12T06:09:54.548Z",
