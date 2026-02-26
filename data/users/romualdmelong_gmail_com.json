@@ -4,6 +4,13 @@
   "li": 68,
   "notifications": [
     {
+      "id": "follow_1772077985567",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:53:05.567Z",
+      "read": false
+    },
+    {
       "id": "like_1771045599342",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Femme en silence\" !",
@@ -256,7 +263,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [],
   "works": [],
   "created_at": "2026-02-11T22:20:07.548Z",
