@@ -190,6 +190,7 @@ export default function TextContent() {
   const handleShare = async () => {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
+    const shareImage = text.image || "https://lisible.biz/cover.png"; // Image de couverture plateforme par défaut
     const shareText = `Découvrez "${shareTitle}" sur Lisible.biz ✨`;
     
     if (navigator.share) {
@@ -198,6 +199,7 @@ export default function TextContent() {
           title: shareTitle, 
           text: shareText, 
           url: shareUrl 
+          // Note: La plupart des navigateurs mobiles récupèrent automatiquement l'image via les balises meta de l'URL
         }); 
       } catch (err) {}
     } else {
