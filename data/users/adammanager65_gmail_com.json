@@ -4,6 +4,13 @@
   "li": 173,
   "notifications": [
     {
+      "id": "follow_1772077890079",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:51:30.079Z",
+      "read": false
+    },
+    {
       "id": "like_1772025772229",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"La guerre\" !",
@@ -2363,7 +2370,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [],
   "works": [],
   "created_at": "2026-02-11T15:04:21.802Z",
