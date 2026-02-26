@@ -4,6 +4,13 @@
   "li": 60,
   "notifications": [
     {
+      "id": "follow_1772077993339",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:53:13.339Z",
+      "read": false
+    },
+    {
       "id": "cert_1772031713374",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Chant en détresse\" (+1 Li).",
@@ -144,7 +151,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [],
   "works": [],
   "created_at": "2026-02-11T16:53:33.817Z",
