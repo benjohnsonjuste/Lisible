@@ -4,6 +4,13 @@
   "li": 54,
   "notifications": [
     {
+      "id": "like_1772093308363",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le Vide\" !",
+      "date": "2026-02-26T08:08:28.363Z",
+      "read": false
+    },
+    {
       "id": "follow_1772078000168",
       "type": "follow",
       "message": " s'est abonné à vous !",
