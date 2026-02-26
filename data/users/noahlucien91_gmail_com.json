@@ -4,6 +4,13 @@
   "li": 888,
   "notifications": [
     {
+      "id": "follow_1772077954006",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:52:34.006Z",
+      "read": false
+    },
+    {
       "id": "like_1771781701354",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Et si la femme était un objet\" !",
@@ -8306,7 +8313,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [
     "noahlucien91@gmail.com"
   ],
