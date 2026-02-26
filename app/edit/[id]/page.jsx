@@ -50,7 +50,7 @@ export default function EditWorkPage() {
         summary: manuscript.summary || ""
       });
     } catch (err) {
-      console.error(err); // Utile pour déboguer si le problème persiste
+      console.error(err); 
       toast.error("Échec de l'ouverture du parchemin.");
       router.push("/dashboard");
     } finally {
@@ -84,13 +84,12 @@ export default function EditWorkPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "publish",
-          id: id, 
+          action: "edit_text", // Changé de 'publish' à 'edit_text' pour modifier l'existant
+          textId: id, 
           userEmail: user.email,
           ...formData,
           authorName: user.name || "Auteur Lisible",
-          authorEmail: user.email,
-          updatedAt: new Date().toISOString()
+          authorEmail: user.email
         })
       });
 
@@ -98,7 +97,8 @@ export default function EditWorkPage() {
         toast.success("Manuscrit ré-archivé !", { id: tid });
         router.push("/dashboard");
       } else {
-        throw new Error("Erreur de synchronisation");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur de synchronisation");
       }
     } catch (err) {
       toast.error(err.message, { id: tid });
