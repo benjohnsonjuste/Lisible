@@ -4,6 +4,13 @@
   "li": 60,
   "notifications": [
     {
+      "id": "reset_1772108880070",
+      "type": "security",
+      "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+      "date": "2026-02-26T12:28:00.070Z",
+      "read": false
+    },
+    {
       "id": "follow_1772078595092",
       "type": "follow",
       "message": " s'est abonné à vous !",
@@ -122,6 +129,6 @@
   "following": [],
   "works": [],
   "created_at": "2026-02-12T06:09:54.548Z",
-  "password": "$2b$10$d0O3pgbxF7O/6Gqenl0O8udn7LEbCCHV0Do2NyK34FI4crbnvMx06",
+  "password": "$2b$10$JQmusbVEcI/cW6CjVHt22eZJD7YkVl065smcUnhJNbYcLKYcEWnCa",
   "referralCode": null
 }
