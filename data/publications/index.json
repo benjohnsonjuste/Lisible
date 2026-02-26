@@ -215,19 +215,6 @@
     "certified": 4
   },
   {
-    "id": "1771714246871",
-    "title": "Au champ de bataille",
-    "author": "Une Plume",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-21T22:50:47.232Z",
-    "views": 6,
-    "likes": 2,
-    "certified": 4
-  },
-  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -376,18 +363,6 @@
     "date": "2026-02-24T04:20:10.010Z",
     "views": 1,
     "likes": 1,
-    "certified": 0
-  },
-  {
-    "id": "1771714246871",
-    "title": "Au champ de bataille",
-    "author": "Auteur Lisible",
-    "authorEmail": "amougouefficace@icloud.com",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-26T12:29:11.833Z",
-    "views": 0,
-    "likes": 0,
     "certified": 0
   },
   {
