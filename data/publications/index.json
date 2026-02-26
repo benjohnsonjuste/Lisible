@@ -78,6 +78,19 @@
     "certified": 68
   },
   {
+    "id": "1771724719525",
+    "title": "L'innocence sous les Canons",
+    "author": "Dahana DUCLAIRE ",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-22T01:47:30.876Z",
+    "views": 59,
+    "likes": 21,
+    "certified": 59
+  },
+  {
     "id": "txt_1770822380909",
     "title": "AFRIAMEURASIOCE",
     "author": "Adam Ibrahim",
@@ -94,19 +107,6 @@
     "imageBase64": null,
     "concurrentId": "ADIB1129",
     "comments": []
-  },
-  {
-    "id": "1771724719525",
-    "title": "L'innocence sous les Canons",
-    "author": "Dahana DUCLAIRE ",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-22T01:47:30.876Z",
-    "views": 59,
-    "likes": 21,
-    "certified": 58
   },
   {
     "id": "txt_1770822631261",
