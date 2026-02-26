@@ -63,7 +63,7 @@ async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   const jsonString = JSON.stringify(content, null, 2);
   const bytes = new TextEncoder().encode(jsonString);
-  const binString = Array.from(bytes, (byte) => String.fromPoint(byte)).join("");
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
   const encodedContent = btoa(binString);
 
   try {
@@ -131,6 +131,7 @@ export async function POST(req) {
         email: data.email.toLowerCase().trim(),
         name: data.name || "Nouvel Auteur",
         li: data.referralCode ? 250 : 50,
+        status: "active",
         notifications: [], followers: [], following: [], works: [],
         created_at: new Date().toISOString(),
         ...data,
@@ -150,6 +151,15 @@ export async function POST(req) {
       }
 
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+
+      // Vérification Soft Delete
+      if (file.content.status === "deleted") {
+        return NextResponse.json({ 
+          error: "Ce compte est en attente de suppression.",
+          isDeleted: true,
+          email: file.content.email 
+        }, { status: 403 });
+      }
 
       const storedPassword = file.content.password;
       const providedPassword = data.password;
@@ -176,12 +186,42 @@ export async function POST(req) {
       return NextResponse.json({ success: true, user: safeUser });
     }
 
+    if (action === 'soft_delete_account') {
+      const file = await getFile(targetPath);
+      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+      
+      file.content.status = "deleted";
+      file.content.deletedAt = new Date().toISOString();
+      
+      await updateFile(targetPath, file.content, file.sha, `🗑 Soft Delete Account: ${emailToUse}`);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'restore_account') {
+      const file = await getFile(targetPath);
+      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+      
+      // Vérification optionnelle du mot de passe ici si nécessaire
+      file.content.status = "active";
+      delete file.content.deletedAt;
+      
+      file.content.notifications.unshift({
+        id: `restore_${Date.now()}`,
+        type: "security",
+        message: "Bon retour ! Votre compte a été restauré avec succès.",
+        date: new Date().toISOString(),
+        read: false
+      });
+
+      await updateFile(targetPath, file.content, file.sha, `♻️ Restore Account: ${emailToUse}`);
+      const { password, ...safeUser } = file.content;
+      return NextResponse.json({ success: true, user: safeUser });
+    }
+
     if (action === 'reset-password') {
-      // 1. Recherche via le chemin sécurisé (getSafePath)
       let file = await getFile(targetPath);
       let finalPathUsed = targetPath;
       
-      // 2. Fallback si non trouvé (format sans underscores pour les points)
       if (!file && emailToUse) {
         const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
         file = await getFile(legacyPath);
