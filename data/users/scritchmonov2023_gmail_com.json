@@ -4,6 +4,13 @@
   "li": 174,
   "notifications": [
     {
+      "id": "follow_1772077969180",
+      "type": "follow",
+      "message": " s'est abonné à vous !",
+      "date": "2026-02-26T03:52:49.180Z",
+      "read": false
+    },
+    {
       "id": "cert_1771989297187",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Un sonnet pour les victimes de guerre\" (+1 Li).",
@@ -1222,7 +1229,9 @@
       "read": false
     }
   ],
-  "followers": [],
+  "followers": [
+    "adamahassoumi1998@gmail.com"
+  ],
   "following": [
     "scritchmonov2023@gmail.com"
   ],
