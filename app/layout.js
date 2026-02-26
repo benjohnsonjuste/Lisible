@@ -58,6 +58,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${inter.variable} ${lora.variable} h-full`} suppressHydrationWarning>
       <head>
+        {/* Google AdSense Validation Code */}
+        <script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7644995408680119"
+          crossOrigin="anonymous"
+        ></script>
+        
         <script
           dangerouslySetInnerHTML={{
             __html: `
