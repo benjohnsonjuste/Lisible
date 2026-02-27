@@ -32,71 +32,64 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupération parallèle pour gagner du temps
-      const [resLib, resUsers] = await Promise.all([
-        fetch(`/api/github-db?type=data&file=library`),
-        fetch(`/api/github-db?type=data&file=users`)
+      // 1. Récupération des données utilisateurs (Dossier data/users via github-db)
+      // On récupère aussi la library pour les stats de publications
+      const [resUsers, resLib] = await Promise.all([
+        fetch(`/api/github-db?type=data&file=users`),
+        fetch(`/api/github-db?type=data&file=library`)
       ]);
 
-      const jsonLib = await resLib.json();
       const jsonUsers = await resUsers.json();
+      const jsonLib = await resLib.json();
       
-      if (jsonLib && Array.isArray(jsonLib.content)) {
-        const statsMap = jsonLib.content.reduce((acc, pub) => {
+      if (jsonUsers && Array.isArray(jsonUsers.content)) {
+        // Map pour agréger les stats de la bibliothèque par email
+        const libStats = (jsonLib.content || []).reduce((acc, pub) => {
           const email = pub.authorEmail?.toLowerCase().trim();
           if (!email) return acc;
+          if (!acc[email]) acc[email] = { works: 0, views: 0, likes: 0, certified: 0 };
           
-          if (!acc[email]) {
-            acc[email] = {
-              name: pub.author || "Plume Anonyme",
-              email: email,
-              image: pub.authorImage || null,
-              followers: pub.followers || [], 
-              certified: 0, 
-              likes: 0, 
-              views: 0, 
-              worksCount: 0,
-              li: 0
-            };
-          }
-          acc[email].worksCount += 1;
-          acc[email].certified += Number(pub.certified || 0);
-          acc[email].likes += Number(pub.likes || 0);
+          acc[email].works += 1;
           acc[email].views += Number(pub.views || 0);
+          acc[email].likes += Number(pub.likes || 0);
+          acc[email].certified += Number(pub.certified || 0);
           return acc;
         }, {});
 
-        let authorEntries = Object.values(statsMap);
+        // Construction de la liste finale basée sur data/users
+        const authorEntries = jsonUsers.content.map(user => {
+          const email = user.email?.toLowerCase().trim();
+          const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
+          
+          return {
+            name: user.name || user.username || "Plume Anonyme",
+            email: email,
+            image: user.profilePic || user.image || null,
+            followers: user.followers || [],
+            li: Number(user.li || 0),
+            worksCount: stats.works,
+            views: stats.views,
+            likes: stats.likes,
+            certified: stats.certified
+          };
+        });
 
-        // 2. Enrichissement via le fichier users
-        if (jsonUsers && Array.isArray(jsonUsers.content)) {
-          authorEntries = authorEntries.map(auth => {
-            const userProfile = jsonUsers.content.find(u => u.email?.toLowerCase().trim() === auth.email);
-            return userProfile ? {
-              ...auth,
-              li: userProfile.li || 0,
-              image: userProfile.profilePic || userProfile.image || auth.image
-            } : auth;
-          });
-        }
-
+        // Tri par popularité (li + vues + œuvres)
         const sortedAuthors = authorEntries.sort((a, b) => 
-          (b.certified + b.likes + b.views) - (a.certified + a.likes + a.views)
+          (b.li + b.views + b.worksCount) - (a.li + a.views + a.worksCount)
         );
 
-        // Mise à jour du cache et de l'état
         authorsCache = sortedAuthors;
         setAuthors(sortedAuthors);
       }
     } catch (e) { 
-      console.error("Erreur générale:", e);
-      if (!authorsCache) toast.error("Le Cercle est inaccessible."); 
+      console.error("Erreur de chargement du Cercle:", e);
+      if (!authorsCache) toast.error("Le Cercle est momentanément inaccessible."); 
     } finally { 
       setLoading(false); 
     }
   }
 
-  // Mémos pour les statistiques globales
   const stats = useMemo(() => {
     if (authors.length === 0) return { maxViews: 0, maxWorks: 0, maxLi: 0 };
     return {
@@ -125,9 +118,6 @@ export default function CommunautePage() {
     }
     if (author.li === stats.maxLi && stats.maxLi > 0) {
       b.push({ icon: <Sun size={10} />, label: "Auréole", color: "bg-amber-400 text-slate-900 font-bold shadow-lg" });
-    }
-    if (author.certified > 3 && b.length < 3) {
-      b.push({ icon: <Star size={10} />, label: "Certifiée", color: "bg-amber-100 text-amber-700" });
     }
     return b;
   };
@@ -169,7 +159,7 @@ export default function CommunautePage() {
           <input 
             type="text" 
             placeholder="Rechercher une plume..." 
-            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all" 
+            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all font-sans" 
             onChange={(e) => setSearchTerm(e.target.value)} 
           />
         </div>
@@ -226,7 +216,7 @@ export default function CommunautePage() {
       
       {authors.length > visibleCount && (
         <div className="mt-20 text-center">
-          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl">
+          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl font-sans">
             Découvrir plus de plumes
           </button>
         </div>
