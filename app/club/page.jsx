@@ -1,17 +1,36 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Radio, PlayCircle, PlusCircle, Mic, Video, Loader2 } from "lucide-react";
+import { Radio, PlusCircle, Mic, Video, Loader2, ShieldCheck } from "lucide-react";
 import ReplayCard from "@/components/ReplayCard";
 
 export default function ClubExplorer() {
   const [liveData, setLiveData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Liste stricte des administrateurs autorisés
+  const ADMINS = [
+    "adm.lablitteraire7@gmail.com", "woolsleypierre01@gmail.com", 
+    "jeanpierreborlhaïniedarha@gmail.com", "robergeaurodley97@gmail.com", 
+    "jb7management@gmail.com", "cmo.lablitteraire7@gmail.com"
+  ];
 
   useEffect(() => {
+    // 1. Vérification du rôle administratif
+    const storedUser = localStorage.getItem("lisible_user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        if (ADMINS.includes(user.email?.toLowerCase())) {
+          setIsAdmin(true);
+        }
+      } catch (e) { console.error("Erreur session"); }
+    }
+
+    // 2. Récupération des données du live
     async function fetchData() {
       try {
-        // Adaptation : On interroge l'API dédiée au live
         const res = await fetch('/api/live');
         const data = await res.json();
         setLiveData(data);
@@ -24,17 +43,14 @@ export default function ClubExplorer() {
     fetchData();
   }, []);
 
-  // Logique : Si isActive est true, on l'affiche en direct. 
-  // Si isActive est false mais qu'il y a un transcript, c'est une archive.
   const activeLive = liveData && liveData.isActive ? liveData : null;
-  // Pour les replays, on simule une liste à partir de la donnée actuelle si elle est inactive
   const pastReplays = liveData && !liveData.isActive && liveData.roomID ? [liveData] : [];
 
   return (
     <div className="min-h-screen bg-[#020617] p-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header */}
+        {/* Header dynamique */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
           <div>
             <h1 className="text-6xl font-black italic tracking-tighter text-white mb-2 leading-none">
@@ -42,11 +58,15 @@ export default function ClubExplorer() {
             </h1>
             <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Salons littéraires et artistiques en temps réel.</p>
           </div>
-          <Link href="/club/host">
-            <button className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl shadow-blue-600/30">
-              <PlusCircle size={18}/> Lancer mon direct
-            </button>
-          </Link>
+
+          {/* Bouton visible UNIQUEMENT pour les admins */}
+          {isAdmin && (
+            <Link href="/club/host">
+              <button className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl shadow-blue-600/30">
+                <ShieldCheck size={18}/> Studio Admin
+              </button>
+            </Link>
+          )}
         </div>
 
         {/* SECTION : EN DIRECT */}
@@ -61,7 +81,7 @@ export default function ClubExplorer() {
                <Loader2 className="animate-spin" size={40} />
              </div>
           ) : activeLive ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <Link href={`/live/${activeLive.roomID}`}>
                   <div className="group bg-slate-900 border border-white/5 rounded-[3rem] p-10 hover:border-blue-500/50 transition-all cursor-pointer relative overflow-hidden shadow-2xl">
                     <div className="flex items-center gap-6 mb-8">
@@ -78,14 +98,14 @@ export default function ClubExplorer() {
                         <h4 className="text-white text-xl font-black italic tracking-tight group-hover:text-blue-400 transition-colors leading-tight">
                           {activeLive.title}
                         </h4>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Par l'admin {activeLive.admin.split('@')[0]}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Hôte : {activeLive.admin.split('@')[0]}</p>
                       </div>
                     </div>
                     <div className="flex justify-between items-center bg-white/5 p-5 rounded-3xl border border-white/5">
                        <span className="text-[10px] font-black text-blue-400 flex items-center gap-3">
                          {activeLive.type === 'audio' ? <Mic size={16}/> : <Video size={16}/>} {activeLive.type.toUpperCase()}
                        </span>
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Rejoindre la salle →</span>
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Rejoindre →</span>
                     </div>
                   </div>
                 </Link>
@@ -110,7 +130,7 @@ export default function ClubExplorer() {
                     <ReplayCard key={idx} replay={replay} />
                 ))
             ) : (
-                <p className="text-slate-700 text-[10px] font-black uppercase tracking-widest">Aucune archive disponible.</p>
+                <p className="text-slate-700 text-[10px] font-black uppercase tracking-widest opacity-40">Aucune archive disponible.</p>
             )}
           </div>
         </section>
