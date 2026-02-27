@@ -1,52 +1,71 @@
 "use client";
 import { useEffect, useState } from "react";
-import ClubLive from "@/components/ClubLive";
-import ClubHostControls from "@/components/ClubHostControls";
+import LiveSystem from "@/components/LiveSystem"; // Utilisation de votre nouveau système unifié
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 export default function LiveRoom({ params }) {
   const [liveData, setLiveData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const currentUser = { name: "Anonyme", avatar: "/default.png" }; // À lier à votre session
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
+    // 1. Récupération de l'utilisateur depuis la session locale
+    const loggedUser = localStorage.getItem("lisible_user");
+    if (loggedUser) {
+      try { setCurrentUser(JSON.parse(loggedUser)); } catch (e) { console.error(e); }
+    }
+
+    // 2. Récupération de l'état du live via l'API dédiée
     async function getLive() {
-      const res = await fetch(`/api/github-db?type=live-sync&id=${params.id}`);
-      const data = await res.json();
-      if (data && data.content) {
-        setLiveData(data.content);
+      try {
+        const res = await fetch(`/api/live`);
+        const data = await res.json();
+        
+        // On vérifie si un live est actif et correspond à la roomID
+        if (data && data.isActive && data.roomID === params.id) {
+          setLiveData(data);
+        }
+      } catch (e) {
+        console.error("Erreur de chargement du live");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     getLive();
   }, [params.id]);
 
   if (loading) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-white font-serif italic">
-      <div className="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-      Initialisation du flux...
+    <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white font-serif italic">
+      <Loader2 className="w-12 h-12 text-teal-500 animate-spin mb-4" />
+      <p className="text-[10px] font-black uppercase tracking-[0.3em]">Initialisation du flux...</p>
     </div>
   );
 
+  // Si aucun live n'est trouvé ou si le live récupéré ne correspond pas à l'ID de l'URL
   if (!liveData || !liveData.isActive) return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-white p-8 text-center">
-      <h2 className="text-3xl font-serif italic mb-4">Ce salon est fermé.</h2>
-      <p className="text-slate-400 mb-8">L'hôte a terminé sa diffusion ou le lien est expiré.</p>
-      <a href="/club" className="text-blue-500 font-bold uppercase text-xs tracking-widest">Retour au Club</a>
+    <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-8 text-center">
+      <h2 className="text-4xl font-black italic tracking-tighter mb-4 text-white">Ce salon est fermé<span className="text-teal-500">.</span></h2>
+      <p className="text-slate-400 font-medium text-sm max-w-md mb-10 leading-relaxed">
+        L'hôte a terminé sa diffusion, ou le lien est expiré. Les plus belles paroles s'envolent, mais les écrits restent.
+      </p>
+      <Link href="/club" className="bg-white text-slate-950 px-10 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-teal-500 hover:text-white transition-all">
+        Retour au Club
+      </Link>
     </div>
   );
 
-  const isHost = currentUser.email === liveData.hostEmail;
+  // Vérification de l'hôte (Administrateur du direct)
+  const isHost = currentUser && currentUser.email === liveData.admin;
 
   return (
-    <div className="h-screen w-full relative">
-      <ClubLive liveData={liveData} currentUser={currentUser} />
-      
-      {/* Contrôles spéciaux si l'utilisateur est l'hôte */}
-      {isHost && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[600]">
-          <ClubHostControls liveId={liveData.id} />
-        </div>
-      )}
-    </div>
+    <main className="min-h-screen bg-[#FCFBF9]">
+      <div className="py-12">
+        <LiveSystem 
+          currentUser={currentUser} 
+          isAdmin={isHost} 
+        />
+      </div>
+    </main>
   );
 }
