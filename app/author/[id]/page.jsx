@@ -7,14 +7,17 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 
+// Cache global partagé avec la page Cercle
+let authorDataCache = {};
+
 export default function AuthorCataloguePage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const authorEmailId = resolvedParams.id || resolvedParams.email;
 
-  const [author, setAuthor] = useState(null);
-  const [texts, setTexts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [author, setAuthor] = useState(authorDataCache[authorEmailId]?.author || null);
+  const [texts, setTexts] = useState(authorDataCache[authorEmailId]?.texts || []);
+  const [loading, setLoading] = useState(!authorDataCache[authorEmailId]);
   const [currentUser, setCurrentUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [globalMaxViews, setGlobalMaxViews] = useState(0);
@@ -26,25 +29,31 @@ export default function AuthorCataloguePage({ params }) {
   }, []);
 
   const fetchAuthorData = useCallback(async (id) => {
-    setLoading(true);
+    // Si on n'a pas de cache, on affiche le loader
+    if (!authorDataCache[id]) setLoading(true);
+    
     try {
       const authorEmail = decodeURIComponent(id).toLowerCase().trim();
       
-      // 1. Récupérer l'utilisateur depuis /data/users.json
-      const userRes = await fetch(`/api/github-db?type=data&file=users`);
-      const userData = await userRes.json();
+      // Récupération parallèle des données
+      const [userRes, indexRes] = await Promise.all([
+        fetch(`/api/github-db?type=data&file=users`),
+        fetch(`/api/github-db?type=data&file=library`)
+      ]);
       
-      if (userData?.content && Array.isArray(userData.content)) {
-        const found = userData.content.find(u => 
-          u.email?.toLowerCase().trim() === authorEmail
-        );
-        if (found) setAuthor(found);
-      }
-
-      // 2. Récupérer les textes depuis /data/library.json
-      const indexRes = await fetch(`/api/github-db?type=data&file=library`);
+      const userData = await userRes.json();
       const indexData = await indexRes.json();
       
+      let foundAuthor = null;
+      let authorTexts = [];
+      let maxViews = 0;
+
+      if (userData?.content && Array.isArray(userData.content)) {
+        foundAuthor = userData.content.find(u => 
+          u.email?.toLowerCase().trim() === authorEmail
+        );
+      }
+
       if (indexData?.content && Array.isArray(indexData.content)) {
         const viewsMap = indexData.content.reduce((acc, pub) => {
           const email = pub.authorEmail?.toLowerCase().trim();
@@ -52,22 +61,69 @@ export default function AuthorCataloguePage({ params }) {
           return acc;
         }, {});
         
-        setGlobalMaxViews(Math.max(...Object.values(viewsMap), 0));
+        maxViews = Math.max(...Object.values(viewsMap), 0);
+        setGlobalMaxViews(maxViews);
         
-        const authorTexts = indexData.content.filter(t => 
+        authorTexts = indexData.content.filter(t => 
           t.authorEmail?.toLowerCase().trim() === authorEmail
         );
-        setTexts(authorTexts);
       }
+
+      // Mise à jour de l'état et du cache
+      const freshData = { author: foundAuthor, texts: authorTexts, maxViews };
+      authorDataCache[id] = freshData;
+      
+      setAuthor(foundAuthor);
+      setTexts(authorTexts);
       
     } catch (e) { 
       console.error(e);
-      toast.error("Auteur introuvable"); 
+      if (!authorDataCache[id]) toast.error("Auteur introuvable"); 
     }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { if (authorEmailId) fetchAuthorData(authorEmailId); }, [authorEmailId, fetchAuthorData]);
+
+  const handleFollow = async () => {
+    if (!currentUser) return toast.error("Connectez-vous pour suivre cette plume");
+    if (currentUser.email === author?.email) return toast.error("Vous ne pouvez pas vous suivre vous-même");
+    
+    setSubmitting(true);
+    const isFollowing = author?.followers?.includes(currentUser.email);
+    
+    try {
+      const res = await fetch("/api/github-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: isFollowing ? "unfollow" : "follow", 
+          userEmail: currentUser.email, 
+          targetEmail: author.email 
+        })
+      });
+
+      if (res.ok) {
+        const updatedFollowers = isFollowing 
+          ? author.followers.filter(e => e !== currentUser.email) 
+          : [...(author.followers || []), currentUser.email];
+        
+        const updatedAuthor = { ...author, followers: updatedFollowers };
+        setAuthor(updatedAuthor);
+        
+        // Mettre à jour le cache
+        if (authorDataCache[authorEmailId]) {
+          authorDataCache[authorEmailId].author = updatedAuthor;
+        }
+        
+        toast.success(isFollowing ? "Abonnement retiré" : "Vous suivez cette plume !");
+      }
+    } catch (err) {
+      toast.error("Erreur de liaison au serveur");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleShare = async () => {
     const shareData = { 
@@ -79,10 +135,11 @@ export default function AuthorCataloguePage({ params }) {
     else { navigator.clipboard.writeText(window.location.href); toast.success("Lien copié !"); }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9]"><Loader2 className="animate-spin text-teal-600" /></div>;
+  if (loading && !author) return <div className="h-screen flex items-center justify-center bg-[#FCFBF9]"><Loader2 className="animate-spin text-teal-600" /></div>;
 
   const totalViews = texts.reduce((s, t) => s + Number(t.views || 0), 0);
   const isElite = totalViews === globalMaxViews && globalMaxViews > 0;
+  const isFollowing = author?.followers?.includes(currentUser?.email);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-12 bg-[#FCFBF9] min-h-screen space-y-10">
@@ -99,7 +156,6 @@ export default function AuthorCataloguePage({ params }) {
             {isElite && <div className="absolute inset-0 border-4 border-amber-400 rounded-[2.5rem] animate-pulse" />}
           </div>
           
-          {/* Section Biographie */}
           <div className="w-full flex flex-col items-center">
             <button 
               onClick={() => setShowBio(!showBio)}
@@ -132,6 +188,19 @@ export default function AuthorCataloguePage({ params }) {
         </div>
 
         <div className="flex flex-col gap-3 w-full md:w-auto">
+          <button 
+            onClick={handleFollow}
+            disabled={submitting}
+            className={`px-8 py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest transition-all ${
+              isFollowing 
+              ? "bg-slate-100 text-slate-400" 
+              : "bg-slate-950 text-white hover:bg-teal-600 shadow-lg"
+            }`}
+          >
+            {submitting ? <Loader2 size={18} className="animate-spin" /> : isFollowing ? <UserMinus size={18} /> : <UserPlus size={18} />}
+            {isFollowing ? "Désabonner" : "Suivre"}
+          </button>
+          
           <Link href={`/donate?to=${btoa(author?.email || "")}`} className="bg-rose-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-600/20 hover:bg-slate-900 transition-all"><HeartHandshake size={18} /> Soutenir</Link>
           <button onClick={handleShare} className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"><Share2 size={18}/></button>
         </div>
