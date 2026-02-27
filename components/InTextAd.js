@@ -34,7 +34,14 @@ export function InTextAd() {
         script.src = "//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
         script.async = true;
         
+        // Ajout du script spécifique demandé
+        const extraScript = document.createElement("script");
+        extraScript.type = "text/javascript";
+        extraScript.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
+        extraScript.async = true;
+
         container.appendChild(script);
+        container.appendChild(extraScript);
       }
 
       return () => {
