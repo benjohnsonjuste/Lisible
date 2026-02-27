@@ -67,7 +67,8 @@ export async function POST(req) {
       });
       if (!liveRes.ok) return NextResponse.json({ error: "No live active" }, { status: 404 });
       
-      const liveData = JSON.parse(Buffer.from((await liveRes.json()).content, 'base64').toString());
+      const data = await liveRes.json();
+      const liveData = JSON.parse(Buffer.from(data.content, 'base64').toString());
       if (!liveData.isActive) return NextResponse.json({ error: "Live ended" }, { status: 400 });
 
       const newComment = {
@@ -89,7 +90,8 @@ export async function POST(req) {
       const liveRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
         headers: { Authorization: `Bearer ${TOKEN}` },
       });
-      const liveData = JSON.parse(Buffer.from((await liveRes.json()).content, 'base64').toString());
+      const data = await liveRes.json();
+      const liveData = JSON.parse(Buffer.from(data.content, 'base64').toString());
       
       liveData.isActive = false;
       liveData.endedAt = new Date().toISOString();
@@ -100,6 +102,7 @@ export async function POST(req) {
 
     // D. Action : Inviter un utilisateur
     if (action === "invite") {
+      // Logique pour les invitations (peut être étendue pour écrire dans les notifications de l'utilisateur)
       console.log(`Invitation envoyée à ${targetEmail}`);
       return NextResponse.json({ success: true });
     }
