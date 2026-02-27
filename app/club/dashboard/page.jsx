@@ -1,18 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
-import ClubDashboard from "@/components/ClubDashboard";
+import LiveSystem from "@/components/LiveSystem";
 
 export default function HostPage() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Récupération de l'utilisateur depuis le localStorage (ou ta session)
-    const storedUser = localStorage.getItem("user");
+    // Récupération de l'utilisateur depuis le localStorage Lisible
+    const storedUser = localStorage.getItem("lisible_user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Erreur de session");
+      }
     } else {
-      // Fallback ou redirection si non connecté
-      setUser({ name: "Auteur Lisible", email: "guest@lisible.com", avatar: "" });
+      // Fallback sécurisé
+      setUser({ penName: "Plume Admin", email: "adm.lablitteraire7@gmail.com", image: "" });
     }
   }, []);
 
@@ -20,8 +24,9 @@ export default function HostPage() {
 
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6">
-      <div className="w-full max-w-xl animate-in fade-in zoom-in duration-500">
-        <ClubDashboard currentUser={user} />
+      <div className="w-full max-w-5xl animate-in fade-in zoom-in duration-500">
+        {/* On passe isAdmin={true} car c'est la page Host (Studio) */}
+        <LiveSystem currentUser={user} isAdmin={true} />
       </div>
     </div>
   );
