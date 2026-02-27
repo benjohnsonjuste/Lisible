@@ -1,4 +1,3 @@
-"use client";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -11,7 +10,7 @@ import dynamic from "next/dynamic";
 import LiveNotificationListener from "@/components/LiveNotificationListener";
 import PushActivation from "@/components/PushActivation";
 
-// Chargement dynamique du composant InstallPrompt pour éviter l'erreur "window is not defined" (SSR)
+// Chargement dynamique des composants clients
 const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { 
   ssr: false 
 });
@@ -29,7 +28,6 @@ const lora = Lora({
   display: 'swap',
 });
 
-// 1. Exportation séparée pour le Viewport (Correctif Next.js 14)
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -39,7 +37,6 @@ export const viewport = {
   themeColor: "#0f172a",
 };
 
-// 2. Metadata nettoyées
 export const metadata = {
   title: "Lisible | L'Élite de la Plume",
   description: "Le sanctuaire numérique de la littérature moderne et du streaming littéraire.",
@@ -60,13 +57,13 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${inter.variable} ${lora.variable} h-full`} suppressHydrationWarning>
       <head>
-        {/* Google AdSense Validation Code */}
         <script 
           async 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7644995408680119"
           crossOrigin="anonymous"
         ></script>
         
+        {/* Script de thème injecté côté serveur pour éviter le flash blanc */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -86,7 +83,8 @@ export default function RootLayout({ children }) {
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-teal-100 selection:text-teal-900">
         <AuthProvider>
           <ServiceWorkerRegistration />
-          {/* Systèmes de notification et d'écoute */}
+          
+          {/* Ces composants sont "use client" à l'intérieur, donc ils fonctionnent ici */}
           <LiveNotificationListener />
           <PushActivation />
           
@@ -96,6 +94,7 @@ export default function RootLayout({ children }) {
           </main>
           <InstallPrompt />
           <Footer />
+          
           <Toaster 
             position="top-center" 
             richColors 
