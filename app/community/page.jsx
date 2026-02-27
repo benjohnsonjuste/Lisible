@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
-  Briefcase, HeartHandshake, Feather
+  Briefcase, HeartHandshake, Feather, Sparkles, Sun
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -29,22 +29,14 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupérer les publications depuis /data/library.json
-      const resLib = await fetch(`/api/github-db?type=data&file=library`); 
+      // 1. Récupérer l'index des publications
+      const resLib = await fetch(`/api/github-db?type=publications`); 
       const jsonLib = await resLib.json();
-      
-      // 2. Récupérer les profils depuis /data/users.json pour la synchronisation
-      const resUsers = await fetch(`/api/github-db?type=data&file=users`);
-      const jsonUsers = await resUsers.json();
-      
-      const realUsersMap = Array.isArray(jsonUsers.content) 
-        ? jsonUsers.content.reduce((acc, u) => {
-            const emailKey = u.email?.toLowerCase().trim();
-            if (emailKey) acc[emailKey] = u.image || u.profilePic;
-            return acc;
-          }, {})
-        : {};
 
+      // 2. Récupérer les données brutes des utilisateurs pour les Li et les photos réelles
+      // On utilise fetch direct pour garantir la synchro des profils
+      const resUsers = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/publications/index.json?t=${Date.now()}`);
+      
       if (jsonLib && Array.isArray(jsonLib.content)) {
         const statsMap = jsonLib.content.reduce((acc, pub) => {
           const email = pub.authorEmail?.toLowerCase().trim();
@@ -54,13 +46,13 @@ export default function CommunautePage() {
             acc[email] = {
               name: pub.author || "Plume Anonyme",
               email: email,
-              // Priorité à l'image du profil utilisateur, sinon celle de la publication
-              image: realUsersMap[email] || pub.image || pub.authorImage || null,
+              image: pub.authorImage || null, // Image de base de l'index
               followers: pub.followers || [], 
               certified: 0, 
               likes: 0, 
               views: 0, 
-              worksCount: 0
+              worksCount: 0,
+              li: 0
             };
           }
           acc[email].worksCount += 1;
@@ -70,7 +62,25 @@ export default function CommunautePage() {
           return acc;
         }, {});
 
-        const sortedAuthors = Object.values(statsMap).sort((a, b) => 
+        // 3. Enrichissement avec les données réelles de chaque profil (Li et Image synchro)
+        const authorEntries = Object.values(statsMap);
+        const enrichedAuthors = await Promise.all(authorEntries.map(async (auth) => {
+          try {
+            const safeEmail = auth.email.replace(/@/g, '_').replace(/\./g, '_');
+            const userRes = await fetch(`https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/users/${safeEmail}.json?t=${Date.now()}`);
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              return { 
+                ...auth, 
+                li: userData.li || 0, 
+                image: userData.image || userData.profilePic || auth.image 
+              };
+            }
+          } catch (err) {}
+          return auth;
+        }));
+
+        const sortedAuthors = enrichedAuthors.sort((a, b) => 
           (b.certified + b.likes + b.views) - (a.certified + a.likes + a.views)
         );
         setAuthors(sortedAuthors);
@@ -82,14 +92,15 @@ export default function CommunautePage() {
     finally { setLoading(false); }
   }
 
-  const maxViews = useMemo(() => {
-    return authors.length > 0 ? Math.max(...authors.map(a => a.views)) : 0;
-  }, [authors]);
+  const maxViews = useMemo(() => authors.length > 0 ? Math.max(...authors.map(a => a.views)) : 0, [authors]);
+  const maxWorks = useMemo(() => authors.length > 0 ? Math.max(...authors.map(a => a.worksCount)) : 0, [authors]);
+  const maxLi = useMemo(() => authors.length > 0 ? Math.max(...authors.map(a => a.li)) : 0, [authors]);
 
   const getBadges = (author) => {
     const b = [];
     const mail = author.email?.toLowerCase();
 
+    // Staff Badges
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
     if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
@@ -97,10 +108,18 @@ export default function CommunautePage() {
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
     if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-gold-900 text-red-400" });
     
+    // Achievement Badges
     if (author.views === maxViews && maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
-    } else if (author.certified > 3) {
-      b.push({ icon: <Star size={10} />, label: "Plume Certifiée", color: "bg-amber-100 text-amber-700" });
+    }
+    if (author.worksCount === maxWorks && maxWorks > 5) {
+      b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white shadow-lg shadow-teal-500/20" });
+    }
+    if (author.li === maxLi && maxLi > 0) {
+      b.push({ icon: <Sun size={10} />, label: "Auréole", color: "bg-amber-400 text-slate-900 font-bold shadow-lg" });
+    }
+    if (author.certified > 3 && b.length < 3) {
+      b.push({ icon: <Star size={10} />, label: "Certifiée", color: "bg-amber-100 text-amber-700" });
     }
     return b;
   };
@@ -113,18 +132,10 @@ export default function CommunautePage() {
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: isFollowing ? "unfollow" : "follow", 
-          userEmail: currentUser.email, 
-          targetEmail: targetEmail 
-        })
+        body: JSON.stringify({ action: isFollowing ? "unfollow" : "follow", userEmail: currentUser.email, targetEmail: targetEmail })
       });
       if (res.ok) {
-        setAuthors(prev => prev.map(auth => 
-          auth.email === targetEmail 
-          ? { ...auth, followers: isFollowing ? auth.followers.filter(e => e !== currentUser.email) : [...auth.followers, currentUser.email] } 
-          : auth
-        ));
+        setAuthors(prev => prev.map(auth => auth.email === targetEmail ? { ...auth, followers: isFollowing ? auth.followers.filter(e => e !== currentUser.email) : [...auth.followers, currentUser.email] } : auth));
         toast.success(isFollowing ? "Désabonné" : "Abonné !");
       }
     } catch (err) { toast.error("Erreur de liaison."); }
@@ -165,6 +176,7 @@ export default function CommunautePage() {
                   src={a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                   alt={a.name}
+                  onError={(e) => { e.target.src = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`; }}
                 />
               </div>
               <div className="grow space-y-4 text-center sm:text-left">
@@ -181,9 +193,9 @@ export default function CommunautePage() {
                       <span className="block text-[8px] font-black text-teal-600 uppercase">Textes</span>
                       <span className="text-sm font-black text-teal-700">{a.worksCount}</span>
                     </div>
-                    <div className="bg-slate-50 px-3 py-1.5 rounded-xl text-center">
-                      <span className="block text-[8px] font-black text-slate-400 uppercase">Abonnés</span>
-                      <span className="text-sm font-black text-slate-900">{a.followers?.length || 0}</span>
+                    <div className="bg-amber-50 px-3 py-1.5 rounded-xl text-center">
+                      <span className="block text-[8px] font-black text-amber-600 uppercase">Li</span>
+                      <span className="text-sm font-black text-amber-700">{a.li}</span>
                     </div>
                 </div>
                 <div className="flex gap-2 justify-center sm:justify-start">
@@ -202,6 +214,14 @@ export default function CommunautePage() {
           </div>
         ))}
       </div>
+      
+      {authors.length > visibleCount && (
+        <div className="mt-20 text-center">
+          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl">
+            Découvrir plus de plumes
+          </button>
+        </div>
+      )}
     </div>
   );
 }
