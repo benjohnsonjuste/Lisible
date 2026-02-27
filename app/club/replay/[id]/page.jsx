@@ -10,12 +10,14 @@ export default function ReplayRoom({ params }) {
 
   useEffect(() => {
     async function getArchive() {
-      // On utilise le type live-sync car l'ID reste le même, 
-      // mais GitHub renverra le JSON avec isActive: false et le transcript
-      const res = await fetch(`/api/github-db?type=live-sync&id=${params.id}`);
+      // Adaptation : Utilisation de la nouvelle API dédiée au live
+      // On récupère les données du live (qui contiennent les infos d'archive si inactif)
+      const res = await fetch(`/api/live`);
       const data = await res.json();
-      if (data && data.content) {
-        setReplayData(data.content);
+      
+      // On vérifie si les données correspondent au replay demandé
+      if (data && data.roomID === params.id) {
+        setReplayData(data);
       }
       setLoading(false);
     }
