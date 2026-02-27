@@ -1,4 +1,4 @@
-// app/layout.js
+"use client";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -8,6 +8,8 @@ import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import dynamic from "next/dynamic";
+import LiveNotificationListener from "@/components/LiveNotificationListener";
+import PushActivation from "@/components/PushActivation";
 
 // Chargement dynamique du composant InstallPrompt pour éviter l'erreur "window is not defined" (SSR)
 const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { 
@@ -84,6 +86,10 @@ export default function RootLayout({ children }) {
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-teal-100 selection:text-teal-900">
         <AuthProvider>
           <ServiceWorkerRegistration />
+          {/* Systèmes de notification et d'écoute */}
+          <LiveNotificationListener />
+          <PushActivation />
+          
           <Navbar />
           <main className="flex-1 w-full pt-20 relative">
             {children}
