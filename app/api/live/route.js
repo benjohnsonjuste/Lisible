@@ -7,9 +7,8 @@ const FILE_PATH = "data/live.json";
 
 // Fonction helper pour interagir avec GitHub
 async function updateFile(content, message) {
-  // 1. Récupérer le SHA du fichier existant
   const getRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
-    headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${TOKEN}`, "Cache-Control": "no-cache" },
   });
   
   let sha = null;
@@ -18,7 +17,6 @@ async function updateFile(content, message) {
     sha = data.sha;
   }
 
-  // 2. Mettre à jour ou créer le fichier
   const updateRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
@@ -32,55 +30,77 @@ async function updateFile(content, message) {
   return updateRes.ok;
 }
 
-// --- ENDPOINT POST : Gérer le lancement, l'arrêt et l'invitation ---
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { action, admin, type, title, targetEmail } = body;
+    const { action, admin, type, title, targetEmail, user, text, avatar } = body;
 
-    // Liste des emails autorisés (Admins)
     const ADMINS = [
       "adm.lablitteraire7@gmail.com", "woolsleypierre01@gmail.com", 
       "jeanpierreborlhaïniedarha@gmail.com", "robergeaurodley97@gmail.com", 
       "jb7management@gmail.com", "cmo.lablitteraire7@gmail.com"
     ];
 
-    if (!ADMINS.includes(admin?.toLowerCase())) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-    }
-
     // A. Action : Démarrer le Live
     if (action === "start") {
+      if (!ADMINS.includes(admin?.toLowerCase())) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      
       const liveData = {
         isActive: true,
         admin,
-        type, // 'audio' | 'video'
+        type,
         title: title || "Session en direct",
         startedAt: new Date().toISOString(),
-        roomID: btoa(admin + Date.now()).substring(0, 12)
+        roomID: btoa(admin + Date.now()).substring(0, 12),
+        transcript: [] // Initialisation du chat pour le replay
       };
       
       const success = await updateFile(liveData, "🚀 Live started");
       return success ? NextResponse.json(liveData) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // B. Action : Arrêter le Live
-    if (action === "stop") {
-      const success = await updateFile({ isActive: false }, "🛑 Live ended");
-      return success ? NextResponse.json({ isActive: false }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
+    // B. Action : Ajouter un commentaire au Transcript (En direct)
+    if (action === "comment") {
+      const liveRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
+        headers: { Authorization: `Bearer ${TOKEN}` },
+        cache: 'no-store'
+      });
+      if (!liveRes.ok) return NextResponse.json({ error: "No live active" }, { status: 404 });
+      
+      const liveData = JSON.parse(Buffer.from((await liveRes.json()).content, 'base64').toString());
+      if (!liveData.isActive) return NextResponse.json({ error: "Live ended" }, { status: 400 });
+
+      const newComment = {
+        id: Date.now(),
+        user: user || "Anonyme",
+        text,
+        avatar: avatar || ""
+      };
+
+      liveData.transcript = [...(liveData.transcript || []), newComment];
+      const success = await updateFile(liveData, "💬 New comment added");
+      return success ? NextResponse.json(newComment) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // C. Action : Inviter un utilisateur
-    if (action === "invite") {
-      // On récupère d'abord les infos du live actuel
+    // C. Action : Arrêter le Live
+    if (action === "stop") {
+      if (!ADMINS.includes(admin?.toLowerCase())) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      
       const liveRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
         headers: { Authorization: `Bearer ${TOKEN}` },
       });
       const liveData = JSON.parse(Buffer.from((await liveRes.json()).content, 'base64').toString());
+      
+      liveData.isActive = false;
+      liveData.endedAt = new Date().toISOString();
+      
+      const success = await updateFile(liveData, "🛑 Live ended & archived");
+      return success ? NextResponse.json({ isActive: false }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
+    }
 
-      // Logique simplifiée : On écrit une notification dans un fichier 'invites.json' 
-      // ou dans le profil de l'utilisateur. Ici, on simule l'envoi.
-      console.log(`Invitation envoyée à ${targetEmail} pour le live ${liveData.roomID}`);
+    // D. Action : Inviter un utilisateur
+    if (action === "invite") {
+      console.log(`Invitation envoyée à ${targetEmail}`);
       return NextResponse.json({ success: true });
     }
 
@@ -89,7 +109,6 @@ export async function POST(req) {
   }
 }
 
-// --- ENDPOINT GET : Vérifier l'état du live ---
 export async function GET() {
   try {
     const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}?t=${Date.now()}`, {
