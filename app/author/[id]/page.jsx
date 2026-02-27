@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  ArrowLeft, BookOpen, Loader2, UserPlus, UserMinus, Coins, ChevronRight, HeartHandshake, ShieldCheck, Crown, Star, Share2
+  ArrowLeft, BookOpen, Loader2, UserPlus, UserMinus, Coins, ChevronRight, HeartHandshake, ShieldCheck, Crown, Star, Share2, Info, ChevronDown, ChevronUp
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ export default function AuthorCataloguePage({ params }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [globalMaxViews, setGlobalMaxViews] = useState(0);
+  const [showBio, setShowBio] = useState(false);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
@@ -45,7 +46,6 @@ export default function AuthorCataloguePage({ params }) {
       const indexData = await indexRes.json();
       
       if (indexData?.content && Array.isArray(indexData.content)) {
-        // Calcul du record de vues global pour le badge Élite
         const viewsMap = indexData.content.reduce((acc, pub) => {
           const email = pub.authorEmail?.toLowerCase().trim();
           if (email) acc[email] = (acc[email] || 0) + Number(pub.views || 0);
@@ -54,7 +54,6 @@ export default function AuthorCataloguePage({ params }) {
         
         setGlobalMaxViews(Math.max(...Object.values(viewsMap), 0));
         
-        // Filtrer les textes de cet auteur
         const authorTexts = indexData.content.filter(t => 
           t.authorEmail?.toLowerCase().trim() === authorEmail
         );
@@ -86,17 +85,40 @@ export default function AuthorCataloguePage({ params }) {
   const isElite = totalViews === globalMaxViews && globalMaxViews > 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12 bg-[#FCFBF9] min-h-screen space-y-16">
+    <div className="max-w-5xl mx-auto px-6 py-12 bg-[#FCFBF9] min-h-screen space-y-10">
       <header className="relative flex flex-col md:flex-row items-center gap-10 bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl">
-        <button onClick={() => router.back()} className="absolute top-8 left-8 p-3 bg-slate-50 rounded-2xl transition-transform hover:scale-105 active:scale-95"><ArrowLeft size={20} /></button>
-        <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl relative bg-slate-100">
-          <img 
-            src={author?.image || author?.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author?.email}`} 
-            className="w-full h-full object-cover" 
-            alt={author?.penName || "Auteur"}
-          />
-          {isElite && <div className="absolute inset-0 border-4 border-amber-400 rounded-[2.5rem] animate-pulse" />}
+        <button onClick={() => router.back()} className="absolute top-8 left-8 p-3 bg-slate-50 rounded-2xl transition-transform hover:scale-105 active:scale-95 z-10"><ArrowLeft size={20} /></button>
+        
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-4 border-white shadow-2xl relative bg-slate-100 flex-shrink-0">
+            <img 
+              src={author?.image || author?.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author?.email}`} 
+              className="w-full h-full object-cover" 
+              alt={author?.penName || "Auteur"}
+            />
+            {isElite && <div className="absolute inset-0 border-4 border-amber-400 rounded-[2.5rem] animate-pulse" />}
+          </div>
+          
+          {/* Section Biographie */}
+          <div className="w-full flex flex-col items-center">
+            <button 
+              onClick={() => setShowBio(!showBio)}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors"
+            >
+              {showBio ? <ChevronUp size={14} /> : <Info size={14} />} 
+              {showBio ? "Fermer la bio" : "Lire sa biographie"}
+            </button>
+            
+            {showBio && (
+              <div className="mt-4 p-6 bg-slate-50 rounded-3xl w-64 md:w-80 border border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-xs leading-relaxed text-slate-600 font-medium italic text-center">
+                  {author?.bio ? author.bio : "Biographie non partagée."}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
+
         <div className="text-center md:text-left grow space-y-4">
           <h1 className="text-5xl font-black text-slate-900 tracking-tighter italic flex items-center gap-3 justify-center md:justify-start">
             {author?.penName || author?.name || "Plume Anonyme"} 
@@ -105,8 +127,10 @@ export default function AuthorCataloguePage({ params }) {
           <div className="flex flex-wrap gap-2 justify-center md:justify-start">
             {isElite && <div className="bg-slate-950 text-amber-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2"><Crown size={12}/> Élite</div>}
             <div className="bg-teal-50 text-teal-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest"><Coins size={12} className="inline mr-1"/> {author?.li || 0} Li</div>
+            <div className="bg-slate-50 text-slate-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">{texts.length} Textes</div>
           </div>
         </div>
+
         <div className="flex flex-col gap-3 w-full md:w-auto">
           <Link href={`/donate?to=${btoa(author?.email || "")}`} className="bg-rose-600 text-white px-8 py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-600/20 hover:bg-slate-900 transition-all"><HeartHandshake size={18} /> Soutenir</Link>
           <button onClick={handleShare} className="bg-white border-2 border-slate-100 p-4 rounded-2xl flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"><Share2 size={18}/></button>
