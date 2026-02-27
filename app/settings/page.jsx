@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { 
   User, Edit3, ArrowLeft, 
-  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info, KeyRound, Feather
+  ShieldCheck, Loader2, Save, BookOpen, Star, Sparkles, Wallet, Camera, Lock, Info, KeyRound, Feather, AlignLeft, ChevronDown, ChevronUp
 } from "lucide-react";
 
 // Sous-composant pour les statistiques
@@ -30,7 +30,9 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [formData, setFormData] = useState({ penName: "", birthday: "", profilePic: "" });
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [showBioPanel, setShowBioPanel] = useState(false);
+  const [formData, setFormData] = useState({ penName: "", birthday: "", profilePic: "", bio: "" });
   const [passwordData, setPasswordData] = useState({ currentPassword: "", newPassword: "" });
 
   const ADMIN_EMAILS = [
@@ -41,13 +43,6 @@ export default function AccountPage() {
     "woolsleypierre01@gmail.com", 
     "jeanpierreborlhaïniedarha@gmail.com"
   ];
-
-  const getRank = (sc) => {
-    if (sc >= 10000) return { name: "Maître de Plume", color: "text-purple-600", bg: "bg-purple-50", icon: "👑" };
-    if (sc >= 2500) return { name: "Plume d'Argent", color: "text-slate-500", bg: "bg-slate-50", icon: "✨" };
-    if (sc >= 1000) return { name: "Plume de Bronze", color: "text-orange-600", bg: "bg-orange-50", icon: "📜" };
-    return { name: "Plume de Plomb", color: "text-slate-400", bg: "bg-slate-100", icon: "🖋️" };
-  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
@@ -86,8 +81,10 @@ export default function AccountPage() {
         setFormData({ 
             penName: freshUser.penName || freshUser.name || "",
             birthday: freshUser.birthday || "",
-            profilePic: freshUser.profilePic || freshUser.image || ""
+            profilePic: freshUser.profilePic || freshUser.image || "",
+            bio: freshUser.bio || ""
         });
+        if (!freshUser.bio) setIsEditingBio(true);
         localStorage.setItem("lisible_user", JSON.stringify(freshUser));
       }
     } catch (e) { 
@@ -98,8 +95,18 @@ export default function AccountPage() {
     }
   };
 
+  const getWordCount = (text) => {
+    if (!text) return 0;
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
   const saveProfile = async () => {
     if (isSaving) return;
+    
+    if (getWordCount(formData.bio) > 500) {
+        return toast.error("Votre biographie dépasse la limite de 500 mots.");
+    }
+
     setIsSaving(true);
     const t = toast.loading("Mise à jour du profil...");
     try {
@@ -117,6 +124,7 @@ export default function AccountPage() {
         const updated = { ...user, ...formData };
         localStorage.setItem("lisible_user", JSON.stringify(updated));
         setUser(updated);
+        setIsEditingBio(false);
         toast.success("Profil mis à jour", { id: t });
       } else {
         throw new Error();
@@ -180,40 +188,101 @@ export default function AccountPage() {
   const isAdmin = ADMIN_EMAILS.includes(user.email?.toLowerCase().trim());
   const balance = user.li || 0;
   const followersCount = user?.followers?.length || 0;
-  const rank = getRank(balance);
   const isEligibleForWithdraw = balance >= 25000 && followersCount >= 250;
   const progressToWithdraw = Math.min((balance / 25000) * 100, 100);
+  const bioWords = getWordCount(formData.bio);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12 space-y-12 pb-32 bg-[#FCFBF9]">
-      <header className="flex flex-col md:flex-row gap-8 items-center justify-between bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-slate-200/50">
-        <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-           <div className="relative group">
-              <div className="w-32 h-32 rounded-[2.5rem] bg-slate-900 overflow-hidden border-4 border-white shadow-2xl">
-                <img 
-                  src={formData.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${user.email}`} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                  alt="Profile"
-                />
+      <header className="flex flex-col md:flex-row gap-8 items-center justify-between bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+        <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left z-10">
+           <div className="flex flex-col items-center gap-4">
+              <div className="relative group">
+                  <div className="w-32 h-32 rounded-[2.5rem] bg-slate-900 overflow-hidden border-4 border-white shadow-2xl">
+                    <img 
+                      src={formData.profilePic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${user.email}`} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      alt="Profile"
+                    />
+                  </div>
+                  <label className="absolute -bottom-2 -right-2 p-3 bg-teal-600 text-white rounded-2xl cursor-pointer hover:bg-slate-900 shadow-lg transition-all active:scale-90">
+                    <Camera size={18} />
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
               </div>
-              <label className="absolute -bottom-2 -right-2 p-3 bg-teal-600 text-white rounded-2xl cursor-pointer hover:bg-slate-900 shadow-lg transition-all active:scale-90">
-                <Camera size={18} />
-                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-              </label>
+              
+              <button 
+                onClick={() => setShowBioPanel(!showBioPanel)}
+                className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-teal-600 transition-colors"
+              >
+                {showBioPanel ? <ChevronUp size={12}/> : <ChevronDown size={12}/>} 
+                Biographie
+              </button>
            </div>
+           
            <div>
-            <div className={`inline-flex items-center gap-2 ${rank.bg} ${rank.color} px-4 py-1.5 rounded-full mb-3 text-[9px] font-black uppercase tracking-widest border border-current/10`}>
-              {rank.icon} {rank.name}
-            </div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 italic tracking-tighter leading-none mb-2">
               {formData.penName || "Ma Plume"}
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user.email}</p>
           </div>
         </div>
-        <button onClick={() => router.back()} className="p-5 bg-slate-50 rounded-3xl text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-100 transition-all">
+        
+        <button onClick={() => router.back()} className="p-5 bg-slate-50 rounded-3xl text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-100 transition-all z-10">
           <ArrowLeft size={24} />
         </button>
+
+        {showBioPanel && (
+          <div className="absolute inset-x-0 bottom-0 bg-slate-900/95 backdrop-blur-md p-8 md:p-10 animate-in slide-in-from-bottom duration-500 z-20 border-t border-white/10">
+            <div className="max-w-3xl mx-auto space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-teal-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                  <Feather size={14}/> Ma Plume en quelques mots
+                </h3>
+                {user.bio && !isEditingBio && (
+                  <button 
+                    onClick={() => setIsEditingBio(true)}
+                    className="text-white/50 hover:text-white text-[9px] font-black uppercase border border-white/20 px-4 py-1 rounded-full transition-all"
+                  >
+                    Modifier
+                  </button>
+                )}
+              </div>
+
+              {isEditingBio ? (
+                <div className="space-y-4">
+                  <textarea 
+                    value={formData.bio} 
+                    onChange={e => setFormData({...formData, bio: e.target.value})}
+                    placeholder="Partagez votre histoire..."
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-white text-sm leading-relaxed outline-none focus:border-teal-500 transition-all h-32 resize-none"
+                  />
+                  <div className="flex justify-between items-center">
+                    <span className={`text-[9px] font-black uppercase ${bioWords > 500 ? 'text-rose-500' : 'text-slate-500'}`}>
+                      {bioWords} / 500 mots
+                    </span>
+                    <div className="flex gap-2">
+                      {user.bio && (
+                        <button onClick={() => setIsEditingBio(false)} className="px-4 py-2 text-[9px] font-black uppercase text-white/40 hover:text-white">Annuler</button>
+                      )}
+                      <button 
+                        onClick={saveProfile} 
+                        disabled={isSaving}
+                        className="bg-teal-500 text-slate-950 px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-white transition-all"
+                      >
+                        {isSaving ? "Enregistrement..." : "Confirmer"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-white/80 text-sm leading-relaxed italic font-medium">
+                  "{user.bio}"
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -240,7 +309,7 @@ export default function AccountPage() {
               className="w-full py-6 bg-slate-950 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.3em] hover:bg-teal-600 transition-all flex justify-center items-center gap-4 shadow-xl active:scale-95 disabled:opacity-50"
             >
               {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} 
-              Enregistrer le profil
+              Mettre à jour mes infos
             </button>
           </div>
 
