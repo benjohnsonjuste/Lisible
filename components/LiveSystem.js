@@ -25,9 +25,11 @@ export default function LiveSystem({ currentUser, isAdmin }) {
       if (res.ok) {
         const data = await res.json();
         setLiveData(data);
-        if (data.isActive && !isAdmin) {
+        if (data.isActive) {
           setIsLive(true);
           setStreamType(data.type);
+        } else if (!isAdmin) {
+          setIsLive(false);
         }
       }
     } catch (e) { console.error("Erreur de statut live"); }
@@ -35,7 +37,7 @@ export default function LiveSystem({ currentUser, isAdmin }) {
 
   useEffect(() => {
     checkLiveStatus();
-    const interval = setInterval(checkLiveStatus, 15000); // Polling léger
+    const interval = setInterval(checkLiveStatus, 10000); // Polling toutes les 10s
     return () => clearInterval(interval);
   }, [checkLiveStatus]);
 
@@ -52,6 +54,7 @@ export default function LiveSystem({ currentUser, isAdmin }) {
       
       const res = await fetch("/api/live", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "start",
           admin: currentUser.email,
@@ -76,23 +79,45 @@ export default function LiveSystem({ currentUser, isAdmin }) {
     streamRef.current?.getTracks().forEach(track => track.stop());
     setIsLive(false);
     setStreamType(null);
-    await fetch("/api/live", { method: "POST", body: JSON.stringify({ action: "stop", admin: currentUser.email }) });
+    await fetch("/api/live", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "stop", admin: currentUser.email }) 
+    });
     toast.info("Direct terminé.");
   };
 
-  // 3. RÉACTIONS ÉPHÉMÈRES (Animation de vol)
-  const sendReaction = (type, text = "") => {
+  // 3. RÉACTIONS ÉPHÉMÈRES ET SAUVEGARDE DU CHAT
+  const sendReaction = async (type, text = "") => {
     const id = Date.now();
+    
+    // Animation locale immédiate pour la fluidité
     const newReaction = { id, type, text, x: Math.random() * 70 + 15 };
     setReactions(prev => [...prev, newReaction]);
     setTimeout(() => {
       setReactions(prev => prev.filter(r => r.id !== id));
     }, 4000);
-    if (text) setComment("");
+
+    // Si c'est un commentaire, on l'enregistre dans l'API pour le replay
+    if (type === 'comment' && text.trim()) {
+      setComment("");
+      try {
+        await fetch("/api/live", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "comment",
+            user: currentUser?.penName || currentUser?.name || "Anonyme",
+            avatar: currentUser?.image || currentUser?.profilePic || "",
+            text: text
+          })
+        });
+      } catch (e) { console.error("Erreur sauvegarde commentaire"); }
+    }
   };
 
   const handleShare = () => {
-    const url = `${window.location.origin}/live?room=${liveData?.roomID}`;
+    const url = `${window.location.origin}/live/${liveData?.roomID || ''}`;
     navigator.clipboard.writeText(url);
     toast.success("Lien de partage copié !");
   };
@@ -150,9 +175,6 @@ export default function LiveSystem({ currentUser, isAdmin }) {
             <div className="bg-rose-600 text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg animate-pulse">
               <span className="w-2 h-2 bg-white rounded-full" /> Direct
             </div>
-            <div className="bg-black/40 backdrop-blur-md text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10">
-              <Users size={14} /> 1.2k
-            </div>
           </div>
         )}
       </div>
@@ -195,12 +217,12 @@ export default function LiveSystem({ currentUser, isAdmin }) {
                 type="text"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && comment.trim() && sendReaction('comment', comment)}
-                placeholder="Dire quelque chose de beau..."
+                onKeyDown={(e) => e.key === 'Enter' && sendReaction('comment', comment)}
+                placeholder="Réagir en direct..."
                 className="w-full bg-slate-50 border-2 border-transparent focus:border-teal-500 focus:bg-white rounded-[2rem] px-8 py-5 text-sm font-medium outline-none transition-all"
               />
               <button 
-                onClick={() => comment.trim() && sendReaction('comment', comment)}
+                onClick={() => sendReaction('comment', comment)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-teal-600 hover:bg-teal-50 rounded-xl transition-all"
               >
                 <Send size={18} />
@@ -216,7 +238,6 @@ export default function LiveSystem({ currentUser, isAdmin }) {
         </div>
       </div>
 
-      {/* MODAL D'INVITATION */}
       <InviteModal 
         isOpen={isInviteOpen} 
         onClose={() => setIsInviteOpen(false)} 
@@ -224,7 +245,6 @@ export default function LiveSystem({ currentUser, isAdmin }) {
         liveData={liveData}
       />
 
-      {/* ANIMATIONS CSS */}
       <style jsx global>{`
         @keyframes live-rise {
           0% { transform: translateY(0) scale(0.3); opacity: 0; }
