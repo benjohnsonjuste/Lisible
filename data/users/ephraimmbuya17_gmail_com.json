@@ -1,8 +1,15 @@
 {
   "email": "ephraimmbuya17@gmail.com",
   "name": "",
-  "li": 55,
+  "li": 56,
   "notifications": [
+    {
+      "id": "cert_1772239817149",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La beauté d'une nymphe\" (+1 Li).",
+      "date": "2026-02-28T00:50:17.149Z",
+      "read": false
+    },
     {
       "id": "cert_1772239814860",
       "type": "certification",
