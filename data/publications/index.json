@@ -122,19 +122,6 @@
     "certified": 56
   },
   {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Plume Anonyme",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z",
-    "views": 44,
-    "likes": 7,
-    "certified": 8
-  },
-  {
     "id": "txt_1772109107808",
     "title": "Au champ de bataille",
     "author": "Plume Anonyme",
@@ -145,6 +132,19 @@
     "date": "2026-02-26T12:31:47.808Z",
     "views": 15,
     "likes": 3,
+    "certified": 9
+  },
+  {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Plume Anonyme",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 44,
+    "likes": 7,
     "certified": 8
   },
   {
