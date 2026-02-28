@@ -215,6 +215,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1772109107808",
+    "title": "Au champ de bataille",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-26T12:31:47.808Z",
+    "views": 5,
+    "likes": 1,
+    "certified": 3
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -251,19 +264,6 @@
     "date": "2026-02-12T07:28:06.895Z",
     "views": 5,
     "likes": 2,
-    "certified": 2
-  },
-  {
-    "id": "txt_1772109107808",
-    "title": "Au champ de bataille",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-26T12:31:47.808Z",
-    "views": 5,
-    "likes": 1,
     "certified": 2
   },
   {
