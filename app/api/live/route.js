@@ -21,7 +21,6 @@ async function updateFile(content, message) {
     sha = data.sha;
   }
 
-  // Encodage propre pour l'API GitHub via Buffer (Node.js)
   const b64Content = Buffer.from(JSON.stringify(content, null, 2)).toString("base64");
 
   const updateRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
@@ -44,7 +43,7 @@ async function updateFile(content, message) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { action, admin, type, title, targetEmail, user, text, avatar } = body;
+    const { action, admin, type, title, targetEmail, user, text, avatar, x } = body;
 
     const ADMINS = [
       "adm.lablitteraire7@gmail.com", "woolsleypierre01@gmail.com", 
@@ -72,8 +71,8 @@ export async function POST(req) {
       return success ? NextResponse.json(liveData) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // B. Action : Ajouter un commentaire au Transcript
-    if (action === "comment") {
+    // B. Action : Ajouter un commentaire OU un cœur (Replay synchronisé)
+    if (action === "comment" || action === "heart") {
       const liveRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
         headers: { Authorization: `Bearer ${TOKEN}` },
         cache: 'no-store'
@@ -86,16 +85,23 @@ export async function POST(req) {
       
       if (!liveData.isActive) return NextResponse.json({ error: "Live ended" }, { status: 400 });
 
-      const newComment = {
+      // Calcul du temps relatif (en secondes) pour le replay
+      const startTime = new Date(liveData.startedAt).getTime();
+      const relativeTime = (Date.now() - startTime) / 1000;
+
+      const newItem = {
         id: Date.now(),
+        type: action, // "comment" ou "heart"
         user: user || "Anonyme",
-        text,
-        avatar: avatar || ""
+        text: text || "",
+        avatar: avatar || "",
+        x: x || Math.random() * 70 + 15, // Position horizontale pour le cœur
+        time: relativeTime // Moment exact pour la synchronisation replay
       };
 
-      liveData.transcript = [...(liveData.transcript || []), newComment];
-      const success = await updateFile(liveData, `💬 Comment by ${user}`);
-      return success ? NextResponse.json(newComment) : NextResponse.json({ error: "Git Error" }, { status: 500 });
+      liveData.transcript = [...(liveData.transcript || []), newItem];
+      const success = await updateFile(liveData, `✨ Added ${action} by ${user}`);
+      return success ? NextResponse.json(newItem) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
     // C. Action : Arrêter le Live
@@ -121,16 +127,14 @@ export async function POST(req) {
       return success ? NextResponse.json({ isActive: false }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // D. Action : Inviter un utilisateur
+    // D. Action : Inviter
     if (action === "invite") {
-      console.log(`Invitation envoyée à ${targetEmail}`);
       return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
 
   } catch (error) {
-    console.error("API Live Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -138,10 +142,7 @@ export async function POST(req) {
 export async function GET() {
   try {
     const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}?t=${Date.now()}`, {
-      headers: { 
-        Authorization: `Bearer ${TOKEN}`,
-        "Accept": "application/vnd.github.v3+json"
-      },
+      headers: { Authorization: `Bearer ${TOKEN}`, "Accept": "application/vnd.github.v3+json" },
       cache: 'no-store'
     });
 
