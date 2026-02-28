@@ -241,6 +241,19 @@
     "certified": 2
   },
   {
+    "id": "1770908907554",
+    "title": "La beauté d'une nymphe",
+    "author": "Une Plume",
+    "authorEmail": "ephraimmbuya17@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-12T15:09:45.854Z",
+    "views": 3,
+    "likes": 1,
+    "certified": 2
+  },
+  {
     "id": "1770882254944",
     "title": "L'Ombre Invisible",
     "author": "Romuald Douanla MELONG",
@@ -307,19 +320,6 @@
     "genre": "Poésie",
     "isConcours": false,
     "date": "2026-02-22T15:08:23.875Z",
-    "views": 3,
-    "likes": 0,
-    "certified": 2
-  },
-  {
-    "id": "1770908907554",
-    "title": "La beauté d'une nymphe",
-    "author": "Une Plume",
-    "authorEmail": "ephraimmbuya17@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-12T15:09:45.854Z",
     "views": 3,
     "likes": 0,
     "certified": 2
