@@ -1,8 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { Video, Mic, Radio, X, Loader2 } from "lucide-react";
+import { Video, Mic, Radio, X, Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
-import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
 
 export default function LiveSystem({ currentUser, isAdmin }) {
   const [isLive, setIsLive] = useState(false);
@@ -10,19 +9,20 @@ export default function LiveSystem({ currentUser, isAdmin }) {
   const containerRef = useRef(null);
   const zpRef = useRef(null);
 
-  // --- CONFIGURATION À REMPLIR ---
-  const appID = 123456789; // Remplacez par votre AppID de ZegoCloud
-  const serverSecret = "votre_secret_ici"; // Remplacez par votre Secret
-  // -------------------------------
+  // --- CONFIGURATION ZEGO CLOUD ---
+  const appID = 1044014775; 
+  const serverSecret = "d687153d18038e439905239e6889bace"; 
 
   const joinLive = async (type = 'video') => {
     setLoading(true);
     try {
-      const roomID = "Lisible_Main_Room";
-      const userID = currentUser?.email || `user_${Math.floor(Math.random() * 10000)}`;
-      const userName = currentUser?.name || "Membre Lisible";
+      // Importation dynamique du SDK installé via package.json
+      const { ZegoUIKitPrebuilt } = await import('@zegocloud/zego-uikit-prebuilt');
 
-      // 1. Générer le Token (Test)
+      const roomID = "Lisible_Elite_Club";
+      const userID = currentUser?.email || `guest_${Math.floor(Math.random() * 10000)}`;
+      const userName = currentUser?.name || currentUser?.penName || "Membre Lisible";
+
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
         appID, 
         serverSecret, 
@@ -31,42 +31,45 @@ export default function LiveSystem({ currentUser, isAdmin }) {
         userName
       );
 
-      // 2. Créer l'instance
       const zp = ZegoUIKitPrebuilt.create(kitToken);
       zpRef.current = zp;
 
-      // 3. Rejoindre la salle
+      // Utilisation de votre configuration spécifique
       zp.joinRoom({
         container: containerRef.current,
+        turnOnCameraWhenJoining: isAdmin && type === 'video',
+        turnOnMicrophoneWhenJoining: isAdmin,
+        showMyCameraToggleButton: isAdmin,
+        showMyMicrophoneToggleButton: isAdmin,
+        showAudioVideoSettingsButton: isAdmin,
+        showScreenSharingButton: isAdmin,
+        showTextChat: true,
+        showUserList: true,
         scenario: {
-          mode: type === 'video' ? ZegoUIKitPrebuilt.Scenario.LiveStreaming : ZegoUIKitPrebuilt.Scenario.GroupCall,
+          mode: ZegoUIKitPrebuilt.Scenario.LiveStreaming,
           config: { 
             role: isAdmin ? ZegoUIKitPrebuilt.Host : ZegoUIKitPrebuilt.Audience 
           },
         },
-        showPreJoinView: false,
-        turnOnCameraWhenJoining: isAdmin && type === 'video',
-        turnOnMicrophoneWhenJoining: isAdmin,
-        showTextChat: true,
-        showUserList: true,
         layout: "Grid",
         onLeaveRoom: () => {
           setIsLive(false);
-          if (isAdmin) handleStatusChange(false);
+          if (isAdmin) updateLiveStatus(false);
         }
       });
 
-      if (isAdmin) await handleStatusChange(true, type);
+      if (isAdmin) await updateLiveStatus(true, type);
       setIsLive(true);
+      toast.success(isAdmin ? "Direct lancé avec succès !" : "Vous avez rejoint le club.");
     } catch (err) {
       console.error(err);
-      toast.error("Échec de connexion au flux.");
+      toast.error("Erreur de connexion au flux vidéo.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusChange = async (active, type = 'video') => {
+  const updateLiveStatus = async (active, type = 'video') => {
     try {
       await fetch("/api/live", {
         method: "POST",
@@ -74,13 +77,14 @@ export default function LiveSystem({ currentUser, isAdmin }) {
         body: JSON.stringify({ 
           action: active ? "start" : "stop", 
           admin: currentUser?.email,
-          type 
+          type,
+          title: `Session Live de ${currentUser?.name || 'Admin'}`
         })
       });
-    } catch (e) { console.error("Erreur API Live"); }
+    } catch (e) { console.error("Erreur mise à jour API"); }
   };
 
-  // Auto-détection du live pour les spectateurs
+  // Détection automatique pour les membres quand l'admin lance le live
   useEffect(() => {
     const checkLive = async () => {
       const res = await fetch("/api/live");
@@ -90,45 +94,53 @@ export default function LiveSystem({ currentUser, isAdmin }) {
       }
     };
     checkLive();
-  }, []);
+    const interval = setInterval(checkLive, 10000); // Vérifie toutes les 10s
+    return () => clearInterval(interval);
+  }, [isLive, isAdmin]);
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-6">
-      <div className="relative aspect-video bg-slate-950 rounded-[3rem] overflow-hidden border-[10px] border-white shadow-2xl">
+    <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+      {/* CADRE DE DIFFUSION "ELITE" */}
+      <div className="relative aspect-video bg-slate-950 rounded-[3.5rem] overflow-hidden border-[12px] border-white shadow-2xl transition-all duration-700">
         
-        {/* L'interface Zego s'injecte ici */}
-        <div ref={containerRef} className="w-full h-full" style={{ height: '100%' }} />
+        {/* L'UI Zego s'injecte ici */}
+        <div ref={containerRef} className="w-full h-full z-10" />
 
         {!isLive && !loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-20">
-             <Radio size={70} className="text-slate-700 animate-pulse mb-4" />
-             <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px]">
-               {isAdmin ? "Prêt pour l'antenne" : "Salon en attente d'hôte"}
-             </p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 z-20">
+             <div className="p-10 bg-slate-800/50 rounded-full mb-6 border border-slate-700">
+                <Radio size={80} className="text-teal-500 animate-pulse" />
+             </div>
+             <h2 className="text-xl font-black italic text-slate-400 uppercase tracking-[0.3em]">
+                {isAdmin ? "Studio Lisible Prêt" : "Le Club est en attente"}
+             </h2>
+             <p className="text-slate-600 text-[10px] mt-4 font-bold uppercase tracking-widest">Émetteur sécurisé par ZegoCloud</p>
           </div>
         )}
 
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900 z-30">
-            <Loader2 className="animate-spin text-blue-500" size={40} />
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 z-30">
+            <Loader2 className="animate-spin text-teal-500" size={48} />
           </div>
         )}
       </div>
 
+      {/* PANNEAU DE CONTRÔLE ADMIN */}
       {isAdmin && !isLive && (
-        <div className="flex justify-center gap-4">
-          <button 
-            onClick={() => joinLive('video')} 
-            className="bg-slate-950 text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-600 transition-all shadow-xl"
-          >
-            <Video size={18} /> Lancer le Direct Vidéo
-          </button>
-          <button 
-            onClick={() => joinLive('audio')} 
-            className="bg-white text-slate-900 border-2 border-slate-100 px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-slate-50 transition-all"
-          >
-            <Mic size={18} /> Salon Audio
-          </button>
+        <div className="flex flex-col md:flex-row justify-center items-center gap-6 bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3 pr-6 border-r border-slate-100">
+            <Shield className="text-teal-600" size={20} />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mode Administrateur</span>
+          </div>
+          
+          <div className="flex gap-4">
+            <button 
+                onClick={() => joinLive('video')} 
+                className="bg-slate-950 text-white px-12 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-teal-600 hover:scale-105 transition-all shadow-xl"
+            >
+                <Video size={18} /> Lancer le Direct
+            </button>
+          </div>
         </div>
       )}
     </div>
