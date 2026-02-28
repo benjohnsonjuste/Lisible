@@ -23,14 +23,22 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/report", {
+      // On utilise l'API github-db pour enregistrer le signalement
+      // Cela permet d'envoyer les données vers votre système de stockage centralisé
+      const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          textId,
-          reporterEmail: userEmail || "Anonyme",
-          reason,
-          details
+          action: "report-content",
+          targetEmail: "cmo.lablitteraire7@gmail.com", // Destinataire forcé
+          reportData: {
+            textId,
+            textTitle,
+            reporterEmail: userEmail || "Anonyme",
+            reason,
+            details,
+            date: new Date().toISOString()
+          }
         }),
       });
 
@@ -43,9 +51,11 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
           setDetails("");
         }, 3000);
       } else {
-        throw new Error();
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur serveur");
       }
     } catch (error) {
+      console.error("Report error:", error);
       toast.error("Erreur lors de l'envoi du signalement.");
     } finally {
       setIsSubmitting(false);
