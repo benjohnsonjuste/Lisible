@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
+import SecurityLock from "@/components/SecurityLock";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -94,7 +95,7 @@ export default function TextContent() {
 
       const indexRes = await fetch(`/api/github-db?type=library&t=${Date.now()}`);
       if (indexRes.ok) {
-        const indexData = await indexRes.json();
+        const indexData = await indexRes.ok ? await indexRes.json() : { content: [] };
         const sortedLibrary = (indexData.content || []).sort((a, b) => {
             const certA = Number(a.certified || 0);
             const certB = Number(b.certified || 0);
@@ -190,7 +191,6 @@ export default function TextContent() {
   const handleShare = async () => {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
-    const shareImage = text.image || "https://lisible.biz/cover.png"; // Image de couverture plateforme par défaut
     const shareText = `Découvrez "${shareTitle}" sur Lisible.biz ✨`;
     
     if (navigator.share) {
@@ -199,7 +199,6 @@ export default function TextContent() {
           title: shareTitle, 
           text: shareText, 
           url: shareUrl 
-          // Note: La plupart des navigateurs mobiles récupèrent automatiquement l'image via les balises meta de l'URL
         }); 
       } catch (err) {}
     } else {
@@ -247,7 +246,6 @@ export default function TextContent() {
            {firstPart.map((p, i) => <p key={i} className="mb-6">{p}</p>)}
         </div>
         
-        {/* Insertion de la publicité au milieu du texte */}
         <InTextAd />
 
         <div className="whitespace-pre-wrap space-y-6">
@@ -271,106 +269,108 @@ export default function TextContent() {
   const displayImage = text.image || null;
 
   return (
-    <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
-        <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
-           <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
-        </div>
-
-        <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
-          <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-            <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
-              <ArrowLeft size={20} />
-            </button>
-            <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
-              <Maximize2 size={20} />
-            </button>
+    <SecurityLock userEmail={user?.email}>
+      <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
+          <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
+             <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
           </div>
-        </nav>
 
-        {isFocusMode && (
-          <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
-            <Minimize2 size={24} />
-          </button>
-        )}
+          <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
+            <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
+              <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
+                <ArrowLeft size={20} />
+              </button>
+              <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
+                <Maximize2 size={20} />
+              </button>
+            </div>
+          </nav>
 
-        <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
-           {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
+          {isFocusMode && (
+            <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
+              <Minimize2 size={24} />
+            </button>
+          )}
 
-           <header className={`mb-20 space-y-10 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 grayscale' : 'opacity-100'}`}>
-              <div className="flex flex-wrap items-center gap-4">
-                 <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">
-                   {text.category || text.genre || "Inédit"}
-                 </span>
-                 {mood?.score > 0 && (
-                   <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-current/10 ${mood.color}`}>
-                     {mood.icon} {mood.label}
+          <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
+             {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
+
+             <header className={`mb-20 space-y-10 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 grayscale' : 'opacity-100'}`}>
+                <div className="flex flex-wrap items-center gap-4">
+                   <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-[0.2em]">
+                     {text.category || text.genre || "Inédit"}
                    </span>
-                 )}
-                 <div className="ml-auto flex items-center gap-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                    {!isAnnouncementAccount && <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>}
-                    <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>
-                 </div>
-              </div>
-
-              {displayImage && (
-                <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
-                  <img src={displayImage} className="w-full h-full object-cover" alt="" />
+                   {mood?.score > 0 && (
+                     <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border border-current/10 ${mood.color}`}>
+                       {mood.icon} {mood.label}
+                     </span>
+                   )}
+                   <div className="ml-auto flex items-center gap-5 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                      {!isAnnouncementAccount && <span className="flex items-center gap-2"><Eye size={16}/> {liveViews}</span>}
+                      <span className="flex items-center gap-2"><Clock size={16}/> {Math.ceil((text.content?.length || 0) / 1000)} min</span>
+                   </div>
                 </div>
-              )}
 
-              <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>
-                {text.title}
-              </h1>
+                {displayImage && (
+                  <div className="w-full aspect-video rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100 mb-10">
+                    <img src={displayImage} className="w-full h-full object-cover" alt="" />
+                  </div>
+                )}
 
-              <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
-                 <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative">
-                    <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt={text.authorName} />
-                 </div>
-                 <div className="text-left">
-                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
-                      <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName}</p>
-                      <ShieldCheck size={18} className="text-teal-500" />
-                    </div>
-                 </div>
-              </div>
-           </header>
+                <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-[1.05] tracking-tighter ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>
+                  {text.title}
+                </h1>
 
-           <div className="relative">
-              <SocialMargins textId={id} textTitle={text.title} />
-              <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                  {renderedContent}
-              </article>
-           </div>
+                <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
+                   <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden relative">
+                      <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt={text.authorName} />
+                   </div>
+                   <div className="text-left">
+                      <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
+                        <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName}</p>
+                        <ShieldCheck size={18} className="text-teal-500" />
+                      </div>
+                   </div>
+                </div>
+             </header>
 
-           <div className={`h-px w-full my-32 transition-opacity duration-1000 ${isFocusMode ? 'bg-white/5 opacity-50' : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'}`} />
+             <div className="relative">
+                <SocialMargins textId={id} textTitle={text.title} />
+                <article className={`relative font-serif leading-[1.9] text-xl sm:text-[22px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                    {renderedContent}
+                </article>
+             </div>
 
-           <section className={`space-y-48 transition-all duration-1000 ${isFocusMode ? 'opacity-10 pointer-events-none blur-sm' : 'opacity-100'}`}>
-              {!isAnnouncementAccount && (
-                <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
-              )}
-              <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
-              <SmartRecommendations currentId={id} allTexts={allTexts} />
-           </section>
-        </main>
+             <div className={`h-px w-full my-32 transition-opacity duration-1000 ${isFocusMode ? 'bg-white/5 opacity-50' : 'bg-gradient-to-r from-transparent via-slate-200 to-transparent'}`} />
 
-        <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
-            <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}>
-              <Heart size={22} className={isLiking ? "fill-current" : ""} />
-            </button>
-            <div className="w-px h-8 bg-white/10 mx-1" />
-            <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90">
-              <Share2 size={22} />
-            </button>
-            <div className="w-px h-8 bg-white/10 mx-1" />
-            <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full">
-              <AlertTriangle size={22} />
-            </button>
-        </div>
+             <section className={`space-y-48 transition-all duration-1000 ${isFocusMode ? 'opacity-10 pointer-events-none blur-sm' : 'opacity-100'}`}>
+                {!isAnnouncementAccount && (
+                  <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
+                )}
+                <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
+                <SmartRecommendations currentId={id} allTexts={allTexts} />
+             </section>
+          </main>
 
-        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
-    </div>
+          <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
+              <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}>
+                <Heart size={22} className={isLiking ? "fill-current" : ""} />
+              </button>
+              <div className="w-px h-8 bg-white/10 mx-1" />
+              <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90">
+                <Share2 size={22} />
+              </button>
+              <div className="w-px h-8 bg-white/10 mx-1" />
+              <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full">
+                <AlertTriangle size={22} />
+              </button>
+          </div>
+
+          <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
+      </div>
+    </SecurityLock>
   );
 }
