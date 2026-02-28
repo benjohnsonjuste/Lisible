@@ -135,6 +135,19 @@
     "certified": 8
   },
   {
+    "id": "txt_1772109107808",
+    "title": "Au champ de bataille",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-26T12:31:47.808Z",
+    "views": 13,
+    "likes": 2,
+    "certified": 7
+  },
+  {
     "id": "1770850500145",
     "title": "Femme du Cameroun, lumière d’Afrique",
     "author": "Romuald Douanla MELONG",
@@ -159,19 +172,6 @@
     "date": "2026-02-11T22:27:38.745Z",
     "views": 6,
     "likes": 5,
-    "certified": 6
-  },
-  {
-    "id": "txt_1772109107808",
-    "title": "Au champ de bataille",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-26T12:31:47.808Z",
-    "views": 13,
-    "likes": 2,
     "certified": 6
   },
   {
