@@ -4,6 +4,13 @@
   "li": 64,
   "notifications": [
     {
+      "id": "like_1772281638550",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Au champ de bataille\" !",
+      "date": "2026-02-28T12:27:18.550Z",
+      "read": false
+    },
+    {
       "id": "cert_1772280794062",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Au champ de bataille\" (+1 Li).",
