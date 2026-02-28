@@ -202,6 +202,19 @@
     "certified": 4
   },
   {
+    "id": "1770908907554",
+    "title": "La beauté d'une nymphe",
+    "author": "Une Plume",
+    "authorEmail": "ephraimmbuya17@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-12T15:09:45.854Z",
+    "views": 3,
+    "likes": 1,
+    "certified": 3
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -238,19 +251,6 @@
     "date": "2026-02-12T07:28:06.895Z",
     "views": 5,
     "likes": 2,
-    "certified": 2
-  },
-  {
-    "id": "1770908907554",
-    "title": "La beauté d'une nymphe",
-    "author": "Une Plume",
-    "authorEmail": "ephraimmbuya17@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-12T15:09:45.854Z",
-    "views": 3,
-    "likes": 1,
     "certified": 2
   },
   {
