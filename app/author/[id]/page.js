@@ -133,7 +133,7 @@ export default function AuthorCataloguePage() {
             {works.map((work) => (
               <Link 
                 key={work.id} 
-                href={`/reader/${work.id}`}
+                href={`/texts/${work.id}`}
                 className="group bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-teal-500/20 transition-all flex justify-between items-center"
               >
                 <div>
