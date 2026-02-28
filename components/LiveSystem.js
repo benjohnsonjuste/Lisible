@@ -1,261 +1,136 @@
 "use client";
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { 
-  Video, Mic, MessageSquare, Heart, Share2, Users, 
-  X, Radio, Send, ShieldCheck, Loader2, Volume2, VideoOff, UserPlus
-} from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Video, Mic, Radio, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import InviteModal from "./InviteModal";
+import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
 
 export default function LiveSystem({ currentUser, isAdmin }) {
   const [isLive, setIsLive] = useState(false);
-  const [liveData, setLiveData] = useState(null);
-  const [comment, setComment] = useState("");
-  const [reactions, setReactions] = useState([]); 
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [streamType, setStreamType] = useState(null); // 'audio' ou 'video'
-  
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const containerRef = useRef(null);
+  const zpRef = useRef(null);
 
-  // 1. SURVEILLANCE DU LIVE (Pour les spectateurs et l'initialisation)
-  const checkLiveStatus = useCallback(async () => {
+  // --- CONFIGURATION À REMPLIR ---
+  const appID = 123456789; // Remplacez par votre AppID de ZegoCloud
+  const serverSecret = "votre_secret_ici"; // Remplacez par votre Secret
+  // -------------------------------
+
+  const joinLive = async (type = 'video') => {
+    setLoading(true);
     try {
-      const res = await fetch("/api/live");
-      if (res.ok) {
-        const data = await res.json();
-        setLiveData(data);
-        if (data.isActive) {
-          setIsLive(true);
-          setStreamType(data.type);
-        } else if (!isAdmin) {
+      const roomID = "Lisible_Main_Room";
+      const userID = currentUser?.email || `user_${Math.floor(Math.random() * 10000)}`;
+      const userName = currentUser?.name || "Membre Lisible";
+
+      // 1. Générer le Token (Test)
+      const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+        appID, 
+        serverSecret, 
+        roomID, 
+        userID, 
+        userName
+      );
+
+      // 2. Créer l'instance
+      const zp = ZegoUIKitPrebuilt.create(kitToken);
+      zpRef.current = zp;
+
+      // 3. Rejoindre la salle
+      zp.joinRoom({
+        container: containerRef.current,
+        scenario: {
+          mode: type === 'video' ? ZegoUIKitPrebuilt.Scenario.LiveStreaming : ZegoUIKitPrebuilt.Scenario.GroupCall,
+          config: { 
+            role: isAdmin ? ZegoUIKitPrebuilt.Host : ZegoUIKitPrebuilt.Audience 
+          },
+        },
+        showPreJoinView: false,
+        turnOnCameraWhenJoining: isAdmin && type === 'video',
+        turnOnMicrophoneWhenJoining: isAdmin,
+        showTextChat: true,
+        showUserList: true,
+        layout: "Grid",
+        onLeaveRoom: () => {
           setIsLive(false);
+          if (isAdmin) handleStatusChange(false);
         }
-      }
-    } catch (e) { console.error("Erreur de statut live"); }
-  }, [isAdmin]);
-
-  useEffect(() => {
-    checkLiveStatus();
-    const interval = setInterval(checkLiveStatus, 10000); // Polling toutes les 10s
-    return () => clearInterval(interval);
-  }, [checkLiveStatus]);
-
-  // 2. LOGIQUE DE FLUX (WebRTC)
-  const startStream = async (type) => {
-    try {
-      const constraints = { 
-        video: type === 'video' ? { width: 1280, height: 720 } : false, 
-        audio: true 
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      
-      const res = await fetch("/api/live", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "start",
-          admin: currentUser.email,
-          type,
-          title: `${type === 'video' ? 'Vidéo' : 'Audio'} Live de ${currentUser.penName || 'Admin'}`
-        })
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setLiveData(data);
-        setIsLive(true);
-        setStreamType(type);
-        toast.success("Votre direct est lancé !");
-      }
+      if (isAdmin) await handleStatusChange(true, type);
+      setIsLive(true);
     } catch (err) {
-      toast.error("Vérifiez vos permissions caméra/micro.");
+      console.error(err);
+      toast.error("Échec de connexion au flux.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const stopLive = async () => {
-    streamRef.current?.getTracks().forEach(track => track.stop());
-    setIsLive(false);
-    setStreamType(null);
-    await fetch("/api/live", { 
-      method: "POST", 
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "stop", admin: currentUser.email }) 
-    });
-    toast.info("Direct terminé.");
+  const handleStatusChange = async (active, type = 'video') => {
+    try {
+      await fetch("/api/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: active ? "start" : "stop", 
+          admin: currentUser?.email,
+          type 
+        })
+      });
+    } catch (e) { console.error("Erreur API Live"); }
   };
 
-  // 3. RÉACTIONS ÉPHÉMÈRES ET SAUVEGARDE DU CHAT
-  const sendReaction = async (type, text = "") => {
-    const id = Date.now();
-    
-    // Animation locale immédiate pour la fluidité
-    const newReaction = { id, type, text, x: Math.random() * 70 + 15 };
-    setReactions(prev => [...prev, newReaction]);
-    setTimeout(() => {
-      setReactions(prev => prev.filter(r => r.id !== id));
-    }, 4000);
-
-    // Si c'est un commentaire, on l'enregistre dans l'API pour le replay
-    if (type === 'comment' && text.trim()) {
-      setComment("");
-      try {
-        await fetch("/api/live", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "comment",
-            user: currentUser?.penName || currentUser?.name || "Anonyme",
-            avatar: currentUser?.image || currentUser?.profilePic || "",
-            text: text
-          })
-        });
-      } catch (e) { console.error("Erreur sauvegarde commentaire"); }
-    }
-  };
-
-  const handleShare = () => {
-    const url = `${window.location.origin}/live/${liveData?.roomID || ''}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Lien de partage copié !");
-  };
+  // Auto-détection du live pour les spectateurs
+  useEffect(() => {
+    const checkLive = async () => {
+      const res = await fetch("/api/live");
+      const data = await res.json();
+      if (data.isActive && !isLive && !isAdmin) {
+        joinLive(data.type);
+      }
+    };
+    checkLive();
+  }, []);
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
-      {/* ÉCRAN PRINCIPAL DU LIVE */}
-      <div className="relative aspect-video bg-slate-950 rounded-[3.5rem] overflow-hidden border-[12px] border-white shadow-2xl group">
+    <div className="max-w-5xl mx-auto p-4 space-y-6">
+      <div className="relative aspect-video bg-slate-950 rounded-[3rem] overflow-hidden border-[10px] border-white shadow-2xl">
         
-        {isLive ? (
-          streamType === 'video' ? (
-            <video ref={videoRef} autoPlay playsInline muted={isAdmin} className="w-full h-full object-cover animate-in fade-in duration-700" />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-teal-900 to-slate-950">
-              <div className="relative">
-                <div className="absolute inset-0 bg-teal-500 rounded-full animate-ping opacity-20" />
-                <div className="relative bg-teal-500 p-12 rounded-full text-white shadow-3xl">
-                  <Mic size={64} />
-                </div>
-              </div>
-              <p className="text-teal-400 mt-8 font-black uppercase tracking-[0.3em] text-[10px]">Transmission Audio en cours</p>
-            </div>
-          )
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-800">
-             <Radio size={80} className={`${isAdmin ? "text-teal-600 animate-pulse" : "text-slate-100"}`} />
-             <h2 className="mt-6 text-xl font-black italic tracking-tighter opacity-20 uppercase">
-                {isAdmin ? "Studio Lisible" : "En attente du direct"}
-             </h2>
+        {/* L'interface Zego s'injecte ici */}
+        <div ref={containerRef} className="w-full h-full" style={{ height: '100%' }} />
+
+        {!isLive && !loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 z-20">
+             <Radio size={70} className="text-slate-700 animate-pulse mb-4" />
+             <p className="text-slate-500 font-black uppercase tracking-[0.2em] text-[10px]">
+               {isAdmin ? "Prêt pour l'antenne" : "Salon en attente d'hôte"}
+             </p>
           </div>
         )}
 
-        {/* OVERLAY DES RÉACTIONS ÉPHÉMÈRES */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {reactions.map(r => (
-            <div 
-              key={r.id}
-              className="absolute bottom-10 animate-live-rise flex flex-col items-center"
-              style={{ left: `${r.x}%` }}
-            >
-              {r.type === 'heart' ? (
-                <Heart className="text-rose-500 fill-rose-500 drop-shadow-lg" size={40} />
-              ) : (
-                <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-5 py-3 rounded-[1.5rem] shadow-2xl">
-                  <p className="text-white text-[11px] font-black tracking-tight leading-none">{r.text}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* STATUS BADGE */}
-        {isLive && (
-          <div className="absolute top-8 left-8 flex items-center gap-3">
-            <div className="bg-rose-600 text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg animate-pulse">
-              <span className="w-2 h-2 bg-white rounded-full" /> Direct
-            </div>
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900 z-30">
+            <Loader2 className="animate-spin text-blue-500" size={40} />
           </div>
         )}
       </div>
 
-      {/* BARRE DE CONTRÔLE / INTERACTION */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col md:flex-row items-center gap-6">
-        
-        {isAdmin ? (
-          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-            {!isLive ? (
-              <>
-                <button onClick={() => startStream('video')} className="flex-1 md:flex-none bg-slate-950 text-white px-8 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-teal-600 transition-all shadow-xl">
-                  <Video size={18} /> Lancer Vidéo
-                </button>
-                <button onClick={() => startStream('audio')} className="flex-1 md:flex-none bg-slate-100 text-slate-900 px-8 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-200 transition-all">
-                  <Mic size={18} /> Lancer Audio
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={stopLive} className="bg-rose-600 text-white px-8 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-rose-700 transition-all shadow-lg">
-                  <X size={18} /> Arrêter le live
-                </button>
-                <button onClick={() => setIsInviteOpen(true)} className="bg-teal-600 text-white p-5 rounded-[1.8rem] hover:bg-teal-700 transition-all shadow-lg">
-                  <UserPlus size={20} />
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-4 w-full">
-            <button 
-              onClick={() => sendReaction('heart')}
-              className="p-5 bg-rose-50 text-rose-600 rounded-[1.8rem] hover:scale-110 active:scale-95 transition-all shadow-sm"
-            >
-              <Heart size={24} fill="currentColor" />
-            </button>
-            <div className="relative flex-1">
-              <input 
-                type="text"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendReaction('comment', comment)}
-                placeholder="Réagir en direct..."
-                className="w-full bg-slate-50 border-2 border-transparent focus:border-teal-500 focus:bg-white rounded-[2rem] px-8 py-5 text-sm font-medium outline-none transition-all"
-              />
-              <button 
-                onClick={() => sendReaction('comment', comment)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-teal-600 hover:bg-teal-50 rounded-xl transition-all"
-              >
-                <Send size={18} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-4 border-l border-slate-100 pl-6 hidden md:flex">
-          <button onClick={handleShare} className="p-5 bg-slate-50 text-slate-400 rounded-[1.8rem] hover:bg-slate-100 hover:text-slate-900 transition-all">
-            <Share2 size={22} />
+      {isAdmin && !isLive && (
+        <div className="flex justify-center gap-4">
+          <button 
+            onClick={() => joinLive('video')} 
+            className="bg-slate-950 text-white px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-blue-600 transition-all shadow-xl"
+          >
+            <Video size={18} /> Lancer le Direct Vidéo
+          </button>
+          <button 
+            onClick={() => joinLive('audio')} 
+            className="bg-white text-slate-900 border-2 border-slate-100 px-10 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-slate-50 transition-all"
+          >
+            <Mic size={18} /> Salon Audio
           </button>
         </div>
-      </div>
-
-      <InviteModal 
-        isOpen={isInviteOpen} 
-        onClose={() => setIsInviteOpen(false)} 
-        adminEmail={currentUser?.email}
-        liveData={liveData}
-      />
-
-      <style jsx global>{`
-        @keyframes live-rise {
-          0% { transform: translateY(0) scale(0.3); opacity: 0; }
-          15% { opacity: 1; transform: translateY(-50px) scale(1.1); }
-          80% { opacity: 0.8; }
-          100% { transform: translateY(-600px) scale(1); opacity: 0; }
-        }
-        .animate-live-rise {
-          animation: live-rise 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-      `}</style>
+      )}
     </div>
   );
 }
