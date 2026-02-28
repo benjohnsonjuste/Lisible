@@ -32,7 +32,6 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupérer l'index des publications pour identifier les auteurs actifs
       const resIndex = await fetch(`/api/github-db?type=publications`);
       const indexData = await resIndex.json();
       
@@ -40,16 +39,13 @@ export default function CommunautePage() {
         throw new Error("Impossible de charger l'index");
       }
 
-      // 2. Extraire les emails uniques des auteurs
       const uniqueEmails = [...new Set(indexData.content.map(p => p.authorEmail))].filter(Boolean);
 
-      // 3. Charger les profils complets de chaque auteur depuis data/users/
       const authorProfiles = await Promise.all(
         uniqueEmails.map(async (email) => {
           const resUser = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
           const userData = await resUser.json();
           if (userData && userData.content) {
-            // Calculer les stats de l'auteur depuis l'index
             const stats = indexData.content.reduce((acc, pub) => {
               if (pub.authorEmail === email) {
                 acc.works += 1;
@@ -74,7 +70,6 @@ export default function CommunautePage() {
 
       const finalAuthors = authorProfiles.filter(a => a !== null && a.status !== "deleted");
 
-      // Tri par popularité (Li + Vues + Œuvres)
       const sortedAuthors = finalAuthors.sort((a, b) => 
         ((b.li || 0) + (b.views || 0) + (b.worksCount || 0)) - ((a.li || 0) + (a.views || 0) + (a.worksCount || 0))
       );
@@ -102,7 +97,6 @@ export default function CommunautePage() {
     const b = [];
     const mail = author.email?.toLowerCase().trim();
 
-    // Badges de Rôles (Conditions fixes par Email)
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
     if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
@@ -110,7 +104,6 @@ export default function CommunautePage() {
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
     if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-red-900 text-white" });
     
-    // Badges de Performance (Conditions dynamiques)
     if (author.views === stats.maxViews && stats.maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
     }
@@ -212,6 +205,7 @@ export default function CommunautePage() {
                   >
                     {submitting === a.email ? <Loader2 size={12} className="animate-spin" /> : (a.followers?.includes(currentUser?.email) ? "Désabonner" : "Suivre")}
                   </button>
+                  {/* Redirection vers app/author/[id] */}
                   <Link href={`/author/${encodeURIComponent(a.email)}`} className="px-6 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2">
                     Profil <ArrowRight size={14} />
                   </Link>
