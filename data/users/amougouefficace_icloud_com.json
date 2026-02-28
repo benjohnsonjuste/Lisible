@@ -4,6 +4,13 @@
   "li": 60,
   "notifications": [
     {
+      "id": "like_1772280761573",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Au champ de bataille\" !",
+      "date": "2026-02-28T12:12:41.573Z",
+      "read": false
+    },
+    {
       "id": "reset_1772108880070",
       "type": "security",
       "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
