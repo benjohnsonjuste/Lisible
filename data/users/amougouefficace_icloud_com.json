@@ -1,8 +1,15 @@
 {
   "email": "amougouefficace@icloud.com",
   "name": "",
-  "li": 72,
+  "li": 73,
   "notifications": [
+    {
+      "id": "cert_1772293300243",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Au champ de bataille\" (+1 Li).",
+      "date": "2026-02-28T15:41:40.243Z",
+      "read": false
+    },
     {
       "id": "cert_1772293297976",
       "type": "certification",
