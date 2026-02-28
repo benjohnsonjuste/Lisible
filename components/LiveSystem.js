@@ -12,15 +12,16 @@ export default function LiveSystem({ currentUser, isAdmin }) {
   // --- CONFIGURATION ZEGO CLOUD ---
   const appID = 1044014775; 
   const serverSecret = "d687153d18038e439905239e6889bace"; 
+  const serverUrl = "wss://webliveroom1044014775-api.coolzcloud.com/ws";
 
   const joinLive = async (type = 'video') => {
     setLoading(true);
     try {
-      // Importation dynamique du SDK installé via package.json
       const { ZegoUIKitPrebuilt } = await import('@zegocloud/zego-uikit-prebuilt');
 
       const roomID = "Lisible_Elite_Club";
-      const userID = currentUser?.email || `guest_${Math.floor(Math.random() * 10000)}`;
+      // Nettoyage de l'ID pour éviter les erreurs sur mobile (caractères spéciaux)
+      const userID = (currentUser?.email || `guest_${Math.floor(Math.random() * 10000)}`).replace(/[^a-zA-Z0-9]/g, '_');
       const userName = currentUser?.name || currentUser?.penName || "Membre Lisible";
 
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
@@ -34,9 +35,9 @@ export default function LiveSystem({ currentUser, isAdmin }) {
       const zp = ZegoUIKitPrebuilt.create(kitToken);
       zpRef.current = zp;
 
-      // Utilisation de votre configuration spécifique
       zp.joinRoom({
         container: containerRef.current,
+        server: serverUrl, // Configuration du serveur WebSocket spécifique
         turnOnCameraWhenJoining: isAdmin && type === 'video',
         turnOnMicrophoneWhenJoining: isAdmin,
         showMyCameraToggleButton: isAdmin,
@@ -63,7 +64,7 @@ export default function LiveSystem({ currentUser, isAdmin }) {
       toast.success(isAdmin ? "Direct lancé avec succès !" : "Vous avez rejoint le club.");
     } catch (err) {
       console.error(err);
-      toast.error("Erreur de connexion au flux vidéo.");
+      toast.error("Erreur de connexion au flux.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,6 @@ export default function LiveSystem({ currentUser, isAdmin }) {
     } catch (e) { console.error("Erreur mise à jour API"); }
   };
 
-  // Détection automatique pour les membres quand l'admin lance le live
   useEffect(() => {
     const checkLive = async () => {
       const res = await fetch("/api/live");
@@ -94,16 +94,14 @@ export default function LiveSystem({ currentUser, isAdmin }) {
       }
     };
     checkLive();
-    const interval = setInterval(checkLive, 10000); // Vérifie toutes les 10s
+    const interval = setInterval(checkLive, 10000);
     return () => clearInterval(interval);
   }, [isLive, isAdmin]);
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-      {/* CADRE DE DIFFUSION "ELITE" */}
       <div className="relative aspect-video bg-slate-950 rounded-[3.5rem] overflow-hidden border-[12px] border-white shadow-2xl transition-all duration-700">
         
-        {/* L'UI Zego s'injecte ici */}
         <div ref={containerRef} className="w-full h-full z-10" />
 
         {!isLive && !loading && (
@@ -114,7 +112,7 @@ export default function LiveSystem({ currentUser, isAdmin }) {
              <h2 className="text-xl font-black italic text-slate-400 uppercase tracking-[0.3em]">
                 {isAdmin ? "Studio Lisible Prêt" : "Le Club est en attente"}
              </h2>
-             <p className="text-slate-600 text-[10px] mt-4 font-bold uppercase tracking-widest">Émetteur sécurisé par ZegoCloud</p>
+             <p className="text-slate-600 text-[10px] mt-4 font-bold uppercase tracking-widest">Flux sécurisé : {serverUrl.split('/')[2]}</p>
           </div>
         )}
 
@@ -125,7 +123,6 @@ export default function LiveSystem({ currentUser, isAdmin }) {
         )}
       </div>
 
-      {/* PANNEAU DE CONTRÔLE ADMIN */}
       {isAdmin && !isLive && (
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 pr-6 border-r border-slate-100">
