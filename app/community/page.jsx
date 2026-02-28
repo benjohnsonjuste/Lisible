@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
@@ -7,7 +8,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import Head from 'next/head';
 
 // Cache global hors du composant pour persister durant la session
 let authorsCache = null;
@@ -32,56 +32,55 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupération des données utilisateurs (Dossier data/users via github-db)
-      // On récupère aussi la library pour les stats de publications
-      const [resUsers, resLib] = await Promise.all([
-        fetch(`/api/github-db?type=data&file=users`),
-        fetch(`/api/github-db?type=data&file=library`)
-      ]);
-
-      const jsonUsers = await resUsers.json();
-      const jsonLib = await resLib.json();
+      // 1. Récupérer l'index des publications pour identifier les auteurs actifs
+      const resIndex = await fetch(`/api/github-db?type=publications`);
+      const indexData = await resIndex.json();
       
-      if (jsonUsers && Array.isArray(jsonUsers.content)) {
-        // Map pour agréger les stats de la bibliothèque par email
-        const libStats = (jsonLib.content || []).reduce((acc, pub) => {
-          const email = pub.authorEmail?.toLowerCase().trim();
-          if (!email) return acc;
-          if (!acc[email]) acc[email] = { works: 0, views: 0, likes: 0, certified: 0 };
-          
-          acc[email].works += 1;
-          acc[email].views += Number(pub.views || 0);
-          acc[email].likes += Number(pub.likes || 0);
-          acc[email].certified += Number(pub.certified || 0);
-          return acc;
-        }, {});
-
-        // Construction de la liste finale basée sur data/users
-        const authorEntries = jsonUsers.content.map(user => {
-          const email = user.email?.toLowerCase().trim();
-          const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
-          
-          return {
-            name: user.name || user.username || "Plume Anonyme",
-            email: email,
-            image: user.profilePic || user.image || null,
-            followers: user.followers || [],
-            li: Number(user.li || 0),
-            worksCount: stats.works,
-            views: stats.views,
-            likes: stats.likes,
-            certified: stats.certified
-          };
-        });
-
-        // Tri par popularité (li + vues + œuvres)
-        const sortedAuthors = authorEntries.sort((a, b) => 
-          (b.li + b.views + b.worksCount) - (a.li + a.views + a.worksCount)
-        );
-
-        authorsCache = sortedAuthors;
-        setAuthors(sortedAuthors);
+      if (!indexData || !Array.isArray(indexData.content)) {
+        throw new Error("Impossible de charger l'index");
       }
+
+      // 2. Extraire les emails uniques des auteurs
+      const uniqueEmails = [...new Set(indexData.content.map(p => p.authorEmail))].filter(Boolean);
+
+      // 3. Charger les profils complets de chaque auteur depuis data/users/
+      const authorProfiles = await Promise.all(
+        uniqueEmails.map(async (email) => {
+          const resUser = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
+          const userData = await resUser.json();
+          if (userData && userData.content) {
+            // Calculer les stats de l'auteur depuis l'index
+            const stats = indexData.content.reduce((acc, pub) => {
+              if (pub.authorEmail === email) {
+                acc.works += 1;
+                acc.views += (pub.views || 0);
+                acc.likes += (pub.likes || 0);
+                acc.certified += (pub.certified || 0);
+              }
+              return acc;
+            }, { works: 0, views: 0, likes: 0, certified: 0 });
+
+            return {
+              ...userData.content,
+              worksCount: stats.works,
+              views: stats.views,
+              likes: stats.likes,
+              certified: stats.certified
+            };
+          }
+          return null;
+        })
+      );
+
+      const finalAuthors = authorProfiles.filter(a => a !== null && a.status !== "deleted");
+
+      // Tri par popularité (Li + Vues + Œuvres)
+      const sortedAuthors = finalAuthors.sort((a, b) => 
+        ((b.li || 0) + (b.views || 0) + (b.worksCount || 0)) - ((a.li || 0) + (a.views || 0) + (a.worksCount || 0))
+      );
+
+      authorsCache = sortedAuthors;
+      setAuthors(sortedAuthors);
     } catch (e) { 
       console.error("Erreur de chargement du Cercle:", e);
       if (!authorsCache) toast.error("Le Cercle est momentanément inaccessible."); 
@@ -93,27 +92,29 @@ export default function CommunautePage() {
   const stats = useMemo(() => {
     if (authors.length === 0) return { maxViews: 0, maxWorks: 0, maxLi: 0 };
     return {
-      maxViews: Math.max(...authors.map(a => a.views)),
-      maxWorks: Math.max(...authors.map(a => a.worksCount)),
-      maxLi: Math.max(...authors.map(a => a.li))
+      maxViews: Math.max(...authors.map(a => a.views || 0)),
+      maxWorks: Math.max(...authors.map(a => a.worksCount || 0)),
+      maxLi: Math.max(...authors.map(a => a.li || 0))
     };
   }, [authors]);
 
   const getBadges = (author) => {
     const b = [];
-    const mail = author.email?.toLowerCase();
+    const mail = author.email?.toLowerCase().trim();
 
+    // Badges de Rôles (Conditions fixes par Email)
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
     if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
     if (mail === "robergeaurodley97@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Général", color: "bg-green-600 text-white" });
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
-    if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-gold-900 text-red-400" });
+    if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-red-900 text-white" });
     
+    // Badges de Performance (Conditions dynamiques)
     if (author.views === stats.maxViews && stats.maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
     }
-    if (author.worksCount === stats.maxWorks && stats.maxWorks > 5) {
+    if (author.worksCount === stats.maxWorks && stats.maxWorks >= 5) {
       b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white shadow-lg shadow-teal-500/20" });
     }
     if (author.li === stats.maxLi && stats.maxLi > 0) {
@@ -130,12 +131,20 @@ export default function CommunautePage() {
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: isFollowing ? "unfollow" : "follow", userEmail: currentUser.email, targetEmail: targetEmail })
+        body: JSON.stringify({ 
+          action: isFollowing ? "unfollow" : "follow", 
+          userEmail: currentUser.email, 
+          targetEmail: targetEmail 
+        })
       });
       if (res.ok) {
-        const update = prev => prev.map(auth => auth.email === targetEmail ? { ...auth, followers: isFollowing ? auth.followers.filter(e => e !== currentUser.email) : [...auth.followers, currentUser.email] } : auth);
+        const update = prev => prev.map(auth => 
+          auth.email === targetEmail 
+          ? { ...auth, followers: isFollowing ? auth.followers.filter(e => e !== currentUser.email) : [...(auth.followers || []), currentUser.email] } 
+          : auth
+        );
         setAuthors(update);
-        authorsCache = update(authorsCache);
+        authorsCache = update(authorsCache || []);
         toast.success(isFollowing ? "Désabonné" : "Abonné !");
       }
     } catch (err) { toast.error("Erreur de liaison."); }
@@ -151,7 +160,6 @@ export default function CommunautePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-20 bg-[#FCFBF9] min-h-screen">
-      <Head><title>Cercle | Lisible</title></Head>
       <header className="flex flex-col lg:flex-row justify-between mb-24 gap-8">
         <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">Cercle.</h1>
         <div className="relative group w-full lg:w-96">
@@ -167,7 +175,7 @@ export default function CommunautePage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {authors
-          .filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()))
+          .filter(a => (a.name || "").toLowerCase().includes(searchTerm.toLowerCase()))
           .slice(0, visibleCount)
           .map((a) => (
           <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-all hover:shadow-2xl hover:border-teal-500/10">
@@ -181,20 +189,20 @@ export default function CommunautePage() {
             <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
               <div className="w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100 flex-shrink-0">
                 <img 
-                  src={a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
+                  src={a.profilePic || a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                   alt={a.name}
                 />
               </div>
               <div className="grow space-y-4 text-center sm:text-left">
                 <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter flex items-center justify-center sm:justify-start gap-2">
-                  {a.name} 
+                  {a.penName || a.name || "Auteur"} 
                   {a.certified > 0 && <ShieldCheck size={20} className="text-teal-500" fill="currentColor" />}
                 </h2>
                 <div className="flex justify-center sm:justify-start gap-3">
-                    <StatBadge label="Lectures" val={a.views} color="rose" />
-                    <StatBadge label="Textes" val={a.worksCount} color="teal" />
-                    <StatBadge label="Li" val={a.li} color="amber" />
+                    <StatBadge label="Lectures" val={a.views || 0} color="rose" />
+                    <StatBadge label="Textes" val={a.worksCount || 0} color="teal" />
+                    <StatBadge label="Li" val={a.li || 0} color="amber" />
                 </div>
                 <div className="flex gap-2 justify-center sm:justify-start">
                   <button 
