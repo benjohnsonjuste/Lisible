@@ -162,6 +162,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1772109107808",
+    "title": "Au champ de bataille",
+    "author": "Plume Anonyme",
+    "authorEmail": "amougouefficace@icloud.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-26T12:31:47.808Z",
+    "views": 8,
+    "likes": 2,
+    "certified": 5
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -199,19 +212,6 @@
     "date": "2026-02-23T13:35:39.084Z",
     "views": 12,
     "likes": 3,
-    "certified": 4
-  },
-  {
-    "id": "txt_1772109107808",
-    "title": "Au champ de bataille",
-    "author": "Plume Anonyme",
-    "authorEmail": "amougouefficace@icloud.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-26T12:31:47.808Z",
-    "views": 8,
-    "likes": 2,
     "certified": 4
   },
   {
