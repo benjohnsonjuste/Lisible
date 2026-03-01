@@ -162,19 +162,6 @@
     "certified": 6
   },
   {
-    "id": "1770848857244",
-    "title": "Femme de mon pays",
-    "author": "Romuald Douanla MELONG",
-    "authorEmail": "romualdmelong@gmail.com",
-    "category": "Poésie",
-    "genre": "Poésie",
-    "isConcours": false,
-    "date": "2026-02-11T22:27:38.745Z",
-    "views": 6,
-    "likes": 5,
-    "certified": 6
-  },
-  {
     "id": "1770881884883",
     "title": "Femme en silence",
     "author": "Romuald Douanla MELONG",
@@ -186,7 +173,20 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 11,
     "likes": 5,
-    "certified": 5
+    "certified": 6
+  },
+  {
+    "id": "1770848857244",
+    "title": "Femme de mon pays",
+    "author": "Romuald Douanla MELONG",
+    "authorEmail": "romualdmelong@gmail.com",
+    "category": "Poésie",
+    "genre": "Poésie",
+    "isConcours": false,
+    "date": "2026-02-11T22:27:38.745Z",
+    "views": 6,
+    "likes": 5,
+    "certified": 6
   },
   {
     "id": "txt_1770823066946",
