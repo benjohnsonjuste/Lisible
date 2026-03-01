@@ -140,7 +140,7 @@ export default function LisibleClub({ roomId, isHost, currentUser }) {
         });
       } catch (err) { console.error("Notif error:", err); }
     }
-    await initZego = async (); // Note: Assurez-vous d'appeler la fonction correctement
+    
     await initZego();
     setJoined(true);
     setLoading(false);
