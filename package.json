@@ -13,6 +13,7 @@
   "dependencies": {
     "firebase": "^11.0.2",
     "bcrypt-ts": "latest",
+    "howler": "^2.2.4",
     "firebase-admin": "^11.11.0",
     "googleapis": "^131.0.0",
     "@zegocloud/zego-uikit-prebuilt": "^2.10.0",
