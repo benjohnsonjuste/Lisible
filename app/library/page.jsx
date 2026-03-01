@@ -8,7 +8,6 @@ import {
 import { toast } from "sonner";
 
 export default function Bibliotheque({ initialTexts = [] }) {
-  // Sécurité : s'assurer que texts est toujours un tableau
   const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,12 +19,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
   useEffect(() => {
     setMounted(true);
     fetchInitial();
-    const interval = setInterval(fetchInitial, 30000);
+    const interval = setInterval(fetchInitial, 60000); // Augmenté à 60s pour ménager les appels API croisés
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
-    // On ne met loading=true que si on n'a vraiment rien à afficher
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
@@ -33,20 +31,39 @@ export default function Bibliotheque({ initialTexts = [] }) {
       const json = await res.json();
       
       if (json && Array.isArray(json.content)) {
-        const sorted = [...json.content].sort((a, b) => {
+        // Extraction des emails uniques pour récupérer les vrais noms
+        const uniqueEmails = [...new Set(json.content.map(t => t.authorEmail))].filter(Boolean);
+        
+        // Récupération des profils en parallèle pour obtenir les penName/name réels
+        const authorProfiles = {};
+        await Promise.all(uniqueEmails.map(async (email) => {
+          try {
+            const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
+            const userData = await userRes.json();
+            if (userData && userData.content) {
+              authorProfiles[email] = userData.content.penName || userData.content.name;
+            }
+          } catch (e) { console.error("User fetch error", e); }
+        }));
+
+        const enrichedTexts = json.content.map(t => ({
+          ...t,
+          // Priorité au nom du profil réel, sinon au nom de l'index
+          displayAuthorName: authorProfiles[t.authorEmail] || t.author || t.authorName || "Anonyme"
+        }));
+
+        const sorted = enrichedTexts.sort((a, b) => {
           const certA = Number(a?.certified || a?.totalCertified || 0);
           const certB = Number(b?.certified || b?.totalCertified || 0);
           if (certB !== certA) return certB - certA;
-
           const likesA = Number(a?.likes || a?.totalLikes || 0);
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
-
-          // Sécurité sur la date pour le tri
           const dateA = a?.date ? new Date(a.date).getTime() : 0;
           const dateB = b?.date ? new Date(b.date).getTime() : 0;
           return dateB - dateA;
         });
+        
         setTexts(sorted);
       }
     } catch (e) { 
@@ -62,7 +79,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
     return texts.filter(t => {
       if (!t) return false;
       const title = (t.title || "").toLowerCase();
-      const author = (t.author || t.authorName || "").toLowerCase();
+      const author = (t.displayAuthorName || "").toLowerCase();
       const search = searchTerm.toLowerCase();
       
       const matchesSearch = title.includes(search) || author.includes(search);
@@ -74,7 +91,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
-  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
   if (!mounted && initialTexts.length === 0) return null;
 
   if (loading && (!texts || texts.length === 0)) return (
@@ -136,7 +152,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
-          const displayCerts = item.certified || item.totalCertified || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -204,11 +219,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
                   <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white">
-                        {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
+                        {item.displayAuthorName.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
-                          {item.author || item.authorName || "Anonyme"}
+                          {item.displayAuthorName}
                         </span>
                         <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">
                           {isAnnouncementAccount ? "Compte Officiel" : hasSceau ? "Plume Certifiée" : "Auteur Scellé"}
