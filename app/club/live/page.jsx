@@ -57,7 +57,7 @@ function LiveContent() {
 
       <LisibleClub 
         roomId={roomId}
-        isHost={user.role === 'admin' || user.isAdmin === true} 
+        isHost={true} 
         currentUser={user}
       />
     </div>
