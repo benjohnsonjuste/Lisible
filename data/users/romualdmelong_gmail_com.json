@@ -4,6 +4,13 @@
   "li": 68,
   "notifications": [
     {
+      "id": "like_1772381870081",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Femme en silence\" !",
+      "date": "2026-03-01T16:17:50.081Z",
+      "read": false
+    },
+    {
       "id": "follow_1772077985567",
       "type": "follow",
       "message": " s'est abonné à vous !",
