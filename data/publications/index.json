@@ -175,19 +175,6 @@
     "certified": 6
   },
   {
-    "id": "txt_1770823066946",
-    "title": "Mon départ",
-    "author": "Adama Junior Cissokho",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:17:46.946Z",
-    "views": 22,
-    "likes": 8,
-    "certified": 4
-  },
-  {
     "id": "1770881884883",
     "title": "Femme en silence",
     "author": "Romuald Douanla MELONG",
@@ -199,6 +186,19 @@
     "date": "2026-02-12T07:38:06.271Z",
     "views": 11,
     "likes": 5,
+    "certified": 5
+  },
+  {
+    "id": "txt_1770823066946",
+    "title": "Mon départ",
+    "author": "Adama Junior Cissokho",
+    "authorEmail": "adamacissokho15@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:17:46.946Z",
+    "views": 22,
+    "likes": 8,
     "certified": 4
   },
   {
