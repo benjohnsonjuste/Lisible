@@ -1,0 +1,15 @@
+name: Clôture Duel de Plume
+on:
+  schedule:
+    # S'exécute tous les lundis à 04:05 UTC (Dimanche 23:05 en Haïti)
+    - cron: '05 4 * * 1'
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calcul du vainqueur et attribution du badge
+        run: |
+          curl -X POST "https://ton-site.vercel.app/api/duel-engine" \
+          -H "Content-Type: application/json" \
+          -d '{"action": "finalizeWinner", "secret": "${{ secrets.DUEL_SECRET }}"}'
