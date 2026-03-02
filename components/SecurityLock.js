@@ -76,7 +76,10 @@ export default function SecurityLock({ children, userEmail, activeAntiCapture = 
         <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] flex flex-wrap gap-24 overflow-hidden rotate-[-25deg] scale-150">
           {Array(80).fill(userEmail).map((email, i) => (
             <span key={i} className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest whitespace-nowrap">
-              {email} - LISIBLE
+LISIBLE | LISIBLE | LISIBLE | LISIBLE
+LISIBLE | LISIBLE | LISIBLE | LISIBLE
+LISIBLE | LISIBLE | LISIBLE | LISIBLE
+LISIBLE | LISIBLE | LISIBLE | LISIBLE
             </span>
           ))}
         </div>
