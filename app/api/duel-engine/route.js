@@ -61,7 +61,7 @@ export async function POST(req) {
       texts: { [player1]: "", [player2]: "" },
       votes: { [player1]: 0, [player2]: 0 },
       status: "scheduled",
-      theme: await getRandomTheme(), // Le thème est scellé ici
+      theme: await getRandomTheme(), 
       winner: null
     };
 
@@ -85,32 +85,48 @@ export async function POST(req) {
     return new Response(JSON.stringify({ success: true }));
   }
 
-  // --- 4. FINALISER LE GAGNANT (Badge Haute Classe) ---
+  // --- 4. FINALISER LE GAGNANT (Badge Haute Classe + Notifications) ---
   if (action === "finalizeWinner") {
     const duel = duels.find(d => d.id === duelId);
-    if (!duel) return new Response("Duel non trouvé", { status: 404 });
+    if (!duel || duel.status === "finished") return new Response("Duel invalide", { status: 404 });
 
     const p1 = duel.participants[0];
     const p2 = duel.participants[1];
     const votesP1 = duel.votes[p1] || 0;
     const votesP2 = duel.votes[p2] || 0;
 
-    let winnerId = votesP1 > votesP2 ? p1 : p2;
-    if (votesP1 === votesP2) winnerId = p1; 
+    let winnerEmail = votesP1 > votesP2 ? p1 : p2;
+    if (votesP1 === votesP2) winnerEmail = p1; 
 
+    const winnerProfile = users.find(u => u.email === winnerEmail);
+    const winnerName = winnerProfile?.penName || winnerProfile?.name || "L'Anonyme";
+
+    // Mise à jour des badges et ajout de la notification personnelle au profil
     const updatedUsers = users.map(u => {
       let badges = (u.badges || []).filter(b => b !== "Haute Classe");
-      if (u.email === winnerId) badges.push("Haute Classe");
+      if (u.email === winnerEmail) {
+        badges.push("Haute Classe");
+        // Notification personnelle
+        if (!u.notifications) u.notifications = [];
+        u.notifications.unshift({
+          id: `victory_${Date.now()}`,
+          type: "victory",
+          title: "👑 La Couronne est à vous",
+          message: "Félicitations ! Vous avez remporté le duel. Le badge Haute Classe brille sur votre profil.",
+          date: new Date().toISOString(),
+          read: false
+        });
+      }
       return { ...u, badges };
     });
 
     duel.status = "finished";
-    duel.winner = winnerId;
+    duel.winner = winnerEmail;
 
-    await saveGithubFile("data/users.json", updatedUsers, `🏆 Nouveau Champion : ${winnerId}`);
+    await saveGithubFile("data/users.json", updatedUsers, `🏆 Nouveau Champion : ${winnerEmail}`);
     await saveGithubFile("data/duels.json", duels, `🏁 Duel ${duelId} clôturé`);
 
-    return new Response(JSON.stringify({ success: true, winner: winnerId }));
+    return new Response(JSON.stringify({ success: true, winner: winnerName }));
   }
 
   // --- 5. VOTE UNIQUE ---
