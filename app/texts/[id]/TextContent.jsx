@@ -31,7 +31,7 @@ function BadgeAnnonce() {
   return (
     <div className="inline-flex items-center gap-2 bg-rose-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
       <Megaphone size={14} className="animate-pulse" />
-      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Annonce Officielle</span>
+      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Annonce</span>
     </div>
   );
 }
@@ -191,7 +191,7 @@ export default function TextContent() {
   const handleShare = async () => {
     const shareTitle = text.title;
     const shareUrl = window.location.href;
-    const shareText = `Découvrez "${shareTitle}" sur Lisible.biz ✨`;
+    const shareText = `Découvrez "${shareTitle}" sur Lisible. Bonne lecture !`;
     
     if (navigator.share) {
       try { 
@@ -287,7 +287,7 @@ export default function TextContent() {
           </nav>
 
           {isFocusMode && (
-            <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
+            <button onClick={() => setIsFocusMode(false)} className="fixed top-24 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
               <Minimize2 size={24} />
             </button>
           )}
@@ -327,7 +327,7 @@ export default function TextContent() {
                    </div>
                    <div className="text-left">
                       <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2">
-                        <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Auteur Certifié"}
+                        <Sparkles size={12} /> {isAnnouncementAccount ? "Compte Officiel" : "Plume Certifiée"}
                       </p>
                       <div className="flex items-center gap-2">
                         <p className={`text-xl font-bold italic tracking-tight ${isFocusMode ? 'text-white/60' : 'text-slate-900'}`}>{text.authorName}</p>
