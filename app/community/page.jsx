@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
-  ShieldCheck, Crown, Settings, Sparkles, Sun
+  ShieldCheck, Crown, Settings, Sparkles, Sun, Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -30,7 +30,6 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupérer l'index global des publications pour calculer les stats réelles
       const resIndex = await fetch(`/api/github-db?type=publications`);
       const indexData = await resIndex.json();
       
@@ -38,10 +37,8 @@ export default function CommunautePage() {
         throw new Error("Impossible de charger l'index");
       }
 
-      // 2. Extraire la liste unique des auteurs ayant publié
       const uniqueEmails = [...new Set(indexData.content.map(p => p.authorEmail))].filter(Boolean);
 
-      // 3. Récupérer chaque profil utilisateur et fusionner avec les stats de l'index
       const authorProfiles = await Promise.all(
         uniqueEmails.map(async (email) => {
           try {
@@ -49,7 +46,6 @@ export default function CommunautePage() {
             const userData = await resUser.json();
             
             if (userData && userData.content) {
-              // Calcul des statistiques à partir de l'index
               const stats = indexData.content.reduce((acc, pub) => {
                 if (pub.authorEmail?.toLowerCase() === email.toLowerCase()) {
                   acc.works += 1;
@@ -75,10 +71,8 @@ export default function CommunautePage() {
         })
       );
 
-      // Filtrer les profils valides et non supprimés
       const finalAuthors = authorProfiles.filter(a => a !== null && a.status !== "deleted");
 
-      // Tri par influence (Vues + Li + Publications)
       const sortedAuthors = finalAuthors.sort((a, b) => 
         ((b.li || 0) + (b.views || 0) + (b.worksCount || 0)) - ((a.li || 0) + (a.views || 0) + (a.worksCount || 0))
       );
@@ -106,7 +100,16 @@ export default function CommunautePage() {
     const b = [];
     const mail = author.email?.toLowerCase().trim();
 
-    // Badges de rôle (Statiques par email)
+    // --- BADGE HAUTE CLASSE (DUEL) ---
+    if (author.badges?.includes("Haute Classe")) {
+      b.push({ 
+        icon: <Trophy size={10} className="animate-bounce" />, 
+        label: "Haute Classe", 
+        color: "bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.4)]" 
+      });
+    }
+
+    // Badges de rôle
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
     if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
@@ -114,7 +117,7 @@ export default function CommunautePage() {
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
     if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-red-900 text-white" });
     
-    // Badges de performance (Dynamiques)
+    // Badges de performance
     if (author.views === stats.maxViews && stats.maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
     }
@@ -186,7 +189,7 @@ export default function CommunautePage() {
           .filter(a => (a.penName || a.name || "").toLowerCase().includes(searchTerm.toLowerCase()))
           .slice(0, visibleCount)
           .map((a) => (
-          <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-all hover:shadow-2xl hover:border-teal-500/10">
+          <div key={a.email} className={`group bg-white rounded-[3.5rem] p-10 border shadow-xl relative overflow-hidden transition-all hover:shadow-2xl ${a.badges?.includes("Haute Classe") ? 'border-amber-200 ring-2 ring-amber-50' : 'border-slate-100 hover:border-teal-500/10'}`}>
             {/* Badges */}
             <div className="absolute top-8 right-8 flex flex-col items-end gap-2 z-10">
               {getBadges(a).map((b, i) => (
@@ -198,7 +201,7 @@ export default function CommunautePage() {
 
             <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
               {/* Photo */}
-              <div className="w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100 flex-shrink-0">
+              <div className={`w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 shadow-2xl bg-slate-100 flex-shrink-0 ${a.badges?.includes("Haute Classe") ? 'border-amber-400' : 'border-white'}`}>
                 <img 
                   src={a.profilePic || a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
