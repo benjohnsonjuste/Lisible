@@ -25,21 +25,26 @@ export default function DuelArena({ duelData, currentUser }) {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [status]);
+  }, [status, isPlayer]);
 
   const submitFinalText = async () => {
     try {
-      await fetch('/api/duel-engine', {
-        method: 'POST', // Changé en POST pour correspondre à ton moteur de duel
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          action: 'saveDuelText', // Cette action doit être gérée dans ton route.js
+          action: 'saveDuelText', 
           duelId: duelData.id, 
           text: content, 
           email: currentUser.email 
         })
       });
-      toast.success("Manuscrit scellé pour l'éternité !");
+      
+      if (res.ok) {
+        toast.success("Manuscrit scellé pour l'éternité !");
+      } else {
+        throw new Error();
+      }
     } catch (e) {
       toast.error("Erreur de sauvegarde finale.");
     }
@@ -112,7 +117,7 @@ export default function DuelArena({ duelData, currentUser }) {
               <div className="relative">
                 <textarea
                   readOnly={!isMe || status !== "playing"}
-                  value={isMe && status === "playing" ? content : (status !== "playing" ? participantText : "L'adversaire est en train de rédiger son destin...")}
+                  value={isMe && status === "playing" ? content : (status !== "playing" ? participantText : "")}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder={isMe ? "Que l'encre coule..." : "Le texte sera révélé à la fin du chrono."}
                   className={`w-full h-[550px] bg-white/5 p-10 rounded-[3rem] border-2 transition-all duration-700 font-serif text-xl md:text-2xl resize-none outline-none leading-relaxed ${
@@ -122,8 +127,8 @@ export default function DuelArena({ duelData, currentUser }) {
                   } ${status === "voting" ? 'shadow-[0_0_60px_rgba(255,255,255,0.03)] border-white/10' : ''}`}
                 />
                 
-                {/* Overlay pour cacher le texte de l'adversaire pendant le jeu */}
-                {!isMe && status === "playing" && (
+                {/* Overlay pour cacher le texte de l'adversaire ou du joueur hors phase de jeu */}
+                {(!isMe && status === "playing") && (
                   <div className="absolute inset-0 bg-black/40 backdrop-blur-md rounded-[3rem] flex items-center justify-center p-12 text-center border border-white/5">
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-[0.3em] leading-loose">
                       Texte scellé jusqu'à la fin du compte à rebours
