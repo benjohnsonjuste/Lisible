@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { 
-  Sword, ShieldCheck, shadow, Loader2, 
-  ArrowLeft, Coins, UserPlus, Zap, Check, X 
+  Sword, ShieldCheck, Loader2, 
+  ArrowLeft, Coins, UserPlus, Zap, Check, X, Sparkles 
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ export default function DuelGestionPage() {
     const currentUser = JSON.parse(logged);
 
     try {
-      // 1. Charger le profil frais de l'utilisateur (pour les Li et requêtes)
+      // 1. Charger le profil frais de l'utilisateur
       const resUser = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(currentUser.email)}`);
       const userData = await resUser.json();
       if (userData.content) {
@@ -35,7 +35,6 @@ export default function DuelGestionPage() {
       const resAuthors = await fetch(`/api/github-db?type=publications`);
       const authorsData = await resAuthors.json();
       
-      // On filtre pour ne proposer que des gens "réels" (qui ont déjà publié)
       const uniqueEmails = [...new Set(authorsData.content.map(p => p.authorEmail))];
       const profiles = await Promise.all(
         uniqueEmails
@@ -95,7 +94,7 @@ export default function DuelGestionPage() {
             <DuelRequests requests={user.duelRequests} currentUser={user} />
           ) : (
             <div className="bg-white p-10 rounded-[2.5rem] border border-dashed border-slate-200 text-center">
-              <p className="text-slate-400 italic text-sm">Personne n'a encore oser vous défier...</p>
+              <p className="text-slate-400 italic text-sm">Personne n'a encore osé vous défier...</p>
             </div>
           )}
         </section>
@@ -106,26 +105,30 @@ export default function DuelGestionPage() {
             <div className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center">
               <Sword size={16} />
             </div>
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">Lancer un gant (250 Li)</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">Lancer un gant (Entrée Libre)</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-3">
             {followedAuthors.map((author) => (
-              <div key={author.email} className="group bg-white p-4 rounded-3xl border border-slate-100 hover:border-rose-200 transition-all flex items-center justify-between">
+              <div key={author.email} className="group bg-white p-4 rounded-3xl border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <img 
                     src={author.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${author.email}`} 
-                    className="w-12 h-12 rounded-2xl object-cover"
+                    className="w-12 h-12 rounded-2xl object-cover grayscale group-hover:grayscale-0 transition-all"
+                    alt="avatar"
                   />
                   <div>
                     <h4 className="font-bold text-slate-900">{author.penName || author.name}</h4>
-                    <p className="text-[10px] text-slate-400 font-black uppercase">{author.li || 0} Li en poche</p>
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={10} className="text-teal-500" />
+                      <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Prêt pour le combat</p>
+                    </div>
                   </div>
                 </div>
                 
                 <button 
                   onClick={() => handleDuelClick(author)}
-                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-slate-900/10"
+                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-lg shadow-slate-900/10"
                 >
                   Défier
                 </button>
@@ -139,9 +142,7 @@ export default function DuelGestionPage() {
   );
 
   async function handleDuelClick(target) {
-    if (user.li < 250) return toast.error("Il vous faut 250 Li.");
-    
-    const confirmDuel = confirm(`Défier ${target.penName || target.name} pour 250 Li ?`);
+    const confirmDuel = confirm(`Voulez-vous vraiment défier ${target.penName || target.name} ?`);
     if (!confirmDuel) return;
 
     const toastId = toast.loading("Envoi du défi...");
@@ -149,6 +150,7 @@ export default function DuelGestionPage() {
     try {
       const res = await fetch('/api/duel-engine', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: "sendChallenge",
           senderEmail: user.email,
@@ -158,7 +160,7 @@ export default function DuelGestionPage() {
       });
 
       if (res.ok) {
-        toast.success("Gant jeté ! 250 Li mis en jeu.", { id: toastId });
+        toast.success("Gant jeté ! L'honneur est en jeu.", { id: toastId });
         window.location.reload();
       }
     } catch (e) {
