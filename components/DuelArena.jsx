@@ -6,12 +6,11 @@ import DuelVote from "./DuelVote";
 
 export default function DuelArena({ duelData, currentUser }) {
   const [timeLeft, setTimeLeft] = useState(900); // 15:00
-  const [status, setStatus] = useState("playing"); // playing, voting, finished
+  const [status, setStatus] = useState(duelData.status === "finished" ? "finished" : "playing"); // playing, voting, finished
   const [content, setContent] = useState("");
   const isPlayer = duelData.participants.includes(currentUser?.email);
 
   useEffect(() => {
-    // Si le duel vient de commencer, on peut imaginer un petit délai de grâce
     if (status === "playing") {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
@@ -30,11 +29,11 @@ export default function DuelArena({ duelData, currentUser }) {
 
   const submitFinalText = async () => {
     try {
-      await fetch('/api/github-db', {
-        method: 'PATCH',
+      await fetch('/api/duel-engine', {
+        method: 'POST', // Changé en POST pour correspondre à ton moteur de duel
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          action: 'saveDuelText', 
+          action: 'saveDuelText', // Cette action doit être gérée dans ton route.js
           duelId: duelData.id, 
           text: content, 
           email: currentUser.email 
@@ -68,11 +67,17 @@ export default function DuelArena({ duelData, currentUser }) {
         </div>
         
         <div className="flex items-center gap-4 bg-white/5 px-8 py-4 rounded-3xl border border-white/10 shadow-2xl shadow-rose-500/5">
-          <Timer className={timeLeft < 60 ? "text-rose-500 animate-pulse" : "text-teal-500"} size={28} />
+          {status === "finished" ? (
+            <Trophy className="text-amber-500" size={28} />
+          ) : (
+            <Timer className={timeLeft < 60 ? "text-rose-500 animate-pulse" : "text-teal-500"} size={28} />
+          )}
           <div className="flex flex-col">
-            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Temps restant</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">
+              {status === "finished" ? "Duel Terminé" : "Temps restant"}
+            </span>
             <span className="text-3xl font-mono font-black tabular-nums">
-              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              {status === "finished" ? "FIN" : `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`}
             </span>
           </div>
         </div>
@@ -83,16 +88,17 @@ export default function DuelArena({ duelData, currentUser }) {
         {duelData.participants.map((email, index) => {
           const isMe = currentUser?.email === email;
           const participantText = duelData.texts?.[email] || "";
+          const isWinner = duelData.winner === email;
           
           return (
             <div key={email} className="group space-y-6">
               <div className="flex items-center justify-between px-4">
                 <div className="flex items-center gap-4 text-slate-500">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${isMe ? 'bg-teal-500/10 border-teal-500/20 text-teal-500' : 'bg-white/5 border-white/10 text-slate-600'}`}>
-                    {isMe ? <UserCircle size={18} /> : <Ghost size={18} />}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${isWinner ? 'bg-amber-500/20 border-amber-500 text-amber-500' : isMe ? 'bg-teal-500/10 border-teal-500/20 text-teal-500' : 'bg-white/5 border-white/10 text-slate-600'}`}>
+                    {isWinner ? <Trophy size={18} /> : isMe ? <UserCircle size={18} /> : <Ghost size={18} />}
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-widest">
-                    {isMe ? "Votre Plume" : `Concurrent ${index + 1}`}
+                    {isMe ? "Votre Plume" : `Concurrent ${index + 1}`} {isWinner && "• Vainqueur"}
                   </span>
                 </div>
                 {status === "voting" && (
@@ -106,13 +112,13 @@ export default function DuelArena({ duelData, currentUser }) {
               <div className="relative">
                 <textarea
                   readOnly={!isMe || status !== "playing"}
-                  value={isMe ? content : (status !== "playing" ? participantText : "L'adversaire est en train de rédiger son destin...")}
+                  value={isMe && status === "playing" ? content : (status !== "playing" ? participantText : "L'adversaire est en train de rédiger son destin...")}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder={isMe ? "Que l'encre coule..." : "Le texte sera révélé à la fin du chrono."}
                   className={`w-full h-[550px] bg-white/5 p-10 rounded-[3rem] border-2 transition-all duration-700 font-serif text-xl md:text-2xl resize-none outline-none leading-relaxed ${
-                    isMe 
-                      ? 'border-teal-500/20 focus:border-teal-500 shadow-[inset_0_0_40px_rgba(20,184,166,0.02)]' 
-                      : 'border-white/5 text-slate-400 italic'
+                    isWinner ? 'border-amber-500/40 shadow-[0_0_50px_rgba(245,158,11,0.05)]' :
+                    isMe ? 'border-teal-500/20 focus:border-teal-500 shadow-[inset_0_0_40px_rgba(20,184,166,0.02)]' : 
+                    'border-white/5 text-slate-400 italic'
                   } ${status === "voting" ? 'shadow-[0_0_60px_rgba(255,255,255,0.03)] border-white/10' : ''}`}
                 />
                 
