@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
-  Maximize2, Minimize2, Clock, AlertTriangle,
-  Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck, Ghost
+  Clock, AlertTriangle, Sun, Zap, Coffee, 
+  Loader2, Sparkles, Megaphone, ShieldCheck, Ghost
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
 import SecurityLock from "@/components/SecurityLock";
+import FocusModeControl from "@/components/FocusModeControl";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -280,17 +281,17 @@ export default function TextContent() {
               <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
                 <ArrowLeft size={20} />
               </button>
-              <button onClick={() => setIsFocusMode(true)} className="p-3 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-lg hover:bg-teal-600 transition-all">
-                <Maximize2 size={20} />
-              </button>
+              <FocusModeControl 
+                isFocusMode={isFocusMode} 
+                toggleFocus={() => setIsFocusMode(true)} 
+              />
             </div>
           </nav>
 
-          {isFocusMode && (
-            <button onClick={() => setIsFocusMode(false)} className="fixed top-12 right-8 z-[110] p-4 rounded-full bg-teal-600 text-white shadow-[0_0_20px_rgba(13,148,136,0.4)] hover:bg-teal-500 hover:scale-110 transition-all active:scale-95">
-              <Minimize2 size={24} />
-            </button>
-          )}
+          <FocusModeControl 
+            isFocusMode={isFocusMode} 
+            toggleFocus={() => setIsFocusMode(false)} 
+          />
 
           <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
              {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
