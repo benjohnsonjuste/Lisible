@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
-  Maximize2, Minimize2, Clock, AlertTriangle,
+  Clock, AlertTriangle,
   Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck, Ghost
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
 import SecurityLock from "@/components/SecurityLock";
+import LumiReader from "@/components/reader/LumiReader";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -280,17 +281,16 @@ export default function TextContent() {
               <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
                 <ArrowLeft size={20} />
               </button>
-              <button onClick={() => setIsFocusMode(true)} className="p-3 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
-                <Maximize2 size={20} />
-              </button>
             </div>
           </nav>
 
-          {isFocusMode && (
-            <button onClick={() => setIsFocusMode(false)} className="fixed top-[100px] right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
-              <Minimize2 size={24} />
-            </button>
-          )}
+          <LumiReader 
+            isActive={isFocusMode} 
+            onClose={() => setIsFocusMode(false)}
+            content={text.content}
+            title={text.title}
+            author={text.authorName}
+          />
 
           <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
              {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
@@ -358,6 +358,10 @@ export default function TextContent() {
           <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 ring-8 ring-slate-950/5 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
               <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}>
                 <Heart size={22} className={isLiking ? "fill-current" : ""} />
+              </button>
+              <div className="w-px h-8 bg-white/10 mx-1" />
+              <button onClick={() => setIsFocusMode(true)} className="p-5 text-white hover:text-amber-400 rounded-full transition-all active:scale-90">
+                <Sun size={22} />
               </button>
               <div className="w-px h-8 bg-white/10 mx-1" />
               <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90">
