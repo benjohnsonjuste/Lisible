@@ -1,32 +1,38 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { Sparkles, Moon, Sun, Wind, Flame } from "lucide-react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Sparkles, Moon, Sun, Wind, Flame, X } from "lucide-react";
 
 const THEMES = {
-  neutral: "from-slate-50 to-white text-slate-900 shadow-slate-200",
-  mystery: "from-slate-950 via-indigo-950 to-black text-slate-100 shadow-indigo-500/20",
-  action: "from-orange-50 via-red-50 to-white text-slate-900 shadow-red-200",
-  nature: "from-emerald-50 via-teal-50 to-white text-slate-900 shadow-teal-200",
-  dream: "from-purple-50 via-fuchsia-50 to-white text-slate-900 shadow-fuchsia-200"
+  neutral: "from-slate-50 to-white text-slate-900",
+  mystery: "from-slate-950 via-indigo-950 to-black text-slate-100",
+  action: "from-orange-50 via-red-50 to-white text-slate-900",
+  nature: "from-emerald-50 via-teal-50 to-white text-slate-900",
+  dream: "from-purple-50 via-fuchsia-50 to-white text-slate-900"
 };
 
-export default function LumiReader({ title, content }) {
+export default function LumiReader({ title, content, author, onClose }) {
   const [currentTheme, setCurrentTheme] = useState("neutral");
   const [isLumiActive, setIsLumiActive] = useState(true);
   const containerRef = useRef(null);
 
-  // Mots-clés pour l'analyse de sentiment simplifiée
+  // Sécurisation du contenu : conversion du texte brut en tableau de paragraphes
+  const paragraphs = useMemo(() => {
+    if (!content) return [];
+    return typeof content === "string" 
+      ? content.split('\n').filter(p => p.trim() !== "") 
+      : content;
+  }, [content]);
+
   const keywords = {
-    mystery: ["nuit", "ombre", "secret", "noir", "silence", "peur", "sombre", "mort"],
-    action: ["sang", "feu", "épée", "courir", "cri", "guerre", "choc", "brûle"],
-    nature: ["vent", "mer", "soleil", "fleur", "vert", "forêt", "eau", "ciel"],
-    dream: ["rêve", "étoile", "nuage", "magie", "amour", "douceur", "infini"]
+    mystery: ["nuit", "ombre", "secret", "noir", "silence", "peur", "sombre", "mort", "fantôme"],
+    action: ["sang", "feu", "épée", "courir", "cri", "guerre", "choc", "brûle", "vitesse"],
+    nature: ["vent", "mer", "soleil", "fleur", "vert", "forêt", "eau", "ciel", "rivière"],
+    dream: ["rêve", "étoile", "nuage", "magie", "amour", "douceur", "infini", "nuée"]
   };
 
   const analyzeContent = (text) => {
     if (!isLumiActive) return;
     const words = text.toLowerCase();
-    
     for (const [theme, list] of Object.entries(keywords)) {
       if (list.some(word => words.includes(word))) {
         setCurrentTheme(theme);
@@ -36,13 +42,13 @@ export default function LumiReader({ title, content }) {
     setCurrentTheme("neutral");
   };
 
-  // Détecter le paragraphe au centre de l'écran lors du scroll
   useEffect(() => {
     const handleScroll = () => {
-      const paragraphs = containerRef.current.querySelectorAll('p');
-      let leadingPara = paragraphs[0];
+      if (!containerRef.current) return;
+      const pElements = containerRef.current.querySelectorAll('p');
+      let leadingPara = pElements[0];
       
-      paragraphs.forEach(p => {
+      pElements.forEach(p => {
         const rect = p.getBoundingClientRect();
         if (rect.top > 0 && rect.top < window.innerHeight / 2) {
           leadingPara = p;
@@ -53,53 +59,61 @@ export default function LumiReader({ title, content }) {
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    // Bloquer le scroll du body quand le mode focus est actif
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.body.style.overflow = 'unset';
+    };
   }, [isLumiActive]);
 
   return (
-    <div className={`min-h-screen transition-all duration-[2000ms] ease-in-out bg-gradient-to-b ${THEMES[currentTheme]}`}>
+    <div className={`fixed inset-0 z-[200] overflow-y-auto transition-all duration-[1500ms] bg-gradient-to-b ${THEMES[currentTheme]}`}>
       
-      {/* Barre d'outils flottante High-Tech */}
-      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-4">
-        <button 
-          onClick={() => setIsLumiActive(!isLumiActive)}
-          className={`p-4 rounded-2xl backdrop-blur-md border transition-all ${isLumiActive ? 'bg-teal-500 border-teal-400 text-white shadow-lg shadow-teal-500/40' : 'bg-white/10 border-white/20 text-slate-400'}`}
-          title="Activer Lumi-Lecture"
-        >
-          <Sparkles size={20} className={isLumiActive ? "animate-pulse" : ""} />
-        </button>
-        
-        <div className="flex flex-col gap-2 p-2 rounded-2xl bg-black/5 backdrop-blur-md border border-black/5 italic text-[10px] font-black items-center text-slate-400">
-           {currentTheme === "mystery" && <Moon size={14} className="text-indigo-400" />}
-           {currentTheme === "action" && <Flame size={14} className="text-red-400" />}
-           {currentTheme === "nature" && <Wind size={14} className="text-teal-400" />}
-           {currentTheme === "dream" && <Sun size={14} className="text-fuchsia-400" />}
-           <span className="uppercase tracking-widest mt-1">{currentTheme}</span>
+      {/* Contrôles */}
+      <div className="fixed right-6 top-6 z-[210] flex items-center gap-3">
+        <div className="flex items-center gap-3 p-2 px-4 rounded-2xl bg-black/5 backdrop-blur-md border border-black/5 text-[10px] font-black uppercase tracking-widest text-current opacity-50">
+           {currentTheme === "mystery" && <Moon size={14} />}
+           {currentTheme === "action" && <Flame size={14} />}
+           {currentTheme === "nature" && <Wind size={14} />}
+           {currentTheme === "dream" && <Sun size={14} />}
+           <span>{currentTheme}</span>
         </div>
+
+        <button 
+          onClick={onClose}
+          className="p-4 rounded-2xl bg-black/5 hover:bg-rose-500 hover:text-white transition-all border border-black/5"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      {/* Zone de lecture */}
-      <article ref={containerRef} className="max-w-3xl mx-auto px-6 py-32 space-y-12">
-        <header className="space-y-4 mb-20 text-center">
-          <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter leading-none uppercase">
+      <article ref={containerRef} className="max-w-3xl mx-auto px-6 py-32 relative z-10">
+        <header className="mb-24 space-y-6">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Lumière sur le texte</p>
+          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter leading-none">
             {title}
           </h1>
-          <div className="h-1 w-24 bg-current mx-auto opacity-20 rounded-full" />
+          <p className="text-xl font-bold italic opacity-60">par {author}</p>
         </header>
 
-        <div className="prose prose-xl prose-slate transition-colors duration-1000">
-          {content.map((para, i) => (
-            <p key={i} className="text-2xl font-medium leading-relaxed mb-10 opacity-90 transition-all hover:opacity-100">
+        <div className="space-y-12 font-serif">
+          {paragraphs.map((para, i) => (
+            <p key={i} className="text-2xl md:text-3xl leading-relaxed opacity-90 transition-opacity duration-700 hover:opacity-100">
               {para}
             </p>
           ))}
         </div>
+
+        <footer className="mt-40 pb-20 text-center opacity-30 text-[10px] font-black uppercase tracking-[0.5em]">
+          Fin du manuscrit
+        </footer>
       </article>
 
-      {/* Effet de halo ambiant */}
-      <div className={`fixed inset-0 pointer-events-none transition-opacity duration-[3000ms] z-0 opacity-30 ${currentTheme !== "neutral" ? 'block' : 'hidden'}`}>
-        <div className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] bg-current`} />
-        <div className={`absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] bg-current`} />
+      {/* Effet d'ambiance dynamique */}
+      <div className={`fixed inset-0 pointer-events-none transition-opacity duration-[3000ms] z-0 opacity-20 ${currentTheme !== "neutral" ? 'opacity-20' : 'opacity-0'}`}>
+        <div className="absolute top-0 left-0 w-full h-full bg-current mix-blend-overlay opacity-5" />
       </div>
     </div>
   );
