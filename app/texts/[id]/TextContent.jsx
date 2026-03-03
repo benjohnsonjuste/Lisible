@@ -11,7 +11,9 @@ import {
 
 import { InTextAd } from "@/components/InTextAd";
 import SecurityLock from "@/components/SecurityLock";
-import LumiReader from "@/components/reader/LumiReader";
+
+// Import dynamique pour éviter l'erreur "client-side exception"
+const LumiReader = dynamic(() => import("@/components/reader/LumiReader"), { ssr: false });
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -96,7 +98,7 @@ export default function TextContent() {
 
       const indexRes = await fetch(`/api/github-db?type=library&t=${Date.now()}`);
       if (indexRes.ok) {
-        const indexData = await indexRes.ok ? await indexRes.json() : { content: [] };
+        const indexData = await indexRes.json();
         const sortedLibrary = (indexData.content || []).sort((a, b) => {
             const certA = Number(a.certified || 0);
             const certB = Number(b.certified || 0);
@@ -284,13 +286,15 @@ export default function TextContent() {
             </div>
           </nav>
 
-          <LumiReader 
-            isActive={isFocusMode} 
-            onClose={() => setIsFocusMode(false)}
-            content={text.content}
-            title={text.title}
-            author={text.authorName}
-          />
+          {/* Appel du composant LumiReader uniquement en mode focus */}
+          {isFocusMode && (
+            <LumiReader 
+              title={text.title} 
+              content={text.content} 
+              author={text.authorName}
+              onClose={() => setIsFocusMode(false)}
+            />
+          )}
 
           <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
              {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
@@ -360,9 +364,12 @@ export default function TextContent() {
                 <Heart size={22} className={isLiking ? "fill-current" : ""} />
               </button>
               <div className="w-px h-8 bg-white/10 mx-1" />
+              
+              {/* Bouton pour activer le Focus Mode (LumiReader) */}
               <button onClick={() => setIsFocusMode(true)} className="p-5 text-white hover:text-amber-400 rounded-full transition-all active:scale-90">
                 <Sun size={22} />
               </button>
+              
               <div className="w-px h-8 bg-white/10 mx-1" />
               <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90">
                 <Share2 size={22} />
