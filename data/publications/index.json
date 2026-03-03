@@ -299,6 +299,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1772554267181",
+    "title": "La Ballade des Amoureux",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-03T16:11:07.181Z",
+    "views": 1,
+    "likes": 0,
+    "certified": 1
+  },
+  {
     "id": "txt_1772554025498",
     "title": "La ballade des amoureux",
     "author": "Adama Junior Cissokho ",
@@ -350,19 +363,6 @@
     "date": "2026-02-24T04:20:10.010Z",
     "views": 2,
     "likes": 1,
-    "certified": 0
-  },
-  {
-    "id": "txt_1772554267181",
-    "title": "La Ballade des Amoureux",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-03T16:11:07.181Z",
-    "views": 1,
-    "likes": 0,
     "certified": 0
   },
   {
