@@ -117,7 +117,7 @@ export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
-    const { action, userEmail, textId, amount, currentPassword, newPassword, ...data } = body;
+    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, ...data } = body;
     
     const emailToUse = userEmail || data.email;
     const targetPath = getSafePath(emailToUse);
@@ -180,45 +180,33 @@ export async function POST(req) {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
       const indexPath = `data/publications/index.json`;
-      
-      // On privilégie l'URL Unsplash (data.image) sur le Base64
       const finalImage = data.image || data.imageBase64 || null;
-      
-      const newPub = { 
-        ...data, 
-        id: pubId, 
-        image: finalImage, 
-        date: new Date().toISOString(), 
-        views: 0, 
-        likes: 0, 
-        comments: [], 
-        certified: 0 
-      };
-      
+      const newPub = { ...data, id: pubId, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
-      
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
-      
-      indexContent.unshift({ 
-        id: pubId, 
-        title: data.title, 
-        author: data.authorName, 
-        authorEmail: data.authorEmail, 
-        category: data.category, 
-        genre: data.genre, 
-        isConcours: data.isConcours || false, 
-        image: finalImage, 
-        date: newPub.date, 
-        views: 0, 
-        likes: 0, 
-        certified: 0 
-      });
-      
+      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: data.isConcours || false, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
-      
       return NextResponse.json({ success: true, id: pubId });
+    }
+
+    if (action === 'saveDuelText') {
+      const duelFilePath = `data/duels.json`;
+      const file = await getFile(duelFilePath);
+      if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
+      
+      const duels = Array.isArray(file.content) ? file.content : [];
+      const duelIndex = duels.findIndex(d => d.id === duelId);
+      
+      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
+
+      if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
+      duels[duelIndex].texts[data.email] = data.text;
+
+      await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'edit_text') {
@@ -227,21 +215,13 @@ export async function POST(req) {
       const indexPath = `data/publications/index.json`;
       const file = await getFile(path);
       if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
-      
       const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
       await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
-
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
         const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
         if (itemIndex > -1) {
-          indexFile.content[itemIndex] = { 
-            ...indexFile.content[itemIndex],
-            title: data.title || indexFile.content[itemIndex].title,
-            category: data.category || indexFile.content[itemIndex].category,
-            genre: data.genre || indexFile.content[itemIndex].genre,
-            image: data.image || indexFile.content[itemIndex].image
-          };
+          indexFile.content[itemIndex] = { ...indexFile.content[itemIndex], title: data.title || indexFile.content[itemIndex].title, category: data.category || indexFile.content[itemIndex].category, genre: data.genre || indexFile.content[itemIndex].genre, image: data.image || indexFile.content[itemIndex].image };
           await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
         }
       }
@@ -254,11 +234,7 @@ export async function POST(req) {
       const indexPath = `data/publications/index.json`;
       const file = await getFile(path);
       if (file) {
-        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha })
-        });
+        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha }) });
       }
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
@@ -266,16 +242,6 @@ export async function POST(req) {
         await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
       }
       return NextResponse.json({ success: true });
-    }
-
-    // ... Reste des actions (follow, transfer, etc.) inchangées pour préserver la logique métier ...
-    if (action === 'user_sync' || action === 'update_user') {
-      const file = await getFile(targetPath);
-      if (!file) return NextResponse.json({ error: "Sync impossible" }, { status: 404 });
-      const userData = { ...file.content, ...data };
-      await updateFile(targetPath, userData, file.sha, `👤 User Sync/Update`);
-      const { password, ...safeUser } = userData;
-      return NextResponse.json({ success: true, user: safeUser });
     }
 
     if (action === 'follow' || action === 'unfollow') {
@@ -288,11 +254,7 @@ export async function POST(req) {
         if (!follower.content.following.includes(targetEmailClean)) {
           follower.content.following.push(targetEmailClean);
           target.content.followers.push(userEmailClean);
-          target.content.notifications.unshift({
-            id: `follow_${Date.now()}`, type: "follow",
-            message: `${follower.content.name} s'est abonné à vous !`,
-            date: new Date().toISOString(), read: false
-          });
+          target.content.notifications.unshift({ id: `follow_${Date.now()}`, type: "follow", message: `${follower.content.name} s'est abonné à vous !`, date: new Date().toISOString(), read: false });
         }
       } else {
         follower.content.following = follower.content.following.filter(e => e !== targetEmailClean);
