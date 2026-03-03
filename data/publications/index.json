@@ -189,6 +189,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1772554267181",
+    "title": "La Ballade des Amoureux",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-03T16:11:07.181Z",
+    "views": 7,
+    "likes": 1,
+    "certified": 5
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -212,19 +225,6 @@
     "date": "2026-02-23T13:35:39.084Z",
     "views": 13,
     "likes": 3,
-    "certified": 4
-  },
-  {
-    "id": "txt_1772554267181",
-    "title": "La Ballade des Amoureux",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-03T16:11:07.181Z",
-    "views": 7,
-    "likes": 1,
     "certified": 4
   },
   {
