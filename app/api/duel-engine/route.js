@@ -46,7 +46,6 @@ export async function POST(req) {
     const { challengeId, player1, player2 } = body;
     const p2 = users.find(u => u.email === player2);
 
-    // Suppression de la vérification de Li
     p2.duelRequests = (p2.duelRequests || []).filter(r => r.id !== challengeId);
 
     const newDuel = {
@@ -78,7 +77,22 @@ export async function POST(req) {
     return new Response(JSON.stringify({ success: true }));
   }
 
-  // --- 4. FINALISER LE GAGNANT ---
+  // --- 4. SAUVEGARDER LE TEXTE DU DUEL ---
+  if (action === "saveDuelText") {
+    const { text, email } = body;
+    const duel = duels.find(d => d.id === duelId);
+
+    if (!duel) return new Response("Duel introuvable", { status: 404 });
+    if (duel.status === "finished") return new Response("Duel déjà terminé", { status: 403 });
+
+    if (!duel.texts) duel.texts = {};
+    duel.texts[email] = text;
+
+    await saveGithubFile("data/duels.json", duels, `✍️ Mise à jour manuscrit : ${email}`);
+    return new Response(JSON.stringify({ success: true }));
+  }
+
+  // --- 5. FINALISER LE GAGNANT ---
   if (action === "finalizeWinner") {
     const duel = duels.find(d => d.id === duelId);
     if (!duel || duel.status === "finished") return new Response("Duel invalide", { status: 404 });
@@ -119,7 +133,7 @@ export async function POST(req) {
     return new Response(JSON.stringify({ success: true, winner: winnerName }));
   }
 
-  // --- 5. VOTE (Reste à 1 Li pour éviter le spam de votes) ---
+  // --- 6. VOTE ---
   if (action === "vote") {
     const { targetEmail, voterEmail } = body;
     const voter = users.find(u => u.email === voterEmail);
