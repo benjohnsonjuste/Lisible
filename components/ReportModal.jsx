@@ -23,21 +23,20 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
 
     setIsSubmitting(true);
     try {
-      // On utilise l'API github-db pour enregistrer le signalement
-      // Cela permet d'envoyer les données vers votre système de stockage centralisé
+      // Envoi des détails du signalement à l'adresse spécifiée via l'API
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "report-content",
-          targetEmail: "cmo.lablitteraire7@gmail.com", // Destinataire forcé
+          targetEmail: "cmo.lablitteraire7@gmail.com", 
           reportData: {
             textId,
             textTitle,
             reporterEmail: userEmail || "Anonyme",
             reason,
             details,
-            date: new Date().toISOString()
+            date: new Date().toLocaleString("fr-FR")
           }
         }),
       });
