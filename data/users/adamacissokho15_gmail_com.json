@@ -4,6 +4,13 @@
   "li": 54,
   "notifications": [
     {
+      "id": "like_1772554217393",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La ballade des amoureux\" !",
+      "date": "2026-03-03T16:10:17.393Z",
+      "read": false
+    },
+    {
       "id": "like_1772093308363",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Le Vide\" !",
