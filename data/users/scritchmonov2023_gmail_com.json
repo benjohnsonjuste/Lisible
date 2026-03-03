@@ -4,6 +4,13 @@
   "li": 188,
   "notifications": [
     {
+      "id": "like_1772556478700",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La Ballade des Amoureux\" !",
+      "date": "2026-03-03T16:47:58.700Z",
+      "read": false
+    },
+    {
       "id": "cert_1772556466873",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"La Ballade des Amoureux\" (+1 Li).",
