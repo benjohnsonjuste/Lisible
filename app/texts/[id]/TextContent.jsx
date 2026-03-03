@@ -5,15 +5,12 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import {
   ArrowLeft, Share2, Eye, Heart, Trophy,
-  Clock, AlertTriangle,
+  Maximize2, Minimize2, Clock, AlertTriangle,
   Sun, Zap, Coffee, Loader2, Sparkles, Megaphone, ShieldCheck, Ghost
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
 import SecurityLock from "@/components/SecurityLock";
-
-// Import dynamique pour éviter l'erreur "client-side exception"
-const LumiReader = dynamic(() => import("@/components/reader/LumiReader"), { ssr: false });
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -98,7 +95,7 @@ export default function TextContent() {
 
       const indexRes = await fetch(`/api/github-db?type=library&t=${Date.now()}`);
       if (indexRes.ok) {
-        const indexData = await indexRes.json();
+        const indexData = await indexRes.ok ? await indexRes.json() : { content: [] };
         const sortedLibrary = (indexData.content || []).sort((a, b) => {
             const certA = Number(a.certified || 0);
             const certB = Number(b.certified || 0);
@@ -283,17 +280,16 @@ export default function TextContent() {
               <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
                 <ArrowLeft size={20} />
               </button>
+              <button onClick={() => setIsFocusMode(true)} className="p-3 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-lg hover:bg-teal-600 transition-all">
+                <Maximize2 size={20} />
+              </button>
             </div>
           </nav>
 
-          {/* Appel du composant LumiReader uniquement en mode focus */}
           {isFocusMode && (
-            <LumiReader 
-              title={text.title} 
-              content={text.content} 
-              author={text.authorName}
-              onClose={() => setIsFocusMode(false)}
-            />
+            <button onClick={() => setIsFocusMode(false)} className="fixed top-12 right-8 z-[110] p-4 rounded-full bg-teal-600 text-white shadow-[0_0_20px_rgba(13,148,136,0.4)] hover:bg-teal-500 hover:scale-110 transition-all active:scale-95">
+              <Minimize2 size={24} />
+            </button>
           )}
 
           <main className={`max-w-3xl mx-auto px-6 pt-40 pb-48 transition-all duration-1000 ${isFocusMode ? 'scale-[1.02]' : ''}`}>
@@ -363,13 +359,6 @@ export default function TextContent() {
               <button onClick={handleLike} className={`p-5 rounded-full transition-all ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}>
                 <Heart size={22} className={isLiking ? "fill-current" : ""} />
               </button>
-              <div className="w-px h-8 bg-white/10 mx-1" />
-              
-              {/* Bouton pour activer le Focus Mode (LumiReader) */}
-              <button onClick={() => setIsFocusMode(true)} className="p-5 text-white hover:text-amber-400 rounded-full transition-all active:scale-90">
-                <Sun size={22} />
-              </button>
-              
               <div className="w-px h-8 bg-white/10 mx-1" />
               <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90">
                 <Share2 size={22} />
