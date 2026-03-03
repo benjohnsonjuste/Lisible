@@ -1,8 +1,15 @@
 {
   "email": "adamacissokho15@gmail.com",
   "name": "",
-  "li": 54,
+  "li": 55,
   "notifications": [
+    {
+      "id": "cert_1772578190234",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La ballade des amoureux\" (+1 Li).",
+      "date": "2026-03-03T22:49:50.234Z",
+      "read": false
+    },
     {
       "id": "like_1772578113726",
       "type": "like",
