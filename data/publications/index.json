@@ -313,6 +313,19 @@
     "certified": 0
   },
   {
+    "id": "txt_1772554025498",
+    "title": "La ballade des amoureux",
+    "author": "Adama Junior Cissokho ",
+    "authorEmail": "adamacissokho15@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-03T16:07:05.498Z",
+    "views": 1,
+    "likes": 1,
+    "certified": 0
+  },
+  {
     "id": "1772093279458",
     "title": "Le Vide",
     "author": "Adama Junior Cissokho ",
@@ -362,19 +375,6 @@
     "image": null,
     "date": "2026-03-03T16:08:48.427Z",
     "views": 0,
-    "likes": 0,
-    "certified": 0
-  },
-  {
-    "id": "txt_1772554025498",
-    "title": "La ballade des amoureux",
-    "author": "Adama Junior Cissokho ",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-03T16:07:05.498Z",
-    "views": 1,
     "likes": 0,
     "certified": 0
   },
