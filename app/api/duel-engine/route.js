@@ -1,6 +1,41 @@
-import { getGithubFile, saveGithubFile } from "@/lib/github-db";
+import { NextResponse } from 'next/server';
 
-// Fonction utilitaire pour calculer le prochain dimanche (21h00 Heure Haïti)
+// On importe les fonctions du fichier github-db pour garder la cohérence
+// Si ces fonctions ne sont pas exportées, on utilise la logique interne
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+  token: process.env.GITHUB_TOKEN
+};
+
+async function getFile(path) {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
+      cache: 'no-store'
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content = JSON.parse(Buffer.from(data.content, 'base64').toString());
+    return { content, sha: data.sha };
+  } catch { return null; }
+}
+
+async function updateFile(path, content, sha, message) {
+  const encodedContent = Buffer.from(JSON.stringify(content, null, 2)).toString('base64');
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `[DUEL] ${message}`, content: encodedContent, sha })
+  });
+  return res.ok;
+}
+
+const getSafePath = (email) => {
+  const safeEmail = email.toLowerCase().trim().replace(/@/g, '_').replace(/\./g, '_').replace(/[^a-z0-9_]/g, '');
+  return `data/users/${safeEmail}.json`;
+};
+
 const getNextSundayISO = () => {
   const now = new Date();
   const nextSunday = new Date();
@@ -9,148 +44,113 @@ const getNextSundayISO = () => {
   return nextSunday.toISOString();
 };
 
-const getRandomTheme = async () => {
-  const themes = await getGithubFile("data/themes.json") || ["Le silence d'une plume abandonnée."];
-  const randomIndex = Math.floor(Math.random() * themes.length);
-  return themes[randomIndex];
-};
-
 export async function POST(req) {
-  const body = await req.json();
-  const { action, duelId } = body;
+  try {
+    const body = await req.json();
+    const { action, duelId } = body;
+    const duelsFile = await getFile("data/duels.json") || { content: [], sha: null };
+    const duels = duelsFile.content;
 
-  const users = await getGithubFile("data/users.json");
-  const duels = await getGithubFile("data/duels.json") || [];
+    // --- 1. ENVOYER UN DÉFI ---
+    if (action === "sendChallenge") {
+      const { senderEmail, targetEmail, senderName } = body;
+      const targetFile = await getFile(getSafePath(targetEmail));
 
-  // --- 1. ENVOYER UN DÉFI (Gratuit désormais) ---
-  if (action === "sendChallenge") {
-    const { senderEmail, targetEmail, senderName } = body;
-    const target = users.find(u => u.email === targetEmail);
+      if (!targetFile) return NextResponse.json({ error: "Destinataire introuvable" }, { status: 404 });
 
-    if (!target) return new Response("Destinataire introuvable", { status: 404 });
+      const targetData = targetFile.content;
+      if (!targetData.duelRequests) targetData.duelRequests = [];
+      
+      targetData.duelRequests.push({
+        id: `req_${Date.now()}`,
+        senderEmail,
+        senderName,
+        date: new Date().toISOString()
+      });
 
-    if (!target.duelRequests) target.duelRequests = [];
-    target.duelRequests.push({
-      id: `req_${Date.now()}`,
-      senderEmail,
-      senderName,
-      date: new Date().toISOString()
-    });
-
-    await saveGithubFile("data/users.json", users, `⚔️ Défi lancé par ${senderEmail}`);
-    return new Response(JSON.stringify({ success: true }));
-  }
-
-  // --- 2. ACCEPTER UN DUEL (Gratuit désormais) ---
-  if (action === "acceptDuel") {
-    const { challengeId, player1, player2 } = body;
-    const p2 = users.find(u => u.email === player2);
-
-    p2.duelRequests = (p2.duelRequests || []).filter(r => r.id !== challengeId);
-
-    const newDuel = {
-      id: `duel_${Date.now()}`,
-      date: getNextSundayISO(),
-      participants: [player1, player2],
-      texts: { [player1]: "", [player2]: "" },
-      votes: { [player1]: 0, [player2]: 0 },
-      status: "scheduled",
-      theme: await getRandomTheme(), 
-      winner: null
-    };
-
-    duels.push(newDuel);
-    await saveGithubFile("data/users.json", users);
-    await saveGithubFile("data/duels.json", duels, `🏁 Duel programmé entre ${player1} et ${player2}`);
-
-    return new Response(JSON.stringify({ success: true }));
-  }
-
-  // --- 3. REFUSER UN DUEL ---
-  if (action === "declineChallenge") {
-    const { challengeId, player2 } = body;
-    const p2 = users.find(u => u.email === player2);
-
-    p2.duelRequests = (p2.duelRequests || []).filter(r => r.id !== challengeId);
-
-    await saveGithubFile("data/users.json", users, `❌ Défi refusé par ${player2}`);
-    return new Response(JSON.stringify({ success: true }));
-  }
-
-  // --- 4. SAUVEGARDER LE TEXTE DU DUEL ---
-  if (action === "saveDuelText") {
-    const { text, email } = body;
-    const duel = duels.find(d => d.id === duelId);
-
-    if (!duel) return new Response("Duel introuvable", { status: 404 });
-    if (duel.status === "finished") return new Response("Duel déjà terminé", { status: 403 });
-
-    if (!duel.texts) duel.texts = {};
-    duel.texts[email] = text;
-
-    await saveGithubFile("data/duels.json", duels, `✍️ Mise à jour manuscrit : ${email}`);
-    return new Response(JSON.stringify({ success: true }));
-  }
-
-  // --- 5. FINALISER LE GAGNANT ---
-  if (action === "finalizeWinner") {
-    const duel = duels.find(d => d.id === duelId);
-    if (!duel || duel.status === "finished") return new Response("Duel invalide", { status: 404 });
-
-    const [p1, p2] = duel.participants;
-    const votesP1 = duel.votes[p1] || 0;
-    const votesP2 = duel.votes[p2] || 0;
-
-    let winnerEmail = votesP1 > votesP2 ? p1 : p2;
-    if (votesP1 === votesP2) winnerEmail = p1; 
-
-    const winnerProfile = users.find(u => u.email === winnerEmail);
-    const winnerName = winnerProfile?.penName || winnerProfile?.name || "L'Anonyme";
-
-    const updatedUsers = users.map(u => {
-      let badges = (u.badges || []).filter(b => b !== "Haute Classe");
-      if (u.email === winnerEmail) {
-        badges.push("Haute Classe");
-        if (!u.notifications) u.notifications = [];
-        u.notifications.unshift({
-          id: `victory_${Date.now()}`,
-          type: "victory",
-          title: "👑 La Couronne est à vous",
-          message: `Félicitations ! Vous avez remporté le duel contre ${winnerEmail === p1 ? p2 : p1}.`,
-          date: new Date().toISOString(),
-          read: false
-        });
-      }
-      return { ...u, badges };
-    });
-
-    duel.status = "finished";
-    duel.winner = winnerEmail;
-
-    await saveGithubFile("data/users.json", updatedUsers, `🏆 Nouveau Champion : ${winnerEmail}`);
-    await saveGithubFile("data/duels.json", duels, `🏁 Duel ${duelId} clôturé`);
-
-    return new Response(JSON.stringify({ success: true, winner: winnerName }));
-  }
-
-  // --- 6. VOTE ---
-  if (action === "vote") {
-    const { targetEmail, voterEmail } = body;
-    const voter = users.find(u => u.email === voterEmail);
-    
-    if (voter.li < 1) return new Response("Pas assez de Li", { status: 400 });
-    voter.li -= 1;
-
-    const duel = duels.find(d => d.id === duelId);
-    if (duel) {
-      duel.votes[targetEmail] = (duel.votes[targetEmail] || 0) + 1;
+      await updateFile(getSafePath(targetEmail), targetData, targetFile.sha, `⚔️ Défi par ${senderEmail}`);
+      return NextResponse.json({ success: true });
     }
 
-    await saveGithubFile("data/users.json", users);
-    await saveGithubFile("data/duels.json", duels);
+    // --- 2. ACCEPTER UN DUEL ---
+    if (action === "acceptDuel") {
+      const { challengeId, player1, player2 } = body;
+      const p2File = await getFile(getSafePath(player2));
 
-    return new Response(JSON.stringify({ success: true }));
+      if (!p2File) return NextResponse.json({ error: "Joueur introuvable" }, { status: 404 });
+
+      const p2Data = p2File.content;
+      p2Data.duelRequests = (p2Data.duelRequests || []).filter(r => r.id !== challengeId);
+
+      const newDuel = {
+        id: `duel_${Date.now()}`,
+        date: getNextSundayISO(),
+        participants: [player1, player2],
+        texts: { [player1]: "", [player2]: "" },
+        votes: { [player1]: 0, [player2]: 0 },
+        status: "scheduled",
+        theme: "Le silence d'une plume abandonnée.", // Fallback simple
+        winner: null
+      };
+
+      duels.push(newDuel);
+      await updateFile(getSafePath(player2), p2Data, p2File.sha, `✅ Défi accepté`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `🏁 Duel programmé: ${player1} vs ${player2}`);
+
+      return NextResponse.json({ success: true });
+    }
+
+    // --- 3. REFUSER UN DUEL ---
+    if (action === "declineChallenge") {
+      const { challengeId, player2 } = body;
+      const p2File = await getFile(getSafePath(player2));
+      if (!p2File) return NextResponse.json({ error: "Joueur introuvable" }, { status: 404 });
+
+      p2File.content.duelRequests = (p2File.content.duelRequests || []).filter(r => r.id !== challengeId);
+      await updateFile(getSafePath(player2), p2File.content, p2File.sha, `❌ Défi refusé`);
+      return NextResponse.json({ success: true });
+    }
+
+    // --- 4. SAUVEGARDER LE TEXTE ---
+    if (action === "saveDuelText") {
+      const { text, email } = body;
+      const duel = duels.find(d => d.id === duelId);
+
+      if (!duel) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+      if (duel.status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
+
+      if (!duel.texts) duel.texts = {};
+      duel.texts[email] = text;
+
+      await updateFile("data/duels.json", duels, duelsFile.sha, `✍️ Manuscrit: ${email}`);
+      return NextResponse.json({ success: true });
+    }
+
+    // --- 5. VOTE (1 Li pour voter) ---
+    if (action === "vote") {
+      const { targetEmail, voterEmail } = body;
+      const voterFile = await getFile(getSafePath(voterEmail));
+      const duel = duels.find(d => d.id === duelId);
+
+      if (!voterFile || !duel) return NextResponse.json({ error: "Données invalides" }, { status: 404 });
+      if (voterFile.content.li < 1) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
+
+      voterFile.content.li -= 1;
+      duel.votes[targetEmail] = (duel.votes[targetEmail] || 0) + 1;
+
+      await updateFile(getSafePath(voterEmail), voterFile.content, voterFile.sha, `🗳️ Vote effectué`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `📈 Score mis à jour`);
+
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
+}
 
-  return new Response("Action inconnue", { status: 400 });
+export async function GET() {
+  const duelsFile = await getFile("data/duels.json");
+  return NextResponse.json(duelsFile ? duelsFile.content : []);
 }
