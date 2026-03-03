@@ -275,19 +275,19 @@ export default function TextContent() {
              <div className="h-full bg-teal-600 shadow-[0_0_10px_rgba(13,148,136,0.5)] transition-all duration-300" style={{ width: `${readingProgress}%` }} />
           </div>
 
-          <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-8'}`}>
+          <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md border-b border-slate-100 py-3 shadow-sm' : 'bg-transparent py-4'}`}>
             <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-              <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
+              <button onClick={() => router.back()} className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
                 <ArrowLeft size={20} />
               </button>
-              <button onClick={() => setIsFocusMode(true)} className="p-4 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
+              <button onClick={() => setIsFocusMode(true)} className="p-3 rounded-2xl bg-white text-slate-900 border border-slate-100 shadow-sm">
                 <Maximize2 size={20} />
               </button>
             </div>
           </nav>
 
           {isFocusMode && (
-            <button onClick={() => setIsFocusMode(false)} className="fixed top-24 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
+            <button onClick={() => setIsFocusMode(false)} className="fixed top-[100px] right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50 hover:text-white hover:bg-white/20 transition-all">
               <Minimize2 size={24} />
             </button>
           )}
