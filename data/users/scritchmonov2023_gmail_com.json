@@ -1,8 +1,15 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "",
-  "li": 186,
+  "li": 187,
   "notifications": [
+    {
+      "id": "cert_1772556464447",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La Ballade des Amoureux\" (+1 Li).",
+      "date": "2026-03-03T16:47:44.447Z",
+      "read": false
+    },
     {
       "id": "like_1772556380067",
       "type": "like",
