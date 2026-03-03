@@ -135,19 +135,6 @@
     "certified": 23
   },
   {
-    "id": "txt_1770828929024",
-    "title": "Une lettre pour le futur",
-    "author": "Junior Zoro Bi",
-    "authorEmail": "juniorzoro382@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T16:55:29.024Z",
-    "views": 45,
-    "likes": 7,
-    "certified": 8
-  },
-  {
     "id": "txt_1772554267181",
     "title": "La Ballade des Amoureux",
     "author": "Fils de l’encre noire ",
@@ -158,6 +145,19 @@
     "date": "2026-03-03T16:11:07.181Z",
     "views": 10,
     "likes": 2,
+    "certified": 9
+  },
+  {
+    "id": "txt_1770828929024",
+    "title": "Une lettre pour le futur",
+    "author": "Junior Zoro Bi",
+    "authorEmail": "juniorzoro382@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T16:55:29.024Z",
+    "views": 45,
+    "likes": 7,
     "certified": 8
   },
   {
