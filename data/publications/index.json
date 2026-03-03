@@ -286,6 +286,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1772554267181",
+    "title": "La Ballade des Amoureux",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-03T16:11:07.181Z",
+    "views": 1,
+    "likes": 0,
+    "certified": 2
+  },
+  {
     "id": "1771772894224",
     "title": "La confiance",
     "author": "Francy yuri",
@@ -297,19 +310,6 @@
     "views": 3,
     "likes": 0,
     "certified": 2
-  },
-  {
-    "id": "txt_1772554267181",
-    "title": "La Ballade des Amoureux",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-03T16:11:07.181Z",
-    "views": 1,
-    "likes": 0,
-    "certified": 1
   },
   {
     "id": "txt_1772554025498",
