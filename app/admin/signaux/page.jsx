@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import LanceurDeSignaux from '@/components/LanceurDeSignaux';
 import { Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -8,24 +8,39 @@ export default function AdminSignauxPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const checkAuth = async (e) => {
     e.preventDefault();
-    // On appelle une API simple qui vérifie le mot de passe côté serveur
-    const res = await fetch('/api/admin/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
-    });
+    setIsVerifying(true);
+    
+    try {
+      // On utilise l'API github-db existante avec un broadcast "test" 
+      // Si le mot de passe est correct, l'API renvoie 200, sinon 403.
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'broadcast', 
+          adminToken: password,
+          message: "Vérification de connexion staff",
+          type: "info",
+          dryRun: true // Optionnel : pour indiquer à l'API de ne pas envoyer si vous l'implémentez
+        })
+      });
 
-    if (res.ok) {
-      const { token } = await res.json();
-      sessionStorage.setItem('admin_access_token', token);
-      setIsAuthenticated(true);
-      setError(false);
-    } else {
+      if (res.ok) {
+        sessionStorage.setItem('admin_access_token', password);
+        setIsAuthenticated(true);
+        setError(false);
+      } else {
+        setError(true);
+        setPassword("");
+      }
+    } catch (err) {
       setError(true);
-      setPassword("");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -44,14 +59,18 @@ export default function AdminSignauxPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={isVerifying}
               className={`w-full p-5 bg-slate-50 rounded-2xl text-center font-bold border-2 transition-all ${error ? 'border-rose-500' : 'border-transparent focus:border-teal-500'}`}
               placeholder="Code d'accès"
             />
-            <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black">
-              Déverrouiller
+            <button 
+              disabled={isVerifying}
+              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black disabled:opacity-50"
+            >
+              {isVerifying ? "Vérification..." : "Déverrouiller"}
             </button>
           </form>
-          {error && <p className="text-rose-500 text-[10px] font-black uppercase mt-4">Code erroné</p>}
+          {error && <p className="text-rose-500 text-[10px] font-black uppercase mt-4">Code erroné ou accès refusé</p>}
         </div>
       </div>
     );
@@ -61,7 +80,7 @@ export default function AdminSignauxPage() {
     <div className="min-h-screen bg-[#FCFBF9] p-8">
       <div className="max-w-4xl mx-auto">
         <header className="flex items-center justify-between mb-16">
-          <Link href="/dashboard" className="p-4 bg-white rounded-2xl border border-slate-100 hover:text-teal-600 transition-all">
+          <Link href="/dashboard" className="p-4 bg-white rounded-[1.2rem] border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
             <ArrowLeft size={20} />
           </Link>
           <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-600 rounded-full border border-teal-100">
