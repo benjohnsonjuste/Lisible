@@ -241,6 +241,19 @@
     "certified": 4
   },
   {
+    "id": "txt_1772587497201",
+    "title": "La ballade de l'inacceptable accepté",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-04T01:24:57.201Z",
+    "views": 4,
+    "likes": 3,
+    "certified": 3
+  },
+  {
     "id": "txt_1770824772287",
     "title": "La beauté d'une nymphe",
     "author": "Mbuya Ephraïm",
@@ -264,19 +277,6 @@
     "date": "2026-02-11T15:02:49.168Z",
     "views": 16,
     "likes": 4,
-    "certified": 2
-  },
-  {
-    "id": "txt_1772587497201",
-    "title": "La ballade de l'inacceptable accepté",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-04T01:24:57.201Z",
-    "views": 4,
-    "likes": 3,
     "certified": 2
   },
   {
