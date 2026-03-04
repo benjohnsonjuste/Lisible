@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon, Sword, Bell
+  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon, Sword, Bell, Bookmark, BookmarkX
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -37,7 +37,6 @@ export default function AuthorDashboard() {
             setUser(userData.content);
             localStorage.setItem("lisible_user", JSON.stringify(userData.content));
             
-            // Calcul des notifications non lues
             const unread = (userData.content.notifications || []).filter(n => !n.read).length;
             setUnreadNotifs(unread);
           }
@@ -56,9 +55,7 @@ export default function AuthorDashboard() {
                 const likesA = Number(a.likes || a.totalLikes || 0);
                 const likesB = Number(b.likes || b.totalLikes || 0);
                 if (likesB !== likesA) return likesB - likesA;
-                const dateA = a.date ? new Date(a.date).getTime() : 0;
-                const dateB = b.date ? new Date(b.date).getTime() : 0;
-                return dateB - dateA;
+                return new Date(b.date) - new Date(a.date);
               });
             setWorks(authorWorks);
           }
@@ -72,6 +69,31 @@ export default function AuthorDashboard() {
     }
     loadStudio();
   }, [router]);
+
+  const handleRemoveBookmark = async (e, textId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: "toggle_bookmark", 
+          userEmail: user.email, 
+          textId: textId 
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updatedUser = { ...user, bookmarks: data.bookmarks };
+        setUser(updatedUser);
+        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
+        toast.success("Retiré des favoris");
+      }
+    } catch (err) {
+      toast.error("Erreur");
+    }
+  };
 
   const generateBadge = (download = false) => {
     const canvas = canvasRef.current;
@@ -151,9 +173,7 @@ export default function AuthorDashboard() {
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ action: 'delete_text', textId: id }) 
       });
-      
       const data = await res.json();
-      
       if (res.ok && data.success) { 
         setWorks(prevWorks => prevWorks.filter(w => w.id !== id)); 
         toast.success("L'œuvre a été supprimée.", { id: toastId }); 
@@ -161,7 +181,6 @@ export default function AuthorDashboard() {
         throw new Error(data.error || "Erreur lors de la suppression");
       }
     } catch (e) { 
-      console.error("Delete error:", e);
       toast.error("Échec du retrait.", { id: toastId }); 
     }
   };
@@ -176,6 +195,7 @@ export default function AuthorDashboard() {
   if (!user) return null;
   const followerCount = user.followers?.length || 0;
   const canWithdraw = (user.li >= 25000) && (followerCount >= 250);
+  const bookmarks = user.bookmarks || [];
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
@@ -227,12 +247,10 @@ export default function AuthorDashboard() {
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
-          
           <Link href="/battle/close" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all border-4 border-white/20">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Événement</p><h3 className="text-xl font-bold italic">Battle Poétique</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"><Sword size={24} /></div>
           </Link>
-
           <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p><h3 className="text-xl font-bold italic">Gérer mon compte</h3></div>
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><User size={22} /></div>
@@ -259,6 +277,46 @@ export default function AuthorDashboard() {
           </div>
         </div>
 
+        {/* SECTION FAVORIS */}
+        <section className="space-y-6 pt-6">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <Bookmark size={20} className="text-teal-600" />
+              <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Ma Bibliothèque.</h2>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{bookmarks.length} Enregistrés</span>
+          </div>
+          
+          {bookmarks.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {bookmarks.map((fav) => (
+                <Link href={`/texts/${fav.id}`} key={fav.id} className="group bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-teal-200 transition-all flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-teal-500 transition-colors">
+                        <FileText size={20} />
+                      </div>
+                      <div className="max-w-[150px]">
+                        <h4 className="font-bold text-slate-900 truncate text-sm">{fav.title}</h4>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">Par {fav.author}</p>
+                      </div>
+                   </div>
+                   <button 
+                    onClick={(e) => handleRemoveBookmark(e, fav.id)}
+                    className="p-3 text-slate-300 hover:text-rose-500 transition-colors"
+                   >
+                     <BookmarkX size={18} />
+                   </button>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
+              <p className="text-slate-400 text-xs font-medium italic">Votre bibliothèque est vide pour le moment.</p>
+            </div>
+          )}
+        </section>
+
+        {/* SECTION MANUSCRITS */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Manuscrits.</h2>
