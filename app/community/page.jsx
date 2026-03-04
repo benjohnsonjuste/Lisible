@@ -2,12 +2,15 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
-  ShieldCheck, Crown, Settings, Sparkles, Sun, Trophy
+  ShieldCheck, Crown, Settings, Sparkles, Sun, Trophy,
+  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-// Cache global hors du composant pour persister durant la session
+// Simulation de l'importation de data/users (à adapter selon votre structure de dossiers réelle)
+// import allUsers from "@/data/users.json"; 
+
 let authorsCache = null;
 
 export default function CommunautePage() {
@@ -16,7 +19,7 @@ export default function CommunautePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [submitting, setSubmitting] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [visibleCount, setVisibleCount] = useState(20); // Augmenté pour voir plus de monde
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -30,48 +33,39 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      const resIndex = await fetch(`/api/github-db?type=publications`);
-      const indexData = await resIndex.json();
+      // 1. Récupérer TOUS les utilisateurs de la base de données
+      const resAllUsers = await fetch(`/api/github-db?type=all_users`);
+      const allUsersData = await resAllUsers.json();
       
-      if (!indexData || !Array.isArray(indexData.content)) {
-        throw new Error("Impossible de charger l'index");
-      }
+      // 2. Récupérer les publications pour les stats
+      const resPubs = await fetch(`/api/github-db?type=publications`);
+      const indexData = await resPubs.json();
+      
+      const publications = Array.isArray(indexData.content) ? indexData.content : [];
+      const userList = Array.isArray(allUsersData.content) ? allUsersData.content : [];
 
-      const uniqueEmails = [...new Set(indexData.content.map(p => p.authorEmail))].filter(Boolean);
-
-      const authorProfiles = await Promise.all(
-        uniqueEmails.map(async (email) => {
-          try {
-            const resUser = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
-            const userData = await resUser.json();
-            
-            if (userData && userData.content) {
-              const stats = indexData.content.reduce((acc, pub) => {
-                if (pub.authorEmail?.toLowerCase() === email.toLowerCase()) {
-                  acc.works += 1;
-                  acc.views += (Number(pub.views) || 0);
-                  acc.likes += (Number(pub.likes) || 0);
-                  acc.certified += (Number(pub.certified) || 0);
-                }
-                return acc;
-              }, { works: 0, views: 0, likes: 0, certified: 0 });
-
-              return {
-                ...userData.content,
-                worksCount: stats.works,
-                views: stats.views,
-                likes: stats.likes,
-                totalCertified: stats.certified
-              };
-            }
-          } catch (err) {
-            console.error(`Erreur pour ${email}:`, err);
+      // 3. Fusionner les données pour inclure absolument tout le monde
+      const finalAuthors = userList.map(user => {
+        const stats = publications.reduce((acc, pub) => {
+          if (pub.authorEmail?.toLowerCase() === user.email?.toLowerCase()) {
+            acc.works += 1;
+            acc.views += (Number(pub.views) || 0);
+            acc.likes += (Number(pub.likes) || 0);
+            acc.certified += (Number(pub.certified) || 0);
           }
-          return null;
-        })
-      );
+          return acc;
+        }, { works: 0, views: 0, likes: 0, certified: 0 });
 
-      const finalAuthors = authorProfiles.filter(a => a !== null && a.status !== "deleted");
+        return {
+          ...user,
+          worksCount: stats.works,
+          views: stats.views,
+          likes: stats.likes,
+          totalCertified: stats.certified,
+          // Un utilisateur est "Vérifié" s'il a le badge Concours ou s'il a participé
+          isVerifiedParticipant: user.badges?.includes("Concours") || user.participatedInContest === true
+        };
+      }).filter(a => a.status !== "deleted");
 
       const sortedAuthors = finalAuthors.sort((a, b) => 
         ((b.li || 0) + (b.views || 0) + (b.worksCount || 0)) - ((a.li || 0) + (a.views || 0) + (a.worksCount || 0))
@@ -100,7 +94,6 @@ export default function CommunautePage() {
     const b = [];
     const mail = author.email?.toLowerCase().trim();
 
-    // --- BADGE HAUTE CLASSE (DUEL) ---
     if (author.badges?.includes("Haute Classe")) {
       b.push({ 
         icon: <Trophy size={10} className="animate-bounce" />, 
@@ -109,7 +102,6 @@ export default function CommunautePage() {
       });
     }
 
-    // Badges de rôle
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
     if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
@@ -117,7 +109,6 @@ export default function CommunautePage() {
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
     if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-red-900 text-white" });
     
-    // Badges de performance
     if (author.views === stats.maxViews && stats.maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
     }
@@ -190,7 +181,6 @@ export default function CommunautePage() {
           .slice(0, visibleCount)
           .map((a) => (
           <div key={a.email} className={`group bg-white rounded-[3.5rem] p-10 border shadow-xl relative overflow-hidden transition-all hover:shadow-2xl ${a.badges?.includes("Haute Classe") ? 'border-amber-200 ring-2 ring-amber-50' : 'border-slate-100 hover:border-teal-500/10'}`}>
-            {/* Badges */}
             <div className="absolute top-8 right-8 flex flex-col items-end gap-2 z-10">
               {getBadges(a).map((b, i) => (
                 <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5`}>
@@ -200,7 +190,6 @@ export default function CommunautePage() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
-              {/* Photo */}
               <div className={`w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 shadow-2xl bg-slate-100 flex-shrink-0 ${a.badges?.includes("Haute Classe") ? 'border-amber-400' : 'border-white'}`}>
                 <img 
                   src={a.profilePic || a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
@@ -209,12 +198,22 @@ export default function CommunautePage() {
                 />
               </div>
 
-              {/* Infos */}
               <div className="grow space-y-4 text-center sm:text-left">
-                <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter flex items-center justify-center sm:justify-start gap-2">
-                  {a.penName || a.name || "Auteur"} 
-                  {a.totalCertified > 0 && <ShieldCheck size={20} className="text-teal-500" fill="currentColor" />}
-                </h2>
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter flex items-center justify-center sm:justify-start gap-2">
+                    {a.penName || a.name || "Auteur"} 
+                    {/* Icône Vérifiée Instagram/X pour les participants au concours */}
+                    {a.isVerifiedParticipant && (
+                        <CheckCircle2 size={22} className="text-blue-500 fill-blue-500/10" strokeWidth={2.5} />
+                    )}
+                    {a.totalCertified > 0 && !a.isVerifiedParticipant && (
+                        <ShieldCheck size={20} className="text-teal-500" fill="currentColor" />
+                    )}
+                    </h2>
+                    {a.isVerifiedParticipant && (
+                        <span className="text-[9px] font-bold text-blue-600 uppercase tracking-widest block -mt-1">Compte Vérifié</span>
+                    )}
+                </div>
 
                 <div className="flex justify-center sm:justify-start gap-3">
                     <StatBadge label="Lectures" val={a.views || 0} color="rose" />
@@ -243,8 +242,8 @@ export default function CommunautePage() {
       
       {authors.length > visibleCount && (
         <div className="mt-20 text-center">
-          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl font-sans">
-            Découvrir plus de plumes
+          <button onClick={() => setVisibleCount(v => v + 20)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl font-sans">
+            Découvrir plus de plumes ({authors.length - visibleCount} restantes)
           </button>
         </div>
       )}
