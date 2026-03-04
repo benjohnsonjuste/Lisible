@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "Dahana DUCLAIRE",
-  "li": 345,
+  "li": 346,
   "notifications": [
+    {
+      "id": "cert_1772590732280",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Ta lumière dans mes ombres\" (+1 Li).",
+      "date": "2026-03-04T02:18:52.280Z",
+      "read": false
+    },
     {
       "id": "like_1772590587036",
       "type": "like",
