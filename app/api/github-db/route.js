@@ -117,7 +117,7 @@ export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
-    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, ...data } = body;
+    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, adminToken, ...data } = body;
     
     const emailToUse = userEmail || data.email;
     const targetPath = getSafePath(emailToUse);
@@ -133,7 +133,7 @@ export async function POST(req) {
         li: data.referralCode ? 250 : 50,
         status: "active",
         notifications: [], followers: [], following: [], works: [],
-        bookmarks: [], // Initialisation des favoris
+        bookmarks: [],
         created_at: new Date().toISOString(),
         ...data,
         password: hashedPassword 
@@ -195,10 +195,8 @@ export async function POST(req) {
     if (action === 'toggle_bookmark') {
       const userFile = await getFile(targetPath);
       if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      
       const user = userFile.content;
       if (!user.bookmarks) user.bookmarks = [];
-      
       const exists = user.bookmarks.find(b => b.id === textId);
       if (exists) {
         user.bookmarks = user.bookmarks.filter(b => b.id !== textId);
@@ -210,25 +208,52 @@ export async function POST(req) {
           date: new Date().toISOString() 
         });
       }
-      
       await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
       return NextResponse.json({ success: true, bookmarks: user.bookmarks });
+    }
+
+    if (action === 'broadcast') {
+      // Sécurité : Vérification sommaire du mot de passe admin via variable d'env
+      if (adminToken !== process.env.ADMIN_PASSWORD) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
+
+      // 1. Récupérer tous les emails via l'index des publications (méthode indirecte pour trouver les actifs)
+      const indexFile = await getFile(`data/publications/index.json`);
+      if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
+      
+      const emails = [...new Set(indexFile.content.map(p => p.authorEmail))];
+      const newSignal = {
+        id: `staff_${Date.now()}`,
+        type: data.type || "info",
+        message: data.message,
+        date: new Date().toISOString(),
+        read: false
+      };
+
+      // 2. Diffuser aux utilisateurs (limité aux auteurs pour cet exemple)
+      for (const email of emails) {
+        const uPath = getSafePath(email);
+        const uFile = await getFile(uPath);
+        if (uFile) {
+          if (!uFile.content.notifications) uFile.content.notifications = [];
+          uFile.content.notifications.unshift(newSignal);
+          await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff`);
+        }
+      }
+      return NextResponse.json({ success: true, count: emails.length });
     }
 
     if (action === 'saveDuelText') {
       const duelFilePath = `data/duels.json`;
       const file = await getFile(duelFilePath);
       if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
-      
       const duels = Array.isArray(file.content) ? file.content : [];
       const duelIndex = duels.findIndex(d => d.id === duelId);
-      
       if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
       if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
-
       if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
       duels[duelIndex].texts[data.email] = data.text;
-
       await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
       return NextResponse.json({ success: true });
     }
@@ -342,7 +367,21 @@ export async function GET(req) {
 export async function PATCH(req) {
   try {
     const body = await req.json();
-    const { id, action } = body;
+    const { id, action, notifId } = body;
+
+    // Gestion de la lecture des notifications
+    if (action === 'mark_read') {
+      const userPath = getSafePath(id); // id est l'email ici
+      const userFile = await getFile(userPath);
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      
+      const notifs = userFile.content.notifications || [];
+      userFile.content.notifications = notifs.map(n => n.id === notifId ? { ...n, read: true } : n);
+      
+      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notification read: ${notifId}`);
+      return NextResponse.json({ success: true });
+    }
+
     const path = `data/texts/${id}.json`;
     const indexPath = `data/publications/index.json`;
     const textFile = await getFile(path);
