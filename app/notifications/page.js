@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   Bell, Heart, MessageSquare, Clock, 
   ArrowLeft, Sparkles, Loader2, 
-  RefreshCw, Coins, Award, UserPlus, BookOpen, UserCircle, Trophy
+  RefreshCw, Coins, Award, UserPlus, BookOpen, Trophy, Smartphone
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -17,34 +17,56 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  
-  const notifsRef = useRef([]);
+  const [pushEnabled, setPushEnabled] = useState(false);
 
-  // --- SYNCHRONISATION AVEC GITHUB-DB ---
+  // Vérification de la permission de notification au montage
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushEnabled(Notification.permission === "granted");
+    }
+  }, []);
+
+  const requestPushPermission = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Votre navigateur ne supporte pas les notifications push.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      setPushEnabled(true);
+      toast.success("Notifications activées !", {
+        description: "Vous recevrez désormais vos signaux en temps réel sur cet appareil."
+      });
+      // Ici, on pourrait enregistrer le token push en base de données si nécessaire
+    } else {
+      toast.error("Permission refusée.");
+    }
+  };
+
   const fetchNotifications = useCallback(async (userEmail, silent = false) => {
     if (!userEmail) return;
     if (!silent) setLoading(true);
     else setIsSyncing(true);
 
     try {
-      // Récupération du profil utilisateur complet
-      const res = await fetch(`/api/github-db?type=user&id=${userEmail.toLowerCase().trim()}`);
+      const res = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(userEmail.toLowerCase().trim())}`);
       
       if (res.ok) {
         const data = await res.json();
-        const userData = data.content;
-        
-        // On récupère le tableau 'notifications' du JSON
-        const myNotifs = userData?.notifications || [];
-        
-        // Tri par date (plus récent en premier)
-        const sorted = myNotifs.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        setNotifications(sorted);
-        notifsRef.current = sorted;
+        if (data && data.content) {
+          const userData = data.content;
+          setUser(userData);
+          localStorage.setItem("lisible_user", JSON.stringify(userData));
+          
+          const myNotifs = userData.notifications || [];
+          const sorted = [...myNotifs].sort((a, b) => new Date(b.date) - new Date(a.date));
+          
+          setNotifications(sorted);
+        }
       }
     } catch (error) { 
-      console.error("Erreur de synchronisation:", error); 
+      console.error("Sync error:", error); 
     } finally { 
       setLoading(false); 
       setIsSyncing(false);
@@ -56,22 +78,24 @@ export default function NotificationsPage() {
     let interval;
 
     if (loggedUser) {
-      const userData = JSON.parse(loggedUser);
-      setUser(userData);
-      fetchNotifications(userData.email);
+      const parsedUser = JSON.parse(loggedUser);
+      fetchNotifications(parsedUser.email);
 
-      // Pusher pour le temps réel (Signaux immédiats)
       const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
-      const userKey = btoa(userData.email.toLowerCase().trim()).replace(/=/g, "");
+      const userKey = btoa(parsedUser.email.toLowerCase().trim()).replace(/=/g, "");
       const channel = pusher.subscribe(`user-${userKey}`);
       
       channel.bind('new-alert', (newNotif) => {
-        setNotifications(prev => [newNotif, ...prev]);
+        fetchNotifications(parsedUser.email, true);
         toast("Nouveau signal", { description: newNotif.message || "Activité sur votre compte" });
+        
+        // Notification système si l'onglet est en arrière-plan et permission accordée
+        if (Notification.permission === "granted" && document.visibilityState !== "visible") {
+          new Notification("Lisible.biz", { body: newNotif.message, icon: "/icon.png" });
+        }
       });
 
-      // Polling de secours toutes les 45s
-      interval = setInterval(() => fetchNotifications(userData.email, true), 45000);
+      interval = setInterval(() => fetchNotifications(parsedUser.email, true), 45000);
       
       return () => {
         clearInterval(interval);
@@ -83,24 +107,20 @@ export default function NotificationsPage() {
   }, [fetchNotifications, router]);
 
   const markAsRead = async (notifId) => {
-    // Mise à jour optimiste de l'UI
     const updatedNotifs = notifications.map(n => 
       n.id === notifId ? { ...n, read: true } : n
     );
     setNotifications(updatedNotifs);
 
     try {
-      // Persistance sur GitHub via l'API
       await fetch("/api/github-db", {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "user",
           id: user.email,
-          content: { 
-            ...user, // Note: Idéalement récupérer le user frais avant le spread
-            notifications: updatedNotifs 
-          }
+          action: "mark_read",
+          notifId: notifId
         })
       });
     } catch (e) {
@@ -109,7 +129,7 @@ export default function NotificationsPage() {
   };
 
   const getIcon = (type, isRead) => {
-    const cls = isRead ? "opacity-30" : "";
+    const cls = isRead ? "opacity-30" : "animate-pulse";
     switch (type) {
       case 'gain': return <Coins size={20} className={`${cls} text-amber-500`} />;
       case 'certification': return <Award size={20} className={`${cls} text-teal-500`} />;
@@ -122,28 +142,53 @@ export default function NotificationsPage() {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-[#FCFBF9] dark:bg-slate-950">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-[#FCFBF9]">
       <Loader2 className="animate-spin text-teal-600" size={40} />
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Interception des fréquences...</p>
     </div>
   );
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-6 min-h-screen animate-in fade-in duration-1000">
+    <div className="max-w-2xl mx-auto py-12 px-6 min-h-screen bg-[#FCFBF9]">
       <header className="flex items-center justify-between mb-12">
-        <button onClick={() => router.back()} className="p-4 bg-white dark:bg-slate-900 rounded-[1.2rem] border border-slate-100 dark:border-white/5 shadow-sm hover:text-teal-600 transition-colors">
+        <button onClick={() => router.back()} className="p-4 bg-white rounded-[1.2rem] border border-slate-100 shadow-sm hover:text-teal-600 transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div className="text-center">
-            <h1 className="text-2xl font-black italic tracking-tighter">Signaux</h1>
-            {isSyncing && <RefreshCw size={10} className="animate-spin text-teal-500 mx-auto mt-1" />}
+            <h1 className="text-2xl font-black italic tracking-tighter text-slate-900">Signaux.</h1>
+            {isSyncing && <div className="flex items-center gap-1 justify-center"><RefreshCw size={8} className="animate-spin text-teal-500" /><span className="text-[7px] font-black uppercase text-teal-500">Sync</span></div>}
         </div>
-        <div className="w-12 h-12 flex items-center justify-center bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-full shadow-lg shadow-slate-950/20">
+        <div className="w-12 h-12 flex items-center justify-center bg-slate-950 text-white rounded-full shadow-lg shadow-slate-950/20">
              <Bell size={18} />
         </div>
       </header>
 
-      <div className="space-y-4">
+      {/* BANNIÈRE ACTIVATION PUSH */}
+      {!pushEnabled && (
+        <div className="mb-8 p-6 bg-slate-900 rounded-[2.5rem] text-white overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+            <Smartphone size={80} />
+          </div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={14} className="text-teal-400" />
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-teal-400">Mobilité</span>
+            </div>
+            <h3 className="text-lg font-bold italic mb-2">Ne manquez aucun signal.</h3>
+            <p className="text-[11px] text-slate-400 leading-relaxed mb-6 max-w-[80%]">
+              Activez les notifications push pour recevoir vos gains et vos mentions directement sur votre téléphone, même en étant hors du site.
+            </p>
+            <button 
+              onClick={requestPushPermission}
+              className="px-6 py-3 bg-white text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-500 hover:text-white transition-all"
+            >
+              Activer les push
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-4 pb-20">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-40 text-slate-300 gap-6">
             <Sparkles size={40} className="opacity-20" />
@@ -157,17 +202,17 @@ export default function NotificationsPage() {
               onClick={() => markAsRead(n.id)} 
               className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-500 ${
                 n.read 
-                  ? 'bg-slate-50/50 dark:bg-slate-900/20 border-transparent opacity-60' 
-                  : 'bg-white dark:bg-slate-900 border-teal-100 dark:border-teal-900/30 shadow-xl shadow-teal-900/5'
+                  ? 'bg-slate-50/50 border-transparent opacity-60' 
+                  : 'bg-white border-teal-100 shadow-xl shadow-teal-900/5 hover:border-teal-300'
               }`}
             >
-              <div className="shrink-0 p-4 rounded-2xl bg-slate-50 dark:bg-white/5">
+              <div className="shrink-0 p-4 rounded-2xl bg-slate-50">
                 {getIcon(n.type, n.read)}
               </div>
               
               <div className="flex-grow pt-1">
-                <p className={`text-[14px] leading-relaxed ${n.read ? 'text-slate-500' : 'text-slate-900 dark:text-white font-bold'}`}>
-                  {n.message || `${n.authorName} a publié "${n.textTitle}"`}
+                <p className={`text-[14px] leading-relaxed ${n.read ? 'text-slate-500' : 'text-slate-900 font-bold'}`}>
+                  {n.message}
                 </p>
                 
                 <div className="flex items-center justify-between mt-4">
