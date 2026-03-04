@@ -215,6 +215,19 @@
     "certified": 6
   },
   {
+    "id": "txt_1772587497201",
+    "title": "La ballade de l'inacceptable accepté",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-04T01:24:57.201Z",
+    "views": 4,
+    "likes": 3,
+    "certified": 4
+  },
+  {
     "id": "txt_1772554025498",
     "title": "La ballade des amoureux",
     "author": "Adama Junior Cissokho ",
@@ -239,19 +252,6 @@
     "views": 13,
     "likes": 3,
     "certified": 4
-  },
-  {
-    "id": "txt_1772587497201",
-    "title": "La ballade de l'inacceptable accepté",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-04T01:24:57.201Z",
-    "views": 4,
-    "likes": 3,
-    "certified": 3
   },
   {
     "id": "txt_1770824772287",
