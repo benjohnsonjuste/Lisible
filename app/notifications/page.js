@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   Bell, Heart, MessageSquare, Clock, 
   ArrowLeft, Sparkles, Loader2, 
-  RefreshCw, Coins, Award, UserPlus, BookOpen, Trophy, Smartphone
+  RefreshCw, Coins, Award, UserPlus, BookOpen, Trophy, Smartphone, ShieldAlert, AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -38,7 +38,6 @@ export default function NotificationsPage() {
       toast.success("Notifications activées !", {
         description: "Vous recevrez désormais vos signaux en temps réel sur cet appareil."
       });
-      // Ici, on pourrait enregistrer le token push en base de données si nécessaire
     } else {
       toast.error("Permission refusée.");
     }
@@ -89,7 +88,6 @@ export default function NotificationsPage() {
         fetchNotifications(parsedUser.email, true);
         toast("Nouveau signal", { description: newNotif.message || "Activité sur votre compte" });
         
-        // Notification système si l'onglet est en arrière-plan et permission accordée
         if (Notification.permission === "granted" && document.visibilityState !== "visible") {
           new Notification("Lisible.biz", { body: newNotif.message, icon: "/icon.png" });
         }
@@ -131,6 +129,8 @@ export default function NotificationsPage() {
   const getIcon = (type, isRead) => {
     const cls = isRead ? "opacity-30" : "animate-pulse";
     switch (type) {
+      case 'urgent': return <ShieldAlert size={20} className={`${cls} text-rose-600`} />;
+      case 'warning': return <AlertTriangle size={20} className={`${cls} text-amber-500`} />;
       case 'gain': return <Coins size={20} className={`${cls} text-amber-500`} />;
       case 'certification': return <Award size={20} className={`${cls} text-teal-500`} />;
       case 'like': return <Heart size={20} className={`${cls} text-rose-500 fill-rose-500`} />;
@@ -163,7 +163,6 @@ export default function NotificationsPage() {
         </div>
       </header>
 
-      {/* BANNIÈRE ACTIVATION PUSH */}
       {!pushEnabled && (
         <div className="mb-8 p-6 bg-slate-900 rounded-[2.5rem] text-white overflow-hidden relative group">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
@@ -203,15 +202,15 @@ export default function NotificationsPage() {
               className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-500 ${
                 n.read 
                   ? 'bg-slate-50/50 border-transparent opacity-60' 
-                  : 'bg-white border-teal-100 shadow-xl shadow-teal-900/5 hover:border-teal-300'
+                  : `bg-white border-teal-100 shadow-xl shadow-teal-900/5 hover:border-teal-300 ${n.type === 'urgent' ? 'border-l-4 border-l-rose-500' : ''}`
               }`}
             >
-              <div className="shrink-0 p-4 rounded-2xl bg-slate-50">
+              <div className={`shrink-0 p-4 rounded-2xl ${n.type === 'urgent' ? 'bg-rose-50' : 'bg-slate-50'}`}>
                 {getIcon(n.type, n.read)}
               </div>
               
               <div className="flex-grow pt-1">
-                <p className={`text-[14px] leading-relaxed ${n.read ? 'text-slate-500' : 'text-slate-900 font-bold'}`}>
+                <p className={`text-[14px] leading-relaxed ${n.read ? 'text-slate-500' : 'text-slate-900 font-bold'} ${n.type === 'urgent' && !n.read ? 'text-rose-600' : ''}`}>
                   {n.message}
                 </p>
                 
