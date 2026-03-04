@@ -20,14 +20,33 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Fonction pour rafraîchir le compteur depuis la DB
+  const syncUnreadCount = async (email) => {
+    try {
+      const res = await fetch(`/api/github-db?type=user&id=${email}`);
+      if (res.ok) {
+        const data = await res.json();
+        const count = (data.content.notifications || []).filter(n => !n.read).length;
+        setUnreadCount(count);
+        localStorage.setItem("unread_notifs", count.toString());
+      }
+    } catch (e) {
+      console.error("Erreur sync notifs:", e);
+    }
+  };
+
   useEffect(() => {
     // 1. Hydratation initiale
     const loggedUser = localStorage.getItem("lisible_user");
     const currentUser = loggedUser ? JSON.parse(loggedUser) : null;
     setUser(currentUser);
 
-    const savedCount = localStorage.getItem("unread_notifs");
-    if (savedCount) setUnreadCount(parseInt(savedCount));
+    if (currentUser?.email) {
+      syncUnreadCount(currentUser.email);
+    } else {
+      const savedCount = localStorage.getItem("unread_notifs");
+      if (savedCount) setUnreadCount(parseInt(savedCount));
+    }
 
     // 2. Configuration Pusher
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
@@ -45,7 +64,7 @@ export default function Navbar() {
         return next;
       });
 
-      // Feedback Audio "Lisible"
+      // Feedback Audio
       const playNotifSound = () => {
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -58,7 +77,7 @@ export default function Navbar() {
           gainNode.connect(audioCtx.destination);
           oscillator.start();
           oscillator.stop(audioCtx.currentTime + 0.3);
-        } catch (e) { /* Silencieux si bloqué par navigateur */ }
+        } catch (e) {}
       };
       playNotifSound();
       
@@ -78,8 +97,6 @@ export default function Navbar() {
         action: {
           label: "VOIR",
           onClick: () => {
-            setUnreadCount(0);
-            localStorage.setItem("unread_notifs", "0");
             router.push(notif.link || "/notifications");
           }
         },
@@ -89,16 +106,22 @@ export default function Navbar() {
     });
 
     const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem("lisible_user");
-      setUser(updatedUser ? JSON.parse(updatedUser) : null);
+      const updatedUserStr = localStorage.getItem("lisible_user");
+      const updatedUser = updatedUserStr ? JSON.parse(updatedUserStr) : null;
+      setUser(updatedUser);
+      if (updatedUser?.email) syncUnreadCount(updatedUser.email);
     };
+    
     window.addEventListener('storage', handleStorageChange);
+    // Écouteur personnalisé pour les mises à jour internes de l'application
+    window.addEventListener('sync-notifications', () => currentUser?.email && syncUnreadCount(currentUser.email));
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('sync-notifications', handleStorageChange);
       pusher.unsubscribe('global-notifications');
     };
-  }, [router]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("lisible_user");
@@ -138,7 +161,6 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/library" icon={<Library size={20} />} active={pathname === "/library"} title="Bibliothèque" />
@@ -150,13 +172,12 @@ export default function Navbar() {
               
               <Link 
                 href="/notifications" 
-                onClick={() => { setUnreadCount(0); localStorage.setItem("unread_notifs", "0"); }}
-                className="p-3 text-slate-400 dark:text-slate-500 hover:text-teal-600 transition-all relative"
+                className={`p-3 transition-all relative ${pathname === "/notifications" ? "text-teal-600" : "text-slate-400 dark:text-slate-500 hover:text-teal-600"}`}
               >
                 <Bell size={22} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-2 right-2 bg-teal-600 text-white text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-bounce">
-                    {unreadCount > 9 ? "!" : unreadCount}
+                  <span className="absolute top-2 right-2 bg-teal-600 text-white text-[9px] font-black min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-950 animate-bounce">
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </Link>
@@ -179,7 +200,6 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* SIDEBAR OVERLAY */}
       <aside className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-500 ease-in-out z-[60] border-r border-slate-50 dark:border-white/5 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="p-8 flex flex-col h-full">
           <div className="flex items-center justify-between mb-10">
@@ -242,7 +262,6 @@ export default function Navbar() {
         </div>
       </aside>
 
-      {/* Backdrop */}
       {isMenuOpen && <div onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />}
     </>
   );
