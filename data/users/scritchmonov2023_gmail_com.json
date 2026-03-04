@@ -4,6 +4,14 @@
   "li": 205,
   "notifications": [
     {
+      "id": "staff_1772650573132",
+      "type": "info",
+      "message": "Bonjour.\nPermettez-moi de partager quelques détails avec vous concernant l'abonnement à votre compte.\n\nIl y a un bouton \"Partager mon profil\" dans votre dashboard, un clic dessus vous donnera toutes les options de partage comprenant une petite note et le lien vers votre profil, je dis bien, votre profil, pas votre dashboard car tous les utilisateurs on un profil public où sont affichés leur photo de profil, mini biographie et la liste de leurs œuvres publiées sur la plateforme (tout ça se met à jour dans la page de Gestion du compte accessible de son bouton dans votre dashboard. Vous pouvez y accéder aussi grâce au lien associé à cette notification). Une fois sur votre profil, l'utilisateur trouvera le bouton pour s'abonner à votre compte, il peut se désabonner aussi à tout moment s'il le souhaite.\n\nBien à vous,\nLisible Support Team",
+      "link": "lisible.biz/settings",
+      "date": "2026-03-04T18:56:13.132Z",
+      "read": false
+    },
+    {
       "id": "staff_1772650376733",
       "type": "info",
       "message": "Vérification de connexion staff",
