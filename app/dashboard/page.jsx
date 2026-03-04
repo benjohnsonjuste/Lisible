@@ -127,7 +127,7 @@ export default function AuthorDashboard() {
     if (navigator.canShare && navigator.canShare(shareData)) {
       try { await navigator.share(shareData); } catch (err) { toast.error("Partage annulé"); }
     } else {
-      const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz`;
+      const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi !`;
       window.open(shareUrl, '_blank');
       toast.info("Lien de partage généré !");
     }
@@ -228,8 +228,8 @@ export default function AuthorDashboard() {
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
           
-          <Link href="/battle/publier" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all border-4 border-white/20">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Événement</p><h3 className="text-xl font-bold italic">Concours & Battle</h3></div>
+          <Link href="/battle/close" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all border-4 border-white/20">
+            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Événement</p><h3 className="text-xl font-bold italic">Battle Poétique</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"><Sword size={24} /></div>
           </Link>
 
