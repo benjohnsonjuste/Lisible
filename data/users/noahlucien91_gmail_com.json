@@ -4,6 +4,14 @@
   "li": 888,
   "notifications": [
     {
+      "id": "staff_1772650376733",
+      "type": "info",
+      "message": "Vérification de connexion staff",
+      "link": null,
+      "date": "2026-03-04T18:52:56.733Z",
+      "read": false
+    },
+    {
       "id": "follow_1772077954006",
       "type": "follow",
       "message": " s'est abonné à vous !",
