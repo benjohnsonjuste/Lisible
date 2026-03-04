@@ -32,19 +32,16 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupération des données utilisateurs (Dossier data/users via github-db)
-      // On récupère aussi la library pour les stats de publications
-      const [resUsers, resLib] = await Promise.all([
-        fetch(`/api/github-db?type=data&file=users`),
-        fetch(`/api/github-db?type=data&file=library`)
-      ]);
-
-      const jsonUsers = await resUsers.json();
+      // 1. On récupère l'index des publications pour avoir la liste de tous les emails d'auteurs
+      const resLib = await fetch(`/api/github-db?type=publications`);
       const jsonLib = await resLib.json();
       
-      if (jsonUsers && Array.isArray(jsonUsers.content)) {
-        // Map pour agréger les stats de la bibliothèque par email
-        const libStats = (jsonLib.content || []).reduce((acc, pub) => {
+      if (jsonLib && Array.isArray(jsonLib.content)) {
+        // Extraire les emails uniques
+        const uniqueEmails = [...new Set(jsonLib.content.map(pub => pub.authorEmail?.toLowerCase().trim()))].filter(Boolean);
+
+        // Agréger les stats de la bibliothèque par email
+        const libStats = jsonLib.content.reduce((acc, pub) => {
           const email = pub.authorEmail?.toLowerCase().trim();
           if (!email) return acc;
           if (!acc[email]) acc[email] = { works: 0, views: 0, likes: 0, certified: 0 };
@@ -56,26 +53,36 @@ export default function CommunautePage() {
           return acc;
         }, {});
 
-        // Construction de la liste finale basée sur data/users
-        const authorEntries = jsonUsers.content.map(user => {
-          const email = user.email?.toLowerCase().trim();
-          const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
-          
-          return {
-            name: user.name || user.username || "Plume Anonyme",
-            email: email,
-            image: user.profilePic || user.image || null,
-            followers: user.followers || [],
-            li: Number(user.li || 0),
-            worksCount: stats.works,
-            views: stats.views,
-            likes: stats.likes,
-            certified: stats.certified
-          };
-        });
+        // 2. Récupérer les profils détaillés de chaque auteur
+        const authorProfiles = await Promise.all(
+          uniqueEmails.map(async (email) => {
+            try {
+              const resUser = await fetch(`/api/github-db?type=user&id=${email}`);
+              if (!resUser.ok) return null;
+              const userData = await resUser.json();
+              const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
+              
+              return {
+                name: userData.content.name || userData.content.username || "Plume Anonyme",
+                email: email,
+                image: userData.content.profilePic || userData.content.image || null,
+                followers: userData.content.followers || [],
+                li: Number(userData.content.li || 0),
+                worksCount: stats.works,
+                views: stats.views,
+                likes: stats.likes,
+                certified: stats.certified
+              };
+            } catch (err) {
+              return null;
+            }
+          })
+        );
+
+        const finalAuthors = authorProfiles.filter(Boolean);
 
         // Tri par popularité (li + vues + œuvres)
-        const sortedAuthors = authorEntries.sort((a, b) => 
+        const sortedAuthors = finalAuthors.sort((a, b) => 
           (b.li + b.views + b.worksCount) - (a.li + a.views + a.worksCount)
         );
 
@@ -186,6 +193,7 @@ export default function CommunautePage() {
                   src={a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                   alt={a.name}
+                  onError={(e) => e.target.src = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`}
                 />
               </div>
               <div className="grow space-y-4 text-center sm:text-left">
