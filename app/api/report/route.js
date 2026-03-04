@@ -5,50 +5,44 @@ export async function POST(req) {
   try {
     const { reportData } = await req.json();
 
-    // 1. Configurer le transporteur (Utilisez Gmail ou un autre SMTP)
+    // Configuration du transporteur Gmail
+    // IMPORTANT : Utilisez les Variables d'Environnement sur votre hébergeur (Vercel/Netlify)
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // Votre email d'envoi (ex: lablitteraire@gmail.com)
-        pass: process.env.EMAIL_PASS, // VOTRE MOT DE PASSE D'APPLICATION (16 caractères)
+        user: process.env.EMAIL_USER, // Votre adresse Gmail d'envoi
+        pass: process.env.EMAIL_PASS, // Votre MOT DE PASSE D'APPLICATION (16 caractères)
       },
     });
 
-    // 2. Construire le contenu de l'e-mail pour le Staff
     const mailOptions = {
-      from: `"Système d'Alerte Lisible" <${process.env.EMAIL_USER}>`,
+      from: `"Alerte Lisible" <${process.env.EMAIL_USER}>`,
       to: "cmo.lablitteraire7@gmail.com",
       subject: `🚨 SIGNALEMENT : ${reportData.reason}`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 16px; padding: 25px; color: #1e293b;">
-          <h2 style="color: #e11d48; margin-top: 0;">Nouveau Signalement</h2>
-          <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 20px 0;" />
+        <div style="font-family: sans-serif; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 20px; padding: 30px; color: #0f172a;">
+          <h2 style="color: #e11d48; font-size: 20px;">Nouveau Signalement reçu</h2>
+          <p style="font-size: 14px; color: #64748b;">Un contenu a été marqué pour examen par la modération.</p>
           
-          <p><strong>Texte visé :</strong> <span style="color: #0f172a;">${reportData.textTitle}</span></p>
-          <p><strong>Motif :</strong> <span style="background: #fff1f2; color: #e11d48; padding: 4px 10px; border-radius: 6px; font-weight: bold;">${reportData.reason}</span></p>
-          <p><strong>Détails :</strong> ${reportData.details || "Aucun détail fourni."}</p>
-          
-          <div style="margin-top: 25px; padding: 15px; background: #f8fafc; border-radius: 12px; font-size: 13px;">
-            <p style="margin: 0;"><strong>Signalé par :</strong> ${reportData.reporterEmail}</p>
-            <p style="margin: 5px 0 0 0;"><strong>Date :</strong> ${reportData.date}</p>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 15px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0;"><strong>Texte :</strong> ${reportData.textTitle}</p>
+            <p style="margin: 0 0 10px 0;"><strong>Motif :</strong> <span style="color: #e11d48;">${reportData.reason}</span></p>
+            <p style="margin: 0;"><strong>Détails :</strong> ${reportData.details || "Aucun détail fourni."}</p>
           </div>
 
-          <div style="margin-top: 30px; text-align: center;">
-             <a href="https://lisible.biz/admin/texts/${reportData.textId}" 
-                style="background: #0f172a; color: white; padding: 12px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 14px;">
-                Vérifier le contenu
-             </a>
-          </div>
+          <p style="font-size: 12px; color: #94a3b8;">
+            Signaleur : ${reportData.reporterEmail}<br>
+            Date : ${reportData.date}
+          </p>
         </div>
       `,
     };
 
-    // 3. Envoyer l'e-mail
     await transporter.sendMail(mailOptions);
-
     return NextResponse.json({ success: true });
+
   } catch (error) {
-    console.error("Nodemailer Error:", error);
-    return NextResponse.json({ error: "Erreur lors de l'envoi de l'e-mail" }, { status: 500 });
+    console.error("Erreur Mail:", error);
+    return NextResponse.json({ error: "Échec de l'envoi" }, { status: 500 });
   }
 }
