@@ -46,7 +46,7 @@ export default function TextContent() {
       }
       const libRes = await fetch(`/api/github-db?type=library`);
       if (libRes.ok) {
-        const libData = await libRes.ok ? await libRes.json() : { content: [] };
+        const libData = await libRes.json();
         setAllTexts(libData.content || []);
       }
     } catch (e) { toast.error("Erreur de chargement"); }
@@ -104,12 +104,16 @@ export default function TextContent() {
         <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
       </div>
 
-      <nav className={`fixed top-0 w-full z-[90] transition-all p-6 flex justify-between ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
-        <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100"><ArrowLeft size={20}/></button>
-        <button onClick={() => setIsFocusMode(true)} className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100"><Maximize2 size={20}/></button>
+      <nav className={`fixed top-0 w-full z-[90] transition-all p-6 flex justify-between ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100 text-slate-900"><ArrowLeft size={20}/></button>
+        <button onClick={() => setIsFocusMode(true)} className="p-4 bg-blue-700 text-white rounded-2xl shadow-[0_0_20px_rgba(29,78,216,0.5)] hover:bg-blue-800 transition-all active:scale-95"><Maximize2 size={20}/></button>
       </nav>
 
-      {isFocusMode && <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-white/10 text-white/50"><Minimize2 size={24}/></button>}
+      {isFocusMode && (
+        <button onClick={() => setIsFocusMode(false)} className="fixed top-8 right-8 z-[110] p-4 rounded-full bg-blue-700 text-white shadow-[0_0_30px_rgba(29,78,216,0.6)] hover:bg-blue-800 transition-all scale-110 active:scale-95">
+          <Minimize2 size={24} />
+        </button>
+      )}
 
       <main className="max-w-3xl mx-auto px-6 pt-40 pb-48">
         <header className={`mb-20 space-y-8 transition-all ${isFocusMode ? 'opacity-40' : ''}`}>
@@ -130,10 +134,22 @@ export default function TextContent() {
         </header>
 
         <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
-          <div className="whitespace-pre-wrap">{text.content}</div>
+          <div className="whitespace-pre-wrap">
+            {text.content?.split('\n').slice(0, 3).join('\n')}
+          </div>
+          
+          {!isFocusMode && (
+            <div className="my-12 py-4 border-y border-slate-100/50">
+              <InTextAd />
+            </div>
+          )}
+
+          <div className="whitespace-pre-wrap">
+            {text.content?.split('\n').slice(3).join('\n')}
+          </div>
         </article>
 
-        <section className={`mt-32 space-y-48 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
+        <section className={`mt-32 space-y-48 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => loadContent(true)} certifiedCount={text.certified} />
           <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
         </section>
