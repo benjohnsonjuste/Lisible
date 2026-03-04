@@ -62,6 +62,9 @@ export default function NotificationsPage() {
           const sorted = [...myNotifs].sort((a, b) => new Date(b.date) - new Date(a.date));
           
           setNotifications(sorted);
+          
+          // Mise à jour immédiate du compteur dans la navbar au chargement
+          window.dispatchEvent(new Event('sync-notifications'));
         }
       }
     } catch (error) { 
@@ -105,22 +108,27 @@ export default function NotificationsPage() {
   }, [fetchNotifications, router]);
 
   const markAsRead = async (notifId) => {
+    // Optimistic UI : on marque comme lu localement
     const updatedNotifs = notifications.map(n => 
       n.id === notifId ? { ...n, read: true } : n
     );
     setNotifications(updatedNotifs);
 
     try {
-      await fetch("/api/github-db", {
+      const res = await fetch("/api/github-db", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "user",
-          id: user.email,
+          id: user.email, // L'ID attendu par l'API PATCH action mark_read est l'email
           action: "mark_read",
           notifId: notifId
         })
       });
+
+      if (res.ok) {
+        // Signaler à la Navbar de rafraîchir son compteur
+        window.dispatchEvent(new Event('sync-notifications'));
+      }
     } catch (e) {
       console.error("Erreur marquage lecture", e);
     }
@@ -195,41 +203,44 @@ export default function NotificationsPage() {
           </div>
         ) : (
           notifications.map((n) => (
-            <Link 
-              href={n.textId ? `/texts/${n.textId}` : (n.link || "#")} 
-              key={n.id} 
-              onClick={() => markAsRead(n.id)} 
-              className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-500 ${
-                n.read 
-                  ? 'bg-slate-50/50 border-transparent opacity-60' 
-                  : `bg-white border-teal-100 shadow-xl shadow-teal-900/5 hover:border-teal-300 ${n.type === 'urgent' ? 'border-l-4 border-l-rose-500' : ''}`
-              }`}
+            <div 
+              key={n.id}
+              onClick={() => markAsRead(n.id)}
             >
-              <div className={`shrink-0 p-4 rounded-2xl ${n.type === 'urgent' ? 'bg-rose-50' : 'bg-slate-50'}`}>
-                {getIcon(n.type, n.read)}
-              </div>
-              
-              <div className="flex-grow pt-1">
-                <p className={`text-[14px] leading-relaxed ${n.read ? 'text-slate-500' : 'text-slate-900 font-bold'} ${n.type === 'urgent' && !n.read ? 'text-rose-600' : ''}`}>
-                  {n.message}
-                </p>
-                
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <Clock size={12} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">
-                      {new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {n.amountLi > 0 && (
-                    <div className="px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1 border border-amber-100">
-                      <Coins size={10} className="text-amber-600" />
-                      <span className="text-[10px] font-black text-amber-700">+{n.amountLi} Li</span>
-                    </div>
-                  )}
+              <Link 
+                href={n.textId ? `/texts/${n.textId}` : (n.link || "#")} 
+                className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-500 ${
+                  n.read 
+                    ? 'bg-slate-50/50 border-transparent opacity-60' 
+                    : `bg-white border-teal-100 shadow-xl shadow-teal-900/5 hover:border-teal-300 ${n.type === 'urgent' ? 'border-l-4 border-l-rose-500' : ''}`
+                }`}
+              >
+                <div className={`shrink-0 p-4 rounded-2xl ${n.type === 'urgent' ? 'bg-rose-50' : 'bg-slate-50'}`}>
+                  {getIcon(n.type, n.read)}
                 </div>
-              </div>
-            </Link>
+                
+                <div className="flex-grow pt-1">
+                  <p className={`text-[14px] leading-relaxed ${n.read ? 'text-slate-500' : 'text-slate-900 font-bold'} ${n.type === 'urgent' && !n.read ? 'text-rose-600' : ''}`}>
+                    {n.message}
+                  </p>
+                  
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <Clock size={12} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">
+                        {new Date(n.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {n.amountLi > 0 && (
+                      <div className="px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1 border border-amber-100">
+                        <Coins size={10} className="text-amber-600" />
+                        <span className="text-[10px] font-black text-amber-700">+{n.amountLi} Li</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            </div>
           ))
         )}
       </div>
