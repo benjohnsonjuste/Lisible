@@ -133,6 +133,7 @@ export async function POST(req) {
         li: data.referralCode ? 250 : 50,
         status: "active",
         notifications: [], followers: [], following: [], works: [],
+        bookmarks: [], // Initialisation des favoris
         created_at: new Date().toISOString(),
         ...data,
         password: hashedPassword 
@@ -189,6 +190,29 @@ export async function POST(req) {
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
       return NextResponse.json({ success: true, id: pubId });
+    }
+
+    if (action === 'toggle_bookmark') {
+      const userFile = await getFile(targetPath);
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      
+      const user = userFile.content;
+      if (!user.bookmarks) user.bookmarks = [];
+      
+      const exists = user.bookmarks.find(b => b.id === textId);
+      if (exists) {
+        user.bookmarks = user.bookmarks.filter(b => b.id !== textId);
+      } else {
+        user.bookmarks.push({ 
+          id: textId, 
+          title: data.title, 
+          author: data.authorName, 
+          date: new Date().toISOString() 
+        });
+      }
+      
+      await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
+      return NextResponse.json({ success: true, bookmarks: user.bookmarks });
     }
 
     if (action === 'saveDuelText') {
