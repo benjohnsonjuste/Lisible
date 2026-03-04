@@ -3,7 +3,15 @@
   "name": "Ben Johnson Juste",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1772647757029",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Neptorus - ep. 1\" !",
+      "date": "2026-03-04T18:09:17.029Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [
     "jb7management@gmail.com"
