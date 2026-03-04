@@ -267,6 +267,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1772587497201",
+    "title": "La ballade de l'inacceptable accepté",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-04T01:24:57.201Z",
+    "views": 3,
+    "likes": 2,
+    "certified": 2
+  },
+  {
     "id": "1772093279458",
     "title": "Le Vide",
     "author": "Adama Junior Cissokho ",
@@ -336,19 +349,6 @@
     "views": 3,
     "likes": 0,
     "certified": 2
-  },
-  {
-    "id": "txt_1772587497201",
-    "title": "La ballade de l'inacceptable accepté",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-04T01:24:57.201Z",
-    "views": 3,
-    "likes": 2,
-    "certified": 1
   },
   {
     "id": "1771120386909",
