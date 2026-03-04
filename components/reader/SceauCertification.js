@@ -54,6 +54,11 @@ export default function SceauCertification({
       });
 
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const dateActuelle = new Date().toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
       
       // Fond Ivoire Premium
       doc.setFillColor(252, 251, 249); 
@@ -61,17 +66,17 @@ export default function SceauCertification({
       
       // Bordure Double Ornementale
       doc.setLineWidth(1.5); 
-      doc.setDrawColor(13, 148, 136); // Teal 600
+      doc.setDrawColor(13, 148, 136); 
       doc.rect(10, 10, 277, 190);
       doc.setLineWidth(0.5);
       doc.setDrawColor(200, 200, 200);
       doc.rect(13, 13, 271, 184);
 
-      // Filigrane "LS" en arrière-plan
-      doc.setTextColor(240, 240, 240);
+      // Filigrane "LISIBLE"
+      doc.setTextColor(245, 245, 245);
       doc.setFont("times", "bolditalic");
-      doc.setFontSize(150);
-      doc.text("LS", 148.5, 125, { align: "center", angle: 0 });
+      doc.setFontSize(80);
+      doc.text("LISIBLE", 148.5, 115, { align: "center", angle: 0 });
       
       // Titre Principal
       doc.setTextColor(15, 23, 42); 
@@ -81,9 +86,12 @@ export default function SceauCertification({
       
       // Sous-titre
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(12); 
+      doc.setFontSize(10); 
       doc.setTextColor(120);
-      doc.text("L'ARCHIVE LISIBLE ATTESTE PAR LE PRÉSENT SCEAU QUE L'ŒUVRE", 148.5, 75, { align: "center" });
+      doc.text(`ÉMIS LE ${dateActuelle.toUpperCase()} • ARCHIVE OFFICIELLE`, 148.5, 65, { align: "center" });
+      
+      doc.setFontSize(12);
+      doc.text("L'ARCHIVE LISIBLE ATTESTE PAR LE PRÉSENT SCEAU QUE L'ŒUVRE", 148.5, 80, { align: "center" });
       
       // Titre de l'œuvre (Dynamique)
       doc.setFont("times", "bolditalic"); 
@@ -99,19 +107,34 @@ export default function SceauCertification({
       doc.text(`Une création originale de la plume de ${authorName || "Anonyme"}`, 148.5, 120, { align: "center" });
       
       // Stats Réelles
-      doc.setFontSize(13);
+      doc.setFontSize(11);
       doc.setTextColor(15, 23, 42);
-      doc.text(`Scellé avec un total de ${Number(certifiedCount) || 0} certifications vérifiées`, 148.5, 145, { align: "center" });
+      doc.text(`Scellé avec un total de ${Number(certifiedCount) || 0} certifications vérifiées`, 148.5, 140, { align: "center" });
+
+      // --- LE SCEAU D'APPARENCE RÉELLE (Bas Droite) ---
+      const sealX = 240;
+      const sealY = 160;
+      doc.setDrawColor(185, 28, 28); // Rouge cire
+      doc.setLineWidth(0.8);
+      doc.circle(sealX, sealY, 22, "D"); // Bord extérieur irrégulier (simulé)
+      doc.setLineWidth(0.5);
+      doc.circle(sealX, sealY, 19, "D"); // Bord intérieur
       
-      // Pied de page / Signature
-      doc.setDrawColor(13, 148, 136);
-      doc.line(100, 160, 197, 160);
-      doc.setFontSize(10);
-      doc.setTextColor(150);
-      doc.text("AUTHENTIFIÉ PAR LISIBLE", 148.5, 168, { align: "center" });
+      doc.setTextColor(185, 28, 28);
+      doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(13, 148, 136);
-      doc.text("lisible.biz", 148.5, 175, { align: "center" });
+      doc.text("CERTIFIÉ", sealX, sealY - 10, { align: "center" });
+      doc.setFontSize(14);
+      doc.text("LISIBLE", sealX, sealY + 2, { align: "center" });
+      doc.setFontSize(7);
+      doc.text("OFFICIEL", sealX, sealY + 10, { align: "center" });
+      
+      // Pied de page
+      doc.setDrawColor(13, 148, 136);
+      doc.line(100, 175, 197, 175);
+      doc.setFontSize(9);
+      doc.setTextColor(150);
+      doc.text("AUTHENTIFIÉ PAR LISIBLE.BIZ", 148.5, 182, { align: "center" });
 
       doc.save(`Lisible_Certificat_${fileName}.pdf`);
     } catch (error) {
@@ -181,7 +204,7 @@ export default function SceauCertification({
             </div>
           ) : (
             <div className="text-center text-white p-6">
-              <span className="block text-3xl font-black italic tracking-tighter mb-1">LS</span>
+              <span className="block text-3xl font-black italic tracking-tighter mb-1">LISIBLE</span>
               <div className="h-[1px] w-6 bg-white/30 mx-auto mb-2" />
               <span className="block text-[10px] font-black uppercase tracking-[0.4em] opacity-80">
                 {seconds > 0 ? `${seconds}s` : "Sceller"}
