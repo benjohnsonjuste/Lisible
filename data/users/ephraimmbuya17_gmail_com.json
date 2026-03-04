@@ -4,6 +4,14 @@
   "li": 56,
   "notifications": [
     {
+      "id": "staff_1772650376733",
+      "type": "info",
+      "message": "Vérification de connexion staff",
+      "link": null,
+      "date": "2026-03-04T18:52:56.733Z",
+      "read": false
+    },
+    {
       "id": "cert_1772239817149",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"La beauté d'une nymphe\" (+1 Li).",
