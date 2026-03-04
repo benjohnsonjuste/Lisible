@@ -4,6 +4,13 @@
   "li": 345,
   "notifications": [
     {
+      "id": "like_1772590587036",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Ta lumière dans mes ombres\" !",
+      "date": "2026-03-04T02:16:27.036Z",
+      "read": false
+    },
+    {
       "id": "cert_1772590391478",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Ta lumière dans mes ombres\" (+1 Li).",
