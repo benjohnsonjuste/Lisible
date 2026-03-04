@@ -213,35 +213,42 @@ export async function POST(req) {
     }
 
     if (action === 'broadcast') {
-      // Sécurité : Vérification sommaire du mot de passe admin via variable d'env
       if (adminToken !== process.env.ADMIN_PASSWORD) {
         return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
 
-      // 1. Récupérer tous les emails via l'index des publications (méthode indirecte pour trouver les actifs)
-      const indexFile = await getFile(`data/publications/index.json`);
-      if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
+      // 1. Déterminer les destinataires
+      let targetEmails = [];
+      if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
+        targetEmails = data.targetEmails;
+      } else {
+        const indexFile = await getFile(`data/publications/index.json`);
+        if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
+        targetEmails = [...new Set(indexFile.content.map(p => p.authorEmail))];
+      }
       
-      const emails = [...new Set(indexFile.content.map(p => p.authorEmail))];
       const newSignal = {
         id: `staff_${Date.now()}`,
         type: data.type || "info",
         message: data.message,
+        link: data.link || null,
         date: new Date().toISOString(),
         read: false
       };
 
-      // 2. Diffuser aux utilisateurs (limité aux auteurs pour cet exemple)
-      for (const email of emails) {
+      // 2. Diffusion ciblée
+      let count = 0;
+      for (const email of targetEmails) {
         const uPath = getSafePath(email);
         const uFile = await getFile(uPath);
         if (uFile) {
           if (!uFile.content.notifications) uFile.content.notifications = [];
           uFile.content.notifications.unshift(newSignal);
-          await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff`);
+          const success = await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff (Targeted)`);
+          if (success) count++;
         }
       }
-      return NextResponse.json({ success: true, count: emails.length });
+      return NextResponse.json({ success: true, count });
     }
 
     if (action === 'saveDuelText') {
@@ -369,9 +376,8 @@ export async function PATCH(req) {
     const body = await req.json();
     const { id, action, notifId } = body;
 
-    // Gestion de la lecture des notifications
     if (action === 'mark_read') {
-      const userPath = getSafePath(id); // id est l'email ici
+      const userPath = getSafePath(id);
       const userFile = await getFile(userPath);
       if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       
