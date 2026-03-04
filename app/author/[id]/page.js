@@ -6,6 +6,7 @@ import {
   BookOpen, Users, Star, ArrowRight 
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function AuthorCataloguePage() {
   const params = useParams();
@@ -14,8 +15,14 @@ export default function AuthorCataloguePage() {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    const loggedUser = localStorage.getItem("lisible_user");
+    if (loggedUser) {
+      try { setCurrentUser(JSON.parse(loggedUser)); } catch (e) {}
+    }
     if (params.id) {
       loadAuthorData();
     }
@@ -24,10 +31,8 @@ export default function AuthorCataloguePage() {
   async function loadAuthorData() {
     try {
       setLoading(true);
-      // 1. Décoder l'ID (email) provenant de l'URL
       const email = decodeURIComponent(params.id);
 
-      // 2. Récupérer le profil de l'auteur
       const resUser = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
       const userData = await resUser.json();
 
@@ -37,7 +42,6 @@ export default function AuthorCataloguePage() {
 
       setAuthor(userData.content);
 
-      // 3. Récupérer l'index des publications pour filtrer ses œuvres
       const resPubs = await fetch(`/api/github-db?type=publications`);
       const pubsData = await resPubs.json();
 
@@ -56,6 +60,38 @@ export default function AuthorCataloguePage() {
     }
   }
 
+  const handleFollow = async () => {
+    if (!currentUser) return toast.error("Connectez-vous pour suivre cette plume");
+    if (currentUser.email === author.email) return;
+
+    const isFollowing = (author.followers || []).includes(currentUser.email);
+    if (isFollowing) return; // Désactivé car déjà abonné (état grisâtre)
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/github-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          action: "follow", 
+          userEmail: currentUser.email, 
+          targetEmail: author.email 
+        })
+      });
+      if (res.ok) {
+        setAuthor(prev => ({
+          ...prev,
+          followers: [...(prev.followers || []), currentUser.email]
+        }));
+        toast.success("Abonné !");
+      }
+    } catch (err) { 
+      toast.error("Erreur de liaison."); 
+    } finally { 
+      setSubmitting(false); 
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#FCFBF9]">
       <Loader2 className="animate-spin text-teal-600" size={40} />
@@ -70,6 +106,9 @@ export default function AuthorCataloguePage() {
       </button>
     </div>
   );
+
+  const isFollowing = (author.followers || []).includes(currentUser?.email);
+  const isOwnProfile = currentUser?.email === author.email;
 
   return (
     <div className="min-h-screen bg-[#FCFBF9]">
@@ -101,7 +140,7 @@ export default function AuthorCataloguePage() {
                 {author.bio || "Cette plume n'a pas encore rédigé sa présentation."}
               </p>
 
-              <div className="flex flex-wrap justify-center md:justify-start gap-6">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 mb-8">
                 <div className="flex items-center gap-2">
                   <BookOpen size={18} className="text-teal-500" />
                   <span className="text-sm font-black">{works.length} Œuvres</span>
@@ -115,6 +154,26 @@ export default function AuthorCataloguePage() {
                   <span className="text-sm font-black">{author.li || 0} Li</span>
                 </div>
               </div>
+
+              {!isOwnProfile && (
+                <button 
+                  onClick={handleFollow}
+                  disabled={submitting || isFollowing}
+                  className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    isFollowing 
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
+                    : "bg-slate-950 text-white hover:bg-teal-600 shadow-lg active:scale-95"
+                  }`}
+                >
+                  {submitting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : isFollowing ? (
+                    "Abonné"
+                  ) : (
+                    "Suivre cette plume"
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -122,7 +181,7 @@ export default function AuthorCataloguePage() {
 
       {/* Catalogue des œuvres */}
       <div className="max-w-5xl mx-auto px-6 py-16">
-        <h3 className="text-xl font-black uppercase tracking-[0.2em] text-slate-400 mb-10">Manuscrits & Publications</h3>
+        <h3 className="text-xl font-black uppercase tracking-[0.2em] text-slate-400 mb-10">Manuscrits publiés</h3>
         
         {works.length === 0 ? (
           <div className="bg-white rounded-[2.5rem] p-12 text-center border-2 border-dashed border-slate-100">
