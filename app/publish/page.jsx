@@ -12,11 +12,7 @@ import {
   Trophy,
   ArrowRight,
   Search,
-  Check,
-  Unlock,
-  Zap,
-  Gem,
-  Crown
+  Check
 } from "lucide-react";
 import Link from "next/link";
 
@@ -30,22 +26,12 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // État pour la monétisation
-  const [price, setPrice] = useState(0);
-
   // États pour la recherche Unsplash
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
-  
-  const priceOptions = [
-    { label: "Gratuit", value: 0, icon: <Unlock size={18} />, desc: "Visibilité maximale" },
-    { label: "Privilège", value: 25, icon: <Zap size={18} />, desc: "25 Li" },
-    { label: "Prestige", value: 50, icon: <Gem size={18} />, desc: "50 Li" },
-    { label: "Légende", value: 100, icon: <Crown size={18} />, desc: "100 Li" }
-  ];
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
@@ -67,6 +53,7 @@ export default function PublishPage() {
     }
   }, [title, content, isChecking]);
 
+  // Fonction de recherche Unsplash
   const searchUnsplash = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
@@ -108,10 +95,8 @@ export default function PublishPage() {
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
-        image: imagePreview,
+        image: imagePreview, // Enregistre l'URL Unsplash au lieu du Base64
         isConcours: false,
-        price: price,
-        isPremium: price > 0,
         date: new Date().toISOString(),
         views: 0,
         likes: 0,
@@ -126,6 +111,44 @@ export default function PublishPage() {
       });
 
       if (!resPublish.ok) throw new Error("Échec de la publication.");
+
+      const usersRes = await fetch(`/api/github-db?type=users`);
+      const usersData = await usersRes.json();
+      
+      if (usersData?.content) {
+        const authorProfile = usersData.content.find(u => u.email?.toLowerCase() === authorEmail);
+        const followers = authorProfile?.followers || [];
+
+        if (followers.length > 0) {
+          const newNotification = {
+            id: `notif-${Date.now()}`,
+            type: "new_publication",
+            authorName: user.penName || user.name,
+            textTitle: title.trim(),
+            textId: id,
+            date: new Date().toISOString(),
+            read: false
+          };
+
+          await Promise.all(followers.map(async (followerEmail) => {
+            const followerProfile = usersData.content.find(u => u.email?.toLowerCase() === followerEmail.toLowerCase());
+            if (followerProfile) {
+              await fetch("/api/github-db", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "user",
+                  id: followerEmail,
+                  content: {
+                    ...followerProfile,
+                    notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20)
+                  }
+                })
+              });
+            }
+          }));
+        }
+      }
 
       toast.success("Publié ! Vos abonnés ont été notifiés. ✨", { id: toastId });
       localStorage.removeItem("atelier_draft_title");
@@ -275,40 +298,6 @@ export default function PublishPage() {
               onChange={(e) => setContent(e.target.value)}
               className="w-full min-h-[500px] text-xl md:text-2xl font-serif leading-[1.8] outline-none placeholder:text-slate-100 resize-none text-slate-800"
             />
-          </div>
-
-          {/* Section Monétisation */}
-          <div className="bg-slate-900 p-8 rounded-[3rem] border border-white/10 shadow-2xl">
-            <div className="flex items-center gap-3 mb-6 ml-2">
-              <div className="w-1.5 h-6 bg-teal-500 rounded-full" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Modèle Économique</h3>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {priceOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setPrice(opt.value)}
-                  className={`flex flex-col items-center text-center p-5 rounded-[2.5rem] border-2 transition-all duration-300 ${
-                    price === opt.value 
-                    ? "bg-white text-slate-900 border-white scale-105 shadow-lg" 
-                    : "bg-white/5 border-transparent text-slate-500 hover:bg-white/10"
-                  }`}
-                >
-                  <div className={`p-3 rounded-2xl mb-3 ${price === opt.value ? "bg-teal-600 text-white" : "bg-white/10 text-slate-400"}`}>
-                    {opt.icon}
-                  </div>
-                  <span className="font-black text-[9px] uppercase tracking-widest mb-1">{opt.label}</span>
-                  <span className="text-[10px] opacity-60 font-bold">{opt.value > 0 ? `${opt.value} Li` : "Libre"}</span>
-                </button>
-              ))}
-            </div>
-            {price > 0 && (
-              <p className="mt-6 text-center text-[10px] font-black text-teal-400 uppercase tracking-widest animate-pulse">
-                Accès verrouillé : Perception de {price} Li par lecteur
-              </p>
-            )}
           </div>
 
           <button
