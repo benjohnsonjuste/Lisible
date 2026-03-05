@@ -12,6 +12,7 @@ import {
 import { getMood } from "@/utils/reader-utils";
 import { InTextAd } from "@/components/InTextAd";
 import FloatingActions from "@/components/reader/FloatingActions";
+import SecurityLock from "@/components/SecurityLock"; // Import du composant de protection
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
@@ -166,46 +167,49 @@ export default function TextContent() {
           </div>
         </header>
 
-        <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
-          {canReadFull ? (
-            <div className="whitespace-pre-wrap">
-              {text.content?.split('\n').slice(0, 3).join('\n')}
-              {!isFocusMode && <div className="my-12 py-4 border-y border-slate-100/50"><InTextAd /></div>}
-              {text.content?.split('\n').slice(3).join('\n')}
-            </div>
-          ) : (
-            <div className="relative">
-              <div className="whitespace-pre-wrap opacity-30 select-none pointer-events-none blur-sm">
-                {text.content?.substring(0, 400)}...
-                <div className="h-64" />
+        {/* Début de la zone protégée */}
+        <SecurityLock userEmail={user?.email}>
+          <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
+            {canReadFull ? (
+              <div className="whitespace-pre-wrap">
+                {text.content?.split('\n').slice(0, 3).join('\n')}
+                {!isFocusMode && <div className="my-12 py-4 border-y border-slate-100/50"><InTextAd /></div>}
+                {text.content?.split('\n').slice(3).join('\n')}
               </div>
-              
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-gradient-to-t from-[#FCFBF9] via-[#FCFBF9]/90 to-transparent">
-                <div className="p-6 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 max-w-sm">
-                  <div className="w-16 h-16 bg-rose-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    {text.price === 25 ? <Zap size={30} /> : text.price === 50 ? <Gem size={30} /> : <Crown size={30} />}
-                  </div>
-                  <h3 className="text-xl font-black italic text-slate-900 mb-2 tracking-tighter uppercase">Contenu Privilégié</h3>
-                  <p className="text-xs text-slate-500 font-bold leading-relaxed mb-8">
-                    Cette œuvre est réservée aux mécènes. Soutenez l'auteur pour accéder à l'intégralité du manuscrit.
-                  </p>
-                  <button 
-                    onClick={handleUnlock}
-                    disabled={isUnlocking}
-                    className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 transition-all flex items-center justify-center gap-3"
-                  >
-                    {isUnlocking ? <Loader2 className="animate-spin" size={16}/> : <>DÉBLOQUER • {text.price} LI</>}
-                  </button>
-                  {user && user.li < text.price && (
-                    <p className="mt-4 text-[9px] font-black text-rose-500 uppercase tracking-widest">
-                      Il vous manque {text.price - user.li} Li
+            ) : (
+              <div className="relative">
+                <div className="whitespace-pre-wrap opacity-30 select-none pointer-events-none blur-sm">
+                  {text.content?.substring(0, 400)}...
+                  <div className="h-64" />
+                </div>
+                
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-gradient-to-t from-[#FCFBF9] via-[#FCFBF9]/90 to-transparent">
+                  <div className="p-6 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 max-w-sm">
+                    <div className="w-16 h-16 bg-rose-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6">
+                      {text.price === 25 ? <Zap size={30} /> : text.price === 50 ? <Gem size={30} /> : <Crown size={30} />}
+                    </div>
+                    <h3 className="text-xl font-black italic text-slate-900 mb-2 tracking-tighter uppercase">Contenu Privilégié</h3>
+                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-8">
+                      Cette œuvre est réservée aux mécènes. Soutenez l'auteur pour accéder à l'intégralité du manuscrit.
                     </p>
-                  )}
+                    <button 
+                      onClick={handleUnlock}
+                      disabled={isUnlocking}
+                      className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 transition-all flex items-center justify-center gap-3"
+                    >
+                      {isUnlocking ? <Loader2 className="animate-spin" size={16}/> : <>DÉBLOQUER • {text.price} LI</>}
+                    </button>
+                    {user && user.li < text.price && (
+                      <p className="mt-4 text-[9px] font-black text-rose-500 uppercase tracking-widest">
+                        Il vous manque {text.price - user.li} Li
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </article>
+            )}
+          </article>
+        </SecurityLock>
 
         {canReadFull && (
           <section className={`mt-32 space-y-48 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
