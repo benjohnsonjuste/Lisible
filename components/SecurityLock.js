@@ -2,104 +2,71 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
 
-export default function SecurityLock({ children, userEmail, activeAntiCapture = true }) {
+export default function SecurityLock({ children }) {
   useEffect(() => {
     // 1. Bloquer le menu contextuel (Clic droit)
     const handleContextMenu = (e) => {
       e.preventDefault();
-      toast.error("Contenu protégé : Impossible de copier du texte.");
+      toast.error("Le clic droit est désactivé sur ce contenu.");
     };
 
-    // 2. Bloquer les raccourcis (Copier, Coller, Imprimer, Inspecter, Sauvegarder)
+    // 2. Bloquer les raccourcis clavier (Copier, Imprimer, Inspecter)
     const handleKeyDown = (e) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modifier = isMac ? e.metaKey : e.ctrlKey;
 
-      // Bloquer PrintScreen
-      if (e.key === "PrintScreen") {
-        navigator.clipboard.writeText("");
-        toast.error("Les captures d'écran sont interdites.");
-      }
-
-      // Liste des touches interdites
-      const forbiddenKeys = ['c', 'v', 's', 'p', 'u', 'a'];
+      // Liste des touches interdites : c (copie), p (impression), u (source), s (sauvegarde)
+      const forbiddenKeys = ['c', 'p', 'u', 's'];
+      
       if (modifier && forbiddenKeys.includes(e.key.toLowerCase())) {
         e.preventDefault();
-        toast.error("Action non autorisée sur ce manuscrit.");
+        toast.error("Action de copie ou d'exportation interdite.");
       }
 
-      // Bloquer Inspecteur (F12, Ctrl+Shift+I)
+      // Bloquer l'inspecteur d'éléments (F12 ou Ctrl+Shift+I)
       if (e.key === "F12" || (modifier && e.shiftKey && e.key.toLowerCase() === 'i')) {
         e.preventDefault();
-        toast.error("L'accès aux sources est protégé.");
+        toast.error("L'accès aux outils de développement est restreint.");
       }
     };
 
-    // 3. Effet "Netflix" (Écran noir si on perd le focus ou fait une capture)
-    const handleBlur = () => {
-      if (activeAntiCapture) {
-        document.body.style.filter = "brightness(0) blur(40px)";
-        document.body.style.transition = "filter 0.3s ease";
-      }
-    };
-
-    const handleFocus = () => {
-      document.body.style.filter = "none";
-    };
-
-    // 4. Protection du presse-papier (Vider si copie forcée)
+    // 3. Intercepter l'événement de copie natif
     const handleCopy = (e) => {
       e.preventDefault();
-      e.clipboardData.setData('text/plain', "Contenu protégé par Lisible. Toute reproduction est interdite.");
+      toast.error("La copie du texte est désactivée.");
     };
 
-    // Ajout des écouteurs
+    // Ajout des écouteurs d'événements
     window.addEventListener("contextmenu", handleContextMenu);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("copy", handleCopy);
-    window.addEventListener("blur", handleBlur);
-    window.addEventListener("focus", handleFocus);
 
     return () => {
       window.removeEventListener("contextmenu", handleContextMenu);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("copy", handleCopy);
-      window.removeEventListener("blur", handleBlur);
-      window.removeEventListener("focus", handleFocus);
     };
-  }, [activeAntiCapture]);
+  }, []);
 
   return (
-    <div className="relative overflow-hidden select-none no-screenshot">
-      {/* Watermark Dynamique (Filigrane) */}
-      {userEmail && (
-        <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] flex flex-wrap gap-24 overflow-hidden rotate-[-25deg] scale-150">
-          {Array(80).fill(userEmail).map((email, i) => (
-            <span key={i} className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest whitespace-nowrap">
-LISIBLE | LISIBLE | LISIBLE | LISIBLE
-LISIBLE | LISIBLE | LISIBLE | LISIBLE
-LISIBLE | LISIBLE | LISIBLE | LISIBLE
-LISIBLE | LISIBLE | LISIBLE | LISIBLE
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Le contenu protégé */}
+    <div className="relative select-none no-copy">
+      {/* Contenu protégé */}
       <div className="relative z-10">
         {children}
       </div>
 
       <style jsx global>{`
-        .no-screenshot {
-          -webkit-touch-callout: none;
-          -webkit-user-select: none;
-          -khtml-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-          user-select: none;
-          -webkit-user-drag: none;
+        /* Empêcher la sélection de texte au niveau CSS */
+        .no-copy {
+          -webkit-touch-callout: none; /* iOS Safari */
+          -webkit-user-select: none;    /* Safari */
+          -khtml-user-select: none;     /* Konqueror HTML */
+          -moz-user-select: none;        /* Firefox */
+          -ms-user-select: none;         /* Internet Explorer/Edge */
+          user-select: none;             /* Chrome, Edge, Opera and Firefox */
         }
+
+        /* Masquer le contenu lors d'une tentative d'impression */
         @media print {
           body { display: none !important; }
         }
