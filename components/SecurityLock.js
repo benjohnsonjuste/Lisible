@@ -7,7 +7,7 @@ export default function SecurityLock({ children }) {
     // 1. Bloquer le menu contextuel (Clic droit)
     const handleContextMenu = (e) => {
       e.preventDefault();
-      toast.error("Le clic droit est désactivé sur ce contenu.");
+      toast.error("Contenu protégé. Copie interdite.");
     };
 
     // 2. Bloquer les raccourcis clavier (Copier, Imprimer, Inspecter)
