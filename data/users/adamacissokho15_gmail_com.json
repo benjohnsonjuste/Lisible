@@ -1,8 +1,15 @@
 {
   "email": "adamacissokho15@gmail.com",
   "name": "",
-  "li": 64,
+  "li": 65,
   "notifications": [
+    {
+      "id": "cert_1772688912210",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Mon départ\" (+1 Li).",
+      "date": "2026-03-05T05:35:12.210Z",
+      "read": false
+    },
     {
       "id": "cert_1772688821282",
       "type": "certification",
