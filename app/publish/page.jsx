@@ -9,9 +9,10 @@ import {
   Image as ImageIcon,
   X,
   Feather,
-  Sparkles,
   Trophy,
-  ArrowRight
+  ArrowRight,
+  Search,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,7 +26,11 @@ export default function PublishPage() {
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // Catégories mises à jour
+  // États pour la recherche Unsplash
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
 
   useEffect(() => {
@@ -48,26 +53,21 @@ export default function PublishPage() {
     }
   }, [title, content, isChecking]);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 800; 
-        const scale = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setImagePreview(canvas.toDataURL("image/jpeg", 0.6));
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+  // Fonction de recherche Unsplash
+  const searchUnsplash = async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(
+        `https://api.unsplash.com/search/photos?query=${searchQuery}&per_page=12&client_id=${process.env.NEXT_PUBLIC_UNSPLASH_KEY}`
+      );
+      const data = await res.json();
+      setSearchResults(data.results || []);
+    } catch (e) {
+      toast.error("Impossible de joindre la banque d'images.");
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -75,16 +75,15 @@ export default function PublishPage() {
     if (loading) return;
 
     const cleanContent = content.trim();
-    
     if (!title.trim()) return toast.error("Votre œuvre a besoin d'un titre.");
     if (cleanContent.length === 0) return toast.error("Le Grand Livre ne peut pas sceller une page blanche.");
-    if (cleanContent.length > 3000) return toast.error("Ce manuscrit est trop volumineux pour un seul scellé.");
 
     setLoading(true);
-    const toastId = toast.loading("Scellement du manuscrit dans le Data Lake...");
+    const toastId = toast.loading("Publication et notification des abonnés...");
 
     try {
       const id = Date.now().toString();
+      const authorEmail = user.email.toLowerCase().trim();
 
       const payload = {
         action: "publish", 
@@ -92,11 +91,11 @@ export default function PublishPage() {
         title: title.trim(),
         content: cleanContent,
         authorName: user.penName || user.name || "Une Plume",
-        authorEmail: user.email.toLowerCase().trim(),
+        authorEmail: authorEmail,
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
-        image: imagePreview, 
+        image: imagePreview, // Enregistre l'URL Unsplash au lieu du Base64
         isConcours: false,
         date: new Date().toISOString(),
         views: 0,
@@ -105,19 +104,55 @@ export default function PublishPage() {
         certified: 0
       };
 
-      const res = await fetch("/api/github-db", {
+      const resPublish = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Échec de la synchronisation avec le registre.");
+      if (!resPublish.ok) throw new Error("Échec de la publication.");
 
-      toast.success("Manuscrit scellé avec succès ! ✨", { id: toastId });
+      const usersRes = await fetch(`/api/github-db?type=users`);
+      const usersData = await usersRes.json();
+      
+      if (usersData?.content) {
+        const authorProfile = usersData.content.find(u => u.email?.toLowerCase() === authorEmail);
+        const followers = authorProfile?.followers || [];
 
+        if (followers.length > 0) {
+          const newNotification = {
+            id: `notif-${Date.now()}`,
+            type: "new_publication",
+            authorName: user.penName || user.name,
+            textTitle: title.trim(),
+            textId: id,
+            date: new Date().toISOString(),
+            read: false
+          };
+
+          await Promise.all(followers.map(async (followerEmail) => {
+            const followerProfile = usersData.content.find(u => u.email?.toLowerCase() === followerEmail.toLowerCase());
+            if (followerProfile) {
+              await fetch("/api/github-db", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "user",
+                  id: followerEmail,
+                  content: {
+                    ...followerProfile,
+                    notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20)
+                  }
+                })
+              });
+            }
+          }));
+        }
+      }
+
+      toast.success("Publié ! Vos abonnés ont été notifiés. ✨", { id: toastId });
       localStorage.removeItem("atelier_draft_title");
       localStorage.removeItem("atelier_draft_content");
-
       router.push(`/texts/${id}`);
 
     } catch (err) {
@@ -143,15 +178,13 @@ export default function PublishPage() {
           </button>
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <Sparkles size={12} className="text-teal-600" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Nouvelle Inspiration</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Atelier d'écriture</span>
             </div>
             <h1 className="font-serif font-black italic text-3xl tracking-tighter text-slate-900">Le Studio.</h1>
           </div>
           <div className="w-12" />
         </header>
 
-        {/* Section Battle Poétique */}
         <div className="mb-12 p-8 bg-teal-50 rounded-[3rem] border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 bg-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/20">
@@ -169,26 +202,59 @@ export default function PublishPage() {
 
         <form onSubmit={handleSubmit} className="space-y-10">
           
-          <div className="relative group">
+          <div className="space-y-6">
             {imagePreview ? (
               <div className="relative h-72 rounded-[3rem] overflow-hidden shadow-2xl border-4 border-white">
                 <img src={imagePreview} className="w-full h-full object-cover" alt="Couverture" />
                 <button 
                   type="button"
-                  onClick={() => setImagePreview(null)}
+                  onClick={() => { setImagePreview(null); setSearchResults([]); }}
                   className="absolute top-6 right-6 p-3 bg-slate-950 text-white rounded-2xl hover:bg-rose-600 transition-colors shadow-lg"
                 >
                   <X size={18} />
                 </button>
               </div>
             ) : (
-              <label className="flex flex-col items-center justify-center h-56 border-2 border-dashed border-slate-200 bg-white rounded-[3rem] cursor-pointer hover:border-teal-400 hover:bg-teal-50/30 transition-all group">
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <ImageIcon size={28} className="text-slate-300 group-hover:text-teal-500" />
+              <div className="p-8 bg-white border border-slate-100 rounded-[3rem] space-y-6 shadow-sm">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <input 
+                      type="text"
+                      placeholder="Trouver une illustration (ex: Encre, Forêt, Nuit...)"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 rounded-2xl text-sm outline-none focus:ring-2 ring-teal-500/20"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), searchUnsplash())}
+                    />
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={searchUnsplash}
+                    className="bg-slate-900 text-white px-6 rounded-2xl hover:bg-teal-600 transition-all font-bold text-xs"
+                  >
+                    {isSearching ? <Loader2 className="animate-spin" size={18} /> : "Chercher"}
+                  </button>
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Enluminer votre œuvre</span>
-                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-              </label>
+
+                {searchResults.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {searchResults.map((img) => (
+                      <button
+                        key={img.id}
+                        type="button"
+                        onClick={() => setImagePreview(img.urls.regular)}
+                        className="relative aspect-video rounded-xl overflow-hidden group border-2 border-transparent hover:border-teal-500 transition-all"
+                      >
+                        <img src={img.urls.small} className="w-full h-full object-cover" alt={img.alt_description} />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ImageIcon className="text-white" size={20} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -237,9 +303,9 @@ export default function PublishPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-4 py-7 bg-slate-950 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50 hover:-translate-y-1 active:scale-95"
+            className="w-full flex items-center justify-center gap-4 py-7 bg-slate-950 text-white rounded-[2.5rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-teal-600 transition-all shadow-2xl shadow-slate-900/20 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Feather size={20}/>Publier</>}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Feather size={20}/>Diffuser l'œuvre</>}
           </button>
         </form>
       </div>
