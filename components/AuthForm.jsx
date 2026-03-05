@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Mail, User, Lock, ArrowRight, Loader2, ArrowLeft, Sparkles, Eye, EyeOff, Gift } from "lucide-react";
 
 // Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
 export const runtime = 'edge';
@@ -14,6 +14,7 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [refCode, setRefCode] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [guestBonus, setGuestBonus] = useState(0);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -21,13 +22,20 @@ export default function AuthForm() {
     password: ""
   });
 
-  // Détection du parrainage dans l'URL (?ref=...)
+  // Détection du parrainage et des Li anonymes
   useEffect(() => {
+    // Parrainage
     const code = searchParams.get("ref");
     if (code) {
       setRefCode(code);
       setMode("register"); 
       toast.info("Lien de parrainage activé ! Profitez de votre bonus de bienvenue.");
+    }
+
+    // Li Visiteur (localStorage)
+    const savedGuestLi = localStorage.getItem("lisible_guest_li");
+    if (savedGuestLi && parseInt(savedGuestLi) > 0) {
+      setGuestBonus(parseInt(savedGuestLi));
     }
   }, [searchParams]);
 
@@ -60,7 +68,6 @@ export default function AuthForm() {
 
     try {
       const emailClean = formData.email.trim().toLowerCase();
-      // On garde le mot de passe tel quel pour éviter de casser les hashs existants qui incluraient un espace
       const passwordRaw = formData.password;
 
       if (mode === "forgot") {
@@ -81,6 +88,8 @@ export default function AuthForm() {
       }
 
       const authAction = mode === "register" ? "register" : "login";
+      
+      // Inclusion du guestBonus pour l'inscription
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,8 +97,9 @@ export default function AuthForm() {
           action: authAction,
           name: formData.name.trim(),
           email: emailClean,
-          password: passwordRaw, // Utilisation de la version brute
-          referralCode: refCode
+          password: passwordRaw,
+          referralCode: refCode,
+          guestBonus: mode === "register" ? guestBonus : 0 
         })
       });
 
@@ -101,8 +111,12 @@ export default function AuthForm() {
 
       const userData = result.user;
       
-      if (mode === "register" && refCode) {
-        toast.success("Bienvenue ! +200 Li crédités sur votre compte.");
+      if (mode === "register") {
+        if (refCode) toast.success("Bienvenue ! +200 Li crédités sur votre compte.");
+        if (guestBonus > 0) {
+          toast.success(`Succès ! Vos ${guestBonus} Li de lecture ont été transférés.`);
+          localStorage.removeItem("lisible_guest_li"); // Nettoyage après transfert
+        }
       }
 
       await checkAndNotifyBirthday(userData);
@@ -122,10 +136,20 @@ export default function AuthForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {mode === "register" && refCode && (
-        <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top duration-500">
-           <Sparkles className="text-teal-600" size={18}/>
-           <p className="text-[10px] font-black text-teal-700 uppercase">Bonus de +200 Li activé !</p>
+      {mode === "register" && (refCode || guestBonus > 0) && (
+        <div className="space-y-2 animate-in slide-in-from-top duration-500">
+          {refCode && (
+            <div className="bg-teal-50 border border-teal-100 p-4 rounded-2xl flex items-center gap-3">
+               <Sparkles className="text-teal-600" size={18}/>
+               <p className="text-[10px] font-black text-teal-700 uppercase">Bonus Parrainage (+200 Li)</p>
+            </div>
+          )}
+          {guestBonus > 0 && (
+            <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center gap-3">
+               <Gift className="text-amber-600" size={18}/>
+               <p className="text-[10px] font-black text-amber-700 uppercase">Trésor de lecture prêt : {guestBonus} Li</p>
+            </div>
+          )}
         </div>
       )}
 
