@@ -23,19 +23,17 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
 
     setIsSubmitting(true);
     try {
-      // Envoi des détails du signalement à l'adresse spécifiée via l'API
-      const res = await fetch("/api/github-db", {
+      // Appel à l'API de messagerie dédiée (Nodemailer/Email)
+      const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "report-content",
-          targetEmail: "cmo.lablitteraire7@gmail.com", 
           reportData: {
             textId,
             textTitle,
             reporterEmail: userEmail || "Anonyme",
             reason,
-            details,
+            details: details || "Aucun détail fourni.",
             date: new Date().toLocaleString("fr-FR")
           }
         }),
@@ -45,9 +43,12 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
         setIsSuccess(true);
         setTimeout(() => {
           onClose();
-          setIsSuccess(false);
-          setReason("");
-          setDetails("");
+          // Reset de l'état après la fermeture
+          setTimeout(() => {
+            setIsSuccess(false);
+            setReason("");
+            setDetails("");
+          }, 500);
         }, 3000);
       } else {
         const errorData = await res.json();
@@ -120,7 +121,7 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
                 disabled={isSubmitting || !reason}
                 className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-rose-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isSubmitting ? <Loader2 className="animate-spin" /> : "ENVOYER LE SIGNALEMENT"}
+                {isSubmitting ? <Loader2 className="animate-spin" /> : "Déposer"}
               </button>
             </form>
           ) : (
@@ -128,9 +129,9 @@ export default function ReportModal({ isOpen, onClose, textId, textTitle, userEm
               <div className="w-20 h-20 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle size={40} />
               </div>
-              <h4 className="font-black text-xl text-slate-900 mb-2">Merci pour votre vigilance</h4>
+              <h4 className="font-black text-xl text-slate-900 mb-2">Signalement Transmis</h4>
               <p className="text-slate-500 text-sm">
-                Notre équipe de modération va examiner <br /> ce texte dans les plus brefs délais.
+                Lisible Support Team a bien reçu votre message <br /> et procédera à une <b>investigation</b>.
               </p>
             </div>
           )}
