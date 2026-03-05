@@ -201,7 +201,7 @@
       "type": "follow",
       "message": " s'est abonné à vous !",
       "date": "2026-02-26T04:04:48.283Z",
-      "read": false
+      "read": true
     }
   ],
   "followers": [
