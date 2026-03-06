@@ -20,7 +20,6 @@ async function getFile(path) {
     });
     if (!res.ok) return null;
     const data = await res.json();
-    // Utilisation de TextDecoder pour gérer les caractères spéciaux/accents
     const b64 = data.content.replace(/\s/g, '');
     const binString = atob(b64);
     const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
@@ -48,7 +47,7 @@ async function updateFile(path, content, sha, message) {
         'User-Agent': 'Lisible-App'
       },
       body: JSON.stringify({ 
-        message: `[DUEL] ${message} [skip ci]`, 
+        message: `${message} [skip ci]`, 
         content: encodedContent, 
         sha 
       })
@@ -61,7 +60,6 @@ async function updateFile(path, content, sha, message) {
 }
 
 const getSafePath = (email) => {
-  // Correction de sécurité : vérifie si l'email existe avant le toLowerCase
   if (!email || typeof email !== 'string') return null;
   const safeEmail = email.toLowerCase().trim()
     .replace(/@/g, '_')
@@ -84,24 +82,52 @@ export async function POST(req) {
   try {
     const body = await req.json();
     const { action, duelId } = body;
+
+    // --- LOGIQUE STUDIO & PODCASTS (AJOUTÉE) ---
+
+    // 1. Envoyer une notification (Invitation Studio)
+    if (action === "push_notification") {
+      const { userEmail, notification } = body;
+      const userPath = getSafePath(userEmail);
+      const userFile = await getFile(userPath);
+
+      if (!userFile) return NextResponse.json({ error: "Destinataire introuvable" }, { status: 404 });
+
+      const userData = userFile.content;
+      if (!userData.notifications) userData.notifications = [];
+      
+      userData.notifications.push(notification);
+
+      await updateFile(userPath, userData, userFile.sha, `🔔 Notification: ${notification.type}`);
+      return NextResponse.json({ success: true });
+    }
+
+    // 2. Ajouter un podcast à la base globale
+    if (action === "add_podcast") {
+      const { podcastData } = body;
+      const podcastFile = await getFile("data/podcasts.json") || { content: [], sha: null };
+      const podcasts = Array.isArray(podcastFile.content) ? podcastFile.content : [];
+      
+      podcasts.push(podcastData);
+
+      await updateFile("data/podcasts.json", podcasts, podcastFile.sha, `🎙️ Nouveau Podcast: ${podcastData.title}`);
+      return NextResponse.json({ success: true });
+    }
+
+    // --- LOGIQUE DUELS (EXISTANTE) ---
     
-    // Chargement de la base de données des duels
     const duelsFile = await getFile("data/duels.json") || { content: [], sha: null };
     const duels = Array.isArray(duelsFile.content) ? duelsFile.content : [];
 
-    // --- 1. ENVOYER UN DÉFI ---
     if (action === "sendChallenge" || action === "challenge") {
       const { senderEmail, targetEmail, senderName } = body;
       const targetPath = getSafePath(targetEmail);
-      
       if (!targetPath) return NextResponse.json({ error: "Email cible invalide" }, { status: 400 });
       const targetFile = await getFile(targetPath);
-
       if (!targetFile) return NextResponse.json({ error: "Adversaire introuvable" }, { status: 404 });
 
       const targetData = targetFile.content;
       if (!targetData.duelRequests) targetData.duelRequests = [];
-      
       const alreadyChallenged = targetData.duelRequests.some(r => r.senderEmail === senderEmail || r.fromEmail === senderEmail);
       if (alreadyChallenged) return NextResponse.json({ error: "Défi déjà envoyé" }, { status: 400 });
 
@@ -114,23 +140,19 @@ export async function POST(req) {
         date: new Date().toISOString()
       });
 
-      await updateFile(targetPath, targetData, targetFile.sha, `⚔️ Défi de ${senderName}`);
+      await updateFile(targetPath, targetData, targetFile.sha, `[DUEL] ⚔️ Défi de ${senderName}`);
       return NextResponse.json({ success: true });
     }
 
-    // --- 2. ACCEPTER UN DUEL ---
     if (action === "acceptChallenge" || action === "acceptDuel") {
       const { requestId, email } = body;
       const userPath = getSafePath(email);
-      
       if (!userPath) return NextResponse.json({ error: "Email invalide" }, { status: 400 });
       const userFile = await getFile(userPath);
-
       if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
       const userData = userFile.content;
       const request = (userData.duelRequests || []).find(r => r.id === requestId);
-      
       if (!request) return NextResponse.json({ error: "Requête introuvable" }, { status: 404 });
 
       const player1 = request.fromEmail || request.senderEmail;
@@ -153,71 +175,65 @@ export async function POST(req) {
       };
 
       userData.duelRequests = userData.duelRequests.filter(r => r.id !== requestId);
-
       duels.push(newDuel);
-      // Mise à jour de l'utilisateur (retrait requête) et de la base duel
-      await updateFile(userPath, userData, userFile.sha, `✅ Défi accepté vs ${player1}`);
-      await updateFile("data/duels.json", duels, duelsFile.sha, `🏁 Nouveau Duel: ${player1} vs ${player2}`);
 
+      await updateFile(userPath, userData, userFile.sha, `[DUEL] ✅ Défi accepté vs ${player1}`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `[DUEL] 🏁 Nouveau Duel: ${player1} vs ${player2}`);
       return NextResponse.json({ success: true, duel: newDuel });
     }
 
-    // --- 3. REFUSER UN DUEL ---
     if (action === "declineChallenge") {
       const { requestId, email } = body;
       const userPath = getSafePath(email);
       const userFile = await getFile(userPath);
-      
       if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-
       userFile.content.duelRequests = (userFile.content.duelRequests || []).filter(r => r.id !== requestId);
-      await updateFile(userPath, userFile.content, userFile.sha, `❌ Défi refusé`);
+      await updateFile(userPath, userFile.content, userFile.sha, `[DUEL] ❌ Défi refusé`);
       return NextResponse.json({ success: true });
     }
 
-    // --- 4. SAUVEGARDER LE TEXTE DU DUEL ---
     if (action === "saveDuelText") {
       const { text, email } = body;
       const duelIndex = duels.findIndex(d => d.id === duelId);
-
       if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
       if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel déjà terminé" }, { status: 403 });
-
       duels[duelIndex].texts[email] = text;
-
-      await updateFile("data/duels.json", duels, duelsFile.sha, `✍️ Texte duel de ${email}`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `[DUEL] ✍️ Texte duel de ${email}`);
       return NextResponse.json({ success: true });
     }
 
-    // --- 5. VOTE ---
     if (action === "vote") {
       const { targetEmail, voterEmail } = body;
       const voterPath = getSafePath(voterEmail);
       const voterFile = await getFile(voterPath);
       const duelIndex = duels.findIndex(d => d.id === duelId);
-
       if (!voterFile || duelIndex === -1) return NextResponse.json({ error: "Données de vote invalides" }, { status: 404 });
       if (voterFile.content.li < 1) return NextResponse.json({ error: "Li insuffisants pour voter" }, { status: 400 });
 
-      // On déduit 1 Li au votant et on ajoute le vote au duel
       voterFile.content.li -= 1;
       duels[duelIndex].votes[targetEmail] = (duels[duelIndex].votes[targetEmail] || 0) + 1;
-
-      await updateFile(voterPath, voterFile.content, voterFile.sha, `🗳️ Vote duel ${duelId}`);
-      await updateFile("data/duels.json", duels, duelsFile.sha, `📈 Score duel ${duelId}`);
-
+      await updateFile(voterPath, voterFile.content, voterFile.sha, `[DUEL] 🗳️ Vote duel ${duelId}`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `[DUEL] 📈 Score duel ${duelId}`);
       return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Action non reconnue" }, { status: 400 });
   } catch (e) {
-    console.error("Duel Engine Error:", e.message);
+    console.error("Engine Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get('type');
+
+    if (type === 'podcasts') {
+      const podcastsFile = await getFile("data/podcasts.json");
+      return NextResponse.json(podcastsFile ? podcastsFile.content : []);
+    }
+
     const duelsFile = await getFile("data/duels.json");
     return NextResponse.json(duelsFile ? duelsFile.content : []);
   } catch (e) {
