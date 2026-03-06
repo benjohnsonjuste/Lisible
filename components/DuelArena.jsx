@@ -138,6 +138,7 @@ export default function DuelArena({ duelData, currentUser }) {
           const isMe = currentUser?.email === email;
           const participantText = duelData.texts?.[email] || "";
           const isWinner = duelData.winner === email;
+          const participantName = duelData.participantNames?.[email] || `Concurrent ${index + 1}`;
           
           return (
             <div key={email} className="group space-y-6">
@@ -147,7 +148,7 @@ export default function DuelArena({ duelData, currentUser }) {
                     {isWinner ? <Trophy size={18} /> : isMe ? <UserCircle size={18} /> : <Ghost size={18} />}
                   </div>
                   <span className="text-[10px] font-black uppercase tracking-widest">
-                    {isMe ? "Votre Plume" : `Concurrent ${index + 1}`} {isWinner && "• Vainqueur"}
+                    {isMe ? "Votre Plume" : participantName} {isWinner && "• Vainqueur"}
                   </span>
                 </div>
                 {status === "voting" && (
