@@ -1,13 +1,24 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PodcastStudio from '@/components/PodcastStudio'; 
 import { Mic2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PodcastStudioPage() {
-  
-  // Récupération de l'utilisateur si présent, sinon null (le studio reste accessible)
-  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user')) : null;
+  // Initialisation à null pour éviter le mismatch serveur/client
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Récupération sécurisée après le montage du composant
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error("Erreur parsing user:", e);
+      }
+    }
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#F8FAFC] pb-20">
@@ -43,6 +54,7 @@ export default function PodcastStudioPage() {
         </header>
 
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* Le studio reçoit soit l'user, soit null, mais sans erreur de rendu */}
           <PodcastStudio currentUser={currentUser} />
         </section>
       </div>
