@@ -12,7 +12,7 @@ export default function DuelManager({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
 
-  // 1. Chargement des utilisateurs depuis l'API
+  // 1. Chargement des utilisateurs depuis l'API (avec harmonisation des emails)
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -21,7 +21,16 @@ export default function DuelManager({ currentUser }) {
           const data = await res.json();
           // Exclusion des administrateurs et du profil actuel
           const admins = ["cmo.lablitteraire7@gmail.com", "admin@lisible.biz"];
-          const filtered = data.content.filter(u => 
+          
+          const mappedUsers = data.content.map(u => ({
+            ...u,
+            // Harmonisation pour l'API duel-engine
+            email: u.email || u.authorEmail,
+            name: u.penName || u.author || u.name
+          }));
+
+          const filtered = mappedUsers.filter(u => 
+            u.email &&
             u.email !== currentUser?.email && 
             !admins.includes(u.email) &&
             u.status !== "deleted"
@@ -39,8 +48,14 @@ export default function DuelManager({ currentUser }) {
 
   // 2. Envoyer un défi
   const handleSendChallenge = async (target) => {
-    setActionLoading(target.email);
-    const t = toast.loading(`Provocation de ${target.penName || target.name}...`);
+    const targetEmail = target.email || target.authorEmail;
+    
+    if (!targetEmail) {
+      return toast.error("Impossible de récupérer l'adresse de cet auteur.");
+    }
+
+    setActionLoading(targetEmail);
+    const t = toast.loading(`Provocation de ${target.name}...`);
     
     try {
       const res = await fetch("/api/duel-engine", {
@@ -50,7 +65,7 @@ export default function DuelManager({ currentUser }) {
           action: "sendChallenge",
           senderEmail: currentUser.email,
           senderName: currentUser.penName || currentUser.name,
-          targetEmail: target.email
+          targetEmail: targetEmail
         })
       });
 
