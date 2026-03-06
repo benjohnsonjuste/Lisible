@@ -16,7 +16,7 @@ export async function POST(req) {
 
     // Génération de l'URL du texte (Remplacez par votre domaine réel)
     const baseUrl = "https://lisible.biz"; // Changez ceci par votre URL Vercel si nécessaire
-    const textUrl = `${baseUrl}/lecture/${reportData.textId}`;
+    const textUrl = `${baseUrl}/texts/${reportData.textId}`;
 
     const mailOptions = {
       from: `"Alerte Lisible" <${process.env.EMAIL_USER}>`,
@@ -50,7 +50,7 @@ export async function POST(req) {
           <div style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.6;">
             <p style="margin: 0;"><strong>Signalé par :</strong> ${reportData.reporterEmail}</p>
             <p style="margin: 4px 0 0 0;"><strong>Date :</strong> ${reportData.date}</p>
-            <p style="margin: 20px 0 0 0; font-weight: bold; color: #cbd5e1;">LISIBLE.BIZ SYSTEM</p>
+            <p style="margin: 20px 0 0 0; font-weight: bold; color: #cbd5e1;">Système de sécurité Lisible</p>
           </div>
         </div>
       `,
