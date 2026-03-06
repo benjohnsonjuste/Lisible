@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// On importe les fonctions du fichier github-db pour garder la cohérence
-// Si ces fonctions ne sont pas exportées, on utilise la logique interne
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
   repo: "Lisible",
@@ -51,8 +49,8 @@ export async function POST(req) {
     const duelsFile = await getFile("data/duels.json") || { content: [], sha: null };
     const duels = duelsFile.content;
 
-    // --- 0. LANCER UN DÉFI (ACTION DEPUIS LANCEURDEDUEL) ---
-    if (action === "challenge") {
+    // --- 1. ENVOYER UN DÉFI (Utilisé par LanceurDeDuel & DuelManager) ---
+    if (action === "sendChallenge" || action === "challenge") {
       const { senderEmail, targetEmail, senderName } = body;
       const targetFile = await getFile(getSafePath(targetEmail));
 
@@ -61,65 +59,55 @@ export async function POST(req) {
       const targetData = targetFile.content;
       if (!targetData.duelRequests) targetData.duelRequests = [];
       
-      // On évite les doublons de requêtes du même expéditeur
-      const alreadyChallenged = targetData.duelRequests.some(r => r.senderEmail === senderEmail);
-      if (alreadyChallenged) return NextResponse.json({ error: "Défi déjà envoyé à cet auteur" }, { status: 400 });
+      const alreadyChallenged = targetData.duelRequests.some(r => r.fromEmail === senderEmail || r.senderEmail === senderEmail);
+      if (alreadyChallenged) return NextResponse.json({ error: "Défi déjà envoyé" }, { status: 400 });
 
       targetData.duelRequests.push({
         id: `req_${Date.now()}`,
-        senderEmail,
-        senderName,
+        fromEmail: senderEmail, // Champ utilisé par DuelRequests
+        fromName: senderName,   // Champ utilisé par DuelRequests
+        senderEmail,            // Compatibilité
+        senderName,             // Compatibilité
         date: new Date().toISOString()
       });
 
-      await updateFile(getSafePath(targetEmail), targetData, targetFile.sha, `⚔️ Défi lancé par ${senderName}`);
+      await updateFile(getSafePath(targetEmail), targetData, targetFile.sha, `⚔️ Défi de ${senderName}`);
       return NextResponse.json({ success: true });
     }
 
-    // --- 1. ENVOYER UN DÉFI (ANCIENNE VERSION / COMPATIBILITÉ) ---
-    if (action === "sendChallenge") {
-      const { senderEmail, targetEmail, senderName } = body;
-      const targetFile = await getFile(getSafePath(targetEmail));
+    // --- 2. ACCEPTER UN DUEL (Utilisé par DuelRequests / DuelManager) ---
+    if (action === "acceptChallenge" || action === "acceptDuel") {
+      const { requestId, email } = body; // requestId et email de l'utilisateur actuel
+      const userFile = await getFile(getSafePath(email));
 
-      if (!targetFile) return NextResponse.json({ error: "Destinataire introuvable" }, { status: 404 });
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
-      const targetData = targetFile.content;
-      if (!targetData.duelRequests) targetData.duelRequests = [];
+      const userData = userFile.content;
+      const request = (userData.duelRequests || []).find(r => r.id === requestId);
       
-      targetData.duelRequests.push({
-        id: `req_${Date.now()}`,
-        senderEmail,
-        senderName,
-        date: new Date().toISOString()
-      });
+      if (!request) return NextResponse.json({ error: "Requête introuvable" }, { status: 404 });
 
-      await updateFile(getSafePath(targetEmail), targetData, targetFile.sha, `⚔️ Défi par ${senderEmail}`);
-      return NextResponse.json({ success: true });
-    }
+      const player1 = request.fromEmail || request.senderEmail;
+      const player2 = email;
 
-    // --- 2. ACCEPTER UN DUEL ---
-    if (action === "acceptDuel") {
-      const { challengeId, player1, player2 } = body;
-      const p2File = await getFile(getSafePath(player2));
-
-      if (!p2File) return NextResponse.json({ error: "Joueur introuvable" }, { status: 404 });
-
-      const p2Data = p2File.content;
-      p2Data.duelRequests = (p2Data.duelRequests || []).filter(r => r.id !== challengeId);
-
+      // Création de l'objet Duel
       const newDuel = {
         id: `duel_${Date.now()}`,
         date: getNextSundayISO(),
         participants: [player1, player2],
+        participantNames: { [player1]: request.fromName || request.senderName, [player2]: userData.penName || userData.name },
         texts: { [player1]: "", [player2]: "" },
         votes: { [player1]: 0, [player2]: 0 },
         status: "scheduled",
-        theme: "Le silence d'une plume abandonnée.", // Fallback simple
+        theme: "Le silence d'une plume abandonnée.",
         winner: null
       };
 
+      // Nettoyage de la requête traitée
+      userData.duelRequests = userData.duelRequests.filter(r => r.id !== requestId);
+
       duels.push(newDuel);
-      await updateFile(getSafePath(player2), p2Data, p2File.sha, `✅ Défi accepté`);
+      await updateFile(getSafePath(email), userData, userFile.sha, `✅ Défi accepté vs ${player1}`);
       await updateFile("data/duels.json", duels, duelsFile.sha, `🏁 Duel programmé: ${player1} vs ${player2}`);
 
       return NextResponse.json({ success: true });
@@ -127,44 +115,43 @@ export async function POST(req) {
 
     // --- 3. REFUSER UN DUEL ---
     if (action === "declineChallenge") {
-      const { challengeId, player2 } = body;
-      const p2File = await getFile(getSafePath(player2));
-      if (!p2File) return NextResponse.json({ error: "Joueur introuvable" }, { status: 404 });
+      const { requestId, email } = body;
+      const userFile = await getFile(getSafePath(email));
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
-      p2File.content.duelRequests = (p2File.content.duelRequests || []).filter(r => r.id !== challengeId);
-      await updateFile(getSafePath(player2), p2File.content, p2File.sha, `❌ Défi refusé`);
+      userFile.content.duelRequests = (userFile.content.duelRequests || []).filter(r => r.id !== requestId);
+      await updateFile(getSafePath(email), userFile.content, userFile.sha, `❌ Défi refusé`);
       return NextResponse.json({ success: true });
     }
 
     // --- 4. SAUVEGARDER LE TEXTE ---
     if (action === "saveDuelText") {
       const { text, email } = body;
-      const duel = duels.find(d => d.id === duelId);
+      const duelIndex = duels.findIndex(d => d.id === duelId);
 
-      if (!duel) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
-      if (duel.status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
+      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
 
-      if (!duel.texts) duel.texts = {};
-      duel.texts[email] = text;
+      duels[duelIndex].texts[email] = text;
 
-      await updateFile("data/duels.json", duels, duelsFile.sha, `✍️ Manuscrit: ${email}`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `✍️ Texte mis à jour: ${email}`);
       return NextResponse.json({ success: true });
     }
 
-    // --- 5. VOTE (1 Li pour voter) ---
+    // --- 5. VOTE ---
     if (action === "vote") {
       const { targetEmail, voterEmail } = body;
       const voterFile = await getFile(getSafePath(voterEmail));
-      const duel = duels.find(d => d.id === duelId);
+      const duelIndex = duels.findIndex(d => d.id === duelId);
 
-      if (!voterFile || !duel) return NextResponse.json({ error: "Données invalides" }, { status: 404 });
+      if (!voterFile || duelIndex === -1) return NextResponse.json({ error: "Données invalides" }, { status: 404 });
       if (voterFile.content.li < 1) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
 
       voterFile.content.li -= 1;
-      duel.votes[targetEmail] = (duel.votes[targetEmail] || 0) + 1;
+      duels[duelIndex].votes[targetEmail] = (duels[duelIndex].votes[targetEmail] || 0) + 1;
 
       await updateFile(getSafePath(voterEmail), voterFile.content, voterFile.sha, `🗳️ Vote effectué`);
-      await updateFile("data/duels.json", duels, duelsFile.sha, `📈 Score mis à jour`);
+      await updateFile("data/duels.json", duels, duelsFile.sha, `📈 Score duel ${duelId}`);
 
       return NextResponse.json({ success: true });
     }
