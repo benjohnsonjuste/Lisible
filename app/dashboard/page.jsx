@@ -3,7 +3,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon, Sword, Bell, Bookmark, BookmarkX
+  ShieldCheck, AlertCircle, Award, Link as LinkIcon, Sword, Bell, Bookmark, BookmarkX, 
+  Radio, DoorOpen
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,7 +16,7 @@ export default function AuthorDashboard() {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
-  const canvasRef = useRef(null);
+  const [activePodcastInvite, setActivePodcastInvite] = useState(null);
 
   useEffect(() => {
     async function loadStudio() {
@@ -37,8 +38,15 @@ export default function AuthorDashboard() {
             setUser(userData.content);
             localStorage.setItem("lisible_user", JSON.stringify(userData.content));
             
-            const unread = (userData.content.notifications || []).filter(n => !n.read).length;
+            const notifs = userData.content.notifications || [];
+            const unread = notifs.filter(n => !n.read).length;
             setUnreadNotifs(unread);
+
+            // Détection d'une invitation podcast active
+            const podcastInvite = notifs.find(n => n.type === 'PODCAST_INVITATION' && !n.read);
+            if (podcastInvite) {
+              setActivePodcastInvite(podcastInvite);
+            }
           }
         }
 
@@ -95,66 +103,6 @@ export default function AuthorDashboard() {
     }
   };
 
-  const generateBadge = (download = false) => {
-    const canvas = canvasRef.current;
-    if (!canvas || !user) return;
-    const ctx = canvas.getContext('2d');
-    const name = user.penName || user.name || "Auteur.e Lisible";
-    canvas.width = 600;
-    canvas.height = 600;
-    ctx.fillStyle = '#0f172a'; 
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#14b8a6'; 
-    ctx.lineWidth = 20;
-    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-    ctx.fillStyle = '#14b8a6';
-    ctx.font = 'bold 30px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'italic bold 45px serif';
-    const words = name.split(' ');
-    let line = '';
-    let y = 280;
-    const maxWidth = 500;
-    const lineHeight = 60;
-    for (let n = 0; n < words.length; n++) {
-      let testLine = line + words[n] + ' ';
-      let metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
-        ctx.fillText(line, canvas.width / 2, y);
-        line = words[n] + ' ';
-        y += lineHeight;
-      } else { line = testLine; }
-    }
-    ctx.fillText(line, canvas.width / 2, y);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 25px Arial';
-    ctx.fillText('lisible.biz', canvas.width / 2, 540);
-    if (download) {
-      const link = document.createElement('a');
-      link.download = `badge-officiel-${name}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.9);
-      link.click();
-      toast.success("Badge téléchargé !");
-    }
-  };
-
-  const handleUniversalShare = async () => {
-    generateBadge();
-    const canvas = canvasRef.current;
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
-    const file = new File([blob], 'badge-officiel.jpg', { type: 'image/jpeg' });
-    const shareData = { title: 'Compte Officiel Lisible', text: "J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz", files: [file] };
-    if (navigator.canShare && navigator.canShare(shareData)) {
-      try { await navigator.share(shareData); } catch (err) { toast.error("Partage annulé"); }
-    } else {
-      const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi !`;
-      window.open(shareUrl, '_blank');
-      toast.info("Lien de partage généré !");
-    }
-  };
-
   const handleProfileShare = async () => {
     const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
     const shareData = { title: `Profil de ${user.penName || user.name} | Lisible`, text: `Découvrez mes œuvres et suivez ma plume sur Lisible !`, url: profileUrl };
@@ -199,9 +147,30 @@ export default function AuthorDashboard() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
-      <canvas ref={canvasRef} className="hidden" />
       <div className="max-w-6xl mx-auto space-y-12">
         
+        {/* BANDEAU LIVE PODCAST SI INVITATION */}
+        {activePodcastInvite && (
+          <div className="bg-indigo-600 text-white p-6 rounded-[2.5rem] shadow-xl shadow-indigo-900/20 animate-in slide-in-from-top duration-700 flex flex-col md:flex-row items-center justify-between gap-6 border-b-4 border-indigo-800">
+            <div className="flex items-center gap-4 text-center md:text-left">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center animate-pulse">
+                <Radio size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Invitation en direct</p>
+                <h3 className="text-xl font-bold italic leading-tight">{activePodcastInvite.fromName} vous attend au Studio !</h3>
+              </div>
+            </div>
+            <Link 
+              href={activePodcastInvite.link || "#"}
+              className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-indigo-50 transition-all group"
+            >
+              <DoorOpen size={18} className="group-hover:translate-x-1 transition-transform" />
+              Rejoindre le Live
+            </Link>
+          </div>
+        )}
+
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end pt-12 gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -223,13 +192,9 @@ export default function AuthorDashboard() {
             <button onClick={handleProfileShare} className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"><LinkIcon size={14} /> Partager mon Profil</button>
             <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20"><Award size={20} /></div>
-              <div className="pr-4 hidden sm:block">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Badge</p>
+              <div className="pr-4">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Statut</p>
                 <p className="text-[11px] font-bold text-slate-900">Compte Officiel</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={handleUniversalShare} className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors"><Share2 size={16} /></button>
-                <button onClick={() => generateBadge(true)} className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"><Download size={16} /></button>
               </div>
             </div>
           </div>
