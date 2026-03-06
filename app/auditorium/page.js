@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2 } from 'lucide-react';
+import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -12,11 +12,9 @@ export default function Auditorium() {
   useEffect(() => {
     const fetchPodcasts = async () => {
       try {
-        // Adaptation : On utilise l'API dédiée au registre des podcasts
         const res = await fetch('/api/podcasts/register');
         if (res.ok) {
           const data = await res.json();
-          // Trier par date décroissante (plus récent en premier)
           const list = Array.isArray(data.content) ? data.content : [];
           setPodcasts(list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         }
@@ -73,13 +71,12 @@ function PodcastCard({ podcast, isGlobalPlaying, onPlay }) {
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      onPlay(); // Notifier le parent pour arrêter les autres
+      onPlay();
       audioRef.current.play();
     }
     setIsPlaying(!isPlaying);
   };
 
-  // Arrêter si un autre podcast commence à jouer
   useEffect(() => {
     if (!isGlobalPlaying && isPlaying) {
       audioRef.current.pause();
@@ -114,15 +111,25 @@ function PodcastCard({ podcast, isGlobalPlaying, onPlay }) {
             {podcast.title || "Transmission sans titre"}
           </h3>
           
-          <div className="flex items-center gap-3 mt-3 text-slate-500">
-            <div className="flex items-center gap-1 text-[11px] font-medium">
-              <User size={12} className="text-indigo-500" />
-              {podcast.hostName || "Hôte anonyme"}
+          <div className="flex flex-col gap-1 mt-3">
+            <div className="flex items-center gap-3 text-slate-500">
+              <div className="flex items-center gap-1 text-[11px] font-medium">
+                <User size={12} className="text-indigo-500" />
+                {podcast.hostName || "Hôte anonyme"}
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-medium">
+                <Clock size={12} className="text-indigo-500" />
+                {podcast.duration || "30:00"}
+              </div>
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium">
-              <Clock size={12} className="text-indigo-500" />
-              {podcast.duration || "30:00"}
-            </div>
+
+            {/* Affichage des invités si présents */}
+            {podcast.guests && podcast.guests.length > 0 && (
+              <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400/80 italic">
+                <Users size={10} />
+                avec {podcast.guests.map(g => g.name).join(', ')}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -134,7 +141,6 @@ function PodcastCard({ podcast, isGlobalPlaying, onPlay }) {
         className="hidden" 
       />
       
-      {/* Barre de progression visuelle fictive ou réelle */}
       <div className="mt-6 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
         <div 
           className={`h-full bg-indigo-500 transition-all duration-500 ${isPlaying ? 'w-full' : 'w-0'}`}
