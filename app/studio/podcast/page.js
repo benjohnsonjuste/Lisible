@@ -4,25 +4,10 @@ import PodcastStudio from '@/components/PodcastStudio';
 import { Mic2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-// Correction : On ne passe plus currentUser en paramètre de la page
 export default function PodcastStudioPage() {
   
-  // Simulation/Récupération de l'utilisateur (à adapter selon votre AuthContext)
-  // Si vous utilisez un hook type useAuth, décommentez la ligne suivante :
-  // const { currentUser } = useAuth(); 
+  // Récupération de l'utilisateur si présent, sinon null (le studio reste accessible)
   const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user')) : null;
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <div className="text-center space-y-4">
-          <Mic2 size={48} className="mx-auto text-slate-300 animate-pulse" />
-          <p className="text-slate-500 font-medium">Veuillez vous connecter pour accéder au studio.</p>
-          <Link href="/login" className="text-rose-500 font-bold hover:underline">Se connecter</Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-[#F8FAFC] pb-20">
