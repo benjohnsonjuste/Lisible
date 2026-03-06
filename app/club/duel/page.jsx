@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Sword, Timer, Trophy, Zap, Ghost, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-import InTextAd from "@/components/InTextAd"; // Importation de la publicité
+// Correction de l'importation : ajout des accolades si InTextAd n'est pas un export par défaut
+import { InTextAd } from "@/components/InTextAd"; 
 
 const DuelArena = dynamic(() => import("@/components/DuelArena"), { 
   ssr: false,
@@ -32,7 +33,7 @@ export default function DuelPage() {
       
       if (now > target) target.setDate(target.getDate() + 7);
       
-      const diff = target - now;
+      const diff = target.getTime() - now.getTime();
       setCountdown({
         d: Math.floor(diff / (1000 * 60 * 60 * 24)),
         h: Math.floor((diff / (1000 * 60 * 60)) % 24),
@@ -78,7 +79,7 @@ export default function DuelPage() {
   }, [determinePhase]);
 
   useEffect(() => {
-    const logged = localStorage.getItem("lisible_user");
+    const logged = typeof window !== 'undefined' ? localStorage.getItem("lisible_user") : null;
     if (logged) setCurrentUser(JSON.parse(logged));
     fetchCurrentDuel();
   }, [fetchCurrentDuel]);
@@ -101,7 +102,6 @@ export default function DuelPage() {
     </div>
   );
 
-  // Phase ACTIVE : Arène pour les spectateurs et combattants avec Ad
   if (phase === "active") return (
     <>
       <DuelArena duelData={duel} currentUser={currentUser} />
@@ -113,7 +113,6 @@ export default function DuelPage() {
     </>
   );
 
-  // Phase d'ATTENTE ou FINIE (Page Spectateurs par défaut)
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-6 text-center">
        <div className="mb-12 relative">
@@ -150,7 +149,6 @@ export default function DuelPage() {
           </span>
        </div>
 
-       {/* Emplacement publicitaire stratégique pour l'audience en attente */}
        <div className="w-full max-w-2xl mb-12">
           <InTextAd />
        </div>
