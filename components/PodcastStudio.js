@@ -1,32 +1,28 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, Radio, UserPlus, X, Users, Signal, MicOff } from 'lucide-react';
-import { Room, RoomEvent } from 'livekit-client'; 
+import { Mic, Square, Upload, Loader2, UserPlus, X, Users } from 'lucide-react';
+import { Room, RoomEvent, createLocalAudioTrack } from 'livekit-client'; 
 import { toast } from 'sonner';
 
 export default function PodcastStudio({ currentUser }) {
-  // États classiques
   const [isRecording, setIsRecording] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(1800);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  
-  // États Live & WebRTC
   const [isLive, setIsLive] = useState(false);
   const [room, setRoom] = useState(null);
   const [participants, setParticipants] = useState([]);
-  
   const [availableUsers, setAvailableUsers] = useState([]);
   const [invitedUsers, setInvitedUsers] = useState([]);
   const [showInviteList, setShowInviteList] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  // On utilise une ref pour l'AudioContext afin d'éviter les multiples instances
+  const audioCtxRef = useRef(null);
 
   const currentUserEmail = currentUser?.email || null;
   const currentUserName = currentUser?.penName || currentUser?.name || "Invité";
 
-  // 1. Charger les auteurs pour la liste d'invitation
   useEffect(() => {
     const fetchAuthors = async () => {
       try {
@@ -41,14 +37,11 @@ export default function PodcastStudio({ currentUser }) {
           }, []);
           setAvailableUsers(authors);
         }
-      } catch (e) {
-        console.error("Erreur auteurs:", e);
-      }
+      } catch (e) { console.error("Erreur auteurs:", e); }
     };
     fetchAuthors();
   }, [currentUserEmail]);
 
-  // 2. Rejoindre automatiquement si l'URL contient une room (pour les invités)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
@@ -57,7 +50,6 @@ export default function PodcastStudio({ currentUser }) {
     }
   }, [currentUserEmail, isLive]);
 
-  // --- LOGIQUE WEBRTC ---
   const joinLiveRoom = async (roomName) => {
     if (!currentUserEmail) return toast.error("Connectez-vous pour rejoindre le live");
     
@@ -69,21 +61,25 @@ export default function PodcastStudio({ currentUser }) {
       const { token } = await resp.json();
 
       await roomInstance.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, token);
-      await roomInstance.localParticipant.setMicrophoneEnabled(true);
+      
+      // On crée et publie la piste audio
+      const localTrack = await createLocalAudioTrack();
+      await roomInstance.localParticipant.publishTrack(localTrack);
 
       roomInstance.on(RoomEvent.ParticipantConnected, updateParticipants);
       roomInstance.on(RoomEvent.ParticipantDisconnected, updateParticipants);
+      roomInstance.on(RoomEvent.TrackSubscribed, updateParticipants);
       
       updateParticipants();
       setIsLive(true);
       
-      // DÉCLENCHEMENT AUTOMATIQUE DE L'ENREGISTREMENT POUR TOUS
-      startGlobalRecording(roomInstance);
+      // LANCEMENT DE L'ENREGISTREMENT EN UTILISANT LA PISTE EXISTANTE
+      startGlobalRecording(roomInstance, localTrack);
       
-      toast.success("Vous êtes en direct et l'enregistrement a commencé !");
+      toast.success("Studio rejoint. Enregistrement en cours...");
     } catch (e) {
       console.error(e);
-      toast.error("Échec de la connexion au salon audio");
+      toast.error("Échec de la connexion");
     }
   };
 
@@ -92,24 +88,25 @@ export default function PodcastStudio({ currentUser }) {
     setParticipants([room.localParticipant, ...Array.from(room.participants.values())]);
   };
 
-  // --- LOGIQUE ENREGISTREMENT ---
-  const startGlobalRecording = async (activeRoom = room) => {
+  const startGlobalRecording = async (activeRoom, localTrack) => {
     try {
+      // 1. Initialiser l'AudioContext (doit être fait suite à une interaction)
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtxRef.current = audioCtx;
       const dest = audioCtx.createMediaStreamDestination();
       
-      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 2. Utiliser le flux de LiveKit plutôt que de refaire un getUserMedia
+      const localStream = new MediaStream([localTrack.mediaStreamTrack]);
       audioCtx.createMediaStreamSource(localStream).connect(dest);
 
-      if (activeRoom) {
-        activeRoom.participants.forEach(p => {
-          p.audioTracks.forEach(t => {
-            if (t.track?.mediaStream) {
-              audioCtx.createMediaStreamSource(t.track.mediaStream).connect(dest);
-            }
-          });
+      // 3. Connecter les flux des autres participants
+      activeRoom.participants.forEach(p => {
+        p.audioTracks.forEach(t => {
+          if (t.track?.mediaStream) {
+            audioCtx.createMediaStreamSource(t.track.mediaStream).connect(dest);
+          }
         });
-      }
+      });
 
       mediaRecorderRef.current = new MediaRecorder(dest.stream);
       audioChunksRef.current = [];
@@ -124,8 +121,8 @@ export default function PodcastStudio({ currentUser }) {
       mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (err) {
-      console.error(err);
-      toast.error("Erreur de capture audio globale");
+      console.error("Capture Error:", err);
+      toast.error("Erreur de routage audio");
     }
   };
 
@@ -133,20 +130,17 @@ export default function PodcastStudio({ currentUser }) {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      if (audioCtxRef.current) audioCtxRef.current.close();
       toast.success("Enregistrement terminé");
     }
   };
 
-  // --- LOGIQUE NOTIFICATIONS & LANCEMENT ---
   const launchStudioAndNotify = async () => {
     if (invitedUsers.length === 0) return toast.error("Invitez au moins un membre");
-    
-    // Génération d'un ID de salon unique basé sur l'email de l'hôte
     const roomId = `room-${currentUserEmail.replace(/[^a-zA-Z0-9]/g, '')}-${Date.now()}`;
-    const t = toast.loading("Envoi des invitations et lancement...");
+    const t = toast.loading("Lancement du studio...");
 
     try {
-      // Préparation des notifications pour chaque invité
       const notificationPromises = invitedUsers.map(user => 
         fetch('/api/github-db', {
           method: 'POST',
@@ -159,8 +153,8 @@ export default function PodcastStudio({ currentUser }) {
               fromName: currentUserName,
               fromEmail: currentUserEmail,
               type: 'PODCAST_INVITATION',
-              title: '🎙️ Invitation Studio Live',
-              message: `${currentUserName} vous invite à enregistrer en direct maintenant.`,
+              title: '🎙️ Studio Interactif',
+              message: `${currentUserName} lance un enregistrement live.`,
               link: `${window.location.origin}/studio?room=${roomId}`,
               read: false,
               createdAt: new Date().toISOString()
@@ -170,15 +164,11 @@ export default function PodcastStudio({ currentUser }) {
       );
 
       await Promise.all(notificationPromises);
-      
-      // L'hôte rejoint son propre salon (ceci déclenchera startGlobalRecording)
       await joinLiveRoom(roomId);
-      
-      toast.success("Studio prêt ! L'enregistrement est lancé.", { id: t });
+      toast.success("Studio lancé !", { id: t });
       setShowInviteList(false);
     } catch (e) {
-      console.error("Erreur lancement:", e);
-      toast.error("Erreur lors de l'envoi des invitations", { id: t });
+      toast.error("Erreur de lancement", { id: t });
     }
   };
 
@@ -191,14 +181,14 @@ export default function PodcastStudio({ currentUser }) {
       const uploadRes = await fetch(`/api/podcasts/upload?filename=${filename}`, { method: 'POST', body: audioBlob });
       const blobData = await uploadRes.json();
 
-      const registerRes = await fetch('/api/github-db', {
+      await fetch('/api/github-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'add_podcast',
           podcastData: {
             id: crypto.randomUUID(),
-            title: `Session Live : ${currentUserName}`,
+            title: `Session Studio : ${currentUserName}`,
             audioUrl: blobData.url,
             hostName: currentUserName,
             hostEmail: currentUserEmail,
@@ -208,11 +198,9 @@ export default function PodcastStudio({ currentUser }) {
         })
       });
 
-      if (registerRes.ok) {
-        toast.success("Publié !", { id: t });
-        setAudioUrl(null);
-        setIsLive(false);
-      }
+      toast.success("Podcast publié !", { id: t });
+      setAudioUrl(null);
+      setIsLive(false);
     } catch (e) { toast.error("Erreur publication", { id: t }); }
     finally { setIsUploading(false); }
   };
@@ -225,7 +213,6 @@ export default function PodcastStudio({ currentUser }) {
 
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl border border-white/5">
-      {/* Visualisation Participants */}
       {isLive && (
         <div className="flex justify-center gap-4 mb-8">
           {participants.map((p, idx) => (
@@ -233,22 +220,18 @@ export default function PodcastStudio({ currentUser }) {
               <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400 animate-pulse">
                 <Users size={20} />
               </div>
-              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] bg-slate-800 px-2 py-0.5 rounded-full whitespace-nowrap border border-white/10">
-                {p.identity === currentUserEmail ? "Hôte" : "Invité"}
+              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] bg-slate-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+                {p.identity === currentUserEmail ? "Moi" : "Invité"}
               </span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Interface Dynamique */}
       <div className="flex flex-col items-center gap-6">
         {!isLive ? (
           <div className="w-full space-y-6">
-            <button 
-              onClick={() => setShowInviteList(!showInviteList)}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all"
-            >
+            <button onClick={() => setShowInviteList(!showInviteList)} className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all">
               <UserPlus size={16} /> {showInviteList ? "Masquer la liste" : "Choisir des invités"}
             </button>
 
@@ -263,25 +246,18 @@ export default function PodcastStudio({ currentUser }) {
               </div>
             )}
 
-            <button 
-              onClick={launchStudioAndNotify}
-              disabled={invitedUsers.length === 0}
-              className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 disabled:opacity-30"
-            >
-              Lancer le Studio interactif
+            <button onClick={launchStudioAndNotify} disabled={invitedUsers.length === 0} className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 disabled:opacity-30">
+              LANCER LE STUDIO INTERACTIF
             </button>
           </div>
         ) : (
           !audioUrl && (
             <div className="text-center">
-              <button
-                onClick={stopRecording}
-                className="w-32 h-32 rounded-full flex items-center justify-center transition-all bg-rose-600 animate-pulse scale-110 shadow-3xl shadow-rose-500/40"
-              >
+              <button onClick={stopRecording} className="w-32 h-32 rounded-full flex items-center justify-center transition-all bg-rose-600 animate-pulse scale-110 shadow-3xl shadow-rose-500/40">
                 <Square fill="white" size={32} />
               </button>
               <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500">
-                ENREGISTREMENT EN COURS
+                STUDIO EN COURS D'ENREGISTREMENT
               </p>
             </div>
           )
