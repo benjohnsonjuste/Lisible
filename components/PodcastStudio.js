@@ -76,7 +76,11 @@ export default function PodcastStudio({ currentUser }) {
       
       updateParticipants();
       setIsLive(true);
-      toast.success("Vous êtes en direct dans le studio !");
+      
+      // DÉCLENCHEMENT AUTOMATIQUE DE L'ENREGISTREMENT POUR TOUS
+      startGlobalRecording(roomInstance);
+      
+      toast.success("Vous êtes en direct et l'enregistrement a commencé !");
     } catch (e) {
       console.error(e);
       toast.error("Échec de la connexion au salon audio");
@@ -89,7 +93,7 @@ export default function PodcastStudio({ currentUser }) {
   };
 
   // --- LOGIQUE ENREGISTREMENT ---
-  const startGlobalRecording = async () => {
+  const startGlobalRecording = async (activeRoom = room) => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const dest = audioCtx.createMediaStreamDestination();
@@ -97,8 +101,8 @@ export default function PodcastStudio({ currentUser }) {
       const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioCtx.createMediaStreamSource(localStream).connect(dest);
 
-      if (room) {
-        room.participants.forEach(p => {
+      if (activeRoom) {
+        activeRoom.participants.forEach(p => {
           p.audioTracks.forEach(t => {
             if (t.track?.mediaStream) {
               audioCtx.createMediaStreamSource(t.track.mediaStream).connect(dest);
@@ -119,8 +123,8 @@ export default function PodcastStudio({ currentUser }) {
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-      toast.success("Enregistrement master lancé");
     } catch (err) {
+      console.error(err);
       toast.error("Erreur de capture audio globale");
     }
   };
@@ -129,6 +133,7 @@ export default function PodcastStudio({ currentUser }) {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      toast.success("Enregistrement terminé");
     }
   };
 
@@ -147,7 +152,7 @@ export default function PodcastStudio({ currentUser }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'push_notification', // Action pour ajouter à l'array notifications de l'utilisateur
+            action: 'push_notification',
             userEmail: user.email,
             notification: {
               id: crypto.randomUUID(),
@@ -155,7 +160,7 @@ export default function PodcastStudio({ currentUser }) {
               fromEmail: currentUserEmail,
               type: 'PODCAST_INVITATION',
               title: '🎙️ Invitation Studio Live',
-              message: `${currentUserName} vous invite à rejoindre son studio en direct maintenant.`,
+              message: `${currentUserName} vous invite à enregistrer en direct maintenant.`,
               link: `${window.location.origin}/studio?room=${roomId}`,
               read: false,
               createdAt: new Date().toISOString()
@@ -164,13 +169,12 @@ export default function PodcastStudio({ currentUser }) {
         })
       );
 
-      // Envoi groupé des notifications
       await Promise.all(notificationPromises);
       
-      // L'hôte rejoint son propre salon
+      // L'hôte rejoint son propre salon (ceci déclenchera startGlobalRecording)
       await joinLiveRoom(roomId);
       
-      toast.success("Studio ouvert et invitations envoyées !", { id: t });
+      toast.success("Studio prêt ! L'enregistrement est lancé.", { id: t });
       setShowInviteList(false);
     } catch (e) {
       console.error("Erreur lancement:", e);
@@ -271,13 +275,13 @@ export default function PodcastStudio({ currentUser }) {
           !audioUrl && (
             <div className="text-center">
               <button
-                onClick={isRecording ? stopRecording : startGlobalRecording}
-                className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-rose-600 animate-pulse scale-110 shadow-3xl shadow-rose-500/40' : 'bg-white text-slate-900 shadow-xl'}`}
+                onClick={stopRecording}
+                className="w-32 h-32 rounded-full flex items-center justify-center transition-all bg-rose-600 animate-pulse scale-110 shadow-3xl shadow-rose-500/40"
               >
-                {isRecording ? <Square fill="white" size={32} /> : <Mic size={32} />}
+                <Square fill="white" size={32} />
               </button>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                {isRecording ? "Enregistrement en cours..." : "Cliquer pour enregistrer le Master"}
+              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500">
+                ENREGISTREMENT EN COURS
               </p>
             </div>
           )
