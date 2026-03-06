@@ -19,7 +19,7 @@ export default function DuelChallenge({ targetUser, currentUser }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "sendChallenge",
+          action: "challenge",
           senderEmail: currentUser.email,
           targetEmail: targetUser.email,
           senderName: currentUser.penName || currentUser.name
