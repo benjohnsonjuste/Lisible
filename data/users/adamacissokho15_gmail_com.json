@@ -4,6 +4,14 @@
   "li": 65,
   "notifications": [
     {
+      "id": "staff_1772770812193",
+      "type": "info",
+      "message": "Vérification de connexion staff",
+      "link": null,
+      "date": "2026-03-06T04:20:12.193Z",
+      "read": false
+    },
+    {
       "id": "cert_1772688912210",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Mon départ\" (+1 Li).",
