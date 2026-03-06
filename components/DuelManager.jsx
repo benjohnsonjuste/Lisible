@@ -12,7 +12,7 @@ export default function DuelManager({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
 
-  // 1. Chargement des utilisateurs depuis data/users via github-db
+  // 1. Chargement des utilisateurs depuis l'API
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -89,7 +89,6 @@ export default function DuelManager({ currentUser }) {
           : "Défi décliné avec élégance.";
         toast.success(msg, { id: t });
         
-        // Rafraîchissement léger pour mettre à jour les requêtes dans le profil
         setTimeout(() => window.location.reload(), 1500);
       } else {
         throw new Error();
@@ -101,6 +100,7 @@ export default function DuelManager({ currentUser }) {
     }
   };
 
+  // Filtrage par recherche
   const filteredUsers = users.filter(u => 
     (u.penName || u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
