@@ -51,7 +51,32 @@ export async function POST(req) {
     const duelsFile = await getFile("data/duels.json") || { content: [], sha: null };
     const duels = duelsFile.content;
 
-    // --- 1. ENVOYER UN DÉFI ---
+    // --- 0. LANCER UN DÉFI (ACTION DEPUIS LANCEURDEDUEL) ---
+    if (action === "challenge") {
+      const { senderEmail, targetEmail, senderName } = body;
+      const targetFile = await getFile(getSafePath(targetEmail));
+
+      if (!targetFile) return NextResponse.json({ error: "Adversaire introuvable" }, { status: 404 });
+
+      const targetData = targetFile.content;
+      if (!targetData.duelRequests) targetData.duelRequests = [];
+      
+      // On évite les doublons de requêtes du même expéditeur
+      const alreadyChallenged = targetData.duelRequests.some(r => r.senderEmail === senderEmail);
+      if (alreadyChallenged) return NextResponse.json({ error: "Défi déjà envoyé à cet auteur" }, { status: 400 });
+
+      targetData.duelRequests.push({
+        id: `req_${Date.now()}`,
+        senderEmail,
+        senderName,
+        date: new Date().toISOString()
+      });
+
+      await updateFile(getSafePath(targetEmail), targetData, targetFile.sha, `⚔️ Défi lancé par ${senderName}`);
+      return NextResponse.json({ success: true });
+    }
+
+    // --- 1. ENVOYER UN DÉFI (ANCIENNE VERSION / COMPATIBILITÉ) ---
     if (action === "sendChallenge") {
       const { senderEmail, targetEmail, senderName } = body;
       const targetFile = await getFile(getSafePath(targetEmail));
