@@ -12,7 +12,6 @@ import {
   Trophy,
   ArrowRight,
   Search,
-  Check
 } from "lucide-react";
 import Link from "next/link";
 
@@ -79,7 +78,7 @@ export default function PublishPage() {
     if (cleanContent.length === 0) return toast.error("Le Grand Livre ne peut pas sceller une page blanche.");
 
     setLoading(true);
-    const toastId = toast.loading("Publication et notification des abonnés...");
+    const toastId = toast.loading("Publication en cours...");
 
     try {
       const id = Date.now().toString();
@@ -95,7 +94,7 @@ export default function PublishPage() {
         authorPic: user.profilePic || null,
         genre: category,
         category: category,
-        image: imagePreview, // Enregistre l'URL Unsplash au lieu du Base64
+        image: imagePreview, 
         isConcours: false,
         date: new Date().toISOString(),
         views: 0,
@@ -112,45 +111,7 @@ export default function PublishPage() {
 
       if (!resPublish.ok) throw new Error("Échec de la publication.");
 
-      const usersRes = await fetch(`/api/github-db?type=users`);
-      const usersData = await usersRes.json();
-      
-      if (usersData?.content) {
-        const authorProfile = usersData.content.find(u => u.email?.toLowerCase() === authorEmail);
-        const followers = authorProfile?.followers || [];
-
-        if (followers.length > 0) {
-          const newNotification = {
-            id: `notif-${Date.now()}`,
-            type: "new_publication",
-            authorName: user.penName || user.name,
-            textTitle: title.trim(),
-            textId: id,
-            date: new Date().toISOString(),
-            read: false
-          };
-
-          await Promise.all(followers.map(async (followerEmail) => {
-            const followerProfile = usersData.content.find(u => u.email?.toLowerCase() === followerEmail.toLowerCase());
-            if (followerProfile) {
-              await fetch("/api/github-db", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  type: "user",
-                  id: followerEmail,
-                  content: {
-                    ...followerProfile,
-                    notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20)
-                  }
-                })
-              });
-            }
-          }));
-        }
-      }
-
-      toast.success("Publié ! Vos abonnés ont été notifiés. ✨", { id: toastId });
+      toast.success("Publié ! ✨", { id: toastId });
       localStorage.removeItem("atelier_draft_title");
       localStorage.removeItem("atelier_draft_content");
       router.push(`/texts/${id}`);
@@ -238,7 +199,7 @@ export default function PublishPage() {
                 </div>
 
                 {searchResults.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
                     {searchResults.map((img) => (
                       <button
                         key={img.id}
