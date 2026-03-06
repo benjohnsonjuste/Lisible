@@ -4,6 +4,14 @@
   "li": 83,
   "notifications": [
     {
+      "id": "staff_1772770941047",
+      "type": "urgent",
+      "message": "N'oubliez pas de partager votre profil avec les gens de votre entourage dans la section en haut de votre dashboard en leur disant de s'abonner à votre compte. La monétisation débute dès 250 abonnés.",
+      "link": null,
+      "date": "2026-03-06T04:22:21.047Z",
+      "read": false
+    },
+    {
       "id": "staff_1772770812193",
       "type": "info",
       "message": "Vérification de connexion staff",
