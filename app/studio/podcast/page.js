@@ -9,8 +9,8 @@ export default function PodcastStudioPage() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Récupération sécurisée après le montage du composant
-    const savedUser = localStorage.getItem('user');
+    // Récupération via la clé "lisible_user" pour assurer la cohérence avec le Dashboard
+    const savedUser = localStorage.getItem('lisible_user');
     if (savedUser) {
       try {
         setCurrentUser(JSON.parse(savedUser));
