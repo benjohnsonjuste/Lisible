@@ -30,6 +30,7 @@
     "pusher-js": "^8.4.0",
     "@livepeer/react": "^3.1.5",
     "livekit-client": "latest",
+    "livekit-server-sdk": "latest",
     "livekit-react": "latest",
     "jwt-decode": "latest",
     "html2canvas": "^1.4.1",
