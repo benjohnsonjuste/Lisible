@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { 
   Bell, Heart, MessageSquare, Clock, 
   ArrowLeft, Sparkles, Loader2, 
-  RefreshCw, Coins, Award, UserPlus, BookOpen, Trophy, Smartphone, ShieldAlert, AlertTriangle
+  RefreshCw, Coins, Award, UserPlus, BookOpen, Trophy, Smartphone, ShieldAlert, AlertTriangle,
+  Radio, DoorOpen
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ export default function NotificationsPage() {
           localStorage.setItem("lisible_user", JSON.stringify(userData));
           
           const myNotifs = userData.notifications || [];
+          // Tri par date mais on pourrait aussi remonter les invitations podcast non lues en haut
           const sorted = [...myNotifs].sort((a, b) => new Date(b.date) - new Date(a.date));
           
           setNotifications(sorted);
@@ -119,14 +121,13 @@ export default function NotificationsPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: user.email, // L'ID attendu par l'API PATCH action mark_read est l'email
+          id: user.email, 
           action: "mark_read",
           notifId: notifId
         })
       });
 
       if (res.ok) {
-        // Signaler à la Navbar de rafraîchir son compteur
         window.dispatchEvent(new Event('sync-notifications'));
       }
     } catch (e) {
@@ -137,6 +138,7 @@ export default function NotificationsPage() {
   const getIcon = (type, isRead) => {
     const cls = isRead ? "opacity-30" : "animate-pulse";
     switch (type) {
+      case 'PODCAST_INVITATION': return <Radio size={20} className={`${cls} text-indigo-600`} />;
       case 'urgent': return <ShieldAlert size={20} className={`${cls} text-rose-600`} />;
       case 'warning': return <AlertTriangle size={20} className={`${cls} text-amber-500`} />;
       case 'gain': return <Coins size={20} className={`${cls} text-amber-500`} />;
@@ -183,7 +185,7 @@ export default function NotificationsPage() {
             </div>
             <h3 className="text-lg font-bold italic mb-2">Ne manquez aucun signal.</h3>
             <p className="text-[11px] text-slate-400 leading-relaxed mb-6 max-w-[80%]">
-              Activez les notifications push pour recevoir vos gains et vos mentions directement sur votre téléphone, même en étant hors du site.
+              Activez les notifications push pour recevoir vos gains et vos mentions directement sur votre téléphone.
             </p>
             <button 
               onClick={requestPushPermission}
@@ -212,10 +214,12 @@ export default function NotificationsPage() {
                 className={`flex items-start gap-5 p-6 rounded-[2.5rem] border transition-all duration-500 ${
                   n.read 
                     ? 'bg-slate-50/50 border-transparent opacity-60' 
+                    : n.type === 'PODCAST_INVITATION'
+                    ? 'bg-indigo-50 border-indigo-200 shadow-xl shadow-indigo-900/5 hover:border-indigo-400'
                     : `bg-white border-teal-100 shadow-xl shadow-teal-900/5 hover:border-teal-300 ${n.type === 'urgent' ? 'border-l-4 border-l-rose-500' : ''}`
                 }`}
               >
-                <div className={`shrink-0 p-4 rounded-2xl ${n.type === 'urgent' ? 'bg-rose-50' : 'bg-slate-50'}`}>
+                <div className={`shrink-0 p-4 rounded-2xl ${n.type === 'urgent' ? 'bg-rose-50' : n.type === 'PODCAST_INVITATION' ? 'bg-indigo-100' : 'bg-slate-50'}`}>
                   {getIcon(n.type, n.read)}
                 </div>
                 
@@ -224,6 +228,15 @@ export default function NotificationsPage() {
                     {n.message}
                   </p>
                   
+                  {/* Action spécifique pour Podcast */}
+                  {n.type === 'PODCAST_INVITATION' && !n.read && (
+                    <div className="mt-4">
+                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest group-hover:bg-indigo-700 transition-colors">
+                         <DoorOpen size={14} /> Rejoindre le Studio
+                       </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-2 text-slate-400">
                       <Clock size={12} />
