@@ -8,7 +8,11 @@ export default function DuelChallenge({ targetUser, currentUser }) {
 
   const handleSendChallenge = async () => {
     if (!currentUser) return toast.error("Connectez-vous pour défier cette plume.");
-    if (currentUser.email === targetUser.email) return toast.error("Vous ne pouvez pas vous défier vous-même.");
+    
+    // Sécurité : on ne peut pas se défier soi-même
+    if (currentUser.email === targetUser.email) {
+      return toast.error("Vous ne pouvez pas vous défier vous-même.");
+    }
 
     const confirmChallenge = confirm(`Voulez-vous jeter le gant et défier ${targetUser.penName || targetUser.name} ?`);
     if (!confirmChallenge) return;
@@ -19,7 +23,7 @@ export default function DuelChallenge({ targetUser, currentUser }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "challenge",
+          action: "challenge", // Action cohérente avec l'API duel-engine
           senderEmail: currentUser.email,
           targetEmail: targetUser.email,
           senderName: currentUser.penName || currentUser.name
@@ -27,13 +31,13 @@ export default function DuelChallenge({ targetUser, currentUser }) {
       });
 
       if (res.ok) {
-        toast.success("Défi envoyé ! L'honneur est en jeu.");
+        toast.success("Gantelet jeté ! L'honneur est en jeu.");
       } else {
         const data = await res.json();
-        toast.error(data.error || "Erreur lors de l'envoi.");
+        toast.error(data.error || "L'adversaire a déjà une demande en attente.");
       }
     } catch (e) {
-      toast.error("Erreur de connexion au serveur.");
+      toast.error("Erreur de connexion au serveur de l'Arène.");
     } finally {
       setLoading(false);
     }
@@ -43,9 +47,13 @@ export default function DuelChallenge({ targetUser, currentUser }) {
     <button
       onClick={handleSendChallenge}
       disabled={loading}
-      className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-rose-600 transition-all shadow-lg shadow-slate-900/20"
+      className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] hover:bg-rose-600 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {loading ? <Loader2 size={16} className="animate-spin" /> : <Sword size={16} />}
+      {loading ? (
+        <Loader2 size={16} className="animate-spin" />
+      ) : (
+        <Sword size={16} />
+      )}
       Défier en Duel (Gratuit)
     </button>
   );
