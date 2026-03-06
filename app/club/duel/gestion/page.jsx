@@ -13,6 +13,9 @@ export default function DuelGestionPage() {
   const [followedAuthors, setFollowedAuthors] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Liste des comptes administratifs à exclure des défis
+  const ADMIN_EMAILS = ["cmo.lablitteraire7@gmail.com", "admin@lisible.biz"];
+
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -38,7 +41,10 @@ export default function DuelGestionPage() {
       const uniqueEmails = [...new Set(authorsData.content.map(p => p.authorEmail))];
       const profiles = await Promise.all(
         uniqueEmails
-          .filter(email => email !== currentUser.email)
+          .filter(email => 
+            email !== currentUser.email && 
+            !ADMIN_EMAILS.includes(email) // Exclusion des admins ici
+          )
           .map(async (email) => {
             const r = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
             const d = await r.json();
@@ -50,6 +56,37 @@ export default function DuelGestionPage() {
       toast.error("Erreur de chargement");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDuelClick(target) {
+    const confirmDuel = confirm(`Voulez-vous vraiment défier ${target.penName || target.name} ?`);
+    if (!confirmDuel) return;
+
+    const toastId = toast.loading("Envoi du défi...");
+    
+    try {
+      const res = await fetch('/api/duel-engine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: "sendChallenge",
+          senderEmail: user.email,
+          senderName: user.penName || user.name,
+          targetEmail: target.email
+        })
+      });
+
+      if (res.ok) {
+        toast.success("Gant jeté ! L'honneur est en jeu.", { id: toastId });
+        // Optionnel : recharger les données pour mettre à jour l'UI sans reload complet
+        loadInitialData();
+      } else {
+        const errData = await res.json();
+        toast.error(errData.error || "Échec de l'envoi", { id: toastId });
+      }
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi", { id: toastId });
     }
   }
 
@@ -109,7 +146,7 @@ export default function DuelGestionPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            {followedAuthors.map((author) => (
+            {followedAuthors.length > 0 ? followedAuthors.map((author) => (
               <div key={author.email} className="group bg-white p-4 rounded-3xl border border-slate-100 hover:border-teal-200 transition-all flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <img 
@@ -133,38 +170,13 @@ export default function DuelGestionPage() {
                   Défier
                 </button>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-slate-400 text-xs py-8">Aucun auteur disponible pour un défi.</p>
+            )}
           </div>
         </section>
 
       </div>
     </div>
   );
-
-  async function handleDuelClick(target) {
-    const confirmDuel = confirm(`Voulez-vous vraiment défier ${target.penName || target.name} ?`);
-    if (!confirmDuel) return;
-
-    const toastId = toast.loading("Envoi du défi...");
-    
-    try {
-      const res = await fetch('/api/duel-engine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: "sendChallenge",
-          senderEmail: user.email,
-          senderName: user.penName || user.name,
-          targetEmail: target.email
-        })
-      });
-
-      if (res.ok) {
-        toast.success("Gant jeté ! L'honneur est en jeu.", { id: toastId });
-        window.location.reload();
-      }
-    } catch (e) {
-      toast.error("Erreur lors de l'envoi", { id: toastId });
-    }
-  }
 }
