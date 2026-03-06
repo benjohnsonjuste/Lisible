@@ -9,7 +9,6 @@ export default function PodcastStudio({ currentUser }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   
-  // États pour les invitations
   const [availableUsers, setAvailableUsers] = useState([]);
   const [invitedUsers, setInvitedUsers] = useState([]);
   const [showInviteList, setShowInviteList] = useState(false);
@@ -17,17 +16,19 @@ export default function PodcastStudio({ currentUser }) {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  // Charger les utilisateurs via l'index des publications
+  // Utilisation d'une constante sécurisée pour l'email
+  const currentUserEmail = currentUser?.email || null;
+
   useEffect(() => {
     const fetchAuthors = async () => {
       try {
         const res = await fetch('/api/github-db?type=publications');
         if (res.ok) {
           const data = await res.json();
-          // Extraire les auteurs uniques (nom + email)
           const authors = data.content.reduce((acc, curr) => {
-            if (!acc.find(a => a.email === curr.authorEmail) && curr.authorEmail !== currentUser.email) {
-              acc.push({ name: curr.author, email: curr.authorEmail });
+            // Sécurité : on vérifie que curr existe et on compare avec l'email (si présent)
+            if (curr && curr.authorEmail && !acc.find(a => a.email === curr.authorEmail) && curr.authorEmail !== currentUserEmail) {
+              acc.push({ name: curr.author || "Auteur inconnu", email: curr.authorEmail });
             }
             return acc;
           }, []);
@@ -38,7 +39,7 @@ export default function PodcastStudio({ currentUser }) {
       }
     };
     fetchAuthors();
-  }, [currentUser.email]);
+  }, [currentUserEmail]); // On utilise la constante stable ici
 
   useEffect(() => {
     let interval;
@@ -74,7 +75,7 @@ export default function PodcastStudio({ currentUser }) {
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setShowInviteList(false);
-      toast.success("Enregistrement en cours avec vos invités...");
+      toast.success("Enregistrement en cours...");
     } catch (err) {
       toast.error("Microphone inaccessible.");
     }
@@ -103,6 +104,10 @@ export default function PodcastStudio({ currentUser }) {
       if (!uploadRes.ok) throw new Error("Erreur upload");
       const blobData = await uploadRes.json();
 
+      // Fallback sécurisé pour les infos de l'auteur
+      const hostName = currentUser?.penName || currentUser?.name || "Invité";
+      const hostEmail = currentUser?.email || "guest@studio.local";
+
       const registerRes = await fetch('/api/podcasts/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,11 +115,11 @@ export default function PodcastStudio({ currentUser }) {
           action: 'addPodcast',
           podcastData: {
             id: crypto.randomUUID(),
-            title: `Discussion : ${currentUser.penName || currentUser.name} & ses invités`,
+            title: `Discussion : ${hostName} & ses invités`,
             audioUrl: blobData.url,
-            hostName: currentUser.penName || currentUser.name,
-            hostEmail: currentUser.email,
-            guests: invitedUsers, // Liste des invités enregistrée
+            hostName: hostName,
+            hostEmail: hostEmail,
+            guests: invitedUsers,
             duration: formatTime(1800 - timeLeft),
             createdAt: new Date().toISOString()
           }
@@ -138,7 +143,6 @@ export default function PodcastStudio({ currentUser }) {
 
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl border border-white/5">
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className={`p-3 rounded-2xl ${isRecording ? 'bg-rose-500 animate-pulse' : 'bg-slate-800'}`}>
@@ -152,7 +156,6 @@ export default function PodcastStudio({ currentUser }) {
         <div className="text-2xl font-mono font-bold text-rose-500">{formatTime(timeLeft)}</div>
       </div>
 
-      {/* Zone Invitation (uniquement si pas d'audio enregistré) */}
       {!audioUrl && !isRecording && (
         <div className="mb-8">
           <button 
@@ -164,24 +167,27 @@ export default function PodcastStudio({ currentUser }) {
 
           {showInviteList && (
             <div className="mt-4 grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-              {availableUsers.map(user => (
-                <div 
-                  key={user.email} 
-                  onClick={() => toggleInvite(user)}
-                  className={`flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all ${
-                    invitedUsers.find(u => u.email === user.email) ? 'bg-indigo-600' : 'bg-slate-800/50 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="text-xs font-bold">{user.name}</span>
-                  {invitedUsers.find(u => u.email === user.email) && <X size={14} />}
-                </div>
-              ))}
+              {availableUsers.length > 0 ? (
+                availableUsers.map(user => (
+                  <div 
+                    key={user.email} 
+                    onClick={() => toggleInvite(user)}
+                    className={`flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all ${
+                      invitedUsers.find(u => u.email === user.email) ? 'bg-indigo-600' : 'bg-slate-800/50 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{user.name}</span>
+                    {invitedUsers.find(u => u.email === user.email) && <X size={14} />}
+                  </div>
+                ))
+              ) : (
+                <p className="text-[10px] text-slate-500 italic p-2">Aucun membre disponible</p>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Liste des invités actifs */}
       {invitedUsers.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-8">
           {invitedUsers.map(u => (
@@ -192,7 +198,6 @@ export default function PodcastStudio({ currentUser }) {
         </div>
       )}
 
-      {/* Contrôles */}
       <div className="flex flex-col items-center gap-6">
         {!audioUrl ? (
           <button
