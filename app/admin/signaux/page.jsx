@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import LanceurDeSignaux from '@/components/LanceurDeSignaux';
+import AdminPodcastToggle from '@/components/AdminPodcastToggle';
 import { Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -15,8 +16,6 @@ export default function AdminSignauxPage() {
     setIsVerifying(true);
     
     try {
-      // On utilise l'API github-db existante avec un broadcast "test" 
-      // Si le mot de passe est correct, l'API renvoie 200, sinon 403.
       const res = await fetch('/api/github-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -25,7 +24,7 @@ export default function AdminSignauxPage() {
           adminToken: password,
           message: "Vérification de connexion staff",
           type: "info",
-          dryRun: true // Optionnel : pour indiquer à l'API de ne pas envoyer si vous l'implémentez
+          dryRun: true 
         })
       });
 
@@ -89,8 +88,14 @@ export default function AdminSignauxPage() {
           </div>
         </header>
 
-        <div className="flex justify-center">
-          <LanceurDeSignaux />
+        <div className="space-y-12">
+          <div className="flex justify-center">
+            <LanceurDeSignaux />
+          </div>
+          
+          <div className="flex justify-center border-t border-slate-100 pt-12">
+            <AdminPodcastToggle />
+          </div>
         </div>
       </div>
     </div>
