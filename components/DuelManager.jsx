@@ -16,7 +16,7 @@ export default function DuelManager({ currentUser }) {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("/api/github-db?type=publications");
+        const res = await fetch("/api/github-db?type=users");
         if (res.ok) {
           const data = await res.json();
           // Exclusion des administrateurs et du profil actuel
