@@ -1,11 +1,17 @@
 "use client";
 import React from 'react';
-import PodcastStudio from '@/components/PodcastStudio'; // Ajustez le chemin selon votre structure
+import PodcastStudio from '@/components/PodcastStudio'; 
 import { Mic2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PodcastStudioPage({ currentUser }) {
-  // Optionnel : Protection de la page
+// Correction : On ne passe plus currentUser en paramètre de la page
+export default function PodcastStudioPage() {
+  
+  // Simulation/Récupération de l'utilisateur (à adapter selon votre AuthContext)
+  // Si vous utilisez un hook type useAuth, décommentez la ligne suivante :
+  // const { currentUser } = useAuth(); 
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user')) : null;
+
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -20,7 +26,6 @@ export default function PodcastStudioPage({ currentUser }) {
 
   return (
     <main className="min-h-screen bg-[#F8FAFC] pb-20">
-      {/* Barre de navigation simplifiée pour le Studio */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link 
@@ -52,7 +57,6 @@ export default function PodcastStudioPage({ currentUser }) {
           </p>
         </header>
 
-        {/* Appel du composant Studio */}
         <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
           <PodcastStudio currentUser={currentUser} />
         </section>
