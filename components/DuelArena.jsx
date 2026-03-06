@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Timer, Trophy, UserCircle, Ghost, Sparkles, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import DuelVote from "./DuelVote";
+import DuelResults from "./DuelResults";
 
 export default function DuelArena({ duelData, currentUser }) {
   const [timeLeft, setTimeLeft] = useState(900); // 15:00
@@ -11,7 +12,6 @@ export default function DuelArena({ duelData, currentUser }) {
   const [isSaving, setIsSaving] = useState(false);
   const isPlayer = duelData.participants.includes(currentUser?.email);
   
-  // Utilisation d'une ref pour accéder à la dernière version du contenu dans les timers
   const contentRef = useRef(content);
   useEffect(() => { contentRef.current = content; }, [content]);
 
@@ -40,7 +40,7 @@ export default function DuelArena({ duelData, currentUser }) {
         if (contentRef.current.trim().length > 0) {
           saveProgress(contentRef.current);
         }
-      }, 30000); // 30 secondes
+      }, 30000);
       return () => clearInterval(autosaveInterval);
     }
   }, [status, isPlayer]);
@@ -58,7 +58,6 @@ export default function DuelArena({ duelData, currentUser }) {
           email: currentUser.email 
         })
       });
-      // On ne met pas de toast pour l'autosave pour ne pas déranger l'auteur
     } catch (e) {
       console.error("Échec de l'autosave");
     } finally {
@@ -101,7 +100,6 @@ export default function DuelArena({ duelData, currentUser }) {
         </div>
         
         <div className="flex items-center gap-6">
-          {/* Indicateur d'autosave pour le joueur */}
           {isPlayer && status === "playing" && (
             <div className={`flex items-center gap-2 transition-opacity duration-500 ${isSaving ? 'opacity-100' : 'opacity-20'}`}>
               <Save size={14} className="text-teal-500" />
@@ -126,6 +124,13 @@ export default function DuelArena({ duelData, currentUser }) {
           </div>
         </div>
       </div>
+
+      {/* RÉSULTATS (AFFICHÉS SI FINI) */}
+      {status === "finished" && (
+        <div className="mb-20 animate-in fade-in zoom-in duration-1000">
+          <DuelResults duelData={duelData} />
+        </div>
+      )}
 
       {/* ZONE DE COMBAT */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
