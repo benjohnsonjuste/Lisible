@@ -166,7 +166,7 @@ export async function POST(req) {
         if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
       } else {
         isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
-        if (isMatch) {
+        if (isHashed === false && isMatch) {
           const salt = bcrypt.genSaltSync(10);
           file.content.password = bcrypt.hashSync(providedPassword.trim(), salt);
           await updateFile(targetPath, file.content, file.sha, `🔐 Security Fix: Hashing plain password`);
@@ -217,7 +217,6 @@ export async function POST(req) {
         return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
 
-      // 1. Déterminer les destinataires
       let targetEmails = [];
       if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
         targetEmails = data.targetEmails;
@@ -236,7 +235,6 @@ export async function POST(req) {
         read: false
       };
 
-      // 2. Diffusion ciblée
       let count = 0;
       for (const email of targetEmails) {
         const uPath = getSafePath(email);
@@ -380,49 +378,58 @@ export async function PATCH(req) {
       const userPath = getSafePath(id);
       const userFile = await getFile(userPath);
       if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      
       const notifs = userFile.content.notifications || [];
       userFile.content.notifications = notifs.map(n => n.id === notifId ? { ...n, read: true } : n);
-      
       await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notification read: ${notifId}`);
       return NextResponse.json({ success: true });
     }
 
-    const path = `data/texts/${id}.json`;
-    const indexPath = `data/publications/index.json`;
-    const textFile = await getFile(path);
-    if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
-    const authorPath = getSafePath(textFile.content.authorEmail);
+    // --- LOGIQUE MULTI-CONTENU (TEXTES & PODCASTS) ---
+    const isPodcast = id.startsWith('pod_') || id.includes('podcast');
+    const contentPath = isPodcast ? `data/podcasts/${id}.json` : `data/texts/${id}.json`;
+    const indexPath = isPodcast ? `data/podcasts/index.json` : `data/publications/index.json`;
+
+    const contentFile = await getFile(contentPath);
+    if (!contentFile) return NextResponse.json({ error: "Contenu introuvable" }, { status: 404 });
+
+    const authorEmail = contentFile.content.authorEmail || contentFile.content.hostEmail;
+    const authorPath = getSafePath(authorEmail);
     const authorFile = await getFile(authorPath);
     const indexFile = await getFile(indexPath);
 
-    if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
-    if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
-    if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
+    if (action === 'view') contentFile.content.views = (contentFile.content.views || 0) + 1;
+    if (action === 'like') contentFile.content.likes = (contentFile.content.likes || 0) + 1;
+    if (action === 'certify') contentFile.content.certified = (contentFile.content.certified || 0) + 1;
 
+    // Sync Index
     if (indexFile && Array.isArray(indexFile.content)) {
       const itemIndex = indexFile.content.findIndex(t => t.id === id);
       if (itemIndex > -1) {
-        indexFile.content[itemIndex].views = textFile.content.views;
-        indexFile.content[itemIndex].likes = textFile.content.likes;
-        indexFile.content[itemIndex].certified = textFile.content.certified;
+        indexFile.content[itemIndex].views = contentFile.content.views;
+        indexFile.content[itemIndex].likes = contentFile.content.likes;
+        indexFile.content[itemIndex].certified = contentFile.content.certified;
         indexFile.content = globalSort(indexFile.content);
         await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
       }
     }
+
+    // Author Rewards & Notifs
     if (authorFile) {
+      const title = contentFile.content.title;
       if (action === 'like') {
-        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`, date: new Date().toISOString(), read: false });
+        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre ${isPodcast ? 'podcast' : 'texte'} "${title}" !`, date: new Date().toISOString(), read: false });
       }
       if (action === 'certify') {
         authorFile.content.li = (authorFile.content.li || 0) + 1;
-        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`, date: new Date().toISOString(), read: false });
+        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${title}" (+1 Li).`, date: new Date().toISOString(), read: false });
       }
       await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
     }
-    await updateFile(path, textFile.content, textFile.sha, `📈 Text Update: ${action}`);
-    return NextResponse.json({ success: true, count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) });
+
+    await updateFile(contentPath, contentFile.content, contentFile.sha, `📈 Content Update: ${action}`);
+    return NextResponse.json({ success: true, count: action === 'view' ? contentFile.content.views : (action === 'like' ? contentFile.content.likes : contentFile.content.certified) });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
+}
 }
