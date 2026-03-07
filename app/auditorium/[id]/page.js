@@ -6,9 +6,10 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import des composants demandés
+// Import des composants adaptés
 import InTextAd from '@/components/InTextAd';
-import SceauCertification from '@/components/SceauCertification';
+import SceauCertification from '@/components/reader/SceauCertification';
+import FloatingActions from '@/components/reader/FloatingActions';
 
 export default function PodcastPlayerPage() {
   const { id } = useParams();
@@ -118,7 +119,7 @@ export default function PodcastPlayerPage() {
   if (!podcast) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4">
+    <div className="min-h-screen bg-slate-50 py-12 px-4 relative">
       <div className="max-w-3xl mx-auto">
         <button 
           onClick={() => router.back()}
@@ -230,6 +231,9 @@ export default function PodcastPlayerPage() {
           </div>
         </div>
       </div>
+      
+      {/* Intégration des actions flottantes */}
+      <FloatingActions />
     </div>
   );
 }
