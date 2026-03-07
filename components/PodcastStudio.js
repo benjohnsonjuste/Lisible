@@ -1,25 +1,29 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, Radio, UserPlus, X, Users, Signal, MicOff, DoorOpen } from 'lucide-react';
+import { Mic, Square, Upload, Loader2, UserPlus, X, Users, Link, Check } from 'lucide-react';
 import { Room, RoomEvent } from 'livekit-client'; 
 import { toast } from 'sonner';
 
 export default function PodcastStudio({ currentUser }) {
+  // États classiques
   const [isRecording, setIsRecording] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(1800);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // États Live & WebRTC
   const [isLive, setIsLive] = useState(false);
   const [room, setRoom] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [currentRoomId, setCurrentRoomId] = useState(null);
+  const [copied, setCopied] = useState(false);
+  
   const [availableUsers, setAvailableUsers] = useState([]);
   const [invitedUsers, setInvitedUsers] = useState([]);
   const [showInviteList, setShowInviteList] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const audioCtxRef = useRef(null);
-  
+
   const currentUserEmail = currentUser?.email || null;
   const currentUserName = currentUser?.penName || currentUser?.name || "Invité";
 
@@ -38,47 +42,44 @@ export default function PodcastStudio({ currentUser }) {
           }, []);
           setAvailableUsers(authors);
         }
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Erreur auteurs:", e); }
     };
     fetchAuthors();
   }, [currentUserEmail]);
 
-  // Détection automatique d'invitation dans l'URL
+  // Rejoindre via URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam && !isLive && currentUserEmail) {
-      toast.info("Reconnexion au salon en cours...");
+      setCurrentRoomId(roomParam);
       joinLiveRoom(roomParam);
     }
-  }, [currentUserEmail]);
+  }, [currentUserEmail, isLive]);
 
   const joinLiveRoom = async (roomName) => {
-    if (!currentUserEmail) return toast.error("Connexion requise");
+    if (!currentUserEmail) return toast.error("Connectez-vous pour rejoindre le live");
+    
     const roomInstance = new Room();
     setRoom(roomInstance);
+
     try {
       const resp = await fetch(`/api/livekit/token?room=${roomName}&identity=${currentUserEmail}`);
       const { token } = await resp.json();
+
       await roomInstance.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, token);
       await roomInstance.localParticipant.setMicrophoneEnabled(true);
-      
+
       roomInstance.on(RoomEvent.ParticipantConnected, updateParticipants);
       roomInstance.on(RoomEvent.ParticipantDisconnected, updateParticipants);
-      roomInstance.on(RoomEvent.TrackSubscribed, () => {
-        updateParticipants();
-        // Redémarrer le mixage si l'enregistrement est déjà en cours pour inclure le nouveau venu
-        if (isRecording) restartGlobalRecording(roomInstance);
-      });
-
+      
       updateParticipants();
       setIsLive(true);
-      
-      // Démarrage automatique de l'enregistrement dès la connexion
-      startGlobalRecording(roomInstance);
-      
-      toast.success("Studio Live Connecté et Enregistrement lancé");
-    } catch (e) { toast.error("Erreur WebRTC"); }
+      setCurrentRoomId(roomName);
+      toast.success("Studio rejoint !");
+    } catch (e) {
+      toast.error("Échec de la connexion");
+    }
   };
 
   const updateParticipants = () => {
@@ -86,19 +87,24 @@ export default function PodcastStudio({ currentUser }) {
     setParticipants([room.localParticipant, ...Array.from(room.participants.values())]);
   };
 
-  const startGlobalRecording = async (activeRoom = room) => {
+  const copyInviteLink = () => {
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    toast.success("Lien copié dans le presse-papier !");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const startGlobalRecording = async () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      audioCtxRef.current = audioCtx;
       const dest = audioCtx.createMediaStreamDestination();
       
-      // Ajout de la piste locale
       const localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioCtx.createMediaStreamSource(localStream).connect(dest);
 
-      // Ajout des pistes des participants distants
-      if (activeRoom) {
-        activeRoom.participants.forEach(p => {
+      if (room) {
+        room.participants.forEach(p => {
           p.audioTracks.forEach(t => {
             if (t.track?.mediaStream) {
               audioCtx.createMediaStreamSource(t.track.mediaStream).connect(dest);
@@ -119,60 +125,48 @@ export default function PodcastStudio({ currentUser }) {
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-    } catch (err) {
-      console.error(err);
-      toast.error("Erreur de capture audio globale");
-    }
-  };
-
-  const restartGlobalRecording = (activeRoom) => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      startGlobalRecording(activeRoom);
-    }
+      toast.success("Enregistrement master lancé");
+    } catch (err) { toast.error("Erreur capture audio"); }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      if (audioCtxRef.current) audioCtxRef.current.close();
-      toast.success("Enregistrement arrêté");
     }
   };
 
   const launchStudioAndNotify = async () => {
-    if (invitedUsers.length === 0) return toast.error("Sélectionnez des invités");
-    const roomId = `podcast-${Math.random().toString(36).substring(7)}`;
-    const t = toast.loading("Notification des invités...");
+    const roomId = `room-${currentUserEmail.replace(/[^a-zA-Z0-9]/g, '')}`;
+    const t = toast.loading("Lancement du studio...");
 
     try {
-      const notificationPromises = invitedUsers.map(user => 
-        fetch('/api/github-db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'notifications',
-            action: 'add',
-            data: {
-              id: crypto.randomUUID(),
-              toEmail: user.email,
-              fromName: currentUserName,
-              type: 'PODCAST_INVITATION',
-              title: '🎙️ LIVE : Invitation Studio',
-              message: `${currentUserName} vous invite à rejoindre son podcast en direct maintenant.`,
-              link: `${window.location.origin}/studio?room=${roomId}`,
-              status: 'active',
-              createdAt: new Date().toISOString()
-            }
+      if (invitedUsers.length > 0) {
+        const notificationPromises = invitedUsers.map(user => 
+          fetch('/api/github-db', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'notifications',
+              action: 'add',
+              data: {
+                id: crypto.randomUUID(),
+                toEmail: user.email,
+                fromName: currentUserName,
+                type: 'PODCAST_INVITATION',
+                title: '🎙️ Studio Podcast Live',
+                message: `${currentUserName} vous invite en direct.`,
+                link: `${window.location.origin}${window.location.pathname}?room=${roomId}`,
+                createdAt: new Date().toISOString()
+              }
+            })
           })
-        })
-      );
-      await Promise.all(notificationPromises);
+        );
+        await Promise.all(notificationPromises);
+      }
       await joinLiveRoom(roomId);
-      toast.success("Studio ouvert et invitations envoyées !", { id: t });
-      setShowInviteList(false);
-    } catch (e) { toast.error("Échec du lancement", { id: t }); }
+      toast.success("Studio prêt !", { id: t });
+    } catch (e) { toast.error("Erreur", { id: t }); }
   };
 
   const savePodcast = async () => {
@@ -184,26 +178,26 @@ export default function PodcastStudio({ currentUser }) {
       const uploadRes = await fetch(`/api/podcasts/upload?filename=${filename}`, { method: 'POST', body: audioBlob });
       const blobData = await uploadRes.json();
 
-      await fetch('/api/github-db', {
+      await fetch('/api/podcasts/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'add_podcast',
+          action: 'addPodcast',
           podcastData: {
             id: crypto.randomUUID(),
-            title: `Live Studio : ${currentUserName}`,
+            title: `Session Live : ${currentUserName}`,
             audioUrl: blobData.url,
             hostName: currentUserName,
             hostEmail: currentUserEmail,
-            guests: invitedUsers.map(u => u.name),
+            guests: invitedUsers,
             createdAt: new Date().toISOString()
           }
         })
       });
-      toast.success("Podcast publié !", { id: t });
+      toast.success("Publié !", { id: t });
       setAudioUrl(null);
       setIsLive(false);
-    } catch (e) { toast.error("Erreur publication", { id: t }); }
+    } catch (e) { toast.error("Erreur", { id: t }); }
     finally { setIsUploading(false); }
   };
 
@@ -215,29 +209,38 @@ export default function PodcastStudio({ currentUser }) {
 
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl border border-white/5">
+      {/* Participants & Lien */}
       {isLive && (
-        <div className="flex justify-center gap-4 mb-8">
-          {participants.map((p, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-rose-500 to-indigo-600 p-0.5 animate-pulse">
-                <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center">
-                   <Users size={20} className={p.isSpeaking ? "text-rose-500" : "text-slate-400"} />
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <div className="flex justify-center gap-4">
+            {participants.map((p, idx) => (
+              <div key={idx} className="relative">
+                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400">
+                  <Users size={20} />
                 </div>
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] bg-slate-800 px-2 py-0.5 rounded-full whitespace-nowrap border border-white/10">
+                  {p.identity === currentUserEmail ? "Hôte" : "Invité"}
+                </span>
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-tighter text-slate-400">
-                {p.identity === currentUserEmail ? "Moi (Hôte)" : "Invité"}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
+          
+          <button 
+            onClick={copyInviteLink}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full text-[10px] font-bold hover:bg-slate-700 transition-all border border-white/5"
+          >
+            {copied ? <Check size={14} className="text-teal-400" /> : <Link size={14} />}
+            {copied ? "LIEN COPIÉ" : "COPIER LE LIEN D'INVITATION"}
+          </button>
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-8">
+      <div className="flex flex-col items-center gap-6">
         {!isLive ? (
-          <div className="w-full space-y-4">
-             <button 
+          <div className="w-full space-y-6">
+            <button 
               onClick={() => setShowInviteList(!showInviteList)}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 rounded-2xl text-[11px] font-black uppercase hover:bg-slate-700 transition-all"
+              className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all"
             >
               <UserPlus size={16} /> {showInviteList ? "Masquer la liste" : "Choisir des invités"}
             </button>
@@ -245,7 +248,7 @@ export default function PodcastStudio({ currentUser }) {
             {showInviteList && (
               <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                 {availableUsers.map(user => (
-                  <div key={user.email} onClick={() => toggleInvite(user)} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer ${invitedUsers.find(u => u.email === user.email) ? 'bg-indigo-600' : 'bg-slate-800/50 hover:bg-slate-800'}`}>
+                  <div key={user.email} onClick={() => toggleInvite(user)} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${invitedUsers.find(u => u.email === user.email) ? 'bg-indigo-600' : 'bg-slate-800/50 hover:bg-slate-800'}`}>
                     <span className="text-xs font-bold">{user.name}</span>
                     {invitedUsers.find(u => u.email === user.email) && <X size={14} />}
                   </div>
@@ -253,38 +256,37 @@ export default function PodcastStudio({ currentUser }) {
               </div>
             )}
 
-             <button 
+            <button 
               onClick={launchStudioAndNotify}
-              disabled={invitedUsers.length === 0}
-              className="w-full py-5 bg-rose-600 rounded-2xl font-black uppercase tracking-widest hover:bg-rose-500 shadow-lg shadow-rose-500/20 disabled:opacity-30 transition-all"
+              className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20"
             >
-              Lancer le Studio Interactif
+              Lancer le Studio
             </button>
           </div>
         ) : (
           !audioUrl && (
-            <div className="text-center flex flex-col items-center gap-4">
-               <button
-                  onClick={isRecording ? stopRecording : () => startGlobalRecording(room)}
-                  className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-rose-600 animate-pulse scale-110 shadow-3xl shadow-rose-500/40' : 'bg-white text-slate-900'}`}
-                >
-                  {isRecording ? <Square size={32} fill="white" /> : <Mic size={32} />}
-                </button>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500">
-                  {isRecording ? "Enregistrement Master en cours" : "Reprendre l'enregistrement"}
-                </p>
+            <div className="text-center">
+              <button
+                onClick={isRecording ? stopRecording : startGlobalRecording}
+                className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-rose-600 animate-pulse scale-110 shadow-3xl shadow-rose-500/40' : 'bg-white text-slate-900 shadow-xl'}`}
+              >
+                {isRecording ? <Square fill="white" size={32} /> : <Mic size={32} />}
+              </button>
+              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                {isRecording ? "Enregistrement Master..." : "Cliquer pour enregistrer"}
+              </p>
             </div>
           )
         )}
-
+        
         {audioUrl && (
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-4 animate-in fade-in zoom-in duration-300">
             <div className="bg-slate-800 p-6 rounded-3xl border border-white/5">
-              <audio src={audioUrl} controls className="w-full accent-rose-500" />
+              <audio src={audioUrl} controls className="w-full" />
             </div>
             <button onClick={savePodcast} disabled={isUploading} className="w-full py-5 bg-teal-500 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
               {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={20} />}
-              Publier le Podcast
+              Publier
             </button>
           </div>
         )}
