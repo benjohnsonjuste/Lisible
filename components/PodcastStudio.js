@@ -1,7 +1,28 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, Radio, UserPlus, X, Users } from 'lucide-react';
+import { Mic, Square, Upload, Loader2, Radio } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Composant interne pour les ondes de voix
+const AudioVisualizer = ({ isRecording }) => {
+  return (
+    <div className="flex items-center justify-center gap-1 h-12 mb-4">
+      {[...Array(12)].map((_, i) => (
+        <div
+          key={i}
+          className={`w-1.5 bg-rose-500 rounded-full transition-all duration-150 ${
+            isRecording ? 'animate-bounce' : 'h-2'
+          }`}
+          style={{
+            height: isRecording ? `${Math.random() * 100 + 20}%` : '8px',
+            animationDelay: `${i * 0.05}s`,
+            animationDuration: '0.5s'
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function PodcastStudio({ currentUser }) {
   const [isRecording, setIsRecording] = useState(false);
@@ -9,37 +30,8 @@ export default function PodcastStudio({ currentUser }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const [availableUsers, setAvailableUsers] = useState([]);
-  const [invitedUsers, setInvitedUsers] = useState([]);
-  const [showInviteList, setShowInviteList] = useState(false);
-
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-
-  // Utilisation d'une constante sécurisée pour l'email
-  const currentUserEmail = currentUser?.email || null;
-
-  useEffect(() => {
-    const fetchAuthors = async () => {
-      try {
-        const res = await fetch('/api/github-db?type=publications');
-        if (res.ok) {
-          const data = await res.json();
-          const authors = data.content.reduce((acc, curr) => {
-            // Sécurité : on vérifie que curr existe et on compare avec l'email
-            if (curr && curr.authorEmail && !acc.find(a => a.email === curr.authorEmail) && curr.authorEmail !== currentUserEmail) {
-              acc.push({ name: curr.author || "Auteur inconnu", email: curr.authorEmail });
-            }
-            return acc;
-          }, []);
-          setAvailableUsers(authors);
-        }
-      } catch (err) {
-        console.error("Erreur lors de la récupération des auteurs", err);
-      }
-    };
-    fetchAuthors();
-  }, [currentUserEmail]);
 
   useEffect(() => {
     let interval;
@@ -51,14 +43,6 @@ export default function PodcastStudio({ currentUser }) {
     }
     return () => clearInterval(interval);
   }, [isRecording, timeLeft]);
-
-  const toggleInvite = (user) => {
-    if (invitedUsers.find(u => u.email === user.email)) {
-      setInvitedUsers(invitedUsers.filter(u => u.email !== user.email));
-    } else {
-      setInvitedUsers([...invitedUsers, user]);
-    }
-  };
 
   const startRecording = async () => {
     try {
@@ -77,7 +61,6 @@ export default function PodcastStudio({ currentUser }) {
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-      setShowInviteList(false);
       toast.success("Enregistrement en cours...");
     } catch (err) {
       toast.error("Microphone inaccessible.");
@@ -107,8 +90,8 @@ export default function PodcastStudio({ currentUser }) {
       if (!uploadRes.ok) throw new Error("Erreur upload");
       const blobData = await uploadRes.json();
 
-      const hostName = currentUser?.penName || currentUser?.name || "Invité";
-      const hostEmail = currentUser?.email || "guest@studio.local";
+      const hostName = currentUser?.penName || currentUser?.name || "Auteur";
+      const hostEmail = currentUser?.email || "user@studio.local";
       
       const registerRes = await fetch('/api/podcasts/register', {
         method: 'POST',
@@ -117,11 +100,10 @@ export default function PodcastStudio({ currentUser }) {
           action: 'addPodcast',
           podcastData: {
             id: crypto.randomUUID(),
-            title: `Discussion : ${hostName} & ses invités`,
+            title: `Podcast de ${hostName}`,
             audioUrl: blobData.url,
             hostName: hostName,
             hostEmail: hostEmail,
-            guests: invitedUsers,
             duration: formatTime(1800 - timeLeft),
             createdAt: new Date().toISOString()
           }
@@ -131,7 +113,6 @@ export default function PodcastStudio({ currentUser }) {
       if (registerRes.ok) {
         toast.success("Podcast publié !", { id: t });
         setAudioUrl(null);
-        setInvitedUsers([]);
         setTimeLeft(1800);
       }
     } catch (e) {
@@ -152,55 +133,15 @@ export default function PodcastStudio({ currentUser }) {
           </div>
           <div>
             <h2 className="text-xl font-black italic tracking-tighter">Studio Podcast</h2>
-            <p className="text-[10px] uppercase font-bold text-slate-400">{invitedUsers.length} Invité(s)</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">Enregistrement Solo</p>
           </div>
         </div>
         <div className="text-2xl font-mono font-bold text-rose-500">{formatTime(timeLeft)}</div>
       </div>
 
-      {!audioUrl && !isRecording && (
-        <div className="mb-8">
-          <button 
-            onClick={() => setShowInviteList(!showInviteList)}
-            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest bg-slate-800 px-4 py-2 rounded-xl hover:bg-slate-700 transition-all"
-          >
-            <UserPlus size={14} /> {showInviteList ? "Fermer la liste" : "Inviter des membres"}
-          </button>
-          
-          {showInviteList && (
-            <div className="mt-4 grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-              {availableUsers.length > 0 ? (
-                availableUsers.map(user => (
-                  <div 
-                    key={user.email} 
-                    onClick={() => toggleInvite(user)}
-                    className={`flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all ${
-                      invitedUsers.find(u => u.email === user.email) ? 'bg-indigo-600' : 'bg-slate-800/50 hover:bg-slate-800'
-                    }`}
-                  >
-                    <span className="text-xs font-bold">{user.name}</span>
-                    {invitedUsers.find(u => u.email === user.email) && <X size={14} />}
-                  </div>
-                ))
-              ) : (
-                <p className="text-[10px] text-slate-500 italic p-2">Aucun membre disponible</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {invitedUsers.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-8">
-          {invitedUsers.map(u => (
-            <span key={u.email} className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-[10px] font-bold rounded-full border border-indigo-500/30 flex items-center gap-1">
-              <Users size={10} /> {u.name}
-            </span>
-          ))}
-        </div>
-      )}
-
       <div className="flex flex-col items-center gap-6">
+        {isRecording && <AudioVisualizer isRecording={isRecording} />}
+        
         {!audioUrl ? (
           <button
             onClick={isRecording ? stopRecording : startRecording}
@@ -220,6 +161,12 @@ export default function PodcastStudio({ currentUser }) {
             >
               {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
               Publier le Podcast
+            </button>
+            <button 
+              onClick={() => {setAudioUrl(null); setTimeLeft(1800);}}
+              className="w-full text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors"
+            >
+              Recommencer
             </button>
           </div>
         )}
