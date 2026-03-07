@@ -6,8 +6,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import des composants adaptés
-import InTextAd from '@/components/InTextAd';
+// Import ajusté avec des accolades pour corriger l'erreur de build
+import { InTextAd } from '@/components/InTextAd'; 
 import SceauCertification from '@/components/reader/SceauCertification';
 import FloatingActions from '@/components/reader/FloatingActions';
 
@@ -51,7 +51,6 @@ export default function PodcastPlayerPage() {
     } else {
       audioRef.current.play();
       
-      // Incrémentation des vues lors de la première lecture
       if (!hasIncrementedView.current) {
         try {
           const res = await fetch('/api/podcasts/view', {
@@ -129,7 +128,6 @@ export default function PodcastPlayerPage() {
         </button>
 
         <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-100 overflow-hidden mb-8">
-          {/* Header Visuel */}
           <div className="bg-slate-900 p-12 text-center relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 flex items-center justify-center">
               <Headphones size={300} className="text-white" />
@@ -179,12 +177,10 @@ export default function PodcastPlayerPage() {
               </div>
             </div>
 
-            {/* Publicité InText */}
             <div className="my-8">
                <InTextAd />
             </div>
 
-            {/* Contrôles Audio */}
             <div className="space-y-6">
               <div className="relative group">
                 <input 
@@ -232,7 +228,6 @@ export default function PodcastPlayerPage() {
         </div>
       </div>
       
-      {/* Intégration des actions flottantes */}
       <FloatingActions />
     </div>
   );
