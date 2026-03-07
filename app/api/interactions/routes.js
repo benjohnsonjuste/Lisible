@@ -1,89 +1,141 @@
 import { NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 
-// On réutilise les configurations de ton fichier principal
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; 
+
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
   repo: "Lisible",
   token: process.env.GITHUB_TOKEN
 };
 
-// Helper interne pour récupérer un fichier (identique à ton architecture)
+// --- HELPERS CORE ---
+
+const getSafePath = (email) => {
+  if (!email) return null;
+  return `data/users/${email.toLowerCase().trim().replace(/@/g, '_').replace(/\./g, '_').replace(/[^a-z0-9_]/g, '')}.json`;
+};
+
 async function getFile(path) {
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Lisible-App' },
       cache: 'no-store'
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const decoded = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(data.content.replace(/\s/g, '')), (m) => m.codePointAt(0))));
-    return { content: decoded, sha: data.sha };
-  } catch { return null; }
+    const decoded = new TextDecoder().decode(Uint8Array.from(atob(data.content.replace(/\s/g, '')), (m) => m.codePointAt(0)));
+    return { content: JSON.parse(decoded), sha: data.sha };
+  } catch (err) { return null; }
 }
 
-// Helper interne pour mettre à jour
 async function updateFile(path, content, sha, message) {
-  const encoded = btoa(new TextEncoder().encode(JSON.stringify(content, null, 2)).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: `[INTERACTION] ${message}`, content: encoded, sha })
-  });
-  return res.ok;
+  const encoded = btoa(Array.from(new TextEncoder().encode(JSON.stringify(content, null, 2)), (byte) => String.fromCodePoint(byte)).join(""));
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
+      body: JSON.stringify({ message: `[UNIQUE-INT] ${message} [skip ci]`, content: encoded, sha: sha || undefined }),
+    });
+    return res.ok;
+  } catch (err) { return false; }
 }
+
+// --- ROUTE PRINCIPALE ---
 
 export async function POST(req) {
   try {
-    const { id, action, userEmail, authorEmail } = await req.json();
+    const body = await req.json();
+    const { id, action, userEmail, authorEmail } = body;
+
+    // Empreinte unique : IP + UserAgent + ID du contenu + Type d'action
+    const ip = req.headers.get('x-forwarded-for') || '0.0.0.0';
+    const ua = req.headers.get('user-agent') || 'unknown';
+    const deviceFingerprint = createHash('md5').update(`${ip}-${ua}-${id}-${action}`).digest('hex');
 
     if (!id || !action) return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
 
     const isPodcast = id.startsWith('pod_');
-    const contentPath = isPodcast ? `data/podcasts/${id}.json` : `data/texts/${id}.json`;
-    const indexPath = isPodcast ? `data/podcasts/index.json` : `data/publications/index.json`;
+    let targetPath = isPodcast ? `data/podcasts.json` : `data/texts/${id}.json`;
+    let contentData = null;
+    let fileMeta = await getFile(targetPath);
 
-    // 1. MISE À JOUR DU CONTENU (Le fichier individuel)
-    const file = await getFile(contentPath);
-    if (!file) return NextResponse.json({ error: "Fichier non trouvé" }, { status: 404 });
+    if (!fileMeta) return NextResponse.json({ error: "Contenu introuvable" }, { status: 404 });
 
-    if (action === 'like') file.content.likes = (file.content.likes || 0) + 1;
-    if (action === 'certify') file.content.certified = (file.content.certified || 0) + 1;
+    // 1. EXTRACTION DE L'OBJET À MODIFIER
+    let targetObject = null;
+    if (isPodcast) {
+      // Pour les podcasts, on cherche l'objet dans le tableau
+      const pods = Array.isArray(fileMeta.content) ? fileMeta.content : [];
+      targetObject = pods.find(p => p.id === id);
+    } else {
+      // Pour les textes, c'est l'objet racine du fichier
+      targetObject = fileMeta.content;
+    }
+
+    if (!targetObject) return NextResponse.json({ error: "Podcast non trouvé dans la liste" }, { status: 404 });
+
+    // 2. VÉRIFICATION DE L'UNICITÉ
+    if (!targetObject.interactions) targetObject.interactions = [];
+    if (targetObject.interactions.includes(deviceFingerprint) && action !== 'view') {
+      return NextResponse.json({ 
+        error: "Déjà effectué", 
+        alreadyDone: true,
+        count: action === 'like' ? targetObject.likes : targetObject.certified 
+      }, { status: 200 });
+    }
+
+    // 3. MISE À JOUR DES COMPTEURS
+    if (action === 'like') targetObject.likes = (targetObject.likes || 0) + 1;
+    if (action === 'certify') targetObject.certified = (targetObject.certified || 0) + 1;
+    if (action === 'view') targetObject.views = (targetObject.views || 0) + 1;
     
-    await updateFile(contentPath, file.content, file.sha, `${action} sur ${id}`);
+    if (action !== 'view') targetObject.interactions.push(deviceFingerprint);
 
-    // 2. SYNCHRONISATION DE L'INDEX
-    const indexFile = await getFile(indexPath);
-    if (indexFile && Array.isArray(indexFile.content)) {
-      const idx = indexFile.content.findIndex(item => item.id === id);
-      if (idx > -1) {
-        indexFile.content[idx].likes = file.content.likes;
-        indexFile.content[idx].certified = file.content.certified;
-        await updateFile(indexPath, indexFile.content, indexFile.sha, `Sync Index ${action}`);
+    // 4. SAUVEGARDE DU FICHIER SOURCE
+    await updateFile(targetPath, fileMeta.content, fileMeta.sha, `${action} unique sur ${id}`);
+
+    // 5. SYNC INDEX (Seulement pour les textes, car les podcasts utilisent déjà un fichier central)
+    if (!isPodcast) {
+      const indexPath = `data/publications/index.json`;
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const idx = indexFile.content.findIndex(item => item.id === id);
+        if (idx > -1) {
+          indexFile.content[idx].likes = targetObject.likes;
+          indexFile.content[idx].certified = targetObject.certified;
+          indexFile.content[idx].views = targetObject.views || 0;
+          await updateFile(indexPath, indexFile.content, indexFile.sha, `Sync Index`);
+        }
       }
     }
 
-    // 3. NOTIFICATION DE L'AUTEUR (Optionnel mais recommandé)
-    if (authorEmail && authorEmail !== userEmail) {
-      const safeAuthorEmail = authorEmail.toLowerCase().trim().replace(/@/g, '_').replace(/\./g, '_');
-      const authorPath = `data/users/${safeAuthorEmail}.json`;
+    // 6. NOTIFICATION & RÉCOMPENSE
+    if (authorEmail && authorEmail.toLowerCase() !== userEmail?.toLowerCase()) {
+      const authorPath = getSafePath(authorEmail);
       const authorFile = await getFile(authorPath);
-      
       if (authorFile) {
-        const newNotif = {
+        if (!authorFile.content.notifications) authorFile.content.notifications = [];
+        authorFile.content.notifications.unshift({
           id: `notif_${Date.now()}`,
           type: action,
-          message: `Votre podcast "${file.content.title}" a reçu un ${action} !`,
+          message: `Nouveau ${action} sur "${targetObject.title}" !`,
           date: new Date().toISOString(),
           read: false
-        };
-        authorFile.content.notifications = [newNotif, ...(authorFile.content.notifications || [])];
-        await updateFile(authorPath, authorFile.content, authorFile.sha, `Notif ${action} pour auteur`);
+        });
+        if (action === 'certify') authorFile.content.li = (authorFile.content.li || 0) + 1;
+        await updateFile(authorPath, authorFile.content, authorFile.sha, `Reward Unique`);
       }
     }
 
-    return NextResponse.json({ success: true, count: action === 'like' ? file.content.likes : file.content.certified });
+    return NextResponse.json({ 
+      success: true, 
+      count: action === 'like' ? targetObject.likes : (action === 'certify' ? targetObject.certified : targetObject.views) 
+    });
 
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
