@@ -1,7 +1,6 @@
 "use client";
 import { useState } from 'react';
 import LanceurDeSignaux from '@/components/LanceurDeSignaux';
-import AdminPodcastToggle from '@/components/AdminPodcastToggle';
 import { Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -91,10 +90,6 @@ export default function AdminSignauxPage() {
         <div className="space-y-12">
           <div className="flex justify-center">
             <LanceurDeSignaux />
-          </div>
-          
-          <div className="flex justify-center border-t border-slate-100 pt-12">
-            <AdminPodcastToggle />
           </div>
         </div>
       </div>
