@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import ajusté avec des accolades pour corriger l'erreur de build
+// Import des composants
 import { InTextAd } from '@/components/InTextAd'; 
 import SceauCertification from '@/components/reader/SceauCertification';
 import FloatingActions from '@/components/reader/FloatingActions';
@@ -177,10 +177,6 @@ export default function PodcastPlayerPage() {
               </div>
             </div>
 
-            <div className="my-8">
-               <InTextAd />
-            </div>
-
             <div className="space-y-6">
               <div className="relative group">
                 <input 
@@ -204,6 +200,11 @@ export default function PodcastPlayerPage() {
                 >
                   {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-2" />}
                 </button>
+              </div>
+
+              {/* Publicité placée sous le bouton Play avec hauteur minimale */}
+              <div className="mt-8 min-h-[250px] w-full flex items-center justify-center overflow-visible">
+                <InTextAd />
               </div>
             </div>
 
