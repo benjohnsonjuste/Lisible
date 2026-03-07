@@ -1,13 +1,15 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Users } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Share2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from 'sonner';
+import Link from 'next/link';
 
 export default function Auditorium() {
   const [podcasts, setPodcasts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [playingUrl, setPlayingUrl] = useState(null);
+  const [currentPlayingUrl, setCurrentPlayingUrl] = useState(null);
 
   useEffect(() => {
     const fetchPodcasts = async () => {
@@ -48,8 +50,10 @@ export default function Auditorium() {
             <PodcastCard 
               key={podcast.id || podcast.audioUrl} 
               podcast={podcast} 
-              isGlobalPlaying={playingUrl === podcast.audioUrl}
-              onPlay={() => setPlayingUrl(podcast.audioUrl)}
+              isActive={currentPlayingUrl === podcast.audioUrl}
+              onPlay={() => setCurrentPlayingUrl(podcast.audioUrl)}
+              onPause={() => setCurrentPlayingUrl(null)}
+              setPodcasts={setPodcasts}
             />
           ))}
         </div>
@@ -63,73 +67,130 @@ export default function Auditorium() {
   );
 }
 
-function PodcastCard({ podcast, isGlobalPlaying, onPlay }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = React.useRef(null);
-
-  const togglePlay = () => {
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      onPlay();
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
+function PodcastCard({ podcast, isActive, onPlay, onPause, setPodcasts }) {
+  const audioRef = useRef(null);
+  const [progress, setProgress] = useState(0);
+  const hasIncrementedView = useRef(false);
 
   useEffect(() => {
-    if (!isGlobalPlaying && isPlaying) {
+    if (isActive) {
+      audioRef.current.play().catch(() => onPause());
+    } else {
       audioRef.current.pause();
-      setIsPlaying(false);
     }
-  }, [isGlobalPlaying]);
+  }, [isActive, onPause]);
+
+  const handleTimeUpdate = () => {
+    const duration = audioRef.current.duration;
+    const ct = audioRef.current.currentTime;
+    if (duration) {
+      setProgress((ct / duration) * 100);
+    }
+  };
+
+  const togglePlay = async () => {
+    if (isActive) {
+      onPause();
+    } else {
+      onPlay();
+      
+      // Incrémentation des vues au premier clic
+      if (!hasIncrementedView.current) {
+        try {
+          const res = await fetch('/api/podcasts/view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: podcast.id })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            hasIncrementedView.current = true;
+            // Mise à jour locale du compteur pour l'UI
+            setPodcasts(prev => prev.map(p => 
+              p.id === podcast.id ? { ...p, views: data.views } : p
+            ));
+          }
+        } catch (e) {
+          console.error("Erreur incrementation vues");
+        }
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: podcast.title,
+      text: `Écoutez "${podcast.title}" par ${podcast.hostName} sur l'Auditorium.`,
+      url: `${window.location.origin}/auditorium/${podcast.id}`,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        toast.success("Lien copié dans le presse-papier");
+      }
+    } catch (err) {
+      console.error("Erreur de partage:", err);
+    }
+  };
 
   return (
-    <div className="group bg-white border border-slate-100 p-6 rounded-[2.5rem] shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+    <div className={`group bg-white border p-6 rounded-[2.5rem] transition-all duration-300 ${
+      isActive ? 'border-indigo-500 shadow-2xl scale-[1.02]' : 'border-slate-100 shadow-xl hover:shadow-2xl'
+    }`}>
       <div className="flex items-start gap-5">
         <button 
           onClick={togglePlay}
           className={`w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center transition-all ${
-            isPlaying ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-900 text-white hover:bg-indigo-600'
+            isActive ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-900 text-white hover:bg-indigo-600'
           }`}
         >
-          {isPlaying ? <Pause fill="currentColor" /> : <Play fill="currentColor" className="ml-1" />}
+          {isActive ? <Pause fill="currentColor" size={24} /> : <Play fill="currentColor" size={24} className="ml-1" />}
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md">
-              Podcast
-            </span>
-            <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
-              <Calendar size={10} />
-              {podcast.createdAt ? format(new Date(podcast.createdAt), 'dd MMMM yyyy', { locale: fr }) : 'Date inconnue'}
-            </span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md">
+                Podcast
+              </span>
+              <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
+                <Calendar size={10} />
+                {podcast.createdAt ? format(new Date(podcast.createdAt), 'dd MMM yyyy', { locale: fr }) : 'Date inconnue'}
+              </span>
+            </div>
+            <button 
+              onClick={handleShare}
+              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+              title="Partager"
+            >
+              <Share2 size={16} />
+            </button>
           </div>
           
-          <h3 className="font-bold text-slate-900 text-lg leading-tight truncate">
-            {podcast.title || "Transmission sans titre"}
-          </h3>
+          <Link href={`/auditorium/${podcast.id}`}>
+            <h3 className="font-bold text-slate-900 text-lg leading-tight truncate pr-2 hover:text-indigo-600 transition-colors cursor-pointer">
+              {podcast.title}
+            </h3>
+          </Link>
           
           <div className="flex flex-col gap-1 mt-3">
-            <div className="flex items-center gap-3 text-slate-500">
+            <div className="flex items-center gap-4 text-slate-500">
               <div className="flex items-center gap-1 text-[11px] font-medium">
                 <User size={12} className="text-indigo-500" />
-                {podcast.hostName || "Hôte anonyme"}
+                {podcast.hostName}
               </div>
               <div className="flex items-center gap-1 text-[11px] font-medium">
                 <Clock size={12} className="text-indigo-500" />
-                {podcast.duration || "30:00"}
+                {podcast.duration}
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-medium">
+                <Eye size={12} className="text-indigo-500" />
+                {podcast.views || 0}
               </div>
             </div>
-
-            {/* Affichage des invités si présents */}
-            {podcast.guests && podcast.guests.length > 0 && (
-              <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-400/80 italic">
-                <Users size={10} />
-                avec {podcast.guests.map(g => g.name).join(', ')}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -137,15 +198,23 @@ function PodcastCard({ podcast, isGlobalPlaying, onPlay }) {
       <audio 
         ref={audioRef} 
         src={podcast.audioUrl} 
-        onEnded={() => setIsPlaying(false)}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={onPause}
         className="hidden" 
       />
       
-      <div className="mt-6 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div 
-          className={`h-full bg-indigo-500 transition-all duration-500 ${isPlaying ? 'w-full' : 'w-0'}`}
-          style={{ transitionDuration: isPlaying ? `${30*60}s` : '0s' }}
-        />
+      <div className="mt-6">
+        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-indigo-500 transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        {isActive && (
+           <p className="text-[9px] font-bold text-indigo-500 mt-2 animate-pulse uppercase tracking-widest">
+             Transmission active...
+           </p>
+        )}
       </div>
     </div>
   );
