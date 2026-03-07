@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, Radio } from 'lucide-react';
+import { Mic, Square, Upload, Loader2, Radio, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Composant interne pour les ondes de voix
@@ -29,6 +29,7 @@ export default function PodcastStudio({ currentUser }) {
   const [timeLeft, setTimeLeft] = useState(1800);
   const [audioUrl, setAudioUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [podcastTitle, setPodcastTitle] = useState("");
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -76,16 +77,19 @@ export default function PodcastStudio({ currentUser }) {
   };
 
   const savePodcast = async () => {
+    if (!podcastTitle.trim()) {
+      toast.error("Veuillez donner un titre à votre épisode.");
+      return;
+    }
+
     setIsUploading(true);
     const t = toast.loading("Publication du podcast...");
     try {
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' });
       
-      // 1. Préparation du FormData pour l'upload
       const formData = new FormData();
       formData.append('file', audioBlob, `podcast-${Date.now()}.mp3`);
 
-      // 2. Envoi vers l'API d'upload (Vercel Blob)
       const uploadRes = await fetch('/api/podcasts/upload', {
         method: 'POST',
         body: formData
@@ -97,7 +101,6 @@ export default function PodcastStudio({ currentUser }) {
       const hostName = currentUser?.penName || currentUser?.name || "Auteur";
       const hostEmail = currentUser?.email || "user@studio.local";
       
-      // 3. Envoi vers l'API register pour mettre à jour le JSON sur GitHub
       const registerRes = await fetch('/api/podcasts/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,11 +108,13 @@ export default function PodcastStudio({ currentUser }) {
           action: 'addPodcast',
           podcastData: {
             id: crypto.randomUUID(),
-            title: `Podcast de ${hostName}`,
+            title: podcastTitle,
             audioUrl: uploadData.url,
             hostName: hostName,
             hostEmail: hostEmail,
-            duration: formatTime(1800 - timeLeft)
+            duration: formatTime(1800 - timeLeft),
+            createdAt: new Date().toISOString(),
+            views: 0
           }
         })
       });
@@ -118,6 +123,7 @@ export default function PodcastStudio({ currentUser }) {
 
       toast.success("Podcast publié !", { id: t });
       setAudioUrl(null);
+      setPodcastTitle("");
       setTimeLeft(1800);
       
     } catch (e) {
@@ -138,7 +144,7 @@ export default function PodcastStudio({ currentUser }) {
             <Radio size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-black italic tracking-tighter">Studio Podcast</h2>
+            <h2 className="text-xl font-black italic tracking-tighter uppercase">Studio Podcast</h2>
             <p className="text-[10px] uppercase font-bold text-slate-400">Enregistrement Solo</p>
           </div>
         </div>
@@ -158,18 +164,33 @@ export default function PodcastStudio({ currentUser }) {
             {isRecording ? <Square fill="currentColor" size={32} /> : <Mic size={32} />}
           </button>
         ) : (
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-black text-slate-500 tracking-widest ml-2">
+                Titre de l'épisode
+              </label>
+              <input 
+                type="text"
+                placeholder="Ex: Ma première transmission..."
+                value={podcastTitle}
+                onChange={(e) => setPodcastTitle(e.target.value)}
+                className="w-full bg-slate-800 border border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-bold text-lg"
+              />
+            </div>
+
             <audio src={audioUrl} controls className="w-full accent-rose-500" />
+            
             <button
               onClick={savePodcast}
               disabled={isUploading}
-              className="w-full py-4 bg-teal-500 text-slate-950 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2"
+              className="w-full py-5 bg-teal-500 text-slate-950 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-teal-400 transition-colors shadow-lg shadow-teal-500/20"
             >
               {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
               Publier le Podcast
             </button>
+            
             <button 
-              onClick={() => {setAudioUrl(null); setTimeLeft(1800);}}
+              onClick={() => {setAudioUrl(null); setTimeLeft(1800); setPodcastTitle("");}}
               className="w-full text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors"
             >
               Recommencer
