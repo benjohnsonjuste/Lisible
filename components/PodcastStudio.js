@@ -80,19 +80,24 @@ export default function PodcastStudio({ currentUser }) {
     const t = toast.loading("Publication du podcast...");
     try {
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' });
-      const filename = `podcast-${Date.now()}.mp3`;
       
-      const uploadRes = await fetch(`/api/podcasts/upload?filename=${filename}`, {
+      // 1. Préparation du FormData pour l'upload
+      const formData = new FormData();
+      formData.append('file', audioBlob, `podcast-${Date.now()}.mp3`);
+
+      // 2. Envoi vers l'API d'upload (Vercel Blob)
+      const uploadRes = await fetch('/api/podcasts/upload', {
         method: 'POST',
-        body: audioBlob
+        body: formData
       });
       
-      if (!uploadRes.ok) throw new Error("Erreur upload");
-      const blobData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error("Erreur lors de l'upload du fichier");
+      const uploadData = await uploadRes.json();
 
       const hostName = currentUser?.penName || currentUser?.name || "Auteur";
       const hostEmail = currentUser?.email || "user@studio.local";
       
+      // 3. Envoi vers l'API register pour mettre à jour le JSON sur GitHub
       const registerRes = await fetch('/api/podcasts/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -101,22 +106,23 @@ export default function PodcastStudio({ currentUser }) {
           podcastData: {
             id: crypto.randomUUID(),
             title: `Podcast de ${hostName}`,
-            audioUrl: blobData.url,
+            audioUrl: uploadData.url,
             hostName: hostName,
             hostEmail: hostEmail,
-            duration: formatTime(1800 - timeLeft),
-            createdAt: new Date().toISOString()
+            duration: formatTime(1800 - timeLeft)
           }
         })
       });
 
-      if (registerRes.ok) {
-        toast.success("Podcast publié !", { id: t });
-        setAudioUrl(null);
-        setTimeLeft(1800);
-      }
+      if (!registerRes.ok) throw new Error("Erreur lors de l'enregistrement GitHub");
+
+      toast.success("Podcast publié !", { id: t });
+      setAudioUrl(null);
+      setTimeLeft(1800);
+      
     } catch (e) {
-      toast.error("Échec de la publication", { id: t });
+      console.error(e);
+      toast.error(e.message || "Échec de la publication", { id: t });
     } finally {
       setIsUploading(false);
     }
