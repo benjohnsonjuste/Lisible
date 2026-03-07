@@ -117,7 +117,7 @@ export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
-    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, adminToken, ...data } = body;
+    const { action, userEmail, textId, duelId, amount, adminToken, ...data } = body;
     
     const emailToUse = userEmail || data.email;
     const targetPath = getSafePath(emailToUse);
@@ -151,27 +151,9 @@ export async function POST(req) {
       }
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
       if (file.content.status === "deleted") {
-        return NextResponse.json({ 
-          error: "Ce compte est en attente de suppression.",
-          isDeleted: true,
-          email: file.content.email 
-        }, { status: 403 });
+        return NextResponse.json({ error: "Compte en attente de suppression." }, { status: 403 });
       }
-      const storedPassword = file.content.password;
-      const providedPassword = data.password;
-      let isMatch = false;
-      const isHashed = typeof storedPassword === 'string' && storedPassword.startsWith('$2');
-      if (isHashed) {
-        isMatch = bcrypt.compareSync(providedPassword, storedPassword);
-        if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
-      } else {
-        isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
-        if (isHashed === false && isMatch) {
-          const salt = bcrypt.genSaltSync(10);
-          file.content.password = bcrypt.hashSync(providedPassword.trim(), salt);
-          await updateFile(targetPath, file.content, file.sha, `🔐 Security Fix: Hashing plain password`);
-        }
-      }
+      const isMatch = bcrypt.compareSync(data.password, file.content.password);
       if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
       const { password, ...safeUser } = file.content;
       return NextResponse.json({ success: true, user: safeUser });
@@ -181,153 +163,44 @@ export async function POST(req) {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
       const indexPath = `data/publications/index.json`;
-      const finalImage = data.image || data.imageBase64 || null;
-      const newPub = { ...data, id: pubId, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      const newPub = { ...data, id: pubId, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
-      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: data.isConcours || false, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
+      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, image: data.image, date: newPub.date, views: 0, likes: 0, certified: 0 });
       indexContent = globalSort(indexContent);
-      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
+      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update`);
       return NextResponse.json({ success: true, id: pubId });
-    }
-
-    if (action === 'toggle_bookmark') {
-      const userFile = await getFile(targetPath);
-      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      const user = userFile.content;
-      if (!user.bookmarks) user.bookmarks = [];
-      const exists = user.bookmarks.find(b => b.id === textId);
-      if (exists) {
-        user.bookmarks = user.bookmarks.filter(b => b.id !== textId);
-      } else {
-        user.bookmarks.push({ 
-          id: textId, 
-          title: data.title, 
-          author: data.authorName, 
-          date: new Date().toISOString() 
-        });
-      }
-      await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
-      return NextResponse.json({ success: true, bookmarks: user.bookmarks });
-    }
-
-    if (action === 'broadcast') {
-      if (adminToken !== process.env.ADMIN_PASSWORD) {
-        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-      }
-
-      let targetEmails = [];
-      if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
-        targetEmails = data.targetEmails;
-      } else {
-        const indexFile = await getFile(`data/publications/index.json`);
-        if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
-        targetEmails = [...new Set(indexFile.content.map(p => p.authorEmail))];
-      }
-      
-      const newSignal = {
-        id: `staff_${Date.now()}`,
-        type: data.type || "info",
-        message: data.message,
-        link: data.link || null,
-        date: new Date().toISOString(),
-        read: false
-      };
-
-      let count = 0;
-      for (const email of targetEmails) {
-        const uPath = getSafePath(email);
-        const uFile = await getFile(uPath);
-        if (uFile) {
-          if (!uFile.content.notifications) uFile.content.notifications = [];
-          uFile.content.notifications.unshift(newSignal);
-          const success = await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff (Targeted)`);
-          if (success) count++;
-        }
-      }
-      return NextResponse.json({ success: true, count });
-    }
-
-    if (action === 'saveDuelText') {
-      const duelFilePath = `data/duels.json`;
-      const file = await getFile(duelFilePath);
-      if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
-      const duels = Array.isArray(file.content) ? file.content : [];
-      const duelIndex = duels.findIndex(d => d.id === duelId);
-      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
-      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
-      if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
-      duels[duelIndex].texts[data.email] = data.text;
-      await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
-      return NextResponse.json({ success: true });
-    }
-
-    if (action === 'edit_text') {
-      const idToEdit = textId || data.id;
-      const path = `data/texts/${idToEdit}.json`;
-      const indexPath = `data/publications/index.json`;
-      const file = await getFile(path);
-      if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
-      const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
-      await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
-      const indexFile = await getFile(indexPath);
-      if (indexFile && Array.isArray(indexFile.content)) {
-        const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
-        if (itemIndex > -1) {
-          indexFile.content[itemIndex] = { ...indexFile.content[itemIndex], title: data.title || indexFile.content[itemIndex].title, category: data.category || indexFile.content[itemIndex].category, genre: data.genre || indexFile.content[itemIndex].genre, image: data.image || indexFile.content[itemIndex].image };
-          await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
-        }
-      }
-      return NextResponse.json({ success: true });
     }
 
     if (action === 'delete_text') {
       const idToDelete = textId || data.textId;
-      const path = `data/texts/${idToDelete}.json`;
-      const indexPath = `data/publications/index.json`;
+      const isPodcast = idToDelete.startsWith('pod_');
+      const path = isPodcast ? `data/podcasts/${idToDelete}.json` : `data/texts/${idToDelete}.json`;
+      const indexPath = isPodcast ? `data/podcasts/index.json` : `data/publications/index.json`;
+      
       const file = await getFile(path);
       if (file) {
-        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha }) });
+        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `🗑 Delete: ${idToDelete}`, sha: file.sha })
+        });
       }
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
         const newIndex = indexFile.content.filter(t => t.id !== idToDelete);
-        await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
+        await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync Delete`);
       }
       return NextResponse.json({ success: true });
     }
 
-    if (action === 'follow' || action === 'unfollow') {
-      const follower = await getFile(getSafePath(userEmail));
-      const target = await getFile(getSafePath(data.targetEmail));
-      if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      const targetEmailClean = data.targetEmail.toLowerCase().trim();
-      const userEmailClean = userEmail.toLowerCase().trim();
-      if (action === 'follow') {
-        if (!follower.content.following.includes(targetEmailClean)) {
-          follower.content.following.push(targetEmailClean);
-          target.content.followers.push(userEmailClean);
-          target.content.notifications.unshift({ id: `follow_${Date.now()}`, type: "follow", message: `${follower.content.name} s'est abonné à vous !`, date: new Date().toISOString(), read: false });
-        }
-      } else {
-        follower.content.following = follower.content.following.filter(e => e !== targetEmailClean);
-        target.content.followers = target.content.followers.filter(e => e !== userEmailClean);
-      }
-      await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
-      await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
-      return NextResponse.json({ success: true, followersCount: target.content.followers.length });
-    }
-
-    if (action === 'transfer_li' || action === 'gift_li') {
-      if (amount < ECONOMY.MIN_TRANSFER) return NextResponse.json({ error: "Minimum non atteint" }, { status: 400 });
+    if (action === 'transfer_li') {
       const sender = await getFile(getSafePath(userEmail));
       const receiver = await getFile(getSafePath(data.recipientEmail));
-      if (!sender || !receiver) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
+      if (!sender || !receiver || sender.content.li < amount) return NextResponse.json({ error: "Transaction impossible" }, { status: 400 });
       sender.content.li -= amount;
       receiver.content.li += amount;
-      receiver.content.notifications.unshift({ id: `notif_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
       await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
       await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
       return NextResponse.json({ success: true });
@@ -344,23 +217,18 @@ export async function GET(req) {
   const type = searchParams.get('type');
   const id = searchParams.get('id');
   try {
-    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
     if (type === 'text') {
         const text = await getFile(`data/texts/${id}.json`);
         return NextResponse.json(text);
     }
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
-        if (user) {
-            user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
-            user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
-            delete user.content.password;
-        }
+        if (user) delete user.content.password;
         return NextResponse.json(user);
     }
-    if (type === 'library' || type === 'publications') {
+    if (type === 'publications') {
       const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
+      if (index) index.content = globalSort(index.content);
       return NextResponse.json(index);
     }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
@@ -377,59 +245,35 @@ export async function PATCH(req) {
     if (action === 'mark_read') {
       const userPath = getSafePath(id);
       const userFile = await getFile(userPath);
-      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      const notifs = userFile.content.notifications || [];
-      userFile.content.notifications = notifs.map(n => n.id === notifId ? { ...n, read: true } : n);
-      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notification read: ${notifId}`);
+      if (!userFile) return NextResponse.json({ error: "404" }, { status: 404 });
+      userFile.content.notifications = (userFile.content.notifications || []).map(n => n.id === notifId ? { ...n, read: true } : n);
+      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notif read`);
       return NextResponse.json({ success: true });
     }
 
-    // --- LOGIQUE MULTI-CONTENU (TEXTES & PODCASTS) ---
-    const isPodcast = id.startsWith('pod_') || id.includes('podcast');
+    const isPodcast = id.startsWith('pod_');
     const contentPath = isPodcast ? `data/podcasts/${id}.json` : `data/texts/${id}.json`;
     const indexPath = isPodcast ? `data/podcasts/index.json` : `data/publications/index.json`;
 
     const contentFile = await getFile(contentPath);
-    if (!contentFile) return NextResponse.json({ error: "Contenu introuvable" }, { status: 404 });
-
-    const authorEmail = contentFile.content.authorEmail || contentFile.content.hostEmail;
-    const authorPath = getSafePath(authorEmail);
-    const authorFile = await getFile(authorPath);
-    const indexFile = await getFile(indexPath);
+    if (!contentFile) return NextResponse.json({ error: "404" }, { status: 404 });
 
     if (action === 'view') contentFile.content.views = (contentFile.content.views || 0) + 1;
     if (action === 'like') contentFile.content.likes = (contentFile.content.likes || 0) + 1;
-    if (action === 'certify') contentFile.content.certified = (contentFile.content.certified || 0) + 1;
 
-    // Sync Index
+    const indexFile = await getFile(indexPath);
     if (indexFile && Array.isArray(indexFile.content)) {
-      const itemIndex = indexFile.content.findIndex(t => t.id === id);
-      if (itemIndex > -1) {
-        indexFile.content[itemIndex].views = contentFile.content.views;
-        indexFile.content[itemIndex].likes = contentFile.content.likes;
-        indexFile.content[itemIndex].certified = contentFile.content.certified;
-        indexFile.content = globalSort(indexFile.content);
-        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
+      const idx = indexFile.content.findIndex(t => t.id === id);
+      if (idx > -1) {
+        indexFile.content[idx].views = contentFile.content.views;
+        indexFile.content[idx].likes = contentFile.content.likes;
+        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync`);
       }
     }
 
-    // Author Rewards & Notifs
-    if (authorFile) {
-      const title = contentFile.content.title;
-      if (action === 'like') {
-        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre ${isPodcast ? 'podcast' : 'texte'} "${title}" !`, date: new Date().toISOString(), read: false });
-      }
-      if (action === 'certify') {
-        authorFile.content.li = (authorFile.content.li || 0) + 1;
-        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${title}" (+1 Li).`, date: new Date().toISOString(), read: false });
-      }
-      await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
-    }
-
-    await updateFile(contentPath, contentFile.content, contentFile.sha, `📈 Content Update: ${action}`);
-    return NextResponse.json({ success: true, count: action === 'view' ? contentFile.content.views : (action === 'like' ? contentFile.content.likes : contentFile.content.certified) });
+    await updateFile(contentPath, contentFile.content, contentFile.sha, `📈 Stat Update`);
+    return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
-}
 }
