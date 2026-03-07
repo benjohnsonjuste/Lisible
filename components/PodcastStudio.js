@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, UserPlus, X, Users, Link, Check } from 'lucide-react';
+import { Mic, Square, Upload, Loader2, Users } from 'lucide-react';
 import { Room, RoomEvent } from 'livekit-client'; 
 import { toast } from 'sonner';
 
@@ -14,71 +14,42 @@ export default function PodcastStudio({ currentUser }) {
   const [isLive, setIsLive] = useState(false);
   const [room, setRoom] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [currentRoomId, setCurrentRoomId] = useState(null);
-  const [copied, setCopied] = useState(false);
-  
-  const [availableUsers, setAvailableUsers] = useState([]);
-  const [invitedUsers, setInvitedUsers] = useState([]);
-  const [showInviteList, setShowInviteList] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-
   const currentUserEmail = currentUser?.email || null;
   const currentUserName = currentUser?.penName || currentUser?.name || "Invité";
 
-  // Charger les auteurs
-  useEffect(() => {
-    const fetchAuthors = async () => {
-      try {
-        const res = await fetch('/api/github-db?type=publications');
-        if (res.ok) {
-          const data = await res.json();
-          const authors = data.content.reduce((acc, curr) => {
-            if (curr?.authorEmail && !acc.find(a => a.email === curr.authorEmail) && curr.authorEmail !== currentUserEmail) {
-              acc.push({ name: curr.author || "Auteur inconnu", email: curr.authorEmail });
-            }
-            return acc;
-          }, []);
-          setAvailableUsers(authors);
-        }
-      } catch (e) { console.error("Erreur auteurs:", e); }
-    };
-    fetchAuthors();
-  }, [currentUserEmail]);
-
-  // Rejoindre via URL
+  // Rejoindre automatiquement si l'URL contient une room (via lien direct par exemple)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam && !isLive && currentUserEmail) {
-      setCurrentRoomId(roomParam);
       joinLiveRoom(roomParam);
     }
   }, [currentUserEmail, isLive]);
 
+  // --- LOGIQUE WEBRTC ---
   const joinLiveRoom = async (roomName) => {
     if (!currentUserEmail) return toast.error("Connectez-vous pour rejoindre le live");
     
     const roomInstance = new Room();
     setRoom(roomInstance);
-
     try {
       const resp = await fetch(`/api/livekit/token?room=${roomName}&identity=${currentUserEmail}`);
       const { token } = await resp.json();
-
       await roomInstance.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, token);
       await roomInstance.localParticipant.setMicrophoneEnabled(true);
-
+      
       roomInstance.on(RoomEvent.ParticipantConnected, updateParticipants);
       roomInstance.on(RoomEvent.ParticipantDisconnected, updateParticipants);
       
       updateParticipants();
       setIsLive(true);
-      setCurrentRoomId(roomName);
-      toast.success("Studio rejoint !");
+      toast.success("Vous êtes en direct dans le studio !");
     } catch (e) {
-      toast.error("Échec de la connexion");
+      console.error(e);
+      toast.error("Échec de la connexion au salon audio");
     }
   };
 
@@ -87,14 +58,7 @@ export default function PodcastStudio({ currentUser }) {
     setParticipants([room.localParticipant, ...Array.from(room.participants.values())]);
   };
 
-  const copyInviteLink = () => {
-    const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
-    navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    toast.success("Lien copié dans le presse-papier !");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+  // --- LOGIQUE ENREGISTREMENT ---
   const startGlobalRecording = async () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -122,11 +86,12 @@ export default function PodcastStudio({ currentUser }) {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' });
         setAudioUrl(URL.createObjectURL(audioBlob));
       };
-
       mediaRecorderRef.current.start();
       setIsRecording(true);
       toast.success("Enregistrement master lancé");
-    } catch (err) { toast.error("Erreur capture audio"); }
+    } catch (err) {
+      toast.error("Erreur de capture audio globale");
+    }
   };
 
   const stopRecording = () => {
@@ -136,37 +101,9 @@ export default function PodcastStudio({ currentUser }) {
     }
   };
 
-  const launchStudioAndNotify = async () => {
+  const launchStudio = async () => {
     const roomId = `room-${currentUserEmail.replace(/[^a-zA-Z0-9]/g, '')}`;
-    const t = toast.loading("Lancement du studio...");
-
-    try {
-      if (invitedUsers.length > 0) {
-        const notificationPromises = invitedUsers.map(user => 
-          fetch('/api/github-db', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'notifications',
-              action: 'add',
-              data: {
-                id: crypto.randomUUID(),
-                toEmail: user.email,
-                fromName: currentUserName,
-                type: 'PODCAST_INVITATION',
-                title: '🎙️ Studio Podcast Live',
-                message: `${currentUserName} vous invite en direct.`,
-                link: `${window.location.origin}${window.location.pathname}?room=${roomId}`,
-                createdAt: new Date().toISOString()
-              }
-            })
-          })
-        );
-        await Promise.all(notificationPromises);
-      }
-      await joinLiveRoom(roomId);
-      toast.success("Studio prêt !", { id: t });
-    } catch (e) { toast.error("Erreur", { id: t }); }
+    await joinLiveRoom(roomId);
   };
 
   const savePodcast = async () => {
@@ -177,8 +114,8 @@ export default function PodcastStudio({ currentUser }) {
       const filename = `podcast-${Date.now()}.mp3`;
       const uploadRes = await fetch(`/api/podcasts/upload?filename=${filename}`, { method: 'POST', body: audioBlob });
       const blobData = await uploadRes.json();
-
-      await fetch('/api/podcasts/register', {
+      
+      const registerRes = await fetch('/api/podcasts/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -189,80 +126,49 @@ export default function PodcastStudio({ currentUser }) {
             audioUrl: blobData.url,
             hostName: currentUserName,
             hostEmail: currentUserEmail,
-            guests: invitedUsers,
             createdAt: new Date().toISOString()
           }
         })
       });
-      toast.success("Publié !", { id: t });
-      setAudioUrl(null);
-      setIsLive(false);
-    } catch (e) { toast.error("Erreur", { id: t }); }
-    finally { setIsUploading(false); }
-  };
 
-  const toggleInvite = (user) => {
-    invitedUsers.find(u => u.email === user.email) 
-      ? setInvitedUsers(invitedUsers.filter(u => u.email !== user.email))
-      : setInvitedUsers([...invitedUsers, user]);
+      if (registerRes.ok) {
+        toast.success("Publié !", { id: t });
+        setAudioUrl(null);
+        setIsLive(false);
+      }
+    } catch (e) { 
+      toast.error("Erreur publication", { id: t }); 
+    } finally { 
+      setIsUploading(false); 
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl border border-white/5">
-      {/* Participants & Lien */}
+      {/* Visualisation Participants */}
       {isLive && (
-        <div className="flex flex-col items-center gap-4 mb-8">
-          <div className="flex justify-center gap-4">
-            {participants.map((p, idx) => (
-              <div key={idx} className="relative">
-                <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400">
-                  <Users size={20} />
-                </div>
-                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] bg-slate-800 px-2 py-0.5 rounded-full whitespace-nowrap border border-white/10">
-                  {p.identity === currentUserEmail ? "Hôte" : "Invité"}
-                </span>
+        <div className="flex justify-center gap-4 mb-8">
+          {participants.map((p, idx) => (
+            <div key={idx} className="relative group">
+              <div className="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center border-2 border-indigo-400 animate-pulse">
+                <Users size={20} />
               </div>
-            ))}
-          </div>
-          
-          <button 
-            onClick={copyInviteLink}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full text-[10px] font-bold hover:bg-slate-700 transition-all border border-white/5"
-          >
-            {copied ? <Check size={14} className="text-teal-400" /> : <Link size={14} />}
-            {copied ? "LIEN COPIÉ" : "COPIER LE LIEN D'INVITATION"}
-          </button>
+              <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 text-[8px] bg-slate-800 px-2 py-0.5 rounded-full whitespace-nowrap border border-white/10">
+                {p.identity === currentUserEmail ? "Moi" : "Participant"}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       <div className="flex flex-col items-center gap-6">
         {!isLive ? (
-          <div className="w-full space-y-6">
-            <button 
-              onClick={() => setShowInviteList(!showInviteList)}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-slate-800 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all"
-            >
-              <UserPlus size={16} /> {showInviteList ? "Masquer la liste" : "Choisir des invités"}
-            </button>
-
-            {showInviteList && (
-              <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                {availableUsers.map(user => (
-                  <div key={user.email} onClick={() => toggleInvite(user)} className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${invitedUsers.find(u => u.email === user.email) ? 'bg-indigo-600' : 'bg-slate-800/50 hover:bg-slate-800'}`}>
-                    <span className="text-xs font-bold">{user.name}</span>
-                    {invitedUsers.find(u => u.email === user.email) && <X size={14} />}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button 
-              onClick={launchStudioAndNotify}
-              className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20"
-            >
-              Lancer le Studio
-            </button>
-          </div>
+          <button 
+            onClick={launchStudio}
+            className="w-full py-4 bg-indigo-600 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20"
+          >
+            Entrer dans le Studio
+          </button>
         ) : (
           !audioUrl && (
             <div className="text-center">
@@ -273,7 +179,7 @@ export default function PodcastStudio({ currentUser }) {
                 {isRecording ? <Square fill="white" size={32} /> : <Mic size={32} />}
               </button>
               <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                {isRecording ? "Enregistrement Master..." : "Cliquer pour enregistrer"}
+                {isRecording ? "Enregistrement en cours..." : "Cliquer pour enregistrer le Master"}
               </p>
             </div>
           )
@@ -282,11 +188,11 @@ export default function PodcastStudio({ currentUser }) {
         {audioUrl && (
           <div className="w-full space-y-4 animate-in fade-in zoom-in duration-300">
             <div className="bg-slate-800 p-6 rounded-3xl border border-white/5">
-              <audio src={audioUrl} controls className="w-full" />
+              <audio src={audioUrl} controls className="w-full accent-rose-500" />
             </div>
             <button onClick={savePodcast} disabled={isUploading} className="w-full py-5 bg-teal-500 text-slate-950 rounded-2xl font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
               {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={20} />}
-              Publier
+              Publier le Podcast
             </button>
           </div>
         )}
