@@ -3,8 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Award, Link as LinkIcon, Sword, Bell, Bookmark, BookmarkX, 
-  Radio, DoorOpen
+  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,8 +14,7 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [unreadNotifs, setUnreadNotifs] = useState(0);
-  const [activePodcastInvite, setActivePodcastInvite] = useState(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     async function loadStudio() {
@@ -31,25 +29,17 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email;
         
+        // Synchro profil
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
         if (userRes.ok) {
           const userData = await userRes.json();
           if (userData && userData.content) {
             setUser(userData.content);
             localStorage.setItem("lisible_user", JSON.stringify(userData.content));
-            
-            const notifs = userData.content.notifications || [];
-            const unread = notifs.filter(n => !n.read).length;
-            setUnreadNotifs(unread);
-
-            // Détection d'une invitation podcast active
-            const podcastInvite = notifs.find(n => n.type === 'PODCAST_INVITATION' && !n.read);
-            if (podcastInvite) {
-              setActivePodcastInvite(podcastInvite);
-            }
           }
         }
 
+        // Synchro œuvres avec Tri Universel
         const libraryRes = await fetch(`/api/github-db?type=library`);
         if (libraryRes.ok) {
           const libraryData = await libraryRes.json();
@@ -60,10 +50,15 @@ export default function AuthorDashboard() {
                 const certA = Number(a.certified || a.totalCertified || 0);
                 const certB = Number(b.certified || b.totalCertified || 0);
                 if (certB !== certA) return certB - certA;
+
                 const likesA = Number(a.likes || a.totalLikes || 0);
                 const likesB = Number(b.likes || b.totalLikes || 0);
                 if (likesB !== likesA) return likesB - likesA;
-                return new Date(b.date) - new Date(a.date);
+
+                // Sécurité sur la date pour éviter les crashs
+                const dateA = a.date ? new Date(a.date).getTime() : 0;
+                const dateB = b.date ? new Date(b.date).getTime() : 0;
+                return dateB - dateA;
               });
             setWorks(authorWorks);
           }
@@ -78,59 +73,122 @@ export default function AuthorDashboard() {
     loadStudio();
   }, [router]);
 
-  const handleRemoveBookmark = async (e, textId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      const res = await fetch('/api/github-db', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: "toggle_bookmark", 
-          userEmail: user.email, 
-          textId: textId 
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const updatedUser = { ...user, bookmarks: data.bookmarks };
-        setUser(updatedUser);
-        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
-        toast.success("Retiré des favoris");
+  // Générateur de Badge JPG via Canvas
+  const generateBadge = (download = false) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !user) return;
+    const ctx = canvas.getContext('2d');
+    const name = user.penName || user.name || "Auteur.e Lisible";
+
+    canvas.width = 600;
+    canvas.height = 600;
+
+    ctx.fillStyle = '#0f172a'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#14b8a6'; 
+    ctx.lineWidth = 20;
+    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+    ctx.fillStyle = '#14b8a6';
+    ctx.font = 'bold 30px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'italic bold 45px serif';
+    
+    const words = name.split(' ');
+    let line = '';
+    let y = 280;
+    const maxWidth = 500;
+    const lineHeight = 60;
+
+    for (let n = 0; n < words.length; n++) {
+      let testLine = line + words[n] + ' ';
+      let metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, canvas.width / 2, y);
+        line = words[n] + ' ';
+        y += lineHeight;
+      } else {
+        line = testLine;
       }
-    } catch (err) {
-      toast.error("Erreur");
+    }
+    ctx.fillText(line, canvas.width / 2, y);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 25px Arial';
+    ctx.fillText('lisible.biz', canvas.width / 2, 540);
+
+    if (download) {
+      const link = document.createElement('a');
+      link.download = `badge-officiel-${name}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.click();
+      toast.success("Badge téléchargé !");
     }
   };
 
+  const handleUniversalShare = async () => {
+    generateBadge();
+    const canvas = canvasRef.current;
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+    const file = new File([blob], 'badge-officiel.jpg', { type: 'image/jpeg' });
+    const shareData = {
+      title: 'Compte Officiel Lisible',
+      text: "J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz",
+      files: [file],
+    };
+
+    if (navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        toast.error("Partage annulé");
+      }
+    } else {
+      const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz`;
+      window.open(shareUrl, '_blank');
+      toast.info("Lien de partage généré !");
+    }
+  };
+
+  // Nouvelle fonction pour partager le profil personnel
   const handleProfileShare = async () => {
     const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
-    const shareData = { title: `Profil de ${user.penName || user.name} | Lisible`, text: `Découvrez mes œuvres et suivez ma plume sur Lisible !`, url: profileUrl };
+    const shareData = {
+      title: `Profil de ${user.penName || user.name} | Lisible`,
+      text: `Découvrez mes œuvres et suivez ma plume sur Lisible !`,
+      url: profileUrl,
+    };
+
     try {
-      if (navigator.share) { await navigator.share(shareData); } 
-      else { await navigator.clipboard.writeText(profileUrl); toast.success("Lien du profil copié !"); }
-    } catch (err) { console.log("Erreur de partage"); }
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(profileUrl);
+        toast.success("Lien du profil copié !");
+      }
+    } catch (err) {
+      console.log("Erreur de partage");
+    }
   };
 
   const handleDelete = async (id, title) => {
     if (!confirm(`Voulez-vous vraiment retirer "${title}" des archives ?`)) return;
-    const toastId = toast.loading("Retrait définitif en cours...");
+    const toastId = toast.loading("Retrait...");
     try {
-      const res = await fetch('/api/github-db', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ action: 'delete_text', textId: id }) 
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_text', textId: id })
       });
-      const data = await res.json();
-      if (res.ok && data.success) { 
-        setWorks(prevWorks => prevWorks.filter(w => w.id !== id)); 
-        toast.success("L'œuvre a été supprimée.", { id: toastId }); 
-      } else {
-        throw new Error(data.error || "Erreur lors de la suppression");
+      if (res.ok) {
+        setWorks(works.filter(w => w.id !== id));
+        toast.success("Effacé.", { id: toastId });
       }
-    } catch (e) { 
-      toast.error("Échec du retrait.", { id: toastId }); 
-    }
+    } catch (e) { toast.error("Erreur.", { id: toastId }); }
   };
 
   if (loading) return (
@@ -143,34 +201,12 @@ export default function AuthorDashboard() {
   if (!user) return null;
   const followerCount = user.followers?.length || 0;
   const canWithdraw = (user.li >= 25000) && (followerCount >= 250);
-  const bookmarks = user.bookmarks || [];
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
+      <canvas ref={canvasRef} className="hidden" />
       <div className="max-w-6xl mx-auto space-y-12">
         
-        {/* BANDEAU LIVE PODCAST SI INVITATION */}
-        {activePodcastInvite && (
-          <div className="bg-indigo-600 text-white p-6 rounded-[2.5rem] shadow-xl shadow-indigo-900/20 animate-in slide-in-from-top duration-700 flex flex-col md:flex-row items-center justify-between gap-6 border-b-4 border-indigo-800">
-            <div className="flex items-center gap-4 text-center md:text-left">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center animate-pulse">
-                <Radio size={28} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Invitation en direct</p>
-                <h3 className="text-xl font-bold italic leading-tight">{activePodcastInvite.fromName} vous attend au Studio !</h3>
-              </div>
-            </div>
-            <Link 
-              href={activePodcastInvite.link || "#"}
-              className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-2 hover:bg-indigo-50 transition-all group"
-            >
-              <DoorOpen size={18} className="group-hover:translate-x-1 transition-transform" />
-              Rejoindre le Live
-            </Link>
-          </div>
-        )}
-
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end pt-12 gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -181,20 +217,26 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            <Link href="/notifications" className="relative p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 group">
-              <Bell size={20} className="group-hover:rotate-12 transition-transform" />
-              {unreadNotifs > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-[#FCFBF9] animate-bounce">
-                  {unreadNotifs}
-                </span>
-              )}
-            </Link>
-            <button onClick={handleProfileShare} className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"><LinkIcon size={14} /> Partager mon Profil</button>
+            {/* Section Partage Profil */}
+            <button 
+              onClick={handleProfileShare}
+              className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"
+            >
+              <LinkIcon size={14} /> Partager mon Profil
+            </button>
+
+            {/* Badge Section */}
             <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-              <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20"><Award size={20} /></div>
-              <div className="pr-4">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Statut</p>
+              <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Award size={20} />
+              </div>
+              <div className="pr-4 hidden sm:block">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Badge</p>
                 <p className="text-[11px] font-bold text-slate-900">Compte Officiel</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleUniversalShare} className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors" title="Partager mon badge"><Share2 size={16} /></button>
+                <button onClick={() => generateBadge(true)} className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors" title="Télécharger"><Download size={16} /></button>
               </div>
             </div>
           </div>
@@ -203,18 +245,17 @@ export default function AuthorDashboard() {
         {!canWithdraw && (
           <div className="bg-amber-50 border border-amber-100 p-4 rounded-3xl flex items-center gap-4 text-amber-800">
             <AlertCircle size={20} className="shrink-0" />
-            <p className="text-[11px] font-bold uppercase tracking-tight">Monétisation inactive : 25 000 Li et 250 abonnés requis. ({user.li || 0}/25000 Li • {followerCount}/250 abonnés)</p>
+            <p className="text-[11px] font-bold uppercase tracking-tight">
+              Monétisation inactive : 25 000 Li et 250 abonnés requis. 
+              ({user.li || 0}/25000 Li • {followerCount}/250 abonnés)
+            </p>
           </div>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
-          </Link>
-          <Link href="/battle/close" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all border-4 border-white/20">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Événement</p><h3 className="text-xl font-bold italic">Battle Poétique</h3></div>
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"><Sword size={24} /></div>
           </Link>
           <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p><h3 className="text-xl font-bold italic">Gérer mon compte</h3></div>
@@ -226,7 +267,9 @@ export default function AuthorDashboard() {
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <Coins className="absolute -right-4 -bottom-4 text-slate-50" size={120} />
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">Bourse Li</p>
-            <h2 className="text-5xl font-black italic tracking-tighter text-slate-900">{user.li || 0} <span className="text-teal-600 text-xl not-italic ml-1">Li</span></h2>
+            <h2 className="text-5xl font-black italic tracking-tighter text-slate-900">
+              {user.li || 0} <span className="text-teal-600 text-xl not-italic ml-1">Li</span>
+            </h2>
             <div className="flex items-center gap-2 mt-2">
                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Val. estimée: {(user.li * 0.0002).toFixed(2)} USD</p>
                {canWithdraw && <ShieldCheck size={12} className="text-teal-500" />}
@@ -242,46 +285,6 @@ export default function AuthorDashboard() {
           </div>
         </div>
 
-        {/* SECTION FAVORIS */}
-        <section className="space-y-6 pt-6">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <Bookmark size={20} className="text-teal-600" />
-              <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Ma Bibliothèque.</h2>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{bookmarks.length} Enregistrés</span>
-          </div>
-          
-          {bookmarks.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {bookmarks.map((fav) => (
-                <Link href={`/texts/${fav.id}`} key={fav.id} className="group bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-teal-200 transition-all flex items-center justify-between">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-teal-500 transition-colors">
-                        <FileText size={20} />
-                      </div>
-                      <div className="max-w-[150px]">
-                        <h4 className="font-bold text-slate-900 truncate text-sm">{fav.title}</h4>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">Par {fav.author}</p>
-                      </div>
-                   </div>
-                   <button 
-                    onClick={(e) => handleRemoveBookmark(e, fav.id)}
-                    className="p-3 text-slate-300 hover:text-rose-500 transition-colors"
-                   >
-                     <BookmarkX size={18} />
-                   </button>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center bg-slate-50 rounded-[3rem] border border-dashed border-slate-200">
-              <p className="text-slate-400 text-xs font-medium italic">Votre bibliothèque est vide pour le moment.</p>
-            </div>
-          )}
-        </section>
-
-        {/* SECTION MANUSCRITS */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Manuscrits.</h2>
