@@ -6,10 +6,10 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import des composants
+// Import des composants adaptés
 import { InTextAd } from '@/components/InTextAd'; 
-import SceauCertification from '@/components/reader/SceauCertification';
-import FloatingActions from '@/components/reader/FloatingActions';
+import CertifiedBadge from '@/components/reader/CertifiedBadge';
+import PodcastActions from '@/components/reader/PodcastActions';
 
 export default function PodcastPlayerPage() {
   const { id } = useParams();
@@ -53,14 +53,17 @@ export default function PodcastPlayerPage() {
       
       if (!hasIncrementedView.current) {
         try {
-          const res = await fetch('/api/podcasts/view', {
+          const res = await fetch('/api/interactions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id })
+            body: JSON.stringify({ 
+              id: id, 
+              action: 'view' 
+            })
           });
           if (res.ok) {
             const data = await res.json();
-            setPodcast(prev => ({ ...prev, views: data.views }));
+            setPodcast(prev => ({ ...prev, views: data.count }));
             hasIncrementedView.current = true;
           }
         } catch (e) {
@@ -139,7 +142,10 @@ export default function PodcastPlayerPage() {
               <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight mb-6">
                 {podcast.title}
               </h1>
-              <SceauCertification />
+              <CertifiedBadge 
+                isCertified={podcast.isCertified} 
+                certifiedCount={podcast.certified} 
+              />
             </div>
           </div>
 
@@ -202,7 +208,6 @@ export default function PodcastPlayerPage() {
                 </button>
               </div>
 
-              {/* Publicité placée sous le bouton Play avec hauteur minimale */}
               <div className="mt-8 min-h-[250px] w-full flex items-center justify-center overflow-visible">
                 <InTextAd />
               </div>
@@ -229,7 +234,7 @@ export default function PodcastPlayerPage() {
         </div>
       </div>
       
-      <FloatingActions />
+      <PodcastActions podcast={podcast} userEmail={null} />
     </div>
   );
 }
