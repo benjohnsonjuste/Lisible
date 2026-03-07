@@ -1,9 +1,16 @@
 {
   "email": "benjohnsonjuste47@gmail.com",
   "name": "Bénicé Fils Juste",
-  "li": 50,
+  "li": 51,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1772919526109",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Les preuves d'extraterrestres\" (+1 Li).",
+      "date": "2026-03-07T21:38:46.109Z",
+      "read": false
+    },
     {
       "id": "like_1772919509378",
       "type": "like",
