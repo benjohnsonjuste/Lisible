@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "Dahana DUCLAIRE",
-  "li": 349,
+  "li": 350,
   "notifications": [
+    {
+      "id": "cert_1772857185133",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"L'inaltérable\" (+1 Li).",
+      "date": "2026-03-07T04:19:45.133Z",
+      "read": false
+    },
     {
       "id": "like_1772851626264",
       "type": "like",
