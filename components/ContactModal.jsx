@@ -14,8 +14,8 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
     "cmo.lablitteraire7@gmail.com",
     "benjohnsonjuste47@gmail.com",
     "jb7management@gmail.com",
-    "robergeaurodley97@gmail.com,
-    "adm.lablitteraire7@gmail.com
+    "robergeaurodley97@gmail.com",
+    "adm.lablitteraire7@gmail.com",
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhainiedarha@gmail.com"
   ];
