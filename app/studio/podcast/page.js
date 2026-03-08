@@ -25,8 +25,8 @@ export default function PodcastStudioPage() {
     "cmo.lablitteraire7@gmail.com",
     "benjohnsonjuste@gmail.com",
     "jb7management@gmail.com",
-    "adm.lablitteraire7@gmail.com,
-    "robergeaurodley97@gmail.com,
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhainiedarha@gmail.com"
   ];
