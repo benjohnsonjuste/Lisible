@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, Radio, Headphones } from 'lucide-react';
+import { Mic, Square, Upload, Loader2, Radio, Headphones, Lock, Award, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Composant interne pour les ondes de voix
@@ -33,6 +33,17 @@ export default function PodcastStudio({ currentUser }) {
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+
+  // Liste blanche de l'administration
+  const adminEmails = [
+    "cmo.lablitteraire7@gmail.com",
+    "benjohnsonjuste@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhainiedarha@gmail.com"
+  ];
+
+  const hasAccess = adminEmails.includes(currentUser?.email);
 
   useEffect(() => {
     let interval;
@@ -136,6 +147,33 @@ export default function PodcastStudio({ currentUser }) {
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+  // Rendu de l'état "Accès Refusé" (Design Moderne & Elégant)
+  if (!hasAccess) {
+    return (
+      <div className="max-w-2xl mx-auto bg-white border border-slate-100 rounded-[3rem] p-12 shadow-xl text-center relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-50" />
+        <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-amber-100">
+          <Lock size={32} className="text-amber-600" />
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <Sparkles size={16} className="text-amber-500" />
+          <h2 className="text-2xl font-black italic tracking-tighter text-slate-900 uppercase">
+            L'Auditorium Privé.
+          </h2>
+          <Sparkles size={16} className="text-amber-500" />
+        </div>
+        <p className="text-slate-500 text-sm leading-relaxed font-serif italic max-w-sm mx-auto">
+          "Cet espace est le sanctuaire audio de Lisible, dédié à la création d'émissions littéraires d'exception. L'accès au studio est un privilège réservé aux auteurs ayant atteint le rang d'accréditation Bronze."
+        </p>
+        <div className="mt-10 flex items-center justify-center gap-2 grayscale opacity-40">
+           <Award size={18} />
+           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Accréditation Requise</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Rendu normal du Studio
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl border border-white/5">
       <div className="flex items-center justify-between mb-8">
@@ -144,8 +182,8 @@ export default function PodcastStudio({ currentUser }) {
             <Radio size={24} />
           </div>
           <div>
-            <h2 className="text-xl font-black italic tracking-tighter uppercase">Studio Podcast</h2>
-            <p className="text-[10px] uppercase font-bold text-slate-400">Enregistrement Solo</p>
+            <h2 className="text-xl font-black italic tracking-tighter uppercase text-white">Studio Podcast</h2>
+            <p className="text-[10px] uppercase font-bold text-slate-400">Session Admin • Solo</p>
           </div>
         </div>
         <div className="text-2xl font-mono font-bold text-rose-500">{formatTime(timeLeft)}</div>
@@ -174,7 +212,7 @@ export default function PodcastStudio({ currentUser }) {
                 placeholder="Ex: Ma première transmission..."
                 value={podcastTitle}
                 onChange={(e) => setPodcastTitle(e.target.value)}
-                className="w-full bg-slate-800 border border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-bold text-lg"
+                className="w-full bg-slate-800 border border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-bold text-lg text-white"
               />
             </div>
 
