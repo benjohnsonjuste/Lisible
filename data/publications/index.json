@@ -148,6 +148,19 @@
     "certified": 23
   },
   {
+    "id": "txt_1770823066946",
+    "title": "Mon départ",
+    "author": "Adama Junior Cissokho",
+    "authorEmail": "adamacissokho15@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-02-11T15:17:46.946Z",
+    "views": 24,
+    "likes": 10,
+    "certified": 8
+  },
+  {
     "id": "txt_1770828929024",
     "title": "Une lettre pour le futur",
     "author": "Junior Zoro Bi",
@@ -159,19 +172,6 @@
     "views": 45,
     "likes": 7,
     "certified": 8
-  },
-  {
-    "id": "txt_1770823066946",
-    "title": "Mon départ",
-    "author": "Adama Junior Cissokho",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-02-11T15:17:46.946Z",
-    "views": 24,
-    "likes": 10,
-    "certified": 7
   },
   {
     "id": "1770850500145",
