@@ -10,7 +10,7 @@ import ThemeToggle from "./ThemeToggle";
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, X, Sparkles,
-  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, UserPlus, Mic2
+  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, UserPlus, Mic2, Clapperboard
 } from "lucide-react";
 
 export default function Navbar() {
@@ -136,7 +136,8 @@ export default function Navbar() {
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
-    { href: "/dashboard", label: "Studio Auteur", icon: <LayoutDashboard size={20} />, authRequired: true },
+    { href: "/studio/podcast", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
+    { href: "/dashboard", label: "Tableau de bord", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/community", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
     { href: "/contact", label: "Contact", icon: <MessageCircle size={20} /> },
@@ -165,7 +166,7 @@ export default function Navbar() {
             <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-100 dark:border-white/10">
               <NavLink href="/" icon={<Home size={20} />} active={pathname === "/"} title="Accueil" />
               <NavLink href="/library" icon={<Library size={20} />} active={pathname === "/library"} title="Bibliothèque" />
-              {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Studio Auteur" />}
+              {user && <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} active={pathname === "/dashboard"} title="Tableau de bord" />}
             </nav>
 
             <div className="flex items-center gap-1 md:gap-2">
@@ -236,7 +237,7 @@ export default function Navbar() {
               <LogIn size={22} />
               <div className="text-left">
                 <p className="text-sm font-black uppercase tracking-widest">Rejoindre</p>
-                <p className="text-[9px] font-medium opacity-80 uppercase tracking-tighter">Entrer sur Lisible</p>
+                <p className="text-[9px] font-medium opacity-80 uppercase tracking-tighter">Connecter mon compte</p>
               </div>
             </Link>
           )}
