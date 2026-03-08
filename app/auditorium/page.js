@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Share2, Eye } from 'lucide-react';
+import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Share2, Eye, Mic2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -37,6 +37,24 @@ export default function Auditorium() {
         </div>
         <h1 className="text-4xl font-black italic tracking-tighter text-slate-900">L'Auditorium.</h1>
         <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400 mt-2">Archives des transmissions</p>
+      </div>
+
+      {/* Lien vers le Studio */}
+      <div className="mb-8">
+        <Link 
+          href="https://lisible.biz/studio/podcast" 
+          className="group flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-[2rem] hover:bg-indigo-600 transition-all duration-300 shadow-lg"
+        >
+          <div className="flex items-center gap-4 ml-2">
+            <div className="bg-white/10 p-2 rounded-xl text-white group-hover:scale-110 transition-transform">
+              <Mic2 size={20} />
+            </div>
+            <span className="text-white font-bold tracking-tight">Accéder au studio pour lancer un podcast</span>
+          </div>
+          <div className="mr-2 h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-white group-hover:bg-white group-hover:text-indigo-600 transition-all">
+            <Play size={14} fill="currentColor" />
+          </div>
+        </Link>
       </div>
 
       {loading ? (
