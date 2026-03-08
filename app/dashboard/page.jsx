@@ -3,7 +3,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon
+  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon,
+  Mic2 // Import ajouté pour le studio
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -154,7 +155,6 @@ export default function AuthorDashboard() {
     }
   };
 
-  // Nouvelle fonction pour partager le profil personnel
   const handleProfileShare = async () => {
     const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
     const shareData = {
@@ -217,7 +217,6 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            {/* Section Partage Profil */}
             <button 
               onClick={handleProfileShare}
               className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"
@@ -225,7 +224,6 @@ export default function AuthorDashboard() {
               <LinkIcon size={14} /> Partager mon Profil
             </button>
 
-            {/* Badge Section */}
             <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
                 <Award size={20} />
@@ -252,11 +250,18 @@ export default function AuthorDashboard() {
           </div>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
+
+          {/* Section Podcast Studio Ajoutée */}
+          <Link href="/studio/podcast" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all">
+            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Audio</p><h3 className="text-xl font-bold italic">Podcast Studio</h3></div>
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Mic2 size={24} /></div>
+          </Link>
+
           <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p><h3 className="text-xl font-bold italic">Gérer mon compte</h3></div>
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><User size={22} /></div>
