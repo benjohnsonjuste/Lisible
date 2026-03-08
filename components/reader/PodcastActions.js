@@ -1,14 +1,20 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageSquare, Share2, Award, Loader2 } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Award, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
+// Importation du composant de commentaires
+import Comment from './Comment'; 
 
-const PodcastActions = ({ podcast, userEmail }) => {
+const PodcastActions = ({ podcast, user }) => {
   const [liked, setLiked] = useState(false);
   const [certified, setCertified] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
-  // Synchronisation initiale avec le localStorage pour éviter les clics inutiles
+  const userEmail = user?.email;
+  const authorEmail = podcast.hostEmail || podcast.authorEmail || podcast.email;
+
+  // Synchronisation locale
   useEffect(() => {
     const history = JSON.parse(localStorage.getItem(`interact_${podcast.id}`) || '{}');
     if (history.like) setLiked(true);
@@ -16,50 +22,45 @@ const PodcastActions = ({ podcast, userEmail }) => {
   }, [podcast.id]);
 
   const handleAction = async (type) => {
+    if (!userEmail) return toast.error("Connectez-vous pour interagir.");
     if (isSyncing) return;
-    
-    // Si déjà liké ou certifié (via l'UI), on bloque côté client pour économiser l'API
-    if (type === 'like' && liked) return toast.info("Déjà liké !");
-    if (type === 'certify' && certified) return toast.info("Sceau déjà apposé !");
+    if (type === 'like' && liked) return;
+    if (type === 'certify' && certified) return;
 
     setIsSyncing(true);
 
     try {
-      const res = await fetch('/api/interactions', {
+      const res = await fetch('/api/github-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: type === 'like' ? "toggle_like" : "certify_content",
           id: podcast.id,
-          action: type,
           userEmail: userEmail,
-          authorEmail: podcast.hostEmail || podcast.authorEmail || podcast.email
+          authorEmail: authorEmail,
+          textTitle: podcast.title,
+          isPodcast: true
         })
       });
 
       const data = await res.json();
 
-      if (data.alreadyDone) {
-        toast.info("Action déjà enregistrée sur cet appareil");
-        if (type === 'like') setLiked(true);
-        if (type === 'certify') setCertified(true);
-      } else if (res.ok) {
-        // Succès : on verrouille l'état localement
+      if (res.ok) {
         if (type === 'like') {
           setLiked(true);
-          toast.success("Coup de cœur envoyé !");
+          toast.success("Coup de cœur enregistré");
         }
         if (type === 'certify') {
           setCertified(true);
-          toast.success("Sceau apposé (+1 Li pour l'hôte)");
+          toast.success("Sceau apposé (+1 Li transféré)");
         }
 
-        // Sauvegarde locale pour persistance visuelle immédiate
         const history = JSON.parse(localStorage.getItem(`interact_${podcast.id}`) || '{}');
         history[type] = true;
         localStorage.setItem(`interact_${podcast.id}`, JSON.stringify(history));
       }
     } catch (error) {
-      toast.error("Erreur de connexion au studio");
+      toast.error("Connexion au Grand Livre impossible");
     } finally {
       setIsSyncing(false);
     }
@@ -68,62 +69,87 @@ const PodcastActions = ({ podcast, userEmail }) => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `Podcast : ${podcast.title} | Lisible`,
-        text: `Écoutez "${podcast.title}" sur Lisible`,
+        title: podcast.title,
         url: window.location.href
       }).catch(() => null);
     } else {
       navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié !");
+      toast.success("Lien copié");
     }
   };
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-fit px-4">
-      <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 p-2 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center gap-1">
-        
-        {/* Bouton Like (Coup de cœur) */}
-        <button 
-          onClick={() => handleAction('like')}
-          disabled={isSyncing || liked}
-          className={`group relative p-4 rounded-full transition-all active:scale-90 ${liked ? 'text-rose-500' : 'text-slate-400 hover:bg-white/5'}`}
-          title="Liker"
-        >
-          {isSyncing ? <Loader2 size={20} className="animate-spin" /> : <Heart size={20} fill={liked ? "currentColor" : "none"} className={liked ? "animate-pulse" : ""} />}
-          {liked && <span className="absolute -top-1 -right-1 flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span></span>}
-        </button>
+    <>
+      {/* Barre d'actions flottante */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] w-full max-w-fit px-4">
+        <div className="bg-slate-900/95 backdrop-blur-xl border border-white/10 p-2 rounded-[2.5rem] shadow-2xl flex items-center gap-1">
+          
+          {/* Like */}
+          <button 
+            onClick={() => handleAction('like')}
+            disabled={isSyncing || liked}
+            className={`p-4 rounded-full transition-all active:scale-90 ${liked ? 'text-rose-500' : 'text-slate-400 hover:bg-white/5'}`}
+          >
+            {isSyncing ? <Loader2 size={20} className="animate-spin" /> : <Heart size={20} fill={liked ? "currentColor" : "none"} />}
+          </button>
 
-        {/* Bouton Commentaire */}
-        <button 
-          className="p-4 rounded-full text-slate-400 hover:bg-white/5 transition-all active:scale-90"
-          title="Commenter"
-        >
-          <MessageSquare size={20} />
-        </button>
+          {/* Toggle Commentaires */}
+          <button 
+            onClick={() => setShowComments(!showComments)}
+            className={`p-4 rounded-full transition-all active:scale-90 ${showComments ? 'bg-teal-500 text-white' : 'text-slate-400 hover:bg-white/5'}`}
+          >
+            <MessageSquare size={20} fill={showComments ? "currentColor" : "none"} />
+          </button>
 
-        {/* Bouton Certifier (Sceau) - Remplace le Bookmark simple */}
-        <button 
-          onClick={() => handleAction('certify')}
-          disabled={isSyncing || certified}
-          className={`group relative p-4 rounded-full transition-all active:scale-90 ${certified ? 'text-teal-400' : 'text-slate-400 hover:bg-white/5'}`}
-          title="Apposer un Sceau"
-        >
-          <Award size={20} fill={certified ? "currentColor" : "none"} />
-          {certified && <span className="absolute -top-1 -right-1 h-2 w-2 bg-teal-400 rounded-full shadow-[0_0_8px_rgba(45,212,191,0.6)]"></span>}
-        </button>
+          {/* Certifier */}
+          <button 
+            onClick={() => handleAction('certify')}
+            disabled={isSyncing || certified}
+            className={`p-4 rounded-full transition-all active:scale-90 ${certified ? 'text-teal-400' : 'text-slate-400 hover:bg-white/5'}`}
+          >
+            <Award size={20} fill={certified ? "currentColor" : "none"} />
+          </button>
 
-        <div className="w-[1px] h-6 bg-white/10 mx-2" />
+          <div className="w-[1px] h-6 bg-white/10 mx-2" />
 
-        {/* Bouton Partage */}
-        <button 
-          onClick={handleShare}
-          className="bg-white text-slate-950 px-6 py-3.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] hover:bg-teal-400 hover:text-white transition-all flex items-center gap-2 group"
-        >
-          <Share2 size={14} className="group-hover:rotate-12 transition-transform" /> 
-          <span className="hidden sm:inline">Partager</span>
-        </button>
+          {/* Partager */}
+          <button 
+            onClick={handleShare}
+            className="bg-white text-slate-950 px-6 py-3.5 rounded-full font-black text-[10px] uppercase tracking-[0.2em] hover:bg-teal-400 hover:text-white transition-all flex items-center gap-2 group"
+          >
+            <Share2 size={14} /> <span className="hidden sm:inline">Partager</span>
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Overlay des Commentaires (Tiroir) */}
+      {showComments && (
+        <div className="fixed inset-0 z-[100] bg-white animate-in slide-in-from-bottom duration-500 overflow-y-auto">
+          <div className="max-w-2xl mx-auto pt-10 pb-32">
+            <div className="flex justify-end px-4 mb-4">
+              <button 
+                onClick={() => setShowComments(false)}
+                className="p-3 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <Comment 
+              textId={podcast.id}
+              comments={podcast.comments || []}
+              user={user}
+              authorEmail={authorEmail}
+              textTitle={podcast.title}
+              onCommented={() => {
+                // Optionnel : refresh des données ici
+                toast.success("Résonance ajoutée au flux");
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
