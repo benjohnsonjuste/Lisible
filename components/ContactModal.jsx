@@ -12,8 +12,10 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
   // Liste blanche de l'administration
   const adminEmails = [
     "cmo.lablitteraire7@gmail.com",
-    "benjohnsonjuste@gmail.com",
+    "benjohnsonjuste47@gmail.com",
     "jb7management@gmail.com",
+    "robergeaurodley97@gmail.com,
+    "adm.lablitteraire7@gmail.com
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhainiedarha@gmail.com"
   ];
@@ -35,16 +37,17 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/contact-studio", {
+      // Utilisation de la route /api/report avec le format reportData
+      const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contactData: {
-            senderName: userName || "Auteur Lisible",
-            senderEmail: userEmail,
-            subject,
-            message,
-            context: "Studio Podcast",
+          reportData: {
+            textId: "STUDIO-CONTACT", // Identifiant factice pour la cohérence
+            textTitle: `À propos du studio: ${userName || "Auteur"}`,
+            reporterEmail: userEmail || "Anonyme",
+            reason: subject,
+            details: message,
             date: new Date().toLocaleString("fr-FR")
           }
         }),
@@ -61,11 +64,12 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
           }, 500);
         }, 3000);
       } else {
-        throw new Error("Erreur serveur");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erreur serveur");
       }
     } catch (error) {
       console.error("Contact error:", error);
-      toast.error("Impossible d'envoyer le message pour le moment.");
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
     } finally {
       setIsSubmitting(false);
     }
@@ -142,7 +146,7 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
                 ) : (
                   <>
                     <Send size={18} />
-                    <span>Envoyer à Lisible Support Team</span>
+                    <span>Envoyer à l'administration</span>
                   </>
                 )}
               </button>
