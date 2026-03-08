@@ -8,8 +8,6 @@ import { toast } from 'sonner';
 
 // Import des composants adaptés
 import { InTextAd } from '@/components/InTextAd'; 
-import CertifiedBadge from '@/components/reader/CertifiedBadge';
-import PodcastActions from '@/components/reader/PodcastActions';
 
 export default function PodcastPlayerPage() {
   const { id } = useParams();
@@ -142,10 +140,6 @@ export default function PodcastPlayerPage() {
               <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight mb-6">
                 {podcast.title}
               </h1>
-              <CertifiedBadge 
-                isCertified={podcast.isCertified} 
-                certifiedCount={podcast.certified} 
-              />
             </div>
           </div>
 
@@ -233,8 +227,6 @@ export default function PodcastPlayerPage() {
           </div>
         </div>
       </div>
-      
-      <PodcastActions podcast={podcast} userEmail={null} />
     </div>
   );
 }
