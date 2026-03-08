@@ -10,7 +10,7 @@ import ThemeToggle from "./ThemeToggle";
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, X, Sparkles,
-  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, UserPlus
+  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, UserPlus, Mic2
 } from "lucide-react";
 
 export default function Navbar() {
@@ -135,6 +135,7 @@ export default function Navbar() {
   const menuItems = [
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
+    { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
     { href: "/dashboard", label: "Studio Auteur", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/community", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
