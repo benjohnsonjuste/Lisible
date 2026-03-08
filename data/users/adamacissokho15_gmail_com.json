@@ -1,8 +1,15 @@
 {
   "email": "adamacissokho15@gmail.com",
   "name": "",
-  "li": 67,
+  "li": 68,
   "notifications": [
+    {
+      "id": "cert_1772965511108",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Le Vide\" (+1 Li).",
+      "date": "2026-03-08T10:25:11.108Z",
+      "read": false
+    },
     {
       "id": "like_1772965451382",
       "type": "like",
