@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Upload, Loader2, Radio, Headphones, Lock, Award, Sparkles } from 'lucide-react';
+import { Mic, Square, Upload, Loader2, Radio, Headphones, Lock, Award, Sparkles, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import ContactModal from '@/components/ContactModal';
 
 // Composant interne pour les ondes de voix
 const AudioVisualizer = ({ isRecording }) => {
@@ -30,6 +31,7 @@ export default function PodcastStudio({ currentUser }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [podcastTitle, setPodcastTitle] = useState("");
+  const [isContactOpen, setIsContactOpen] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -39,6 +41,8 @@ export default function PodcastStudio({ currentUser }) {
     "cmo.lablitteraire7@gmail.com",
     "benjohnsonjuste@gmail.com",
     "jb7management@gmail.com",
+    "adm.lablitteraire7@gmail.com",
+    "robergeaurodley97@gmail.com",
     "woolsleypierre01@gmail.com",
     "jeanpierreborlhainiedarha@gmail.com"
   ];
@@ -147,7 +151,7 @@ export default function PodcastStudio({ currentUser }) {
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // Rendu de l'état "Accès Refusé" (Design Moderne & Elégant)
+  // Rendu de l'état "Accès Refusé"
   if (!hasAccess) {
     return (
       <div className="max-w-2xl mx-auto bg-white border border-slate-100 rounded-[3rem] p-12 shadow-xl text-center relative overflow-hidden">
@@ -162,13 +166,28 @@ export default function PodcastStudio({ currentUser }) {
           </h2>
           <Sparkles size={16} className="text-amber-500" />
         </div>
-        <p className="text-slate-500 text-sm leading-relaxed font-serif italic max-w-sm mx-auto">
+        <p className="text-slate-500 text-sm leading-relaxed font-serif italic max-w-sm mx-auto mb-8">
           "Cet espace est le sanctuaire audio de Lisible, dédié à la création d'émissions littéraires d'exception. L'accès au studio est un privilège réservé aux auteurs ayant atteint le rang d'accréditation Bronze."
         </p>
+        
+        <button 
+          onClick={() => setIsContactOpen(true)}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-rose-600 transition-colors shadow-lg"
+        >
+          <MessageSquare size={14} /> Contacter le Staff
+        </button>
+
         <div className="mt-10 flex items-center justify-center gap-2 grayscale opacity-40">
            <Award size={18} />
            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Accréditation Requise</span>
         </div>
+
+        <ContactModal 
+          isOpen={isContactOpen} 
+          onClose={() => setIsContactOpen(false)} 
+          userEmail={currentUser?.email} 
+          userName={currentUser?.penName || currentUser?.name} 
+        />
       </div>
     );
   }
@@ -186,7 +205,16 @@ export default function PodcastStudio({ currentUser }) {
             <p className="text-[10px] uppercase font-bold text-slate-400">Session Admin • Solo</p>
           </div>
         </div>
-        <div className="text-2xl font-mono font-bold text-rose-500">{formatTime(timeLeft)}</div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsContactOpen(true)}
+            className="p-2 text-slate-500 hover:text-white transition-colors"
+            title="Aide technique"
+          >
+            <MessageSquare size={20} />
+          </button>
+          <div className="text-2xl font-mono font-bold text-rose-500">{formatTime(timeLeft)}</div>
+        </div>
       </div>
 
       <div className="flex flex-col items-center gap-6">
@@ -236,6 +264,13 @@ export default function PodcastStudio({ currentUser }) {
           </div>
         )}
       </div>
+
+      <ContactModal 
+        isOpen={isContactOpen} 
+        onClose={() => setIsContactOpen(false)} 
+        userEmail={currentUser?.email} 
+        userName={currentUser?.penName || currentUser?.name} 
+      />
     </div>
   );
 }
