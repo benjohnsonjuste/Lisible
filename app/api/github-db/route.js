@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import * as bcrypt from 'bcrypt-ts';
-import { createHash } from 'crypto';
 
 const localCache = new Map();
 const CACHE_TTL = 0; 
@@ -112,23 +111,17 @@ const globalSort = (list) => {
   });
 };
 
-// --- ROUTE PRINCIPALE ---
+// --- ROUTES ---
 
 export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
-    const { 
-      action, id, textId, userEmail, userName, userPic, comment, 
-      authorEmail, textTitle, isPodcast, duelId, amount, 
-      currentPassword, newPassword, adminToken, ...data 
-    } = body;
+    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, adminToken, ...data } = body;
     
-    const contentId = id || textId;
     const emailToUse = userEmail || data.email;
     const targetPath = getSafePath(emailToUse);
 
-    // 1. GESTION DES UTILISATEURS (Inchangé)
     if (action === 'register') {
       const file = await getFile(targetPath);
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
@@ -158,7 +151,11 @@ export async function POST(req) {
       }
       if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
       if (file.content.status === "deleted") {
-        return NextResponse.json({ error: "Ce compte est en attente de suppression.", isDeleted: true, email: file.content.email }, { status: 403 });
+        return NextResponse.json({ 
+          error: "Ce compte est en attente de suppression.",
+          isDeleted: true,
+          email: file.content.email 
+        }, { status: 403 });
       }
       const storedPassword = file.content.password;
       const providedPassword = data.password;
@@ -180,92 +177,6 @@ export async function POST(req) {
       return NextResponse.json({ success: true, user: safeUser });
     }
 
-    // 2. GESTION DES INTERACTIONS UNIQUES & COMMENTAIRES (Podcast & Texte)
-    if (['comment', 'toggle_like', 'like', 'certify_content', 'certify', 'view'].includes(action)) {
-      const isPod = isPodcast || (contentId && contentId.startsWith('pod_'));
-      const contentPath = isPod ? `data/podcasts.json` : `data/texts/${contentId}.json`;
-      
-      const fileMeta = await getFile(contentPath);
-      if (!fileMeta) return NextResponse.json({ error: "Contenu introuvable" }, { status: 404 });
-
-      let targetObject = null;
-      if (isPod) {
-        if (!Array.isArray(fileMeta.content)) fileMeta.content = [];
-        targetObject = fileMeta.content.find(p => p.id === contentId);
-      } else {
-        targetObject = fileMeta.content;
-      }
-
-      if (!targetObject) return NextResponse.json({ error: "Objet non trouvé" }, { status: 404 });
-
-      // Action: Commentaire
-      if (action === 'comment') {
-        if (!targetObject.comments) targetObject.comments = [];
-        targetObject.comments.push({
-          userName: userName || "Plume",
-          userEmail: userEmail,
-          userPic: userPic,
-          text: comment,
-          date: new Date().toISOString()
-        });
-      } 
-      // Actions: Interactions (Like/Certify/View)
-      else {
-        const ip = req.headers.get('x-forwarded-for') || '0.0.0.0';
-        const ua = req.headers.get('user-agent') || 'unknown';
-        const fingerprint = createHash('md5').update(`${ip}-${ua}-${contentId}-${action}`).digest('hex');
-        
-        if (!targetObject.interactions) targetObject.interactions = [];
-        if (action !== 'view' && targetObject.interactions.includes(fingerprint)) {
-          return NextResponse.json({ success: true, alreadyDone: true });
-        }
-
-        if (action === 'like' || action === 'toggle_like') targetObject.likes = (targetObject.likes || 0) + 1;
-        if (action === 'certify' || action === 'certify_content') targetObject.certified = (targetObject.certified || 0) + 1;
-        if (action === 'view') targetObject.views = (targetObject.views || 0) + 1;
-        
-        if (action !== 'view') targetObject.interactions.push(fingerprint);
-      }
-
-      await updateFile(contentPath, fileMeta.content, fileMeta.sha, `${action} on ${contentId}`);
-
-      // Notifications & Récompenses Li
-      if (authorEmail && authorEmail.toLowerCase() !== userEmail?.toLowerCase()) {
-        const authorPath = getSafePath(authorEmail);
-        const authorFile = await getFile(authorPath);
-        if (authorFile) {
-          if (!authorFile.content.notifications) authorFile.content.notifications = [];
-          let msg = "";
-          if (action === 'comment') msg = `${userName} a commenté "${textTitle || targetObject.title}"`;
-          if (action.includes('like')) msg = `Coup de cœur sur "${textTitle || targetObject.title}" !`;
-          if (action.includes('certify')) {
-            msg = `Sceau apposé sur "${textTitle || targetObject.title}" (+1 Li).`;
-            authorFile.content.li = (authorFile.content.li || 0) + 1;
-          }
-          if (msg) {
-            authorFile.content.notifications.unshift({ id: `nt_${Date.now()}`, type: action, message: msg, date: new Date().toISOString(), read: false });
-            await updateFile(authorPath, authorFile.content, authorFile.sha, `Reward/Notif for ${action}`);
-          }
-        }
-      }
-
-      // Sync Index (pour les textes)
-      if (!isPod) {
-        const indexFile = await getFile(`data/publications/index.json`);
-        if (indexFile && Array.isArray(indexFile.content)) {
-          const idx = indexFile.content.findIndex(t => t.id === contentId);
-          if (idx > -1) {
-            indexFile.content[idx].likes = targetObject.likes;
-            indexFile.content[idx].certified = targetObject.certified;
-            indexFile.content[idx].views = targetObject.views;
-            await updateFile(`data/publications/index.json`, indexFile.content, indexFile.sha, `Sync Index`);
-          }
-        }
-      }
-      return NextResponse.json({ success: true });
-    }
-
-    // 3. PUBLISH, FOLLOW, TRANSFERT (Tes fonctions originales)
     if (action === 'publish') {
       const pubId = data.id || `txt_${Date.now()}`;
       const pubPath = `data/texts/${pubId}.json`;
@@ -279,6 +190,114 @@ export async function POST(req) {
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
       return NextResponse.json({ success: true, id: pubId });
+    }
+
+    if (action === 'toggle_bookmark') {
+      const userFile = await getFile(targetPath);
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      const user = userFile.content;
+      if (!user.bookmarks) user.bookmarks = [];
+      const exists = user.bookmarks.find(b => b.id === textId);
+      if (exists) {
+        user.bookmarks = user.bookmarks.filter(b => b.id !== textId);
+      } else {
+        user.bookmarks.push({ 
+          id: textId, 
+          title: data.title, 
+          author: data.authorName, 
+          date: new Date().toISOString() 
+        });
+      }
+      await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
+      return NextResponse.json({ success: true, bookmarks: user.bookmarks });
+    }
+
+    if (action === 'broadcast') {
+      if (adminToken !== process.env.ADMIN_PASSWORD) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
+
+      // 1. Déterminer les destinataires
+      let targetEmails = [];
+      if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
+        targetEmails = data.targetEmails;
+      } else {
+        const indexFile = await getFile(`data/publications/index.json`);
+        if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
+        targetEmails = [...new Set(indexFile.content.map(p => p.authorEmail))];
+      }
+      
+      const newSignal = {
+        id: `staff_${Date.now()}`,
+        type: data.type || "info",
+        message: data.message,
+        link: data.link || null,
+        date: new Date().toISOString(),
+        read: false
+      };
+
+      // 2. Diffusion ciblée
+      let count = 0;
+      for (const email of targetEmails) {
+        const uPath = getSafePath(email);
+        const uFile = await getFile(uPath);
+        if (uFile) {
+          if (!uFile.content.notifications) uFile.content.notifications = [];
+          uFile.content.notifications.unshift(newSignal);
+          const success = await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff (Targeted)`);
+          if (success) count++;
+        }
+      }
+      return NextResponse.json({ success: true, count });
+    }
+
+    if (action === 'saveDuelText') {
+      const duelFilePath = `data/duels.json`;
+      const file = await getFile(duelFilePath);
+      if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
+      const duels = Array.isArray(file.content) ? file.content : [];
+      const duelIndex = duels.findIndex(d => d.id === duelId);
+      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
+      if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
+      duels[duelIndex].texts[data.email] = data.text;
+      await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'edit_text') {
+      const idToEdit = textId || data.id;
+      const path = `data/texts/${idToEdit}.json`;
+      const indexPath = `data/publications/index.json`;
+      const file = await getFile(path);
+      if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
+      const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
+      await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
+        if (itemIndex > -1) {
+          indexFile.content[itemIndex] = { ...indexFile.content[itemIndex], title: data.title || indexFile.content[itemIndex].title, category: data.category || indexFile.content[itemIndex].category, genre: data.genre || indexFile.content[itemIndex].genre, image: data.image || indexFile.content[itemIndex].image };
+          await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
+        }
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'delete_text') {
+      const idToDelete = textId || data.textId;
+      const path = `data/texts/${idToDelete}.json`;
+      const indexPath = `data/publications/index.json`;
+      const file = await getFile(path);
+      if (file) {
+        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha }) });
+      }
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const newIndex = indexFile.content.filter(t => t.id !== idToDelete);
+        await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
+      }
+      return NextResponse.json({ success: true });
     }
 
     if (action === 'follow' || action === 'unfollow') {
@@ -299,7 +318,7 @@ export async function POST(req) {
       }
       await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
       await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, followersCount: target.content.followers.length });
     }
 
     if (action === 'transfer_li' || action === 'gift_li') {
@@ -310,22 +329,10 @@ export async function POST(req) {
       if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
       sender.content.li -= amount;
       receiver.content.li += amount;
-      receiver.content.notifications.unshift({ id: `nt_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
+      receiver.content.notifications.unshift({ id: `notif_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
       await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
       await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
       return NextResponse.json({ success: true });
-    }
-
-    if (action === 'toggle_bookmark') {
-      const userFile = await getFile(targetPath);
-      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      const user = userFile.content;
-      if (!user.bookmarks) user.bookmarks = [];
-      const exists = user.bookmarks.find(b => b.id === textId);
-      if (exists) { user.bookmarks = user.bookmarks.filter(b => b.id !== textId); } 
-      else { user.bookmarks.push({ id: textId, title: data.title, author: data.authorName, date: new Date().toISOString() }); }
-      await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
-      return NextResponse.json({ success: true, bookmarks: user.bookmarks });
     }
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
@@ -340,7 +347,10 @@ export async function GET(req) {
   const id = searchParams.get('id');
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
-    if (type === 'text') return NextResponse.json(await getFile(`data/texts/${id}.json`));
+    if (type === 'text') {
+        const text = await getFile(`data/texts/${id}.json`);
+        return NextResponse.json(text);
+    }
     if (type === 'user') {
         const user = await getFile(getSafePath(id));
         if (user) {
@@ -356,21 +366,63 @@ export async function GET(req) {
       return NextResponse.json(index);
     }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
-  } catch (e) { return NextResponse.json({ error: "Erreur serveur" }, { status: 500 }); }
+  } catch (e) {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }
 
 export async function PATCH(req) {
   try {
     const body = await req.json();
     const { id, action, notifId } = body;
+
     if (action === 'mark_read') {
       const userPath = getSafePath(id);
       const userFile = await getFile(userPath);
       if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      userFile.content.notifications = (userFile.content.notifications || []).map(n => n.id === notifId ? { ...n, read: true } : n);
-      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notif read: ${notifId}`);
+      
+      const notifs = userFile.content.notifications || [];
+      userFile.content.notifications = notifs.map(n => n.id === notifId ? { ...n, read: true } : n);
+      
+      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notification read: ${notifId}`);
       return NextResponse.json({ success: true });
     }
-    return NextResponse.json({ error: "Action PATCH inconnue" }, { status: 400 });
-  } catch (e) { return NextResponse.json({ error: e.message }, { status: 500 }); }
+
+    const path = `data/texts/${id}.json`;
+    const indexPath = `data/publications/index.json`;
+    const textFile = await getFile(path);
+    if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
+    const authorPath = getSafePath(textFile.content.authorEmail);
+    const authorFile = await getFile(authorPath);
+    const indexFile = await getFile(indexPath);
+
+    if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
+    if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
+    if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
+
+    if (indexFile && Array.isArray(indexFile.content)) {
+      const itemIndex = indexFile.content.findIndex(t => t.id === id);
+      if (itemIndex > -1) {
+        indexFile.content[itemIndex].views = textFile.content.views;
+        indexFile.content[itemIndex].likes = textFile.content.likes;
+        indexFile.content[itemIndex].certified = textFile.content.certified;
+        indexFile.content = globalSort(indexFile.content);
+        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
+      }
+    }
+    if (authorFile) {
+      if (action === 'like') {
+        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`, date: new Date().toISOString(), read: false });
+      }
+      if (action === 'certify') {
+        authorFile.content.li = (authorFile.content.li || 0) + 1;
+        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`, date: new Date().toISOString(), read: false });
+      }
+      await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
+    }
+    await updateFile(path, textFile.content, textFile.sha, `📈 Text Update: ${action}`);
+    return NextResponse.json({ success: true, count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) });
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }
