@@ -4,6 +4,13 @@
   "li": 69,
   "notifications": [
     {
+      "id": "follow_1772966124075",
+      "type": "follow",
+      "message": "cecile fall s'est abonné à vous !",
+      "date": "2026-03-08T10:35:24.075Z",
+      "read": false
+    },
+    {
       "id": "cert_1772965731713",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"La terre qui pleure\" (+1 Li).",
@@ -397,7 +404,8 @@
     }
   ],
   "followers": [
-    "adamahassoumi1998@gmail.com"
+    "adamahassoumi1998@gmail.com",
+    "cecilesokhnaf@gmail.com"
   ],
   "following": [],
   "works": [],
