@@ -1,8 +1,15 @@
 {
   "email": "adamacissokho15@gmail.com",
   "name": "",
-  "li": 68,
+  "li": 69,
   "notifications": [
+    {
+      "id": "cert_1772965731713",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La terre qui pleure\" (+1 Li).",
+      "date": "2026-03-08T10:28:51.713Z",
+      "read": false
+    },
     {
       "id": "like_1772965651868",
       "type": "like",
