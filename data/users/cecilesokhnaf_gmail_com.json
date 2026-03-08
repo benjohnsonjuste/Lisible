@@ -7,7 +7,14 @@
   "followers": [],
   "following": [],
   "works": [],
-  "bookmarks": [],
+  "bookmarks": [
+    {
+      "id": "txt_1770823066946",
+      "title": "Mon départ",
+      "author": "Adama Junior Cissokho",
+      "date": "2026-03-08T10:20:15.653Z"
+    }
+  ],
   "created_at": "2026-03-08T10:18:23.630Z",
   "password": "$2b$10$Upe8vaEQtpK5cF0Dik3iw.oXhgabOmhdgOMmR7M0iN6AvlL2ccaum",
   "referralCode": null,
