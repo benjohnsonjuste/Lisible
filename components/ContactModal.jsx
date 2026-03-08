@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, Send, Loader2, CheckCircle, MessageSquare, Mic2, Lock } from "lucide-react";
+import { X, Send, Loader2, CheckCircle, Mic2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
@@ -37,13 +37,12 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
 
     setIsSubmitting(true);
     try {
-      // Utilisation de la route /api/report avec le format reportData
       const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reportData: {
-            textId: "STUDIO-CONTACT", // Identifiant factice pour la cohérence
+            textId: "STUDIO-CONTACT",
             textTitle: `À propos du studio: ${userName || "Auteur"}`,
             reporterEmail: userEmail || "Anonyme",
             reason: subject,
