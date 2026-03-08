@@ -4,6 +4,13 @@
   "li": 68,
   "notifications": [
     {
+      "id": "like_1772965651868",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La terre qui pleure\" !",
+      "date": "2026-03-08T10:27:31.868Z",
+      "read": false
+    },
+    {
       "id": "cert_1772965511108",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Le Vide\" (+1 Li).",
