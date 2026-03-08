@@ -295,7 +295,7 @@
       "type": "follow",
       "message": " s'est abonné à vous !",
       "date": "2026-02-26T03:53:20.168Z",
-      "read": false
+      "read": true
     },
     {
       "id": "cert_1771717164717",
