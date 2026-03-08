@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { X, Send, Loader2, CheckCircle, MessageSquare, Mic2 } from "lucide-react";
+import { X, Send, Loader2, CheckCircle, MessageSquare, Mic2, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
@@ -9,12 +9,23 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Liste blanche de l'administration
+  const adminEmails = [
+    "cmo.lablitteraire7@gmail.com",
+    "benjohnsonjuste@gmail.com",
+    "jb7management@gmail.com",
+    "woolsleypierre01@gmail.com",
+    "jeanpierreborlhainiedarha@gmail.com"
+  ];
+
+  const hasFullAccess = adminEmails.includes(userEmail);
+
   const contactSubjects = [
-    "Demande d'accréditation Bronze",
-    "Difficultés lié à l'enregistrement",
-    "Suggestion d'amélioration",
-    "Requête spéciale pour la promotion"
-    "Autre"
+    { label: "Demande d'accréditation Bronze", restricted: false },
+    { label: "Difficultés lié à l'enregistrement", restricted: true },
+    { label: "Suggestion d'amélioration", restricted: true },
+    { label: "Requête spéciale pour la promotion", restricted: true },
+    { label: "Autre", restricted: false }
   ];
 
   const handleSubmit = async (e) => {
@@ -24,7 +35,6 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
 
     setIsSubmitting(true);
     try {
-      // Appel à votre API de messagerie (Nodemailer/SendGrid)
       const res = await fetch("/api/contact-studio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,7 +77,6 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
         
-        {/* Header - Style Studio */}
         <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3 text-slate-900">
             <div className="bg-rose-600 p-2 rounded-xl text-white">
@@ -89,20 +98,27 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
               <div>
                 <label className="block text-xs font-black uppercase tracking-[0.15em] text-slate-400 mb-3">Quel est l'objet de votre message ?</label>
                 <div className="grid grid-cols-1 gap-2">
-                  {contactSubjects.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSubject(s)}
-                      className={`text-left px-4 py-3 rounded-2xl text-sm font-medium transition-all border ${
-                        subject === s 
-                        ? "bg-slate-900 text-white border-slate-900 shadow-lg translate-x-1" 
-                        : "bg-slate-50 text-slate-600 border-slate-100 hover:border-rose-200"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {contactSubjects.map((s) => {
+                    const isDisabled = s.restricted && !hasFullAccess;
+                    return (
+                      <button
+                        key={s.label}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => setSubject(s.label)}
+                        className={`group text-left px-4 py-3 rounded-2xl text-sm font-medium transition-all border flex items-center justify-between ${
+                          isDisabled 
+                          ? "bg-slate-50 text-slate-300 border-slate-50 cursor-not-allowed opacity-60" 
+                          : subject === s.label 
+                            ? "bg-slate-900 text-white border-slate-900 shadow-lg translate-x-1" 
+                            : "bg-slate-50 text-slate-600 border-slate-100 hover:border-rose-200"
+                        }`}
+                      >
+                        <span>{s.label}</span>
+                        {isDisabled && <Lock size={12} className="text-slate-300" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
