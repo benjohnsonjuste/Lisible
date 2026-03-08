@@ -36,7 +36,7 @@ async function updateFile(path, content, sha, message) {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
-      body: JSON.stringify({ message: `[UNIQUE-INT] ${message} [skip ci]`, content: encoded, sha: sha || undefined }),
+      body: JSON.stringify({ message: `[DB-UPDATE] ${message} [skip ci]`, content: encoded, sha: sha || undefined }),
     });
     return res.ok;
   } catch (err) { return false; }
@@ -47,61 +47,106 @@ async function updateFile(path, content, sha, message) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { id, action, userEmail, authorEmail } = body;
+    const { action, id, textId, userEmail, userName, userPic, comment, authorEmail, textTitle, isPodcast } = body;
+    
+    // On harmonise l'ID (certains composants envoient 'id', d'autres 'textId')
+    const contentId = id || textId;
+    if (!contentId || !action) return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
 
-    // Empreinte unique : IP + UserAgent + ID du contenu + Type d'action
+    // Empreinte unique (IP + UA + ID + Action)
     const ip = req.headers.get('x-forwarded-for') || '0.0.0.0';
     const ua = req.headers.get('user-agent') || 'unknown';
-    const deviceFingerprint = createHash('md5').update(`${ip}-${ua}-${id}-${action}`).digest('hex');
+    const deviceFingerprint = createHash('md5').update(`${ip}-${ua}-${contentId}-${action}`).digest('hex');
 
-    if (!id || !action) return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
+    // 1. DÉTERMINER LE CHEMIN DU CONTENU
+    // Si c'est un podcast ou marqué comme tel, on va dans podcasts.json, sinon dans le dossier texts
+    const targetPath = (isPodcast || contentId.startsWith('pod_')) 
+      ? `data/podcasts.json` 
+      : `data/texts/${contentId}.json`;
 
-    const isPodcast = id.startsWith('pod_');
-    let targetPath = isPodcast ? `data/podcasts.json` : `data/texts/${id}.json`;
-    let contentData = null;
-    let fileMeta = await getFile(targetPath);
-
+    const fileMeta = await getFile(targetPath);
     if (!fileMeta) return NextResponse.json({ error: "Contenu introuvable" }, { status: 404 });
 
-    // 1. EXTRACTION DE L'OBJET À MODIFIER
+    // 2. EXTRAIRE L'OBJET CIBLE (Podcasts = tableau, Textes = objet racine)
     let targetObject = null;
-    if (isPodcast) {
-      // Pour les podcasts, on cherche l'objet dans le tableau
-      const pods = Array.isArray(fileMeta.content) ? fileMeta.content : [];
-      targetObject = pods.find(p => p.id === id);
+    if (targetPath.endsWith('podcasts.json')) {
+      if (!Array.isArray(fileMeta.content)) fileMeta.content = [];
+      targetObject = fileMeta.content.find(p => p.id === contentId);
     } else {
-      // Pour les textes, c'est l'objet racine du fichier
       targetObject = fileMeta.content;
     }
 
-    if (!targetObject) return NextResponse.json({ error: "Podcast non trouvé dans la liste" }, { status: 404 });
+    if (!targetObject) return NextResponse.json({ error: "Objet non trouvé" }, { status: 404 });
 
-    // 2. VÉRIFICATION DE L'UNICITÉ
-    if (!targetObject.interactions) targetObject.interactions = [];
-    if (targetObject.interactions.includes(deviceFingerprint) && action !== 'view') {
-      return NextResponse.json({ 
-        error: "Déjà effectué", 
-        alreadyDone: true,
-        count: action === 'like' ? targetObject.likes : targetObject.certified 
-      }, { status: 200 });
+    // 3. TRAITEMENT DES ACTIONS
+    
+    // --- ACTION : COMMENTAIRE ---
+    if (action === "comment") {
+      if (!targetObject.comments) targetObject.comments = [];
+      const newComment = {
+        userName: userName || "Plume",
+        userEmail: userEmail,
+        userPic: userPic,
+        text: comment,
+        date: new Date().toISOString()
+      };
+      targetObject.comments.push(newComment);
+    } 
+    
+    // --- ACTION : LIKE / CERTIFY / VIEW ---
+    else {
+      if (!targetObject.interactions) targetObject.interactions = [];
+      
+      // Vérifier si l'appareil a déjà fait cette action (sauf pour les vues)
+      if (action !== 'view' && targetObject.interactions.includes(deviceFingerprint)) {
+        return NextResponse.json({ success: true, alreadyDone: true });
+      }
+
+      if (action === 'toggle_like' || action === 'like') targetObject.likes = (targetObject.likes || 0) + 1;
+      if (action === 'certify_content' || action === 'certify') targetObject.certified = (targetObject.certified || 0) + 1;
+      if (action === 'view') targetObject.views = (targetObject.views || 0) + 1;
+
+      if (action !== 'view') targetObject.interactions.push(deviceFingerprint);
     }
 
-    // 3. MISE À JOUR DES COMPTEURS
-    if (action === 'like') targetObject.likes = (targetObject.likes || 0) + 1;
-    if (action === 'certify') targetObject.certified = (targetObject.certified || 0) + 1;
-    if (action === 'view') targetObject.views = (targetObject.views || 0) + 1;
-    
-    if (action !== 'view') targetObject.interactions.push(deviceFingerprint);
+    // 4. SAUVEGARDE DU CONTENU (Texte ou Podcast)
+    await updateFile(targetPath, fileMeta.content, fileMeta.sha, `${action} sur ${contentId}`);
 
-    // 4. SAUVEGARDE DU FICHIER SOURCE
-    await updateFile(targetPath, fileMeta.content, fileMeta.sha, `${action} unique sur ${id}`);
+    // 5. NOTIFICATION & TRANSFERT DE LI À L'AUTEUR
+    if (authorEmail && authorEmail.toLowerCase() !== userEmail?.toLowerCase()) {
+      const authorPath = getSafePath(authorEmail);
+      const authorFile = await getFile(authorPath);
 
-    // 5. SYNC INDEX (Seulement pour les textes, car les podcasts utilisent déjà un fichier central)
-    if (!isPodcast) {
+      if (authorFile) {
+        if (!authorFile.content.notifications) authorFile.content.notifications = [];
+        
+        let notifMessage = "";
+        if (action === "comment") notifMessage = `${userName} a commenté "${textTitle || 'votre œuvre'}"`;
+        if (action.includes("like")) notifMessage = `Nouveau coup de cœur sur "${textTitle || 'votre œuvre'}"`;
+        if (action.includes("certify")) {
+          notifMessage = `Sceau apposé sur "${textTitle || 'votre œuvre'}". +1 Li reçu !`;
+          authorFile.content.li = (authorFile.content.li || 0) + 1; // Gain de Li
+        }
+
+        if (notifMessage) {
+          authorFile.content.notifications.unshift({
+            id: `notif_${Date.now()}`,
+            type: action,
+            message: notifMessage,
+            date: new Date().toISOString(),
+            read: false
+          });
+          await updateFile(authorPath, authorFile.content, authorFile.sha, `Notif/Reward for ${action}`);
+        }
+      }
+    }
+
+    // 6. SYNC INDEX (Uniquement pour les textes)
+    if (!targetPath.endsWith('podcasts.json')) {
       const indexPath = `data/publications/index.json`;
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
-        const idx = indexFile.content.findIndex(item => item.id === id);
+        const idx = indexFile.content.findIndex(item => item.id === contentId);
         if (idx > -1) {
           indexFile.content[idx].likes = targetObject.likes;
           indexFile.content[idx].certified = targetObject.certified;
@@ -111,31 +156,10 @@ export async function POST(req) {
       }
     }
 
-    // 6. NOTIFICATION & RÉCOMPENSE
-    if (authorEmail && authorEmail.toLowerCase() !== userEmail?.toLowerCase()) {
-      const authorPath = getSafePath(authorEmail);
-      const authorFile = await getFile(authorPath);
-      if (authorFile) {
-        if (!authorFile.content.notifications) authorFile.content.notifications = [];
-        authorFile.content.notifications.unshift({
-          id: `notif_${Date.now()}`,
-          type: action,
-          message: `Nouveau ${action} sur "${targetObject.title}" !`,
-          date: new Date().toISOString(),
-          read: false
-        });
-        if (action === 'certify') authorFile.content.li = (authorFile.content.li || 0) + 1;
-        await updateFile(authorPath, authorFile.content, authorFile.sha, `Reward Unique`);
-      }
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      count: action === 'like' ? targetObject.likes : (action === 'certify' ? targetObject.certified : targetObject.views) 
-    });
+    return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    console.error("API Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
