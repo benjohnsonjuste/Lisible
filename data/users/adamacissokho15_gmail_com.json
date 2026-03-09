@@ -4,6 +4,13 @@
   "li": 69,
   "notifications": [
     {
+      "id": "like_1773015073550",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La ballade des amoureux\" !",
+      "date": "2026-03-09T00:11:13.551Z",
+      "read": false
+    },
+    {
       "id": "follow_1772966124075",
       "type": "follow",
       "message": "cecile fall s'est abonné à vous !",
