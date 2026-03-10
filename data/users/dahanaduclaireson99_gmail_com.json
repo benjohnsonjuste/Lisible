@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "Dahana DUCLAIRE",
-  "li": 358,
+  "li": 359,
   "notifications": [
+    {
+      "id": "cert_1773158964532",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La ballade de l'inacceptable accepté\" (+1 Li).",
+      "date": "2026-03-10T16:09:24.532Z",
+      "read": false
+    },
     {
       "id": "cert_1773158913778",
       "type": "certification",
