@@ -4,6 +4,13 @@
   "li": 354,
   "notifications": [
     {
+      "id": "like_1773158639764",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La ballade de l'inacceptable accepté\" !",
+      "date": "2026-03-10T16:03:59.764Z",
+      "read": false
+    },
+    {
       "id": "like_1773158592156",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"La ballade de l'inacceptable accepté\" !",
