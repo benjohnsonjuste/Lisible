@@ -4,6 +4,13 @@
   "li": 360,
   "notifications": [
     {
+      "id": "like_1773231625119",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La ballade de l'inacceptable accepté\" !",
+      "date": "2026-03-11T12:20:25.119Z",
+      "read": false
+    },
+    {
       "id": "cert_1773231559699",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"La ballade de l'inacceptable accepté\" (+1 Li).",
