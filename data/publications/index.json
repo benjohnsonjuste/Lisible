@@ -228,19 +228,6 @@
     "certified": 6
   },
   {
-    "id": "txt_1772554025498",
-    "title": "La ballade des amoureux",
-    "author": "Adama Junior Cissokho ",
-    "authorEmail": "adamacissokho15@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-03T16:07:05.498Z",
-    "views": 4,
-    "likes": 7,
-    "certified": 5
-  },
-  {
     "id": "txt_1773307172859",
     "title": "Ode à la jeunesse",
     "author": "Fils de l’encre noire ",
@@ -251,6 +238,19 @@
     "date": "2026-03-12T09:19:32.859Z",
     "views": 0,
     "likes": 1,
+    "certified": 6
+  },
+  {
+    "id": "txt_1772554025498",
+    "title": "La ballade des amoureux",
+    "author": "Adama Junior Cissokho ",
+    "authorEmail": "adamacissokho15@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-03T16:07:05.498Z",
+    "views": 4,
+    "likes": 7,
     "certified": 5
   },
   {
