@@ -4,6 +4,14 @@
   "li": 362,
   "notifications": [
     {
+      "id": "staff_1773309674466",
+      "type": "info",
+      "message": "Vérification de connexion staff",
+      "link": null,
+      "date": "2026-03-12T10:01:14.466Z",
+      "read": false
+    },
+    {
       "id": "cert_1773231811538",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"La ballade de l'inacceptable accepté\" (+1 Li).",
