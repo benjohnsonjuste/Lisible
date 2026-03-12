@@ -187,6 +187,19 @@
     "certified": 8
   },
   {
+    "id": "txt_1773307172859",
+    "title": "Ode à la jeunesse",
+    "author": "Fils de l’encre noire ",
+    "authorEmail": "scritchmonov2023@gmail.com",
+    "category": "Poésie",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-12T09:19:32.859Z",
+    "views": 0,
+    "likes": 1,
+    "certified": 7
+  },
+  {
     "id": "1770850500145",
     "title": "Femme du Cameroun, lumière d’Afrique",
     "author": "Romuald Douanla MELONG",
@@ -225,19 +238,6 @@
     "date": "2026-02-11T22:27:38.745Z",
     "views": 7,
     "likes": 5,
-    "certified": 6
-  },
-  {
-    "id": "txt_1773307172859",
-    "title": "Ode à la jeunesse",
-    "author": "Fils de l’encre noire ",
-    "authorEmail": "scritchmonov2023@gmail.com",
-    "category": "Poésie",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-12T09:19:32.859Z",
-    "views": 0,
-    "likes": 1,
     "certified": 6
   },
   {
