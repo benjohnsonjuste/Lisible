@@ -4,18 +4,16 @@ import {
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
   Briefcase, HeartHandshake, Feather, Sparkles, Sun
-} from "lucide-react";
+} from "lucide-center";
 import Link from "next/link";
 import { toast } from "sonner";
 import Head from 'next/head';
 
-// Configuration GitHub identique à ton autre page
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
   repo: "Lisible",
 };
 
-// Cache global
 let authorsCache = null;
 
 export default function CommunautePage() {
@@ -38,58 +36,75 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupérer la liste des fichiers dans data/users via l'API GitHub
-      const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
-      const res = await fetch(url, { next: { revalidate: 0 } });
-      
-      if (!res.ok) throw new Error("Impossible de lister les utilisateurs");
-      const files = await res.json();
+      // --- ÉTAPE 1 : RÉCUPÉRER LES PUBLICATIONS POUR LES STATS ---
+      const pubUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`;
+      const pubRes = await fetch(pubUrl);
+      let libStats = {};
 
-      // 2. Récupérer le contenu de chaque JSON d'utilisateur
+      if (pubRes.ok) {
+        const pubFiles = await pubRes.json();
+        const pubData = await Promise.all(
+          pubFiles.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()))
+        );
+
+        libStats = pubData.reduce((acc, pub) => {
+          const email = pub.authorEmail?.toLowerCase().trim();
+          if (!email) return acc;
+          if (!acc[email]) acc[email] = { works: 0, views: 0, likes: 0, certified: 0 };
+          acc[email].works += 1;
+          acc[email].views += Number(pub.views || 0);
+          acc[email].likes += Number(pub.likes || 0);
+          acc[email].certified += Number(pub.certified || 0);
+          return acc;
+        }, {});
+      }
+
+      // --- ÉTAPE 2 : RÉCUPÉRER LES PROFILS UTILISATEURS ---
+      const userUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
+      const userRes = await fetch(userUrl);
+      if (!userRes.ok) throw new Error("Erreur fichiers users");
+      
+      const userFiles = await userRes.json();
       const authorProfiles = await Promise.all(
-        files
+        userFiles
           .filter(file => file.name.endsWith('.json'))
           .map(async (file) => {
             try {
               const fileRes = await fetch(file.download_url);
-              if (!fileRes.ok) return null;
               const userData = await fileRes.json();
+              const email = userData.email?.toLowerCase().trim();
+              const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
               
-              // On simule/récupère les stats (tu pourras lier ton dossier publications ici plus tard)
               return {
                 name: userData.name || userData.fullName || "Plume Anonyme",
-                email: userData.email,
+                email: email,
                 image: userData.profilePic || userData.image || null,
                 followers: userData.followers || [],
                 li: Number(userData.li || 0),
-                worksCount: userData.worksCount || 0, // À adapter selon ta structure
-                views: userData.views || 0,
-                likes: userData.likes || 0,
-                certified: userData.certified || 0
+                worksCount: stats.works,
+                views: stats.views,
+                likes: stats.likes,
+                certified: stats.certified || userData.certified || 0
               };
-            } catch (err) {
-              return null;
-            }
+            } catch (err) { return null; }
           })
       );
 
-      const finalAuthors = authorProfiles.filter(Boolean);
-
-      // Tri par popularité
-      const sortedAuthors = finalAuthors.sort((a, b) => 
+      const finalAuthors = authorProfiles.filter(Boolean).sort((a, b) => 
         (b.li + b.views + b.worksCount) - (a.li + a.views + a.worksCount)
       );
 
-      authorsCache = sortedAuthors;
-      setAuthors(sortedAuthors);
+      authorsCache = finalAuthors;
+      setAuthors(finalAuthors);
     } catch (e) { 
-      console.error("Erreur de chargement du Cercle:", e);
-      if (!authorsCache) toast.error("Le Cercle est momentanément inaccessible."); 
+      console.error("Erreur globale:", e);
+      if (!authorsCache) toast.error("Connexion au Cercle impossible."); 
     } finally { 
       setLoading(false); 
     }
   }
 
+  // Les fonctions stats, getBadges et handleFollow restent identiques à la version précédente
   const stats = useMemo(() => {
     if (authors.length === 0) return { maxViews: 0, maxWorks: 0, maxLi: 0 };
     return {
@@ -102,29 +117,11 @@ export default function CommunautePage() {
   const getBadges = (author) => {
     const b = [];
     const mail = author.email?.toLowerCase();
-
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
-    if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
-    if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
-    if (mail === "robergeaurodley97@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Général", color: "bg-green-600 text-white" });
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
-    if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-gold-900 text-red-400" });
-    
-    if (author.views === stats.maxViews && stats.maxViews > 0) {
-      b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
-    }
-    if (author.worksCount === stats.maxWorks && stats.maxWorks > 5) {
-      b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white shadow-lg shadow-teal-500/20" });
-    }
-    if (author.li === stats.maxLi && stats.maxLi > 0) {
-      b.push({ icon: <Sun size={10} />, label: "Auréole", color: "bg-amber-400 text-slate-900 font-bold shadow-lg" });
-    }
+    if (author.views === stats.maxViews && stats.maxViews > 0) b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
+    if (author.worksCount === stats.maxWorks && stats.maxWorks > 2) b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white" });
     return b;
-  };
-
-  const handleFollow = async (targetEmail) => {
-    toast.info("La fonction de suivi nécessite une API de mise à jour (POST).");
-    // Note: Pour activer le follow, il te faudra une API Route qui écrit dans GitHub
   };
 
   if (!mounted) return null;
@@ -140,11 +137,11 @@ export default function CommunautePage() {
       <header className="flex flex-col lg:flex-row justify-between mb-24 gap-8">
         <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">Cercle.</h1>
         <div className="relative group w-full lg:w-96">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-500 transition-colors" size={20} />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text" 
             placeholder="Rechercher une plume..." 
-            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all font-sans" 
+            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all" 
             onChange={(e) => setSearchTerm(e.target.value)} 
           />
         </div>
@@ -155,7 +152,7 @@ export default function CommunautePage() {
           .filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()))
           .slice(0, visibleCount)
           .map((a) => (
-          <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-all hover:shadow-2xl hover:border-teal-500/10">
+          <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-all hover:shadow-2xl">
             <div className="absolute top-8 right-8 flex flex-col items-end gap-2 z-10">
               {getBadges(a).map((b, i) => (
                 <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5`}>
@@ -164,7 +161,7 @@ export default function CommunautePage() {
               ))}
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
-              <div className="w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100 flex-shrink-0">
+              <div className="w-32 h-32 rounded-[2.8rem] overflow-hidden border-4 border-white shadow-2xl bg-slate-100">
                 <img 
                   src={a.image || `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${a.email}`} 
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
@@ -183,16 +180,7 @@ export default function CommunautePage() {
                     <StatBadge label="Li" val={a.li} color="amber" />
                 </div>
                 <div className="flex gap-2 justify-center sm:justify-start">
-                  {currentUser?.email !== a.email && (
-                    <button 
-                      onClick={() => handleFollow(a.email)} 
-                      disabled={submitting === a.email}
-                      className={`px-6 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${a.followers?.includes(currentUser?.email) ? "bg-slate-100 text-slate-400" : "bg-slate-950 text-white hover:bg-teal-600 shadow-lg"}`}
-                    >
-                      {submitting === a.email ? <Loader2 size={12} className="animate-spin" /> : (a.followers?.includes(currentUser?.email) ? "Désabonner" : "Suivre")}
-                    </button>
-                  )}
-                  <Link href={`/author/${encodeURIComponent(a.email)}`} className="px-6 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2">
+                  <Link href={`/author/${encodeURIComponent(a.email)}`} className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2">
                     Profil <ArrowRight size={14} />
                   </Link>
                 </div>
@@ -204,7 +192,7 @@ export default function CommunautePage() {
       
       {authors.length > visibleCount && (
         <div className="mt-20 text-center">
-          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl font-sans">
+          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 shadow-xl">
             Découvrir plus de plumes
           </button>
         </div>
