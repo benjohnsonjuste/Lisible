@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { 
-  Send, Bell, BellOff, Loader2, User, MessageSquare, 
-  ShieldCheck, Sparkles, CheckCircle, Globe 
+  Send, Loader2, User, MessageSquare, 
+  ShieldCheck, Sparkles, Globe 
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -10,7 +10,6 @@ export default function ForumPage() {
   const [messages, setMessages] = useState([]);
   const [user, setUser] = useState(null);
   const [newMsg, setNewMsg] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
@@ -22,29 +21,17 @@ export default function ForumPage() {
     loadMessages();
   }, []);
 
-  // On vérifie l'abonnement une fois l'utilisateur chargé
-  useEffect(() => {
-    if (user) checkSubscription();
-  }, [user]);
-
   async function loadMessages() {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/forum/messages`);
       if (res.ok) {
         const files = await res.json();
-        // On prend les 20 derniers messages pour la performance
         const lastFiles = files.filter(f => f.name.endsWith('.json')).slice(-20);
         const contents = await Promise.all(lastFiles.map(f => fetch(f.download_url).then(r => r.json())));
         setMessages(contents.sort((a, b) => b.id - a.id));
       }
     } catch (e) { console.error(e); }
     setLoading(false);
-  }
-
-  async function checkSubscription() {
-    const id = user.email.replace(/[@.]/g, '_');
-    const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/forum/subscribers/${id}.json`);
-    setIsSubscribed(res.ok);
   }
 
   const handlePostMessage = async () => {
@@ -56,9 +43,7 @@ export default function ForumPage() {
     const userName = user.name || user.fullName || "Auteur";
 
     try {
-      // 1. Sauvegarde sur GitHub (Base de données du forum)
-      // Note: Cette partie nécessite une API route proxy pour le token GitHub (comme ton /api/report)
-      // On utilise ici une structure similaire à ton système de report pour la notification
+      // Envoi automatique de la notification via github-db (API proxy /api/report)
       const resNotify = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,21 +60,16 @@ export default function ForumPage() {
       });
 
       if (resNotify.ok) {
-        toast.success("Message publié et équipe notifiée !");
+        toast.success("Message publié !");
         setNewMsg("");
-        // Optionnel: Recharger les messages ici
-        setTimeout(loadMessages, 1000);
+        // Attente courte pour laisser le temps au commit GitHub d'être indexé
+        setTimeout(loadMessages, 1200);
       }
     } catch (error) {
       toast.error("Erreur de transmission.");
     } finally {
       setIsSending(false);
     }
-  };
-
-  const toggleSubscription = async () => {
-    toast.info("Traitement de l'abonnement...");
-    // Logique de création de fichier dans data/forum/subscribers/ via ton API
   };
 
   return (
@@ -101,18 +81,6 @@ export default function ForumPage() {
             <Globe size={12} className="text-teal-500" /> Espace de discussion communautaire
           </p>
         </div>
-
-        {user && (
-          <button 
-            onClick={toggleSubscription}
-            className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${
-              isSubscribed ? "bg-white text-rose-600 border border-rose-100" : "bg-slate-900 text-white hover:bg-rose-600"
-            }`}
-          >
-            {isSubscribed ? <BellOff size={16}/> : <Bell size={16}/>}
-            {isSubscribed ? "Désactiver les alertes" : "S'abonner aux notifications"}
-          </button>
-        )}
       </header>
 
       {/* Zone d'écriture */}
@@ -135,7 +103,14 @@ export default function ForumPage() {
                 disabled={isSending || !newMsg.trim()}
                 className="bg-slate-900 text-white px-8 py-4 rounded-xl flex items-center gap-3 hover:bg-teal-600 transition-all disabled:opacity-30 shadow-xl"
               >
-                {isSending ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> <span className="text-[10px] font-black uppercase tracking-widest">Publier</span></>}
+                {isSending ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <>
+                    <Send size={18} /> 
+                    <span className="text-[10px] font-black uppercase tracking-widest">Publier</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -152,7 +127,9 @@ export default function ForumPage() {
       {/* Flux de messages */}
       <div className="space-y-8">
         {loading ? (
-          <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-teal-600" size={40} /></div>
+          <div className="py-20 text-center">
+            <Loader2 className="animate-spin mx-auto text-teal-600" size={40} />
+          </div>
         ) : messages.length > 0 ? (
           messages.map((m) => (
             <div key={m.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
