@@ -136,6 +136,7 @@ export default function Navbar() {
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
+    { href: "/salon", label: "Salon Lisible", icon: <MessageSquare size={20} /> },
     { href: "/studio/podcast", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
     { href: "/dashboard", label: "Tableau de bord", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/community", label: "Communauté", icon: <Users size={20} /> },
