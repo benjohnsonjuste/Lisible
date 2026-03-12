@@ -1,11 +1,46 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+  token: process.env.GITHUB_TOKEN
+};
+
 export async function POST(req) {
   try {
     const { reportData } = await req.json();
+    const isForum = reportData.reason === "FORUM_POST";
+    const isDirectMessage = reportData.reason === "DIRECT_MESSAGE";
 
-    // Configuration du transporteur Gmail
+    // 1. SI C'EST UN MESSAGE FORUM, ON LE SAUVEGARDE SUR GITHUB
+    if (isForum) {
+      const msgId = reportData.textId.replace("FORUM-", "");
+      const filePath = `data/forum/messages/${msgId}.json`;
+      const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${filePath}`;
+
+      const messageContent = {
+        id: parseInt(msgId),
+        author: reportData.textTitle.replace("Nouveau message de ", ""),
+        email: reportData.reporterEmail,
+        text: reportData.details,
+        date: new Date().toISOString()
+      };
+
+      await fetch(url, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          message: `Forum: ${messageContent.author}`,
+          content: btoa(JSON.stringify(messageContent, null, 2))
+        })
+      });
+    }
+
+    // 2. CONFIGURATION DU TRANSPORTEUR GMAIL
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -14,43 +49,48 @@ export async function POST(req) {
       },
     });
 
-    // Génération de l'URL du texte (Remplacez par votre domaine réel)
-    const baseUrl = "https://lisible.biz"; // Changez ceci par votre URL Vercel si nécessaire
-    const textUrl = `${baseUrl}/texts/${reportData.textId}`;
+    // Détermination du destinataire et de l'URL de redirection
+    const recipientEmail = isDirectMessage ? reportData.targetEmail : "cmo.lablitteraire7@gmail.com";
+    const baseUrl = "https://lisible.biz";
+    let redirectUrl = `${baseUrl}/texts/${reportData.textId}`;
+    if (isForum) redirectUrl = `${baseUrl}/forum`;
+    if (isDirectMessage) redirectUrl = `${baseUrl}/cercle`;
 
     const mailOptions = {
-      from: `"Alerte Lisible" <${process.env.EMAIL_USER}>`,
-      to: "cmo.lablitteraire7@gmail.com",
-      subject: `🚨 SIGNALEMENT : ${reportData.reason}`,
+      from: `"Messagerie Lisible" <${process.env.EMAIL_USER}>`,
+      to: recipientEmail,
+      subject: isDirectMessage ? `✉️ Nouveau message de ${reportData.textTitle}` : isForum ? `💬 FORUM : Nouveau message` : `🚨 SIGNALEMENT : ${reportData.reason}`,
       html: `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 24px; padding: 40px; color: #1e293b; background-color: #ffffff;">
           <div style="text-align: center; margin-bottom: 30px;">
-            <span style="background: #fff1f2; color: #e11d48; padding: 8px 20px; border-radius: 99px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
-              Alerte Modération
+            <span style="background: ${isDirectMessage ? '#eff6ff' : isForum ? '#f0fdf4' : '#fff1f2'}; color: ${isDirectMessage ? '#2563eb' : isForum ? '#16a34a' : '#e11d48'}; padding: 8px 20px; border-radius: 99px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+              ${isDirectMessage ? 'Message Privé' : isForum ? 'Nouvelle Discussion' : 'Alerte Modération'}
             </span>
           </div>
           
-          <h2 style="color: #0f172a; font-size: 22px; margin-top: 0; text-align: center;">Nouveau Signalement reçu</h2>
+          <h2 style="color: #0f172a; font-size: 22px; margin-top: 0; text-align: center;">
+            ${isDirectMessage ? reportData.textTitle + ' vous a écrit' : isForum ? 'Un nouveau message est en ligne' : 'Nouveau Signalement reçu'}
+          </h2>
           
-          <div style="background: #f8fafc; padding: 25px; border-radius: 20px; margin: 30px 0; border: 1px dashed #cbd5e1;">
-            <p style="margin: 0 0 12px 0; font-size: 15px;"><strong>Titre :</strong> <span style="color: #334155;">${reportData.textTitle}</span></p>
-            <p style="margin: 0 0 12px 0; font-size: 15px;"><strong>Motif :</strong> <span style="color: #e11d48; font-weight: bold;">${reportData.reason}</span></p>
-            <p style="margin: 0; font-size: 14px; color: #64748b; font-style: italic;">"${reportData.details || "Aucun commentaire supplémentaire."}"</p>
+          <div style="background: #f8fafc; padding: 25px; border-radius: 20px; margin: 30px 0; border: 1px dashed #cbd5e1; border-left: 4px solid ${isDirectMessage ? '#2563eb' : 'transparent'};">
+            <p style="margin: 0 0 12px 0; font-size: 15px;"><strong>${isDirectMessage ? 'Expéditeur' : 'Auteur'} :</strong> <span style="color: #334155;">${reportData.textTitle}</span></p>
+            ${(!isForum && !isDirectMessage) ? `<p style="margin: 0 0 12px 0; font-size: 15px;"><strong>Motif :</strong> <span style="color: #e11d48; font-weight: bold;">${reportData.reason}</span></p>` : ''}
+            <p style="margin: 0; font-size: 14px; color: #64748b; font-style: italic; line-height: 1.6;">"${reportData.details || "Aucun contenu."}"</p>
           </div>
 
           <div style="text-align: center; margin: 40px 0;">
-            <a href="${textUrl}" 
+            <a href="${redirectUrl}" 
                style="background: #0f172a; color: #ffffff; padding: 18px 35px; text-decoration: none; border-radius: 14px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-               EXAMINER LE TEXTE SUR LE SITE
+               ${isDirectMessage ? 'RÉPONDRE SUR LISIBLE' : isForum ? 'VOIR LE FORUM' : 'EXAMINER LE TEXTE'}
             </a>
           </div>
 
           <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 30px 0;" />
           
           <div style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.6;">
-            <p style="margin: 0;"><strong>Signalé par :</strong> ${reportData.reporterEmail}</p>
+            <p style="margin: 0;">${isDirectMessage ? "Via le système sécurisé Lisible" : "Par : " + reportData.reporterEmail}</p>
             <p style="margin: 4px 0 0 0;"><strong>Date :</strong> ${reportData.date}</p>
-            <p style="margin: 20px 0 0 0; font-weight: bold; color: #cbd5e1;">Système de sécurité Lisible</p>
+            <p style="margin: 20px 0 0 0; font-weight: bold; color: #cbd5e1;">Système Lisible</p>
           </div>
         </div>
       `,
@@ -60,7 +100,7 @@ export async function POST(req) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error("Erreur Mail:", error);
-    return NextResponse.json({ error: "Échec de l'envoi" }, { status: 500 });
+    console.error("Erreur API Report:", error);
+    return NextResponse.json({ error: "Échec du traitement" }, { status: 500 });
   }
 }
