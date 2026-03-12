@@ -4,6 +4,13 @@
   "li": 888,
   "notifications": [
     {
+      "id": "follow_1773298493750",
+      "type": "follow",
+      "message": "Ben Johnson Juste s'est abonné à vous !",
+      "date": "2026-03-12T06:54:53.750Z",
+      "read": false
+    },
+    {
       "id": "staff_1772830402307",
       "type": "info",
       "message": "Vérification de connexion staff",
@@ -8370,7 +8377,8 @@
     }
   ],
   "followers": [
-    "adamahassoumi1998@gmail.com"
+    "adamahassoumi1998@gmail.com",
+    "jb7management@gmail.com"
   ],
   "following": [
     "noahlucien91@gmail.com"
