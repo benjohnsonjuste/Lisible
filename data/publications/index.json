@@ -161,6 +161,19 @@
     "certified": 18
   },
   {
+    "id": "txt_1773311051681",
+    "title": "L'ode à la flamme immobile",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-12T10:24:11.681Z",
+    "views": 0,
+    "likes": 5,
+    "certified": 9
+  },
+  {
     "id": "txt_1770823066946",
     "title": "Mon départ",
     "author": "Adama Junior Cissokho",
@@ -184,19 +197,6 @@
     "date": "2026-02-11T16:55:29.024Z",
     "views": 45,
     "likes": 7,
-    "certified": 8
-  },
-  {
-    "id": "txt_1773311051681",
-    "title": "L'ode à la flamme immobile",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-12T10:24:11.681Z",
-    "views": 0,
-    "likes": 5,
     "certified": 8
   },
   {
