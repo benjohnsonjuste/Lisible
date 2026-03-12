@@ -1,8 +1,15 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "Scritchmonov Jean Baptiste",
-  "li": 206,
+  "li": 207,
   "notifications": [
+    {
+      "id": "cert_1773309620730",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Ode à la jeunesse\" (+1 Li).",
+      "date": "2026-03-12T10:00:20.730Z",
+      "read": false
+    },
     {
       "id": "like_1773307290639",
       "type": "like",
