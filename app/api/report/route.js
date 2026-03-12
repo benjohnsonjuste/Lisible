@@ -12,6 +12,7 @@ export async function POST(req) {
     const { reportData } = await req.json();
     const isForum = reportData.reason === "FORUM_POST";
     const isDirectMessage = reportData.reason === "DIRECT_MESSAGE";
+    const isPodcast = reportData.reason === "PODCAST_ISSUE" || (reportData.textId && reportData.textId.startsWith("POD-"));
 
     // 1. SI C'EST UN MESSAGE FORUM, ON LE SAUVEGARDE SUR GITHUB
     if (isForum) {
@@ -52,9 +53,12 @@ export async function POST(req) {
     // Détermination du destinataire et de l'URL de redirection
     const recipientEmail = isDirectMessage ? reportData.targetEmail : "cmo.lablitteraire7@gmail.com";
     const baseUrl = "https://lisible.biz";
+    
     let redirectUrl = `${baseUrl}/texts/${reportData.textId}`;
+    if (isPodcast) redirectUrl = `${baseUrl}/auditorium/${reportData.textId}`;
     if (isForum) redirectUrl = `${baseUrl}/forum`;
-    if (isDirectMessage) redirectUrl = `${baseUrl}/cercle`;
+    // Pour les messages privés, on passe l'email de l'expéditeur en paramètre pour ouvrir le modal
+    if (isDirectMessage) redirectUrl = `${baseUrl}/community?openChat=${encodeURIComponent(reportData.reporterEmail)}`;
 
     const mailOptions = {
       from: `"Messagerie Lisible" <${process.env.EMAIL_USER}>`,
