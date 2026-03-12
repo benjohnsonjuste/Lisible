@@ -347,6 +347,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1773311051681",
+    "title": "L'ode à la flamme immobile",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-12T10:24:11.681Z",
+    "views": 0,
+    "likes": 1,
+    "certified": 2
+  },
+  {
     "id": "1772116659795",
     "title": "Les preuves d'extraterrestres",
     "author": "Bénicé Fils Juste",
@@ -404,19 +417,6 @@
     "views": 3,
     "likes": 0,
     "certified": 2
-  },
-  {
-    "id": "txt_1773311051681",
-    "title": "L'ode à la flamme immobile",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-12T10:24:11.681Z",
-    "views": 0,
-    "likes": 1,
-    "certified": 1
   },
   {
     "id": "1772983438484",
