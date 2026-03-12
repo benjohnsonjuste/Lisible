@@ -4,6 +4,14 @@
   "li": 207,
   "notifications": [
     {
+      "id": "staff_1773310302481",
+      "type": "info",
+      "message": "Vérification de connexion staff",
+      "link": null,
+      "date": "2026-03-12T10:11:42.481Z",
+      "read": false
+    },
+    {
       "id": "staff_1773309674466",
       "type": "info",
       "message": "Vérification de connexion staff",
