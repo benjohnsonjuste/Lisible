@@ -37,6 +37,9 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
 
     setIsSubmitting(true);
     try {
+      // Récupération automatique du lien de la page actuelle
+      const currentUrl = typeof window !== "undefined" ? window.location.href : "URL inconnue";
+
       const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,7 +49,8 @@ export default function ContactModal({ isOpen, onClose, userEmail, userName }) {
             textTitle: `À propos du studio: ${userName || "Auteur"}`,
             reporterEmail: userEmail || "Anonyme",
             reason: subject,
-            details: message,
+            // Inclusion automatique du lien de l'œuvre/page dans les détails
+            details: `Lien de l'œuvre : ${currentUrl}\n\nMessage : ${message}`,
             date: new Date().toLocaleString("fr-FR")
           }
         }),
