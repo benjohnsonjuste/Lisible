@@ -21,7 +21,6 @@ export default function CommunautePage() {
   const [loading, setLoading] = useState(!authorsCache);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
-  const [submitting, setSubmitting] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [mounted, setMounted] = useState(false);
 
@@ -36,7 +35,7 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // --- ÉTAPE 1 : RÉCUPÉRER LES PUBLICATIONS POUR LES STATS ---
+      // 1. RÉCUPÉRER LES PUBLICATIONS POUR LES STATS RÉELLES
       const pubUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`;
       const pubRes = await fetch(pubUrl);
       let libStats = {};
@@ -59,7 +58,7 @@ export default function CommunautePage() {
         }, {});
       }
 
-      // --- ÉTAPE 2 : RÉCUPÉRER LES PROFILS UTILISATEURS ---
+      // 2. RÉCUPÉRER LES PROFILS UTILISATEURS
       const userUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
       const userRes = await fetch(userUrl);
       if (!userRes.ok) throw new Error("Erreur fichiers users");
@@ -104,7 +103,6 @@ export default function CommunautePage() {
     }
   }
 
-  // Les fonctions stats, getBadges et handleFollow restent identiques à la version précédente
   const stats = useMemo(() => {
     if (authors.length === 0) return { maxViews: 0, maxWorks: 0, maxLi: 0 };
     return {
@@ -117,10 +115,25 @@ export default function CommunautePage() {
   const getBadges = (author) => {
     const b = [];
     const mail = author.email?.toLowerCase();
+
+    // Badges de Rôles (Statiques)
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
+    if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
+    if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
+    if (mail === "robergeaurodley97@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Général", color: "bg-green-600 text-white" });
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
-    if (author.views === stats.maxViews && stats.maxViews > 0) b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
-    if (author.worksCount === stats.maxWorks && stats.maxWorks > 2) b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white" });
+    if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-orange-600 text-white" });
+    
+    // Badges de Performance (Dynamiques basés sur les stats réelles)
+    if (author.views === stats.maxViews && stats.maxViews > 0) {
+      b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
+    }
+    if (author.worksCount === stats.maxWorks && stats.maxWorks > 2) {
+      b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white shadow-lg" });
+    }
+    if (author.li === stats.maxLi && stats.maxLi > 0) {
+      b.push({ icon: <Sun size={10} />, label: "Auréole", color: "bg-amber-400 text-slate-900 font-bold" });
+    }
     return b;
   };
 
@@ -192,7 +205,7 @@ export default function CommunautePage() {
       
       {authors.length > visibleCount && (
         <div className="mt-20 text-center">
-          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 shadow-xl">
+          <button onClick={() => setVisibleCount(v => v + 10)} className="px-12 py-6 bg-white border border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 shadow-xl transition-all">
             Découvrir plus de plumes
           </button>
         </div>
