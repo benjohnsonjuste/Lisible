@@ -116,10 +116,11 @@ export default function CommunautePage() {
 
   const getBadges = (author) => {
     const b = [];
-    const mail = author.email?.toLowerCase();
+    const mail = author.email?.toLowerCase().trim();
+    
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
-    if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
+    if (mail === "jeanpierreborlhainiedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
     if (mail === "robergeaurodley97@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Général", color: "bg-green-600 text-white" });
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
     if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-orange-600 text-white" });
@@ -181,8 +182,6 @@ export default function CommunautePage() {
                   {a.certified > 0 && <ShieldCheck size={20} className="text-teal-500" fill="currentColor" />}
                 </h2>
                 <div className="flex justify-center sm:justify-start gap-3">
-                    <StatBadge label="Lectures" val={a.views} color="rose" />
-                    <StatBadge label="Textes" val={a.worksCount} color="teal" />
                     <StatBadge label="Li" val={a.li} color="amber" />
                 </div>
                 <div className="flex gap-2 justify-center sm:justify-start">
