@@ -4,6 +4,13 @@
   "li": 374,
   "notifications": [
     {
+      "id": "like_1773354947292",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'ode à la flamme immobile\" !",
+      "date": "2026-03-12T22:35:47.292Z",
+      "read": false
+    },
+    {
       "id": "staff_1773353430715",
       "type": "info",
       "message": "Vérification de connexion staff",
