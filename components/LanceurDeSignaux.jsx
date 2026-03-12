@@ -13,25 +13,47 @@ export default function LanceurDeSignaux() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
-  // Charger les utilisateurs via l'index des publications
+  // Charger EXACTEMENT tous les utilisateurs inscrits via data/users
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const res = await fetch('/api/github-db?type=publications');
+        const GITHUB_CONFIG = {
+          owner: "benjohnsonjuste",
+          repo: "Lisible",
+        };
+        
+        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
+        const res = await fetch(url);
+        
         if (res.ok) {
-          const data = await res.json();
-          // Extraire les emails uniques et noms des auteurs
-          const users = data.content.reduce((acc, pub) => {
-            if (!acc.find(u => u.email === pub.authorEmail)) {
-              acc.push({ email: pub.authorEmail, name: pub.author });
-            }
-            return acc;
-          }, []);
-          setAvailableUsers(users);
-          setSelectedUsers(users.map(u => u.email)); // Par défaut, tout le monde
+          const files = await res.json();
+          
+          // Récupération des données de chaque profil pour avoir les emails réels
+          const userDataArray = await Promise.all(
+            files
+              .filter(f => f.name.endsWith('.json'))
+              .map(async (f) => {
+                const fileRes = await fetch(f.download_url);
+                if (fileRes.ok) {
+                  const data = await fileRes.json();
+                  return {
+                    email: data.email?.toLowerCase().trim(),
+                    name: data.name || data.fullName || "Plume Sans Nom"
+                  };
+                }
+                return null;
+              })
+          );
+
+          // Filtrage des doublons ou valeurs nulles
+          const users = userDataArray.filter(u => u && u.email);
+          const uniqueUsers = Array.from(new Map(users.map(u => [u.email, u])).values());
+          
+          setAvailableUsers(uniqueUsers);
+          setSelectedUsers(uniqueUsers.map(u => u.email)); // Par défaut, tout le monde est sélectionné
         }
       } catch (e) {
-        toast.error("Impossible de charger la liste des auteurs.");
+        toast.error("Impossible de charger la liste des inscrits.");
       } finally {
         setIsLoadingUsers(false);
       }
@@ -55,7 +77,7 @@ export default function LanceurDeSignaux() {
     if (selectedUsers.length === 0) return toast.error("Sélectionnez au moins un destinataire.");
     
     setIsSending(true);
-    const t = toast.loading(`Diffusion à ${selectedUsers.length} auteur(s)...`);
+    const t = toast.loading(`Diffusion à ${selectedUsers.length} inscrit(s)...`);
 
     try {
       const res = await fetch('/api/github-db', {
@@ -66,7 +88,7 @@ export default function LanceurDeSignaux() {
           message, 
           type,
           link: link.trim() || null,
-          targetEmails: selectedUsers, // On passe la liste filtrée à l'API
+          targetEmails: selectedUsers,
           adminToken: sessionStorage.getItem('admin_access_token') 
         })
       });
@@ -94,7 +116,7 @@ export default function LanceurDeSignaux() {
         </div>
         <div>
           <h2 className="text-2xl font-black italic tracking-tighter text-slate-900">Diffusion Staff.</h2>
-          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Ciblage Précis</p>
+          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Alerte Générale Inscrits</p>
         </div>
       </div>
 
