@@ -117,7 +117,7 @@ export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
     const body = await req.json();
-    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, adminToken, ...data } = body;
+    const { action, userEmail, textId, amount, adminToken, ...data } = body;
     
     const emailToUse = userEmail || data.email;
     const targetPath = getSafePath(emailToUse);
@@ -125,6 +125,7 @@ export async function POST(req) {
     if (action === 'register') {
       const file = await getFile(targetPath);
       if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
+      
       const salt = bcrypt.genSaltSync(10);
       const hashedPassword = bcrypt.hashSync(data.password, salt);
       const userData = {
@@ -138,7 +139,22 @@ export async function POST(req) {
         ...data,
         password: hashedPassword 
       };
+
       await updateFile(targetPath, userData, null, `👤 User Register: ${data.email}`);
+
+      const indexPath = "data/users/index.json";
+      const indexFile = await getFile(indexPath);
+      let indexContent = (indexFile && Array.isArray(indexFile.content)) ? indexFile.content : [];
+      
+      if (!indexContent.find(u => u.email === userData.email)) {
+        indexContent.push({
+          name: userData.name,
+          email: userData.email,
+          date: userData.created_at
+        });
+        await updateFile(indexPath, indexContent, indexFile?.sha, `📇 Index Sync: New user ${userData.email}`);
+      }
+
       const { password, ...safeUser } = userData;
       return NextResponse.json({ success: true, user: safeUser });
     }
@@ -217,7 +233,6 @@ export async function POST(req) {
         return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
 
-      // 1. Déterminer les destinataires
       let targetEmails = [];
       if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
         targetEmails = data.targetEmails;
@@ -236,7 +251,6 @@ export async function POST(req) {
         read: false
       };
 
-      // 2. Diffusion ciblée
       let count = 0;
       for (const email of targetEmails) {
         const uPath = getSafePath(email);
@@ -249,20 +263,6 @@ export async function POST(req) {
         }
       }
       return NextResponse.json({ success: true, count });
-    }
-
-    if (action === 'saveDuelText') {
-      const duelFilePath = `data/duels.json`;
-      const file = await getFile(duelFilePath);
-      if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
-      const duels = Array.isArray(file.content) ? file.content : [];
-      const duelIndex = duels.findIndex(d => d.id === duelId);
-      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
-      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
-      if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
-      duels[duelIndex].texts[data.email] = data.text;
-      await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
-      return NextResponse.json({ success: true });
     }
 
     if (action === 'edit_text') {
@@ -364,6 +364,10 @@ export async function GET(req) {
       const index = await getFile(`data/publications/index.json`);
       if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
       return NextResponse.json(index);
+    }
+    if (type === 'all_users') {
+      const index = await getFile(`data/users/index.json`);
+      return NextResponse.json(index ? index.content : []);
     }
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
