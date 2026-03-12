@@ -4,6 +4,13 @@
   "li": 369,
   "notifications": [
     {
+      "id": "like_1773334591713",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"L'ode à la flamme immobile\" !",
+      "date": "2026-03-12T16:56:31.713Z",
+      "read": false
+    },
+    {
       "id": "cert_1773332464628",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"L'ode à la flamme immobile\" (+1 Li).",
