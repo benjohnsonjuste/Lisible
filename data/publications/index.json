@@ -420,6 +420,19 @@
     "certified": 1
   },
   {
+    "id": "txt_1773311051681",
+    "title": "L'ode à la flamme immobile",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-12T10:24:11.681Z",
+    "views": 0,
+    "likes": 1,
+    "certified": 0
+  },
+  {
     "id": "1772411356670",
     "title": "Neptorus - ep. 1",
     "author": "Ben Johnson Juste",
@@ -445,19 +458,6 @@
     "date": "2026-02-24T04:20:10.010Z",
     "views": 2,
     "likes": 1,
-    "certified": 0
-  },
-  {
-    "id": "txt_1773311051681",
-    "title": "L'ode à la flamme immobile",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-12T10:24:11.681Z",
-    "views": 0,
-    "likes": 0,
     "certified": 0
   },
   {
