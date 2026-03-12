@@ -36,6 +36,7 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
+      // 1. Récupération des statistiques depuis data/publications
       const pubUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`;
       const pubRes = await fetch(pubUrl);
       let libStats = {};
@@ -43,21 +44,22 @@ export default function CommunautePage() {
       if (pubRes.ok) {
         const pubFiles = await pubRes.json();
         const pubData = await Promise.all(
-          pubFiles.filter(f => f.name.endsWith('.json')).map(f => fetch(f.download_url).then(r => r.json()))
+          pubFiles
+            .filter(f => f.name.endsWith('.json'))
+            .map(f => fetch(f.download_url).then(r => r.json()))
         );
 
         libStats = pubData.reduce((acc, pub) => {
           const email = pub.authorEmail?.toLowerCase().trim();
           if (!email) return acc;
-          if (!acc[email]) acc[email] = { works: 0, views: 0, likes: 0, certified: 0 };
+          if (!acc[email]) acc[email] = { works: 0, views: 0 };
           acc[email].works += 1;
           acc[email].views += Number(pub.views || 0);
-          acc[email].likes += Number(pub.likes || 0);
-          acc[email].certified += Number(pub.certified || 0);
           return acc;
         }, {});
       }
 
+      // 2. Récupération des profils utilisateurs depuis data/users
       const userUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
       const userRes = await fetch(userUrl);
       if (!userRes.ok) throw new Error("Erreur fichiers users");
@@ -71,7 +73,9 @@ export default function CommunautePage() {
               const fileRes = await fetch(file.download_url);
               const userData = await fileRes.json();
               const email = userData.email?.toLowerCase().trim();
-              const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
+              
+              // Injection des stats réelles calculées plus haut
+              const stats = libStats[email] || { works: 0, views: 0 };
               
               return {
                 name: userData.name || userData.fullName || "Plume Anonyme",
@@ -79,10 +83,9 @@ export default function CommunautePage() {
                 image: userData.profilePic || userData.image || null,
                 followers: userData.followers || [],
                 li: Number(userData.li || 0),
-                worksCount: stats.works,
-                views: stats.views,
-                likes: stats.likes,
-                certified: stats.certified || userData.certified || 0
+                worksCount: stats.works, // Nombre de Textes
+                views: stats.views,      // Nombre de Lectures
+                certified: userData.certified || 0
               };
             } catch (err) { return null; }
           })
