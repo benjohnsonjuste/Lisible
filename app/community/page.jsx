@@ -4,7 +4,7 @@ import {
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
   Briefcase, HeartHandshake, Feather, Sparkles, Sun
-} from "lucide-center";
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import Head from 'next/head';
