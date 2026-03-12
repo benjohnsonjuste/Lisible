@@ -1,14 +1,37 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LanceurDeSignaux from '@/components/LanceurDeSignaux';
-import { Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Lock, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+};
 
 export default function AdminSignauxPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [allEmails, setAllEmails] = useState([]);
+
+  // Récupération de la liste de tous les inscrits pour l'alerte
+  const fetchAllUsers = async () => {
+    try {
+      const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const files = await res.json();
+        const emails = files
+          .filter(f => f.name.endsWith('.json'))
+          .map(f => f.name.replace('.json', '').replace(/_/g, '.')); // Adaptation selon format de stockage
+        setAllEmails(emails);
+      }
+    } catch (err) {
+      console.error("Erreur récupération utilisateurs:", err);
+    }
+  };
 
   const checkAuth = async (e) => {
     e.preventDefault();
@@ -29,6 +52,7 @@ export default function AdminSignauxPage() {
 
       if (res.ok) {
         sessionStorage.setItem('admin_access_token', password);
+        await fetchAllUsers(); // On prépare la liste des cibles
         setIsAuthenticated(true);
         setError(false);
       } else {
@@ -63,8 +87,9 @@ export default function AdminSignauxPage() {
             />
             <button 
               disabled={isVerifying}
-              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black disabled:opacity-50"
+              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {isVerifying && <Loader2 size={14} className="animate-spin" />}
               {isVerifying ? "Vérification..." : "Déverrouiller"}
             </button>
           </form>
@@ -81,15 +106,21 @@ export default function AdminSignauxPage() {
           <Link href="/dashboard" className="p-4 bg-white rounded-[1.2rem] border border-slate-100 shadow-sm hover:text-teal-600 transition-all">
             <ArrowLeft size={20} />
           </Link>
-          <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-600 rounded-full border border-teal-100">
-            <ShieldCheck size={14} />
-            <span className="text-[9px] font-black uppercase tracking-widest">Admin Authentifié</span>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-600 rounded-full border border-teal-100">
+              <ShieldCheck size={14} />
+              <span className="text-[9px] font-black uppercase tracking-widest">Admin Authentifié</span>
+            </div>
+            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">
+              Cibles prêtes : {allEmails.length} utilisateurs
+            </span>
           </div>
         </header>
 
         <div className="space-y-12">
           <div className="flex justify-center">
-            <LanceurDeSignaux />
+            {/* On passe la liste complète des inscrits au composant de signal */}
+            <LanceurDeSignaux targets={allEmails} broadcastMode={true} />
           </div>
         </div>
       </div>
