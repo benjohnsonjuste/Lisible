@@ -96,7 +96,7 @@ export default function ForumPage() {
     <div className="max-w-5xl mx-auto px-6 py-20 bg-[#FCFBF9] min-h-screen">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
         <div>
-          <h1 className="text-7xl md:text-8xl font-black italic tracking-tighter text-slate-900 leading-none">Forum.</h1>
+          <h1 className="text-7xl md:text-8xl font-black italic tracking-tighter text-slate-900 leading-none">Salon Lisible.</h1>
           <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-4 flex items-center gap-2">
             <Globe size={12} className="text-teal-500" /> Espace de discussion communautaire
           </p>
