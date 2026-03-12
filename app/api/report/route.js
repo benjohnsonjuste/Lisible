@@ -13,6 +13,8 @@ export async function POST(req) {
     const isForum = reportData.reason === "FORUM_POST";
     const isDirectMessage = reportData.reason === "DIRECT_MESSAGE";
     const isPodcast = reportData.reason === "PODCAST_ISSUE" || (reportData.textId && reportData.textId.startsWith("POD-"));
+    // Détection si c'est un message venant du Studio
+    const isStudioContact = reportData.textId === "STUDIO-CONTACT";
 
     // 1. SI C'EST UN MESSAGE FORUM, ON LE SAUVEGARDE SUR GITHUB
     if (isForum) {
@@ -57,8 +59,9 @@ export async function POST(req) {
     let redirectUrl = `${baseUrl}/texts/${reportData.textId}`;
     if (isPodcast) redirectUrl = `${baseUrl}/auditorium/${reportData.textId}`;
     if (isForum) redirectUrl = `${baseUrl}/forum`;
-    // Pour les messages privés, on passe l'email de l'expéditeur en paramètre pour ouvrir le modal
     if (isDirectMessage) redirectUrl = `${baseUrl}/community?openChat=${encodeURIComponent(reportData.reporterEmail)}`;
+    // Si c'est un contact studio, on utilise l'URL contenue dans les détails ou le studio par défaut
+    if (isStudioContact) redirectUrl = `${baseUrl}/studio`;
 
     const mailOptions = {
       from: `"Messagerie Lisible" <${process.env.EMAIL_USER}>`,
@@ -68,24 +71,24 @@ export async function POST(req) {
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; border: 1px solid #f1f5f9; border-radius: 24px; padding: 40px; color: #1e293b; background-color: #ffffff;">
           <div style="text-align: center; margin-bottom: 30px;">
             <span style="background: ${isDirectMessage ? '#eff6ff' : isForum ? '#f0fdf4' : '#fff1f2'}; color: ${isDirectMessage ? '#2563eb' : isForum ? '#16a34a' : '#e11d48'}; padding: 8px 20px; border-radius: 99px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
-              ${isDirectMessage ? 'Message Privé' : isForum ? 'Nouvelle Discussion' : 'Alerte Modération'}
+              ${isDirectMessage ? 'Message Privé' : isForum ? 'Nouvelle Discussion' : isStudioContact ? 'Assistance Studio' : 'Alerte Modération'}
             </span>
           </div>
           
           <h2 style="color: #0f172a; font-size: 22px; margin-top: 0; text-align: center;">
-            ${isDirectMessage ? reportData.textTitle + ' vous a écrit' : isForum ? 'Un nouveau message est en ligne' : 'Nouveau Signalement reçu'}
+            ${isDirectMessage ? reportData.textTitle + ' vous a écrit' : isForum ? 'Un nouveau message est en ligne' : 'Nouveau Signalement / Requête'}
           </h2>
           
-          <div style="background: #f8fafc; padding: 25px; border-radius: 20px; margin: 30px 0; border: 1px dashed #cbd5e1; border-left: 4px solid ${isDirectMessage ? '#2563eb' : 'transparent'};">
+          <div style="background: #f8fafc; padding: 25px; border-radius: 20px; margin: 30px 0; border: 1px dashed #cbd5e1; border-left: 4px solid ${isDirectMessage ? '#2563eb' : isStudioContact ? '#e11d48' : 'transparent'};">
             <p style="margin: 0 0 12px 0; font-size: 15px;"><strong>${isDirectMessage ? 'Expéditeur' : 'Auteur'} :</strong> <span style="color: #334155;">${reportData.textTitle}</span></p>
-            ${(!isForum && !isDirectMessage) ? `<p style="margin: 0 0 12px 0; font-size: 15px;"><strong>Motif :</strong> <span style="color: #e11d48; font-weight: bold;">${reportData.reason}</span></p>` : ''}
-            <p style="margin: 0; font-size: 14px; color: #64748b; font-style: italic; line-height: 1.6;">"${reportData.details || "Aucun contenu."}"</p>
+            ${(!isForum && !isDirectMessage) ? `<p style="margin: 0 0 12px 0; font-size: 15px;"><strong>Objet :</strong> <span style="color: #e11d48; font-weight: bold;">${reportData.reason}</span></p>` : ''}
+            <div style="margin: 0; font-size: 14px; color: #64748b; line-height: 1.6; white-space: pre-wrap;">${reportData.details || "Aucun contenu."}</div>
           </div>
 
           <div style="text-align: center; margin: 40px 0;">
             <a href="${redirectUrl}" 
                style="background: #0f172a; color: #ffffff; padding: 18px 35px; text-decoration: none; border-radius: 14px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-               ${isDirectMessage ? 'RÉPONDRE SUR LISIBLE' : isForum ? 'VOIR LE FORUM' : 'EXAMINER LE TEXTE'}
+               ${isDirectMessage ? 'RÉPONDRE SUR LISIBLE' : isForum ? 'VOIR LE FORUM' : 'OUVRIR SUR LISIBLE'}
             </a>
           </div>
 
