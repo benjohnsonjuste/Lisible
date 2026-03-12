@@ -9,7 +9,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 import Head from 'next/head';
 
-// Cache global hors du composant pour persister durant la session
+// Configuration GitHub identique à ton autre page
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+};
+
+// Cache global
 let authorsCache = null;
 
 export default function CommunautePage() {
@@ -32,63 +38,50 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. On récupère l'index des publications pour avoir la liste de tous les emails d'auteurs
-      const resLib = await fetch(`/api/github-db?type=publications`);
-      const jsonLib = await resLib.json();
+      // 1. Récupérer la liste des fichiers dans data/users via l'API GitHub
+      const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
+      const res = await fetch(url, { next: { revalidate: 0 } });
       
-      if (jsonLib && Array.isArray(jsonLib.content)) {
-        // Extraire les emails uniques
-        const uniqueEmails = [...new Set(jsonLib.content.map(pub => pub.authorEmail?.toLowerCase().trim()))].filter(Boolean);
+      if (!res.ok) throw new Error("Impossible de lister les utilisateurs");
+      const files = await res.json();
 
-        // Agréger les stats de la bibliothèque par email
-        const libStats = jsonLib.content.reduce((acc, pub) => {
-          const email = pub.authorEmail?.toLowerCase().trim();
-          if (!email) return acc;
-          if (!acc[email]) acc[email] = { works: 0, views: 0, likes: 0, certified: 0 };
-          
-          acc[email].works += 1;
-          acc[email].views += Number(pub.views || 0);
-          acc[email].likes += Number(pub.likes || 0);
-          acc[email].certified += Number(pub.certified || 0);
-          return acc;
-        }, {});
-
-        // 2. Récupérer les profils détaillés de chaque auteur
-        const authorProfiles = await Promise.all(
-          uniqueEmails.map(async (email) => {
+      // 2. Récupérer le contenu de chaque JSON d'utilisateur
+      const authorProfiles = await Promise.all(
+        files
+          .filter(file => file.name.endsWith('.json'))
+          .map(async (file) => {
             try {
-              const resUser = await fetch(`/api/github-db?type=user&id=${email}`);
-              if (!resUser.ok) return null;
-              const userData = await resUser.json();
-              const stats = libStats[email] || { works: 0, views: 0, likes: 0, certified: 0 };
+              const fileRes = await fetch(file.download_url);
+              if (!fileRes.ok) return null;
+              const userData = await fileRes.json();
               
+              // On simule/récupère les stats (tu pourras lier ton dossier publications ici plus tard)
               return {
-                name: userData.content.name || userData.content.username || "Plume Anonyme",
-                email: email,
-                image: userData.content.profilePic || userData.content.image || null,
-                followers: userData.content.followers || [],
-                li: Number(userData.content.li || 0),
-                worksCount: stats.works,
-                views: stats.views,
-                likes: stats.likes,
-                certified: stats.certified
+                name: userData.name || userData.fullName || "Plume Anonyme",
+                email: userData.email,
+                image: userData.profilePic || userData.image || null,
+                followers: userData.followers || [],
+                li: Number(userData.li || 0),
+                worksCount: userData.worksCount || 0, // À adapter selon ta structure
+                views: userData.views || 0,
+                likes: userData.likes || 0,
+                certified: userData.certified || 0
               };
             } catch (err) {
               return null;
             }
           })
-        );
+      );
 
-        const finalAuthors = authorProfiles.filter(Boolean);
+      const finalAuthors = authorProfiles.filter(Boolean);
 
-        // Tri par popularité (li + vues + œuvres)
-        const sortedAuthors = finalAuthors.sort((a, b) => 
-          (b.li + b.views + b.worksCount) - (a.li + a.views + a.worksCount)
-        );
+      // Tri par popularité
+      const sortedAuthors = finalAuthors.sort((a, b) => 
+        (b.li + b.views + b.worksCount) - (a.li + a.views + a.worksCount)
+      );
 
-        authorsCache = sortedAuthors;
-        setAuthors(sortedAuthors);
-      }
+      authorsCache = sortedAuthors;
+      setAuthors(sortedAuthors);
     } catch (e) { 
       console.error("Erreur de chargement du Cercle:", e);
       if (!authorsCache) toast.error("Le Cercle est momentanément inaccessible."); 
@@ -130,25 +123,8 @@ export default function CommunautePage() {
   };
 
   const handleFollow = async (targetEmail) => {
-    if (!currentUser) return toast.error("Connectez-vous pour suivre cette plume");
-    if (currentUser.email === targetEmail) return toast.error("Vous ne pouvez pas vous suivre vous-même");
-    
-    setSubmitting(targetEmail);
-    try {
-      const isFollowing = authors.find(a => a.email === targetEmail)?.followers?.includes(currentUser.email);
-      const res = await fetch("/api/github-db", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: isFollowing ? "unfollow" : "follow", userEmail: currentUser.email, targetEmail: targetEmail })
-      });
-      if (res.ok) {
-        const update = prev => prev.map(auth => auth.email === targetEmail ? { ...auth, followers: isFollowing ? auth.followers.filter(e => e !== currentUser.email) : [...auth.followers, currentUser.email] } : auth);
-        setAuthors(update);
-        authorsCache = update(authorsCache);
-        toast.success(isFollowing ? "Désabonné" : "Abonné !");
-      }
-    } catch (err) { toast.error("Erreur de liaison."); }
-    finally { setSubmitting(null); }
+    toast.info("La fonction de suivi nécessite une API de mise à jour (POST).");
+    // Note: Pour activer le follow, il te faudra une API Route qui écrit dans GitHub
   };
 
   if (!mounted) return null;
