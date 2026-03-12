@@ -334,6 +334,19 @@
     "certified": 2
   },
   {
+    "id": "txt_1773311051681",
+    "title": "L'ode à la flamme immobile",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-12T10:24:11.681Z",
+    "views": 0,
+    "likes": 2,
+    "certified": 2
+  },
+  {
     "id": "1770881283839",
     "title": "Jeunesse",
     "author": "Hassoumi Adama",
@@ -344,19 +357,6 @@
     "date": "2026-02-12T07:28:06.895Z",
     "views": 5,
     "likes": 2,
-    "certified": 2
-  },
-  {
-    "id": "txt_1773311051681",
-    "title": "L'ode à la flamme immobile",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-12T10:24:11.681Z",
-    "views": 0,
-    "likes": 1,
     "certified": 2
   },
   {
