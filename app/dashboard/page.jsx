@@ -4,7 +4,7 @@ import {
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
   ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon,
-  Mic2 // Import ajouté pour le studio
+  Mic2, Swords // Import Swords pour l'icône du Battle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -250,13 +250,18 @@ export default function AuthorDashboard() {
           </div>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
 
-          {/* Section Podcast Studio Ajoutée */}
+          {/* Section Publier au Battle ajoutée */}
+          <Link href="https://lisible.biz/battle/publier" className="group flex items-center justify-between p-8 bg-amber-500 text-white rounded-[2.5rem] shadow-xl shadow-amber-900/10 hover:bg-amber-600 transition-all">
+            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Concours</p><h3 className="text-xl font-bold italic">Publier au Battle</h3></div>
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Swords size={24} /></div>
+          </Link>
+
           <Link href="/studio/podcast" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Audio</p><h3 className="text-xl font-bold italic">Podcast Studio</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Mic2 size={24} /></div>
