@@ -4,6 +4,13 @@
   "li": 206,
   "notifications": [
     {
+      "id": "like_1773307290639",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Ode à la jeunesse\" !",
+      "date": "2026-03-12T09:21:30.639Z",
+      "read": false
+    },
+    {
       "id": "cert_1773307253989",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Ode à la jeunesse\" (+1 Li).",
