@@ -4,6 +4,14 @@
   "li": 374,
   "notifications": [
     {
+      "id": "staff_1773353430715",
+      "type": "info",
+      "message": "Vérification de connexion staff",
+      "link": null,
+      "date": "2026-03-12T22:10:30.715Z",
+      "read": false
+    },
+    {
       "id": "cert_1773349899664",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"L'ode à la flamme immobile\" (+1 Li).",
