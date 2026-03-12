@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
-  Briefcase, HeartHandshake, Feather, Sparkles, Sun
+  Briefcase, HeartHandshake, Feather, Sparkles, Sun, Mail, X, Send, CheckCircle
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ export default function CommunautePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [mounted, setMounted] = useState(false);
+  const [selectedAuthor, setSelectedAuthor] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -35,7 +36,6 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. RÉCUPÉRER LES PUBLICATIONS POUR LES STATS RÉELLES
       const pubUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`;
       const pubRes = await fetch(pubUrl);
       let libStats = {};
@@ -58,7 +58,6 @@ export default function CommunautePage() {
         }, {});
       }
 
-      // 2. RÉCUPÉRER LES PROFILS UTILISATEURS
       const userUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
       const userRes = await fetch(userUrl);
       if (!userRes.ok) throw new Error("Erreur fichiers users");
@@ -115,8 +114,6 @@ export default function CommunautePage() {
   const getBadges = (author) => {
     const b = [];
     const mail = author.email?.toLowerCase();
-
-    // Badges de Rôles (Statiques)
     if (mail === "adm.lablitteraire7@gmail.com") b.push({ icon: <Settings size={10} />, label: "Label", color: "bg-rose-600 text-white" });
     if (mail === "woolsleypierre01@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Artistique", color: "bg-yellow-600 text-white" });
     if (mail === "jeanpierreborlhaïniedarha@gmail.com") b.push({ icon: <Settings size={10} />, label: "Dir. Marketing", color: "bg-blue-600 text-white" });
@@ -124,16 +121,9 @@ export default function CommunautePage() {
     if (mail === "jb7management@gmail.com") b.push({ icon: <Crown size={10} />, label: "Fondateur", color: "bg-slate-900 text-amber-400" });
     if (mail === "cmo.lablitteraire7@gmail.com") b.push({ icon: <Crown size={10} />, label: "Support Team", color: "bg-orange-600 text-white" });
     
-    // Badges de Performance (Dynamiques basés sur les stats réelles)
-    if (author.views === stats.maxViews && stats.maxViews > 0) {
-      b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
-    }
-    if (author.worksCount === stats.maxWorks && stats.maxWorks > 2) {
-      b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white shadow-lg" });
-    }
-    if (author.li === stats.maxLi && stats.maxLi > 0) {
-      b.push({ icon: <Sun size={10} />, label: "Auréole", color: "bg-amber-400 text-slate-900 font-bold" });
-    }
+    if (author.views === stats.maxViews && stats.maxViews > 0) b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
+    if (author.worksCount === stats.maxWorks && stats.maxWorks > 2) b.push({ icon: <Sparkles size={10} />, label: "Pépite", color: "bg-teal-600 text-white shadow-lg" });
+    if (author.li === stats.maxLi && stats.maxLi > 0) b.push({ icon: <Sun size={10} />, label: "Auréole", color: "bg-amber-400 text-slate-900 font-bold" });
     return b;
   };
 
@@ -196,6 +186,14 @@ export default function CommunautePage() {
                   <Link href={`/author/${encodeURIComponent(a.email)}`} className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2">
                     Profil <ArrowRight size={14} />
                   </Link>
+                  {currentUser && currentUser.email !== a.email && (
+                    <button 
+                      onClick={() => setSelectedAuthor(a)}
+                      className="p-3 bg-slate-50 text-slate-400 border border-slate-100 rounded-2xl hover:bg-white hover:text-blue-600 hover:border-blue-100 transition-all"
+                    >
+                      <Mail size={18} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -210,6 +208,95 @@ export default function CommunautePage() {
           </button>
         </div>
       )}
+
+      {selectedAuthor && (
+        <MessageModal 
+          isOpen={!!selectedAuthor} 
+          onClose={() => setSelectedAuthor(null)}
+          sender={currentUser} 
+          recipient={selectedAuthor}
+        />
+      )}
+    </div>
+  );
+}
+
+function MessageModal({ isOpen, onClose, sender, recipient }) {
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (message.length < 5) return toast.error("Message trop court.");
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportData: {
+            textId: "DM", 
+            textTitle: sender.name || sender.fullName || "Un membre", 
+            reporterEmail: sender.email,               
+            targetEmail: recipient.email,             
+            reason: "DIRECT_MESSAGE",
+            details: message,
+            date: new Date().toLocaleString("fr-FR")
+          }
+        }),
+      });
+      if (res.ok) {
+        setIsSuccess(true);
+        setTimeout(() => { onClose(); setIsSuccess(false); setMessage(""); }, 2500);
+      }
+    } catch (error) { toast.error("Erreur d'envoi."); } 
+    finally { setIsSubmitting(false); }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 border border-slate-100 overflow-hidden">
+        {!isSuccess ? (
+          <form onSubmit={handleSend} className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-4">
+                  <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-100">
+                    <Mail size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-black italic text-xl tracking-tight">Message <span className="text-blue-600">privé.</span></h3>
+                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">À : {recipient.name}</p>
+                  </div>
+               </div>
+               <button type="button" onClick={onClose} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><X size={20}/></button>
+            </div>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={`Écrivez à ${recipient.name}...`}
+              className="w-full bg-slate-50 border border-slate-100 rounded-3xl p-6 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-h-[150px] resize-none transition-all"
+            />
+            <button
+              type="submit"
+              disabled={isSubmitting || !message}
+              className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-blue-600 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50"
+            >
+              {isSubmitting ? <Loader2 className="animate-spin" /> : <><Send size={18} /><span>Envoyer le message</span></>}
+            </button>
+          </form>
+        ) : (
+          <div className="py-10 text-center animate-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle size={40} />
+            </div>
+            <h4 className="font-black text-xl text-slate-900 mb-2">Message transmis !</h4>
+            <p className="text-slate-400 text-sm">{recipient.name} recevra une notification par e-mail.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
