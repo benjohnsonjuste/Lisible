@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Script from "next/script"; // Importation nécessaire pour les scripts externes
 import { 
   BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Globe, PenTool, TrendingUp
-} from "lucide-center";
+} from "lucide-react";
 
 // Obligatoire pour optimiser les performances sur Cloudflare Edge
 export const runtime = "edge";
@@ -21,17 +22,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // --- INJECTION DIRECTE DU SCRIPT ADSTERRA ---
-    const scriptId = "adsterra-direct-f3ab7f75";
-    if (!document.getElementById(scriptId)) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js";
-      script.async = true;
-      script.type = "text/javascript";
-      document.body.appendChild(script);
-    }
-
     async function fetchStats() {
       try {
         const response = await fetch("/api/github-db?type=library");
@@ -61,13 +51,7 @@ export default function Home() {
     }
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
-    
-    return () => {
-        clearInterval(interval);
-        // Optionnel : retirer le script au démontage si nécessaire
-        // const currentScript = document.getElementById(scriptId);
-        // if (currentScript) currentScript.remove();
-    };
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -75,7 +59,7 @@ export default function Home() {
       
       <main className="space-y-24 pb-12 animate-in fade-in duration-1000">
         
-        {/* Section Hero - Ajustée à mt-0 pour coller au navbar */}
+        {/* Section Hero */}
         <section className="relative group overflow-hidden rounded-b-[3rem] shadow-2xl mx-2 md:mx-4 mt-0">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent z-10" />
           <img
@@ -150,7 +134,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* --- SECTION GLOBAL STATS HIGH-TECH --- */}
+        {/* Section Global Stats */}
         <section className="py-20 px-6 max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
             <div className="space-y-2">
@@ -158,10 +142,6 @@ export default function Home() {
                 <Activity size={14} className="animate-pulse" /> Live Network Pulse
               </div>
               <h2 className="text-6xl md:text-7xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-[0.8]">Metrics.</h2>
-            </div>
-            <div className="hidden md:block text-right">
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Dernière mise à jour</p>
-              <p className="font-black text-slate-900 dark:text-white">INSTANT TÉLÉMÉTRIE</p>
             </div>
           </div>
 
@@ -184,37 +164,10 @@ export default function Home() {
               </div>
             </div>
 
-            <StatCard 
-              icon={PenTool} 
-              label="Manuscrits" 
-              value={stats.texts} 
-              color="from-blue-500 to-cyan-400" 
-              loading={loading}
-            />
-            
-            <StatCard 
-              icon={Heart} 
-              label="Appréciations" 
-              value={stats.likes} 
-              color="from-rose-500 to-orange-400" 
-              loading={loading}
-            />
-
-            <StatCard 
-              icon={Users} 
-              label="Plumes" 
-              value={stats.authors} 
-              color="from-indigo-500 to-purple-400" 
-              loading={loading}
-            />
-
-            <StatCard 
-              icon={ShieldCheck} 
-              label="Certifiés" 
-              value={stats.certified} 
-              color="from-teal-500 to-emerald-400" 
-              loading={loading}
-            />
+            <StatCard icon={PenTool} label="Manuscrits" value={stats.texts} color="from-blue-500 to-cyan-400" loading={loading} />
+            <StatCard icon={Heart} label="Appréciations" value={stats.likes} color="from-rose-500 to-orange-400" loading={loading} />
+            <StatCard icon={Users} label="Plumes" value={stats.authors} color="from-indigo-500 to-purple-400" loading={loading} />
+            <StatCard icon={ShieldCheck} label="Certifiés" value={stats.certified} color="from-teal-500 to-emerald-400" loading={loading} />
 
             <div className="md:col-span-2 p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-white/5 flex items-center justify-between shadow-lg">
               <div className="space-y-2">
@@ -228,6 +181,11 @@ export default function Home() {
           </div>
         </section>
 
+        {/* --- SCRIPT PUBLICITAIRE INTÉGRÉ --- */}
+        <Script 
+          src="https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js" 
+          strategy="afterInteractive" 
+        />
       </main>
     </div>
   );
