@@ -5,6 +5,8 @@ import {
   ShieldCheck, Sparkles, Globe 
 } from 'lucide-react';
 import { toast } from 'sonner';
+// Importation du composant Adstera
+import Adstera from '@/components/Adstera'; 
 
 export default function ForumPage() {
   const [messages, setMessages] = useState([]);
@@ -43,7 +45,6 @@ export default function ForumPage() {
     const userName = user.name || user.fullName || "Auteur";
 
     try {
-      // Envoi automatique de la notification via github-db (API proxy /api/report)
       const resNotify = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,7 +63,6 @@ export default function ForumPage() {
       if (resNotify.ok) {
         toast.success("Message publié !");
         setNewMsg("");
-        // Attente courte pour laisser le temps au commit GitHub d'être indexé
         setTimeout(loadMessages, 1200);
       }
     } catch (error) {
@@ -84,7 +84,7 @@ export default function ForumPage() {
       </header>
 
       {/* Zone d'écriture */}
-      <div className="group bg-white rounded-[2.5rem] p-2 border border-slate-100 shadow-2xl mb-16 transition-all focus-within:border-teal-500/30">
+      <div className="group bg-white rounded-[2.5rem] p-2 border border-slate-100 shadow-2xl mb-8 transition-all focus-within:border-teal-500/30">
         {user ? (
           <div className="flex flex-col">
             <textarea 
@@ -124,8 +124,11 @@ export default function ForumPage() {
         )}
       </div>
 
+      {/* Publicité Adstera */}
+      <Adstera />
+
       {/* Flux de messages */}
-      <div className="space-y-8">
+      <div className="space-y-8 mt-16">
         {loading ? (
           <div className="py-20 text-center">
             <Loader2 className="animate-spin mx-auto text-teal-600" size={40} />
