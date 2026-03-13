@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft
+  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft, X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,23 +11,21 @@ export default function BattlePoetique() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [adVisible, setAdVisible] = useState(true);
 
   // Logique de tri modifiée : Certifications > Likes > Date
   const sortBattleTexts = useCallback((data) => {
     return data
       .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique")
       .sort((a, b) => {
-        // Priorité 1 : Certifications
         const certA = Number(a.totalCertified || a.certified || 0);
         const certB = Number(b.totalCertified || b.certified || 0);
         if (certB !== certA) return certB - certA;
         
-        // Priorité 2 : Likes
         const likesA = Number(a.totalLikes || a.likes || 0);
         const likesB = Number(b.totalLikes || b.likes || 0);
         if (likesB !== likesA) return likesB - likesA;
         
-        // Priorité 3 : Date
         return new Date(b.date) - new Date(a.date);
       });
   }, []);
@@ -59,6 +57,21 @@ export default function BattlePoetique() {
     const interval = setInterval(() => loadConcoursTexts(true), 60000); 
     return () => clearInterval(interval);
   }, [loadConcoursTexts]);
+
+  // Injection du script Adsterra
+  useEffect(() => {
+    if (adVisible && !loading) {
+      const container = document.getElementById("ad-battle-bottom");
+      if (container) {
+        container.innerHTML = "";
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
+        script.async = true;
+        container.appendChild(script);
+      }
+    }
+  }, [adVisible, loading]);
 
   const handleShare = async (e, item) => {
     e.preventDefault(); 
@@ -218,9 +231,24 @@ export default function BattlePoetique() {
             </div>
           )}
         </main>
+
+        {/* Espace Adsterra */}
+        {adVisible && !loading && (
+          <div className="mt-20 pt-10 border-t border-slate-100 flex flex-col items-center">
+            <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
+              <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Sponsor</span>
+              <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
+                <X size={12} />
+              </button>
+            </div>
+            <div id="ad-battle-bottom" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[2.5rem] p-4 shadow-sm border border-slate-100">
+              {/* Injection du script */}
+            </div>
+          </div>
+        )}
       </div>
 
-      <footer className="mt-16 md:mt-32 text-center pb-10 px-4">
+      <footer className="mt-16 md:mt-24 text-center pb-10 px-4">
          <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] text-slate-300 flex items-center justify-center gap-2 sm:gap-4">
            <span className="w-4 sm:w-8 h-px bg-slate-100"></span>
            Arène Officielle • {new Date().getFullYear()}
