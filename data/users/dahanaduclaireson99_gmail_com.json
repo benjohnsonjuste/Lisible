@@ -1,8 +1,15 @@
 {
   "email": "dahanaduclaireson99@gmail.com",
   "name": "Dahana DUCLAIRE",
-  "li": 383,
+  "li": 384,
   "notifications": [
+    {
+      "id": "cert_1773365438854",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"L'ode à la flamme immobile\" (+1 Li).",
+      "date": "2026-03-13T01:30:38.854Z",
+      "read": false
+    },
     {
       "id": "staff_1773365246333",
       "type": "info",
