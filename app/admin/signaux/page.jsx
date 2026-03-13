@@ -1,139 +1,118 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Send, AlertTriangle, Megaphone, Stars, ShieldAlert, Loader2, Link as LinkIcon, Users, CheckCircle2, Circle } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import LanceurDeSignaux from '@/components/LanceurDeSignaux';
+import { Lock, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
-export default function LanceurDeSignaux({ targets = [], broadcastMode = false }) {
-  const [message, setMessage] = useState("");
-  const [link, setLink] = useState("");
-  const [type, setType] = useState("info");
-  const [isSending, setIsSending] = useState(false);
-  
-  // On utilise les targets reçues du parent au lieu de faire un fetch interne
-  const [selectedUsers, setSelectedUsers] = useState([]);
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+};
 
-  // Synchroniser la sélection par défaut avec les targets reçues
-  useEffect(() => {
-    if (targets.length > 0) {
-      setSelectedUsers(targets);
+export default function AdminSignauxPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [allEmails, setAllEmails] = useState([]);
+
+  // Récupération de la liste de TOUS les inscrits depuis data/users
+  const fetchAllUsers = async () => {
+    try {
+      const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const files = await res.json();
+        // On transforme les noms de fichiers (ex: nom_prenom.json) en emails lisibles
+        const emails = files
+          .filter(f => f.name.endsWith('.json'))
+          .map(f => f.name.replace('.json', '').replace(/_/g, '.'));
+        setAllEmails(emails);
+      }
+    } catch (err) {
+      console.error("Erreur récupération utilisateurs:", err);
     }
-  }, [targets]);
-
-  const toggleUser = (email) => {
-    setSelectedUsers(prev => 
-      prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
-    );
   };
 
-  const toggleAll = () => {
-    if (selectedUsers.length === targets.length) setSelectedUsers([]);
-    else setSelectedUsers(targets);
-  };
-
-  const envoyerSignal = async () => {
-    if (!message.trim()) return toast.error("Le message est vide.");
-    if (selectedUsers.length === 0) return toast.error("Sélectionnez au moins un destinataire.");
+  const checkAuth = async (e) => {
+    e.preventDefault();
+    setIsVerifying(true);
     
-    setIsSending(true);
-    const t = toast.loading(`Diffusion à ${selectedUsers.length} utilisateur(s)...`);
-
     try {
       const res = await fetch('/api/github-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          action: 'broadcast',
-          message, 
-          type,
-          link: link.trim() || null,
-          targetEmails: selectedUsers,
-          adminToken: sessionStorage.getItem('admin_access_token') 
+          action: 'broadcast', 
+          adminToken: password,
+          message: "Vérification staff",
+          type: "info",
+          dryRun: true 
         })
       });
 
       if (res.ok) {
-        toast.success("Signal diffusé avec succès !", { id: t });
-        setMessage("");
-        setLink("");
+        sessionStorage.setItem('admin_access_token', password);
+        await fetchAllUsers(); 
+        setIsAuthenticated(true);
+        setError(false);
       } else {
-        const errData = await res.json();
-        throw new Error(errData.error || "Échec de diffusion");
+        setError(true);
+        setPassword("");
       }
-    } catch (e) {
-      toast.error(e.message || "Erreur de liaison.", { id: t });
+    } catch (err) {
+      setError(true);
     } finally {
-      setIsSending(false);
+      setIsVerifying(false);
     }
   };
 
-  return (
-    <div className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-2xl max-w-xl w-full">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-teal-100 text-teal-600 rounded-2xl">
-          <Megaphone size={24} />
-        </div>
-        <div>
-          <h2 className="text-2xl font-black italic tracking-tighter text-slate-900">Diffusion Staff.</h2>
-          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Base de données : {targets.length} inscrits</p>
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md bg-white p-10 rounded-[3rem] shadow-2xl border border-slate-100 text-center">
+          <div className="w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center mx-auto mb-6">
+            <Lock size={24} />
+          </div>
+          <h1 className="text-3xl font-black italic tracking-tighter mb-2">Accès Staff.</h1>
+          <form onSubmit={checkAuth} className="space-y-4">
+            <input 
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`w-full p-5 bg-slate-50 rounded-2xl text-center font-bold border-2 transition-all ${error ? 'border-rose-500' : 'border-transparent focus:border-teal-500'}`}
+              placeholder="Code d'accès"
+            />
+            <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black disabled:opacity-50">
+              {isVerifying ? "Vérification..." : "Déverrouiller"}
+            </button>
+          </form>
         </div>
       </div>
+    );
+  }
 
-      <div className="space-y-6">
-        {/* LISTE DES DESTINATAIRES (Basée sur les 36 cibles) */}
-        <div>
-          <div className="flex items-center justify-between ml-2 mb-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sélection ({selectedUsers.length})</label>
-            <button onClick={toggleAll} className="text-[9px] font-bold text-teal-600 uppercase">
-              {selectedUsers.length === targets.length ? "Tout désélectionner" : "Tout sélectionner"}
-            </button>
+  return (
+    <div className="min-h-screen bg-[#FCFBF9] p-8">
+      <div className="max-w-4xl mx-auto">
+        <header className="flex items-center justify-between mb-16">
+          <Link href="/dashboard" className="p-4 bg-white rounded-[1.2rem] border border-slate-100 shadow-sm">
+            <ArrowLeft size={20} />
+          </Link>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-600 rounded-full border border-teal-100">
+              <ShieldCheck size={14} />
+              <span className="text-[9px] font-black uppercase tracking-widest">Admin Authentifié</span>
+            </div>
+            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">
+              Base de données : {allEmails.length} utilisateurs trouvés
+            </span>
           </div>
-          
-          <div className="max-h-48 overflow-y-auto bg-slate-50 rounded-[1.5rem] p-4 border border-slate-100 space-y-2 custom-scrollbar">
-            {targets.length === 0 ? (
-              <div className="flex items-center justify-center py-4 text-[10px] font-bold text-slate-400 uppercase">Chargement des comptes...</div>
-            ) : (
-              targets.map(email => (
-                <button 
-                  key={email}
-                  onClick={() => toggleUser(email)}
-                  className="flex items-center justify-between w-full p-3 bg-white rounded-xl border border-transparent hover:border-teal-100 transition-all shadow-sm"
-                >
-                  <span className="text-[10px] font-bold text-slate-600 truncate">{email}</span>
-                  {selectedUsers.includes(email) ? <CheckCircle2 size={16} className="text-teal-500" /> : <Circle size={16} className="text-slate-200" />}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
+        </header>
 
-        {/* ... (Reste du formulaire : Type de signal, Message, Lien) ... */}
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Type</label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {['info', 'warning', 'urgent'].map((t) => (
-              <button key={t} onClick={() => setType(t)} className={`p-3 rounded-xl text-[9px] font-black uppercase border transition-all ${type === t ? 'bg-slate-900 text-white' : 'bg-white text-slate-400'}`}>{t}</button>
-            ))}
-          </div>
+        <div className="flex justify-center">
+          <LanceurDeSignaux targets={allEmails} />
         </div>
-
-        <div>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="w-full p-6 bg-slate-50 border-none rounded-[2rem] text-sm focus:ring-2 focus:ring-teal-500 transition-all"
-            placeholder="Votre message aux 36 plumes..."
-            rows={3}
-          />
-        </div>
-
-        <button
-          onClick={envoyerSignal}
-          disabled={isSending || selectedUsers.length === 0}
-          className="w-full py-5 bg-teal-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] hover:bg-teal-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-        >
-          {isSending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-          Lancer l'alerte
-        </button>
       </div>
     </div>
   );
