@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Share2, Eye, Mic2 } from 'lucide-react';
+import { Play, Pause, Headset, Calendar, User, Clock, Loader2, Music2, Share2, Eye, Mic2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ export default function Auditorium() {
   const [podcasts, setPodcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPlayingUrl, setCurrentPlayingUrl] = useState(null);
+  const [adVisible, setAdVisible] = useState(true);
 
   useEffect(() => {
     const fetchPodcasts = async () => {
@@ -29,8 +30,23 @@ export default function Auditorium() {
     fetchPodcasts();
   }, []);
 
+  // Injection du script Adsterra
+  useEffect(() => {
+    if (adVisible && !loading) {
+      const container = document.getElementById("ad-auditorium-bottom");
+      if (container) {
+        container.innerHTML = "";
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
+        script.async = true;
+        container.appendChild(script);
+      }
+    }
+  }, [adVisible, loading]);
+
   return (
-    <div className="max-w-5xl mx-auto py-12 px-4">
+    <div className="max-w-5xl mx-auto py-12 px-4 min-h-screen">
       <div className="mb-12 text-center">
         <div className="inline-flex p-4 bg-indigo-100 text-indigo-600 rounded-[2rem] mb-4">
           <Headset size={32} />
@@ -81,6 +97,21 @@ export default function Auditorium() {
           <p className="text-slate-500 font-medium">Aucun podcast n'a encore été diffusé.</p>
         </div>
       )}
+
+      {/* Zone Adsterra en fin de page */}
+      {!loading && adVisible && (
+        <div className="mt-20 pt-12 border-t border-slate-100 flex flex-col items-center">
+          <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
+            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Sponsorisé</span>
+            <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
+              <X size={12} />
+            </button>
+          </div>
+          <div id="ad-auditorium-bottom" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100">
+            {/* Injection du script Adsterra */}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -112,7 +143,6 @@ function PodcastCard({ podcast, isActive, onPlay, onPause, setPodcasts }) {
     } else {
       onPlay();
       
-      // Incrémentation des vues au premier clic
       if (!hasIncrementedView.current) {
         try {
           const res = await fetch('/api/podcasts/view', {
@@ -123,7 +153,6 @@ function PodcastCard({ podcast, isActive, onPlay, onPause, setPodcasts }) {
           if (res.ok) {
             const data = await res.json();
             hasIncrementedView.current = true;
-            // Mise à jour locale du compteur pour l'UI
             setPodcasts(prev => prev.map(p => 
               p.id === podcast.id ? { ...p, views: data.views } : p
             ));
