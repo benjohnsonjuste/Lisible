@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
   BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Globe, PenTool, TrendingUp
-} from "lucide-react";
+} from "lucide-center";
 
 // Obligatoire pour optimiser les performances sur Cloudflare Edge
 export const runtime = "edge";
@@ -21,6 +21,17 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // --- INJECTION DIRECTE DU SCRIPT ADSTERRA ---
+    const scriptId = "adsterra-direct-f3ab7f75";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js";
+      script.async = true;
+      script.type = "text/javascript";
+      document.body.appendChild(script);
+    }
+
     async function fetchStats() {
       try {
         const response = await fetch("/api/github-db?type=library");
@@ -50,7 +61,13 @@ export default function Home() {
     }
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
+    
+    return () => {
+        clearInterval(interval);
+        // Optionnel : retirer le script au démontage si nécessaire
+        // const currentScript = document.getElementById(scriptId);
+        // if (currentScript) currentScript.remove();
+    };
   }, []);
 
   return (
