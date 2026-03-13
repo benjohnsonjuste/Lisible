@@ -4,7 +4,7 @@ import {
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
   ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon,
-  Mic2, Swords // Import Swords pour l'icône du Battle
+  Mic2, Swords, X // Import de X pour la fermeture
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [adVisible, setAdVisible] = useState(true); // État pour la pub
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -30,7 +31,6 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email;
         
-        // Synchro profil
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
         if (userRes.ok) {
           const userData = await userRes.json();
@@ -40,7 +40,6 @@ export default function AuthorDashboard() {
           }
         }
 
-        // Synchro œuvres avec Tri Universel
         const libraryRes = await fetch(`/api/github-db?type=library`);
         if (libraryRes.ok) {
           const libraryData = await libraryRes.json();
@@ -56,7 +55,6 @@ export default function AuthorDashboard() {
                 const likesB = Number(b.likes || b.totalLikes || 0);
                 if (likesB !== likesA) return likesB - likesA;
 
-                // Sécurité sur la date pour éviter les crashs
                 const dateA = a.date ? new Date(a.date).getTime() : 0;
                 const dateB = b.date ? new Date(b.date).getTime() : 0;
                 return dateB - dateA;
@@ -74,7 +72,21 @@ export default function AuthorDashboard() {
     loadStudio();
   }, [router]);
 
-  // Générateur de Badge JPG via Canvas
+  // Injection du script Adsterra
+  useEffect(() => {
+    if (adVisible && !loading) {
+      const container = document.getElementById("ad-dashboard-center");
+      if (container) {
+        container.innerHTML = "";
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
+        script.async = true;
+        container.appendChild(script);
+      }
+    }
+  }, [adVisible, loading]);
+
   const generateBadge = (download = false) => {
     const canvas = canvasRef.current;
     if (!canvas || !user) return;
@@ -83,19 +95,15 @@ export default function AuthorDashboard() {
 
     canvas.width = 600;
     canvas.height = 600;
-
     ctx.fillStyle = '#0f172a'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     ctx.strokeStyle = '#14b8a6'; 
     ctx.lineWidth = 20;
     ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-
     ctx.fillStyle = '#14b8a6';
     ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
-
     ctx.fillStyle = '#ffffff';
     ctx.font = 'italic bold 45px serif';
     
@@ -117,7 +125,6 @@ export default function AuthorDashboard() {
       }
     }
     ctx.fillText(line, canvas.width / 2, y);
-
     ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 25px Arial';
     ctx.fillText('lisible.biz', canvas.width / 2, 540);
@@ -256,7 +263,6 @@ export default function AuthorDashboard() {
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
 
-          {/* Section Publier au Battle ajoutée */}
           <Link href="https://lisible.biz/battle/publier" className="group flex items-center justify-between p-8 bg-amber-500 text-white rounded-[2.5rem] shadow-xl shadow-amber-900/10 hover:bg-amber-600 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Concours</p><h3 className="text-xl font-bold italic">Publier au Battle</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Swords size={24} /></div>
@@ -294,6 +300,21 @@ export default function AuthorDashboard() {
             <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Suivis</p><h2 className="text-4xl font-black italic text-slate-900">{user.following?.length || 0}</h2></div>
           </div>
         </div>
+
+        {/* --- Publicité Adsterra --- */}
+        {adVisible && !loading && (
+          <div className="py-4 flex flex-col items-center">
+            <div className="flex items-center justify-between w-full max-w-xl mb-2 px-6">
+              <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Partenaire</span>
+              <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
+                <X size={12} />
+              </button>
+            </div>
+            <div id="ad-dashboard-center" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[2.5rem] p-4 shadow-sm border border-slate-100 overflow-hidden">
+               {/* Script Adsterra */}
+            </div>
+          </div>
+        )}
 
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
