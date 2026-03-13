@@ -1,8 +1,15 @@
 {
   "email": "scritchmonov2023@gmail.com",
   "name": "Scritchmonov Jean Baptiste",
-  "li": 218,
+  "li": 219,
   "notifications": [
+    {
+      "id": "cert_1773365935951",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La Ballade des Amoureux\" (+1 Li).",
+      "date": "2026-03-13T01:38:55.951Z",
+      "read": false
+    },
     {
       "id": "staff_1773365246333",
       "type": "info",
