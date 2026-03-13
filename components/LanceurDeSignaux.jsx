@@ -1,65 +1,21 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Send, AlertTriangle, Megaphone, Stars, ShieldAlert, Loader2, Link as LinkIcon, Users, CheckCircle2, Circle } from 'lucide-react';
+import { Send, AlertTriangle, Megaphone, Stars, ShieldAlert, Loader2, Link as LinkIcon, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function LanceurDeSignaux() {
+export default function LanceurDeSignaux({ targets = [] }) {
   const [message, setMessage] = useState("");
   const [link, setLink] = useState("");
   const [type, setType] = useState("info");
   const [isSending, setIsSending] = useState(false);
-  
-  const [availableUsers, setAvailableUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
-  // Charger EXACTEMENT tous les utilisateurs inscrits via data/users
+  // Initialisation : on sélectionne tout le monde par défaut au chargement des cibles
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const GITHUB_CONFIG = {
-          owner: "benjohnsonjuste",
-          repo: "Lisible",
-        };
-        
-        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
-        const res = await fetch(url);
-        
-        if (res.ok) {
-          const files = await res.json();
-          
-          // Récupération des données de chaque profil pour avoir les emails réels
-          const userDataArray = await Promise.all(
-            files
-              .filter(f => f.name.endsWith('.json'))
-              .map(async (f) => {
-                const fileRes = await fetch(f.download_url);
-                if (fileRes.ok) {
-                  const data = await fileRes.json();
-                  return {
-                    email: data.email?.toLowerCase().trim(),
-                    name: data.name || data.fullName || "Plume Sans Nom"
-                  };
-                }
-                return null;
-              })
-          );
-
-          // Filtrage des doublons ou valeurs nulles
-          const users = userDataArray.filter(u => u && u.email);
-          const uniqueUsers = Array.from(new Map(users.map(u => [u.email, u])).values());
-          
-          setAvailableUsers(uniqueUsers);
-          setSelectedUsers(uniqueUsers.map(u => u.email)); // Par défaut, tout le monde est sélectionné
-        }
-      } catch (e) {
-        toast.error("Impossible de charger la liste des inscrits.");
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-    loadUsers();
-  }, []);
+    if (targets.length > 0) {
+      setSelectedUsers(targets);
+    }
+  }, [targets]);
 
   const toggleUser = (email) => {
     setSelectedUsers(prev => 
@@ -68,8 +24,8 @@ export default function LanceurDeSignaux() {
   };
 
   const toggleAll = () => {
-    if (selectedUsers.length === availableUsers.length) setSelectedUsers([]);
-    else setSelectedUsers(availableUsers.map(u => u.email));
+    if (selectedUsers.length === targets.length) setSelectedUsers([]);
+    else setSelectedUsers(targets);
   };
 
   const envoyerSignal = async () => {
@@ -77,7 +33,7 @@ export default function LanceurDeSignaux() {
     if (selectedUsers.length === 0) return toast.error("Sélectionnez au moins un destinataire.");
     
     setIsSending(true);
-    const t = toast.loading(`Diffusion à ${selectedUsers.length} inscrit(s)...`);
+    const t = toast.loading(`Diffusion à ${selectedUsers.length} utilisateur(s)...`);
 
     try {
       const res = await fetch('/api/github-db', {
@@ -109,103 +65,83 @@ export default function LanceurDeSignaux() {
   };
 
   return (
-    <div className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-2xl max-w-xl w-full">
+    <div className="bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-2xl max-w-xl w-full">
       <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
+        <div className="p-3 bg-teal-100 text-teal-600 rounded-2xl">
           <Megaphone size={24} />
         </div>
         <div>
-          <h2 className="text-2xl font-black italic tracking-tighter text-slate-900">Diffusion Staff.</h2>
-          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Alerte Générale Inscrits</p>
+          <h2 className="text-2xl font-black italic tracking-tighter text-slate-900 leading-none">Diffusion.</h2>
+          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-1">Cible : Inscrits (data/users)</p>
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* SÉLECTION DES DESTINATAIRES */}
         <div>
           <div className="flex items-center justify-between ml-2 mb-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Destinataires ({selectedUsers.length})</label>
-            <button onClick={toggleAll} className="text-[9px] font-bold text-teal-600 uppercase">
-              {selectedUsers.length === availableUsers.length ? "Tout désélectionner" : "Tout sélectionner"}
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Liste des cibles ({selectedUsers.length})</label>
+            <button onClick={toggleAll} className="text-[9px] font-bold text-teal-600 uppercase hover:underline">
+              {selectedUsers.length === targets.length ? "Tout désélectionner" : "Tout sélectionner"}
             </button>
           </div>
           
-          <div className="max-h-40 overflow-y-auto bg-slate-50 rounded-[1.5rem] p-4 border border-slate-100 space-y-2 custom-scrollbar">
-            {isLoadingUsers ? (
-              <div className="flex items-center justify-center py-4"><Loader2 size={16} className="animate-spin text-slate-300" /></div>
-            ) : availableUsers.map(u => (
+          <div className="max-h-48 overflow-y-auto bg-slate-50 rounded-[2rem] p-4 border border-slate-100 space-y-2 custom-scrollbar">
+            {targets.length === 0 ? (
+              <div className="flex items-center justify-center py-6 text-[10px] font-bold text-slate-400 uppercase animate-pulse">Recherche des comptes...</div>
+            ) : (
+              targets.map(email => (
+                <button 
+                  key={email}
+                  onClick={() => toggleUser(email)}
+                  className="flex items-center justify-between w-full p-3 bg-white rounded-xl border border-transparent hover:border-teal-100 transition-all shadow-sm"
+                >
+                  <span className="text-[11px] font-bold text-slate-600 truncate">{email}</span>
+                  {selectedUsers.includes(email) ? <CheckCircle2 size={16} className="text-teal-500" /> : <Circle size={16} className="text-slate-200" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+            {['info', 'warning', 'urgent'].map((t) => (
               <button 
-                key={u.email}
-                onClick={() => toggleUser(u.email)}
-                className="flex items-center justify-between w-full p-3 bg-white rounded-xl border border-transparent hover:border-teal-100 transition-all"
-              >
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-xs font-bold text-slate-800">{u.name}</span>
-                  <span className="text-[9px] text-slate-400 truncate w-40">{u.email}</span>
-                </div>
-                {selectedUsers.includes(u.email) ? <CheckCircle2 size={18} className="text-teal-500" /> : <Circle size={18} className="text-slate-200" />}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Type de Signal</label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {[
-              { id: 'info', icon: Stars, label: 'Info', color: 'text-teal-500' },
-              { id: 'warning', icon: AlertTriangle, label: 'Alerte', color: 'text-amber-500' },
-              { id: 'urgent', icon: ShieldAlert, label: 'Urgent', color: 'text-rose-500' },
-            ].map((t) => (
-              <button
-                key={t.id}
+                key={t} 
                 type="button"
-                onClick={() => setType(t.id)}
-                className={`flex flex-col items-center p-4 rounded-2xl border transition-all ${
-                  type === t.id ? 'bg-slate-900 border-slate-900 text-white' : 'bg-slate-50 border-transparent text-slate-400'
-                }`}
+                onClick={() => setType(t)} 
+                className={`p-3 rounded-xl text-[9px] font-black uppercase border transition-all ${type === t ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-100 text-slate-400'}`}
               >
-                <t.icon size={20} className={type === t.id ? 'text-white' : t.color} />
-                <span className="text-[9px] font-bold uppercase mt-2">{t.label}</span>
+                {t}
               </button>
             ))}
-          </div>
         </div>
 
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Message</label>
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="w-full mt-2 p-6 bg-slate-50 border-none rounded-[2rem] text-sm font-medium focus:ring-2 focus:ring-teal-500 transition-all text-slate-900"
-            placeholder="Écrivez le message..."
-            rows={2}
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="w-full p-6 bg-slate-50 border-none rounded-[2rem] text-sm focus:ring-2 focus:ring-teal-500 transition-all text-slate-900"
+          placeholder="Votre message ici..."
+          rows={3}
+        />
+
+        <div className="relative">
+          <LinkIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+          <input
+            type="text"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            className="w-full pl-14 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-xs focus:ring-2 focus:ring-teal-500 transition-all"
+            placeholder="Lien optionnel (ex: /dashboard)"
           />
-        </div>
-
-        <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Lien (optionnel)</label>
-          <div className="relative mt-2">
-            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400">
-              <LinkIcon size={14} />
-            </div>
-            <input
-              type="text"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-xs font-medium focus:ring-2 focus:ring-teal-500 transition-all text-slate-900"
-              placeholder="/dashboard, /texts/id..."
-            />
-          </div>
         </div>
 
         <button
           onClick={envoyerSignal}
           disabled={isSending || selectedUsers.length === 0}
-          className="w-full py-5 bg-teal-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] hover:bg-teal-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-teal-900/20 disabled:opacity-50"
+          className="w-full py-5 bg-teal-600 text-white rounded-[2rem] font-black uppercase text-xs tracking-[0.2em] hover:bg-teal-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
         >
           {isSending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-          Diffuser le Signal
+          Lancer l'alerte
         </button>
       </div>
     </div>
