@@ -2,11 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Send, Loader2, User, MessageSquare, 
-  ShieldCheck, Sparkles, Globe 
+  ShieldCheck, Sparkles, Globe, X
 } from 'lucide-react';
 import { toast } from 'sonner';
-// Importation du composant Adstera
-import Adstera from '@/components/Adstera'; 
 
 export default function ForumPage() {
   const [messages, setMessages] = useState([]);
@@ -14,6 +12,7 @@ export default function ForumPage() {
   const [newMsg, setNewMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [adVisible, setAdVisible] = useState(true);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
@@ -22,6 +21,21 @@ export default function ForumPage() {
     }
     loadMessages();
   }, []);
+
+  // Gestion de l'injection directe du script Adsterra
+  useEffect(() => {
+    if (adVisible) {
+      const container = document.getElementById("ad-forum-bottom");
+      if (container) {
+        container.innerHTML = "";
+        const script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
+        script.async = true;
+        container.appendChild(script);
+      }
+    }
+  }, [adVisible, messages]); // Se recharge si les messages changent pour rester en bas
 
   async function loadMessages() {
     try {
@@ -84,7 +98,7 @@ export default function ForumPage() {
       </header>
 
       {/* Zone d'écriture */}
-      <div className="group bg-white rounded-[2.5rem] p-2 border border-slate-100 shadow-2xl mb-8 transition-all focus-within:border-teal-500/30">
+      <div className="group bg-white rounded-[2.5rem] p-2 border border-slate-100 shadow-2xl mb-16 transition-all focus-within:border-teal-500/30">
         {user ? (
           <div className="flex flex-col">
             <textarea 
@@ -124,11 +138,8 @@ export default function ForumPage() {
         )}
       </div>
 
-      {/* Publicité Adstera */}
-      <Adstera />
-
       {/* Flux de messages */}
-      <div className="space-y-8 mt-16">
+      <div className="space-y-8 mb-20">
         {loading ? (
           <div className="py-20 text-center">
             <Loader2 className="animate-spin mx-auto text-teal-600" size={40} />
@@ -161,6 +172,21 @@ export default function ForumPage() {
           </div>
         )}
       </div>
+
+      {/* Intégration directe Adsterra en fin de page */}
+      {adVisible && (
+        <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center">
+          <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
+            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Espace Partenaire</span>
+            <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500">
+              <X size={12} />
+            </button>
+          </div>
+          <div id="ad-forum-bottom" className="min-h-[100px] flex items-center justify-center bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
+            {/* Le script s'injecte ici */}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
