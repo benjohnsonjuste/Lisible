@@ -135,6 +135,19 @@
     "certified": 32
   },
   {
+    "id": "txt_1773311051681",
+    "title": "L'ode à la flamme immobile",
+    "author": "Dahana DUCLAIRE",
+    "authorEmail": "dahanaduclaireson99@gmail.com",
+    "category": "Battle Poétique",
+    "isConcours": true,
+    "image": null,
+    "date": "2026-03-12T10:24:11.681Z",
+    "views": 0,
+    "likes": 15,
+    "certified": 23
+  },
+  {
     "id": "txt_1772109107808",
     "title": "Au champ de bataille",
     "author": "NTCHANNA JOSIANE ÈVE",
@@ -146,19 +159,6 @@
     "views": 42,
     "likes": 7,
     "certified": 23
-  },
-  {
-    "id": "txt_1773311051681",
-    "title": "L'ode à la flamme immobile",
-    "author": "Dahana DUCLAIRE",
-    "authorEmail": "dahanaduclaireson99@gmail.com",
-    "category": "Battle Poétique",
-    "isConcours": true,
-    "image": null,
-    "date": "2026-03-12T10:24:11.681Z",
-    "views": 0,
-    "likes": 15,
-    "certified": 22
   },
   {
     "id": "txt_1772587497201",
