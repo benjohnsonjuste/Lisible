@@ -263,7 +263,7 @@ export default function AuthorDashboard() {
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
 
-          <Link href="https://lisible.biz/battle/publier" className="group flex items-center justify-between p-8 bg-amber-500 text-white rounded-[2.5rem] shadow-xl shadow-amber-900/10 hover:bg-amber-600 transition-all">
+          <Link href="https://lisible.biz/battle/close" className="group flex items-center justify-between p-8 bg-amber-500 text-white rounded-[2.5rem] shadow-xl shadow-amber-900/10 hover:bg-amber-600 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Concours</p><h3 className="text-xl font-bold italic">Publier au Battle</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Swords size={24} /></div>
           </Link>
