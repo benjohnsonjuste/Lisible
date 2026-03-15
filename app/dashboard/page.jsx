@@ -4,18 +4,18 @@ import {
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
   ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon,
-  Mic2, Swords, X // Import de X pour la fermeture
+  Mic
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import Script from 'next/script';
 
 export default function AuthorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [adVisible, setAdVisible] = useState(true); // État pour la pub
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -31,6 +31,7 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email;
         
+        // Synchro profil
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
         if (userRes.ok) {
           const userData = await userRes.json();
@@ -40,6 +41,7 @@ export default function AuthorDashboard() {
           }
         }
 
+        // Synchro œuvres avec Tri Universel
         const libraryRes = await fetch(`/api/github-db?type=library`);
         if (libraryRes.ok) {
           const libraryData = await libraryRes.json();
@@ -55,6 +57,7 @@ export default function AuthorDashboard() {
                 const likesB = Number(b.likes || b.totalLikes || 0);
                 if (likesB !== likesA) return likesB - likesA;
 
+                // Sécurité sur la date pour éviter les crashs
                 const dateA = a.date ? new Date(a.date).getTime() : 0;
                 const dateB = b.date ? new Date(b.date).getTime() : 0;
                 return dateB - dateA;
@@ -72,21 +75,7 @@ export default function AuthorDashboard() {
     loadStudio();
   }, [router]);
 
-  // Injection du script Adsterra
-  useEffect(() => {
-    if (adVisible && !loading) {
-      const container = document.getElementById("ad-dashboard-center");
-      if (container) {
-        container.innerHTML = "";
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-        script.async = true;
-        container.appendChild(script);
-      }
-    }
-  }, [adVisible, loading]);
-
+  // Générateur de Badge JPG via Canvas
   const generateBadge = (download = false) => {
     const canvas = canvasRef.current;
     if (!canvas || !user) return;
@@ -95,15 +84,19 @@ export default function AuthorDashboard() {
 
     canvas.width = 600;
     canvas.height = 600;
+
     ctx.fillStyle = '#0f172a'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.strokeStyle = '#14b8a6'; 
     ctx.lineWidth = 20;
     ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
     ctx.fillStyle = '#14b8a6';
     ctx.font = 'bold 30px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
+
     ctx.fillStyle = '#ffffff';
     ctx.font = 'italic bold 45px serif';
     
@@ -125,6 +118,7 @@ export default function AuthorDashboard() {
       }
     }
     ctx.fillText(line, canvas.width / 2, y);
+
     ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 25px Arial';
     ctx.fillText('lisible.biz', canvas.width / 2, 540);
@@ -162,6 +156,7 @@ export default function AuthorDashboard() {
     }
   };
 
+  // Nouvelle fonction pour partager le profil personnel
   const handleProfileShare = async () => {
     const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
     const shareData = {
@@ -211,6 +206,10 @@ export default function AuthorDashboard() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
+      <Script 
+        src="https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js" 
+        strategy="afterInteractive" 
+      />
       <canvas ref={canvasRef} className="hidden" />
       <div className="max-w-6xl mx-auto space-y-12">
         
@@ -224,6 +223,7 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
+            {/* Section Partage Profil */}
             <button 
               onClick={handleProfileShare}
               className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"
@@ -231,6 +231,7 @@ export default function AuthorDashboard() {
               <LinkIcon size={14} /> Partager mon Profil
             </button>
 
+            {/* Badge Section */}
             <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
                 <Award size={20} />
@@ -257,22 +258,15 @@ export default function AuthorDashboard() {
           </div>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
           </Link>
-
-          <Link href="https://lisible.biz/battle/close" className="group flex items-center justify-between p-8 bg-amber-500 text-white rounded-[2.5rem] shadow-xl shadow-amber-900/10 hover:bg-amber-600 transition-all">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Concours</p><h3 className="text-xl font-bold italic">Publier au Battle</h3></div>
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Swords size={24} /></div>
+          <Link href="/studio/podcast" className="group flex items-center justify-between p-8 bg-indigo-600 text-white rounded-[2.5rem] shadow-xl shadow-indigo-900/10 hover:bg-indigo-700 transition-all">
+            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Audio</p><h3 className="text-xl font-bold italic">Studio Podcast</h3></div>
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Mic size={24} /></div>
           </Link>
-
-          <Link href="/studio/podcast" className="group flex items-center justify-between p-8 bg-rose-600 text-white rounded-[2.5rem] shadow-xl shadow-rose-900/10 hover:bg-rose-700 transition-all">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Audio</p><h3 className="text-xl font-bold italic">Podcast Studio</h3></div>
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Mic2 size={24} /></div>
-          </Link>
-
           <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p><h3 className="text-xl font-bold italic">Gérer mon compte</h3></div>
             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><User size={22} /></div>
@@ -300,21 +294,6 @@ export default function AuthorDashboard() {
             <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Suivis</p><h2 className="text-4xl font-black italic text-slate-900">{user.following?.length || 0}</h2></div>
           </div>
         </div>
-
-        {/* --- Publicité Adsterra --- */}
-        {adVisible && !loading && (
-          <div className="py-4 flex flex-col items-center">
-            <div className="flex items-center justify-between w-full max-w-xl mb-2 px-6">
-              <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Partenaire</span>
-              <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                <X size={12} />
-              </button>
-            </div>
-            <div id="ad-dashboard-center" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[2.5rem] p-4 shadow-sm border border-slate-100 overflow-hidden">
-               {/* Script Adsterra */}
-            </div>
-          </div>
-        )}
 
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
