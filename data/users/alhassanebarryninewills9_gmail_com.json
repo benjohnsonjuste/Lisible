@@ -22,7 +22,14 @@
   "followers": [],
   "following": [],
   "works": [],
-  "bookmarks": [],
+  "bookmarks": [
+    {
+      "id": "1773799001479",
+      "title": "A la quête du Savoir",
+      "author": "Alhassane Barry",
+      "date": "2026-03-18T01:58:06.884Z"
+    }
+  ],
   "created_at": "2026-03-18T01:23:50.619Z",
   "password": "$2b$10$hAgElINb6uW3UWj2UVeNTeuEaq0OrKuo6eWASWxyPzILyNmvBoSra",
   "referralCode": null,
