@@ -16,7 +16,7 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"A la quête du Savoir\" !",
       "date": "2026-03-18T01:56:56.032Z",
-      "read": false
+      "read": true
     }
   ],
   "followers": [],
