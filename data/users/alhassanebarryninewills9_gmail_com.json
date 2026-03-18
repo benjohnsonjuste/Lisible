@@ -3,7 +3,15 @@
   "name": "Alhassane Barry",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1773799016032",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"A la quête du Savoir\" !",
+      "date": "2026-03-18T01:56:56.032Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
