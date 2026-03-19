@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft, X
+  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,7 +11,6 @@ export default function BattlePoetique() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [adVisible, setAdVisible] = useState(true);
 
   // Correction du filtre : plus flexible sur les dénominations
   const sortBattleTexts = useCallback((data) => {
@@ -67,21 +66,6 @@ export default function BattlePoetique() {
     const interval = setInterval(() => loadConcoursTexts(true), 60000); 
     return () => clearInterval(interval);
   }, [loadConcoursTexts]);
-
-  // Injection du script Adsterra
-  useEffect(() => {
-    if (adVisible && !loading) {
-      const container = document.getElementById("ad-battle-bottom");
-      if (container) {
-        container.innerHTML = "";
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-        script.async = true;
-        container.appendChild(script);
-      }
-    }
-  }, [adVisible, loading]);
 
   const handleShare = async (e, item) => {
     e.preventDefault(); 
@@ -241,21 +225,6 @@ export default function BattlePoetique() {
             </div>
           )}
         </main>
-
-        {/* Espace Adsterra */}
-        {adVisible && !loading && (
-          <div className="mt-20 pt-10 border-t border-slate-100 flex flex-col items-center">
-            <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
-              <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Sponsor</span>
-              <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                <X size={12} />
-              </button>
-            </div>
-            <div id="ad-battle-bottom" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[2.5rem] p-4 shadow-sm border border-slate-100">
-              {/* Injection du script */}
-            </div>
-          </div>
-        )}
       </div>
 
       <footer className="mt-16 md:mt-24 text-center pb-10 px-4">
