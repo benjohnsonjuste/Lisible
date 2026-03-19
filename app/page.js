@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import Script from "next/script"; // Importation nécessaire pour les scripts externes
 import { 
   BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Globe, PenTool, TrendingUp
 } from "lucide-react";
@@ -180,12 +179,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* --- SCRIPT PUBLICITAIRE INTÉGRÉ --- */}
-        <Script 
-          src="https://pl28553504.effectivegatecpm.com/f3/ab/7f/f3ab7f753d7d49a90e198d67c43c6991.js" 
-          strategy="afterInteractive" 
-        />
       </main>
     </div>
   );
