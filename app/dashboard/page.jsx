@@ -3,13 +3,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon,
-  Mic
+  ShieldCheck, AlertCircle, Share2, Download, Award, Link as LinkIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import Script from 'next/script';
 
 export default function AuthorDashboard() {
   const router = useRouter();
@@ -206,10 +204,6 @@ export default function AuthorDashboard() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
-      <Script 
-        src="https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js" 
-        strategy="afterInteractive" 
-      />
       <canvas ref={canvasRef} className="hidden" />
       <div className="max-w-6xl mx-auto space-y-12">
         
@@ -258,14 +252,10 @@ export default function AuthorDashboard() {
           </div>
         )}
 
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl shadow-teal-900/10 hover:bg-teal-700 transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Création</p><h3 className="text-xl font-bold italic">Publier un texte</h3></div>
             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Plus size={24} /></div>
-          </Link>
-          <Link href="/studio/podcast" className="group flex items-center justify-between p-8 bg-indigo-600 text-white rounded-[2.5rem] shadow-xl shadow-indigo-900/10 hover:bg-indigo-700 transition-all">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Audio</p><h3 className="text-xl font-bold italic">Studio Podcast</h3></div>
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Mic size={24} /></div>
           </Link>
           <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
             <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Profil</p><h3 className="text-xl font-bold italic">Gérer mon compte</h3></div>
