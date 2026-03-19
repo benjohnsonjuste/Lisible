@@ -12,30 +12,23 @@ export default function BattlePoetique() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Correction du filtre : plus flexible sur les dénominations
+  // Logique de tri modifiée : Certifications > Likes > Date
   const sortBattleTexts = useCallback((data) => {
     return data
-      .filter(item => {
-        const isConcoursFlag = item.isConcours === true || item.isConcours === "true";
-        const genreLower = (item.genre || "").toLowerCase();
-        const categoryLower = (item.category || "").toLowerCase();
-        
-        // On accepte si c'est marqué concours OU si le mot "battle" ou "poétique" est dans le genre/catégorie
-        return isConcoursFlag || 
-               genreLower.includes("battle") || 
-               genreLower.includes("poétique") ||
-               categoryLower.includes("battle");
-      })
+      .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique")
       .sort((a, b) => {
+        // Priorité 1 : Certifications
         const certA = Number(a.totalCertified || a.certified || 0);
         const certB = Number(b.totalCertified || b.certified || 0);
         if (certB !== certA) return certB - certA;
         
+        // Priorité 2 : Likes
         const likesA = Number(a.totalLikes || a.likes || 0);
         const likesB = Number(b.totalLikes || b.likes || 0);
         if (likesB !== likesA) return likesB - likesA;
         
-        return new Date(b.date || 0) - new Date(a.date || 0);
+        // Priorité 3 : Date
+        return new Date(b.date) - new Date(a.date);
       });
   }, []);
 
@@ -124,7 +117,7 @@ export default function BattlePoetique() {
             <Link href="/library" className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-6 sm:px-8 py-4 sm:py-5 rounded-[1.5rem] text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
               <BookOpen size={16} /> Archives
             </Link>
-            <Link href="/battle/publier" className="flex items-center justify-center gap-3 bg-teal-600 text-white px-6 sm:px-8 py-4 sm:py-5 rounded-[1.5rem] text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
+            <Link href="/battle/close" className="flex items-center justify-center gap-3 bg-teal-600 text-white px-6 sm:px-8 py-4 sm:py-5 rounded-[1.5rem] text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30">
               <PenTool size={18} /> Déposer un défi
             </Link>
           </div>
@@ -219,7 +212,7 @@ export default function BattlePoetique() {
                 <h3 className="font-black uppercase text-slate-900 tracking-[0.2em] sm:tracking-[0.3em] text-md sm:text-lg">L'arène est vide</h3>
                 <p className="text-slate-400 text-xs sm:text-sm font-medium">Les gladiateurs de la plume ne sont pas encore arrivés.</p>
               </div>
-              <Link href="/battle/publier" className="inline-flex items-center gap-3 bg-slate-900 text-white px-8 sm:px-12 py-5 sm:py-6 rounded-2xl sm:rounded-3xl font-black text-[10px] sm:text-[11px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
+              <Link href="/publier-battle" className="inline-flex items-center gap-3 bg-slate-900 text-white px-8 sm:px-12 py-5 sm:py-6 rounded-2xl sm:rounded-3xl font-black text-[10px] sm:text-[11px] uppercase tracking-widest hover:bg-teal-600 transition-all shadow-2xl">
                  Lancer le défi <ArrowRight size={18} />
               </Link>
             </div>
@@ -227,7 +220,7 @@ export default function BattlePoetique() {
         </main>
       </div>
 
-      <footer className="mt-16 md:mt-24 text-center pb-10 px-4">
+      <footer className="mt-16 md:mt-32 text-center pb-10 px-4">
          <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.5em] text-slate-300 flex items-center justify-center gap-2 sm:gap-4">
            <span className="w-4 sm:w-8 h-px bg-slate-100"></span>
            Arène Officielle • {new Date().getFullYear()}
