@@ -8,7 +8,6 @@ import {
 import { toast } from "sonner";
 
 export default function Bibliotheque({ initialTexts = [] }) {
-  // Sécurité : s'assurer que texts est toujours un tableau
   const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,11 +24,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
   }, []);
 
   const fetchInitial = async () => {
-    // On ne met loading=true que si on n'a vraiment rien à afficher
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      const res = await fetch(`/api/github-db?type=library`);
+      // Adaptation pour chercher spécifiquement dans data/publications
+      const res = await fetch(`/api/github-db?type=data/publications`);
       const json = await res.json();
       
       if (json && Array.isArray(json.content)) {
@@ -42,7 +41,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
 
-          // Sécurité sur la date pour le tri
           const dateA = a?.date ? new Date(a.date).getTime() : 0;
           const dateB = b?.date ? new Date(b.date).getTime() : 0;
           return dateB - dateA;
@@ -74,7 +72,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
-  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
   if (!mounted && initialTexts.length === 0) return null;
 
   if (loading && (!texts || texts.length === 0)) return (
@@ -136,7 +133,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
-          const displayCerts = item.certified || item.totalCertified || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
