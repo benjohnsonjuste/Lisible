@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 
 export default function Bibliotheque({ initialTexts = [] }) {
+  // Sécurité : s'assurer que texts est toujours un tableau
   const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,24 +20,20 @@ export default function Bibliotheque({ initialTexts = [] }) {
   useEffect(() => {
     setMounted(true);
     fetchInitial();
-    // Optionnel : on garde l'intervalle si le fichier est mis à jour côté serveur
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
+    // On ne met loading=true que si on n'a vraiment rien à afficher
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      // Adaptation pour chercher dans le dossier data/publications/index.json
-      const res = await fetch('/data/publications/index.json');
-      const data = await res.json();
+      const res = await fetch(`/api/github-db?type=library`);
+      const json = await res.json();
       
-      // On vérifie si data est directement le tableau ou s'il est dans une propriété
-      const rawContent = Array.isArray(data) ? data : (data.content || []);
-
-      if (Array.isArray(rawContent)) {
-        const sorted = [...rawContent].sort((a, b) => {
+      if (json && Array.isArray(json.content)) {
+        const sorted = [...json.content].sort((a, b) => {
           const certA = Number(a?.certified || a?.totalCertified || 0);
           const certB = Number(b?.certified || b?.totalCertified || 0);
           if (certB !== certA) return certB - certA;
@@ -45,6 +42,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
 
+          // Sécurité sur la date pour le tri
           const dateA = a?.date ? new Date(a.date).getTime() : 0;
           const dateB = b?.date ? new Date(b.date).getTime() : 0;
           return dateB - dateA;
@@ -76,6 +74,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
+  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
   if (!mounted && initialTexts.length === 0) return null;
 
   if (loading && (!texts || texts.length === 0)) return (
@@ -137,6 +136,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
+          const displayCerts = item.certified || item.totalCertified || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
