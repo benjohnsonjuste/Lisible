@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, Sparkles, Megaphone, AlignLeft, X
+  Search, Sparkles, Megaphone, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,7 +13,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [adVisible, setAdVisible] = useState(true);
   
   const [activeGenre, setActiveGenre] = useState("Tous");
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
@@ -26,6 +25,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
   }, []);
 
   const fetchInitial = async () => {
+    // On ne met loading=true que si on n'a vraiment rien à afficher
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
@@ -42,6 +42,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
 
+          // Sécurité sur la date pour le tri
           const dateA = a?.date ? new Date(a.date).getTime() : 0;
           const dateB = b?.date ? new Date(b.date).getTime() : 0;
           return dateB - dateA;
@@ -55,21 +56,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
       setLoading(false); 
     }
   };
-
-  // Injection du script Adsterra
-  useEffect(() => {
-    if (adVisible && mounted && !loading) {
-      const container = document.getElementById("ad-library-bottom");
-      if (container) {
-        container.innerHTML = "";
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-        script.async = true;
-        container.appendChild(script);
-      }
-    }
-  }, [adVisible, mounted, loading]);
 
   const filteredTexts = useMemo(() => {
     if (!Array.isArray(texts)) return [];
@@ -88,6 +74,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
+  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
   if (!mounted && initialTexts.length === 0) return null;
 
   if (loading && (!texts || texts.length === 0)) return (
@@ -149,6 +136,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
+          const displayCerts = item.certified || item.totalCertified || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -245,21 +233,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
           );
         })}
       </div>
-
-      {/* --- Section Adsterra --- */}
-      {adVisible && mounted && !loading && filteredTexts.length > 0 && (
-        <div className="mt-20 pt-10 border-t border-slate-100 flex flex-col items-center">
-            <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
-              <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Sponsorisé</span>
-              <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
-                <X size={12} />
-              </button>
-            </div>
-            <div id="ad-library-bottom" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[3rem] p-4 shadow-sm border border-slate-100 overflow-hidden">
-               {/* Injection du script Adsterra */}
-            </div>
-        </div>
-      )}
 
       {filteredTexts.length === 0 && !loading && mounted && (
         <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
