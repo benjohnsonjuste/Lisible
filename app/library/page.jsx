@@ -29,7 +29,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      const res = await fetch(`/api/github-db?type=library`);
+      const res = await fetch(`/api/github-db?type=publications`);
       const json = await res.json();
       
       if (json && Array.isArray(json.content)) {
