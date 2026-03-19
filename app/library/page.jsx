@@ -19,6 +19,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
   useEffect(() => {
     setMounted(true);
     fetchInitial();
+    // Optionnel : on garde l'intervalle si le fichier est mis à jour côté serveur
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -27,12 +28,15 @@ export default function Bibliotheque({ initialTexts = [] }) {
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      // Adaptation pour chercher spécifiquement dans data/publications
-      const res = await fetch(`/api/github-db?type=data/publications`);
-      const json = await res.json();
+      // Adaptation pour chercher dans le dossier data/publications/index.json
+      const res = await fetch('/data/publications/index.json');
+      const data = await res.json();
       
-      if (json && Array.isArray(json.content)) {
-        const sorted = [...json.content].sort((a, b) => {
+      // On vérifie si data est directement le tableau ou s'il est dans une propriété
+      const rawContent = Array.isArray(data) ? data : (data.content || []);
+
+      if (Array.isArray(rawContent)) {
+        const sorted = [...rawContent].sort((a, b) => {
           const certA = Number(a?.certified || a?.totalCertified || 0);
           const certB = Number(b?.certified || b?.totalCertified || 0);
           if (certB !== certA) return certB - certA;
