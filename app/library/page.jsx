@@ -1,17 +1,14 @@
 "use client";
-
-// Force le rendu dynamique pour éviter que Vercel ne serve une page vide/statique
-export const dynamic = "force-dynamic";
-
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, Sparkles, Megaphone, AlignLeft 
+  Search, Sparkles, Megaphone, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Bibliotheque({ initialTexts = [] }) {
+  // Sécurité : s'assurer que texts est toujours un tableau
   const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,11 +25,11 @@ export default function Bibliotheque({ initialTexts = [] }) {
   }, []);
 
   const fetchInitial = async () => {
+    // On ne met loading=true que si on n'a vraiment rien à afficher
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      const res = await fetch(`/api/github-db?type=publications`);
-      if (!res.ok) throw new Error("Erreur réseau");
+      const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       
       if (json && Array.isArray(json.content)) {
@@ -45,6 +42,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
 
+          // Sécurité sur la date pour le tri
           const dateA = a?.date ? new Date(a.date).getTime() : 0;
           const dateB = b?.date ? new Date(b.date).getTime() : 0;
           return dateB - dateA;
@@ -76,10 +74,10 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
-  // Protection contre les erreurs d'hydratation
-  if (!mounted) return null;
+  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
+  if (!mounted && initialTexts.length === 0) return null;
 
-  if (loading && texts.length === 0) return (
+  if (loading && (!texts || texts.length === 0)) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
@@ -138,6 +136,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
+          const displayCerts = item.certified || item.totalCertified || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -185,7 +184,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
                     <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
-                      {item.date ? new Date(item.date).getFullYear() : "2026"}
+                      {mounted && item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
                     {hasSceau && (
                         <span className="ml-auto text-teal-600 animate-pulse">
@@ -235,7 +234,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
         })}
       </div>
 
-      {filteredTexts.length === 0 && !loading && (
+      {filteredTexts.length === 0 && !loading && mounted && (
         <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
            <Search className="text-slate-100 mx-auto mb-6" size={64} />
            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
