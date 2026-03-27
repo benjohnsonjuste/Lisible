@@ -1,4 +1,6 @@
 "use client";
+export const dynamic = 'force-dynamic'; // Force Next.js à ne pas mettre la page en cache statique
+
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
@@ -20,38 +22,33 @@ export default function Bibliotheque({ initialTexts = [] }) {
   useEffect(() => {
     setMounted(true);
     fetchInitial();
+    // Rafraîchissement automatique toutes les 30 secondes
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
-    // On ne met loading=true que si on n'a vraiment rien à afficher
+    // On ne met loading=true que si on n'a vraiment rien à afficher pour éviter le clignotement
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      const res = await fetch(`/api/github-db?type=data/texts`);
+      // CORRECTION : Utilisation du type 'library' attendu par ton API github-db
+      const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       
+      // Ton API renvoie directement l'objet du fichier index.json
+      // On vérifie si 'content' existe car ton helper getFile renvoie { content: ..., sha: ... }
       if (json && Array.isArray(json.content)) {
-        const sorted = [...json.content].sort((a, b) => {
-          const certA = Number(a?.certified || a?.totalCertified || 0);
-          const certB = Number(b?.certified || b?.totalCertified || 0);
-          if (certB !== certA) return certB - certA;
-
-          const likesA = Number(a?.likes || a?.totalLikes || 0);
-          const likesB = Number(b?.likes || b?.totalLikes || 0);
-          if (likesB !== likesA) return likesB - likesA;
-
-          // Sécurité sur la date pour le tri
-          const dateA = a?.date ? new Date(a.date).getTime() : 0;
-          const dateB = b?.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
-        });
-        setTexts(sorted);
+        setTexts(json.content); // Le tri globalSort est déjà fait côté API
+      } else if (Array.isArray(json)) {
+        // Au cas où l'API renvoie directement le tableau
+        setTexts(json);
       }
     } catch (e) { 
       console.error("Fetch error:", e); 
-      if (!texts || texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
+      if (!texts || texts.length === 0) {
+        toast.error("Le Grand Livre des manuscrits est inaccessible.");
+      }
     } finally { 
       setLoading(false); 
     }
@@ -74,19 +71,22 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
-  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
-  if (!mounted && initialTexts.length === 0) return null;
+  // Éviter l'erreur d'hydratation (SSR vs Client)
+  if (!mounted) return null;
 
-  if (loading && (!texts || texts.length === 0)) return (
-    <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
-      <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
-    </div>
-  );
+  if (loading && texts.length === 0) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+        <Loader2 className="animate-spin text-teal-600" size={40} />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
       
+      {/* Header */}
       <div className="text-center mb-16 space-y-4">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Sparkles size={14} className="text-teal-600" />
@@ -95,6 +95,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Les Archives.</h1>
       </div>
 
+      {/* Recherche et Filtres */}
       <div className="space-y-10 mb-20">
         <div className="relative max-w-2xl mx-auto group">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
@@ -114,8 +115,8 @@ export default function Bibliotheque({ initialTexts = [] }) {
               onClick={() => setActiveGenre(g)}
               className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border ${
                 activeGenre === g
-                  ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105"
-                  : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
+                ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105"
+                : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
               }`}
             >
               {g}
@@ -124,6 +125,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
         </div>
       </div>
 
+      {/* Liste des manuscrits */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
           if (!item || !item.id) return null;
@@ -136,7 +138,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
           const displayViews = item.views || item.totalViews || 0;
           const displayLikes = item.likes || item.totalLikes || 0;
-          const displayCerts = item.certified || item.totalCertified || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -184,7 +185,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
                     <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
-                      {mounted && item.date ? new Date(item.date).getFullYear() : "2026"}
+                      {item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
                     {hasSceau && (
                         <span className="ml-auto text-teal-600 animate-pulse">
@@ -234,7 +235,8 @@ export default function Bibliotheque({ initialTexts = [] }) {
         })}
       </div>
 
-      {filteredTexts.length === 0 && !loading && mounted && (
+      {/* État Vide */}
+      {filteredTexts.length === 0 && !loading && (
         <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
            <Search className="text-slate-100 mx-auto mb-6" size={64} />
            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
