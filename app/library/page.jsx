@@ -1,432 +1,175 @@
-import { NextResponse } from 'next/server';
-import * as bcrypt from 'bcrypt-ts';
+"use client";
 
-const localCache = new Map();
-const CACHE_TTL = 0; 
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, BookOpen, Heart, Eye, Clock, ShieldCheck, Award, Zap } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs'; 
+export default function LibraryPage() {
+  const [texts, setTexts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [mounted, setMounted] = useState(false);
 
-const GITHUB_CONFIG = {
-  owner: "benjohnsonjuste",
-  repo: "Lisible",
-  token: process.env.GITHUB_TOKEN
-};
+  useEffect(() => {
+    setMounted(true);
+    fetchInitial();
+  }, []);
 
-const ECONOMY = {
-  MIN_TRANSFER: 1000,
-  WITHDRAWAL_THRESHOLD: 25000, 
-  REQUIRED_FOLLOWERS: 250,      
-  LI_VALUE_USD: 0.0002 
-};
+  const fetchInitial = async () => {
+    try {
+      setLoading(true);
+      // Appel à ton API séparée
+      const res = await fetch(`/api/github-db?type=library`, { cache: 'no-store' });
+      const json = await res.json();
+      
+      // On récupère les données soit dans .content (si API adaptée), soit à la racine
+      const data = json?.content || (Array.isArray(json) ? json : []);
+      setTexts(data);
+    } catch (e) {
+      console.error("Erreur bibliothèque:", e);
+      toast.error("Impossible de charger le Grand Livre.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// --- HELPERS CORE ---
-
-async function getFile(path) {
-  const now = Date.now();
-  const cached = localCache.get(path);
-  if (cached && (now - cached.timestamp < CACHE_TTL)) {
-    return cached.data;
-  }
-
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-      headers: { 
-        'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'Lisible-App'
-      },
-      cache: 'no-store'
+  const filteredTexts = useMemo(() => {
+    return texts.filter(t => {
+      const matchSearch = 
+        t.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.author?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (filter === 'all') return matchSearch;
+      if (filter === 'certified') return matchSearch && (t.certified > 0);
+      if (filter === 'concours') return matchSearch && t.isConcours;
+      return matchSearch;
     });
-    
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    
-    const data = await res.json();
-    if (!data.content) return null;
-    
-    const b64 = data.content.replace(/\s/g, '');
-    const binString = atob(b64);
-    const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
-    const decodedContent = new TextDecoder().decode(bytes);
-    
-    const result = { content: JSON.parse(decodedContent), sha: data.sha };
-    if (CACHE_TTL > 0) localCache.set(path, { data: result, timestamp: now });
-    return result;
-  } catch (err) {
-    console.error(`Fetch error [${path}]:`, err.message);
-    return null;
-  }
-}
+  }, [texts, searchTerm, filter]);
 
-async function updateFile(path, content, sha, message) {
-  localCache.delete(path);
-  const jsonString = JSON.stringify(content, null, 2);
-  const bytes = new TextEncoder().encode(jsonString);
-  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
-  const encodedContent = btoa(binString);
+  if (!mounted) return null;
 
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: { 
-        'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
-        'Content-Type': 'application/json',
-        'User-Agent': 'Lisible-App'
-      },
-      body: JSON.stringify({
-        message: `[DATA] ${message} [skip ci]`,
-        content: encodedContent,
-        sha: sha || undefined
-      }),
-    });
-    return res.ok;
-  } catch (err) {
-    console.error(`Update error [${path}]:`, err.message);
-    return false;
-  }
-}
+  return (
+    <div className="min-h-screen bg-[#FDFCFB] pb-20">
+      {/* Header & Filtres Fixes */}
+      <div className="bg-white border-b sticky top-0 z-30 px-4 py-4 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h1 className="text-2xl font-serif font-bold text-[#2D2424] flex items-center gap-2">
+            <BookOpen className="text-[#8B4513]" />
+            Le Grand Livre
+          </h1>
 
-const getSafePath = (email) => {
-  if (!email) return null;
-  const safeEmail = email.toLowerCase().trim()
-    .replace(/@/g, '_')
-    .replace(/\./g, '_')
-    .replace(/[^a-z0-9_]/g, '');
-  return `data/users/${safeEmail}.json`;
-};
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input 
+              type="text"
+              placeholder="Rechercher un manuscrit..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full focus:ring-2 focus:ring-[#8B4513]/20 focus:border-[#8B4513] transition-all outline-none text-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-const globalSort = (list) => {
-  if (!Array.isArray(list)) return [];
-  return [...list].sort((a, b) => {
-    const certA = Number(a?.certified || a?.totalCertified || 0);
-    const certB = Number(b?.certified || b?.totalCertified || 0);
-    if (certB !== certA) return certB - certA;
-    const likesA = Number(a?.likes || a?.totalLikes || 0);
-    const likesB = Number(b?.likes || b?.totalLikes || 0);
-    if (likesB !== likesA) return likesB - likesA;
-    const dateA = a?.date ? new Date(a.date).getTime() : 0;
-    const dateB = b?.date ? new Date(b.date).getTime() : 0;
-    return dateB - dateA;
-  });
-};
+          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+            {['all', 'certified', 'concours'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  filter === f 
+                  ? 'bg-[#2D2424] text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {f === 'all' ? 'Tous' : f === 'certified' ? 'Certifiés' : 'Duels'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-// --- ROUTES ---
+      {/* Grille des manuscrits */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="w-12 h-12 border-4 border-[#8B4513]/20 border-t-[#8B4513] rounded-full animate-spin"></div>
+            <p className="text-[#8B4513] font-serif animate-pulse">Consultation des archives...</p>
+          </div>
+        ) : filteredTexts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTexts.map((item) => (
+              <Link key={item.id} href={`/reader?id=${item.id}`}>
+                <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer">
+                  
+                  <div className="relative h-48 bg-gray-200 overflow-hidden">
+                    <img 
+                      src={item.image || `https://images.unsplash.com/photo-1457369804590-52c65a46227d?w=800&q=80`} 
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1457369804590-52c65a46227d?w=800&q=80"; }}
+                    />
+                    
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                      {item.certified > 0 && (
+                        <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-lg">
+                          <Award className="w-4 h-4 fill-current" />
+                        </div>
+                      )}
+                      {item.isConcours && (
+                        <div className="bg-red-600 text-white px-2 py-1 rounded-md text-[10px] font-bold uppercase flex items-center gap-1">
+                          <Zap className="w-3 h-3 fill-current" /> Duel
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-export async function POST(req) {
-  try {
-    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
-    const body = await req.json();
-    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, adminToken, ...data } = body;
-    
-    const emailToUse = userEmail || data.email;
-    const targetPath = getSafePath(emailToUse);
+                  <div className="p-5 flex flex-col flex-1">
+                    <div className="mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8B4513] bg-[#8B4513]/5 px-2 py-0.5 rounded">
+                        {item.category || "Littérature"}
+                      </span>
+                    </div>
+                    
+                    <h3 className="text-lg font-serif font-bold text-[#2D2424] line-clamp-2 group-hover:text-[#8B4513] transition-colors">
+                      {item.title}
+                    </h3>
+                    
+                    <p className="text-gray-500 text-sm mt-1 mb-4 flex items-center gap-1">
+                      par <span className="font-medium text-gray-700">{item.author}</span>
+                      {item.authorIsOfficial && <ShieldCheck className="w-3 h-3 text-blue-500" />}
+                    </p>
 
-    if (action === 'register') {
-      const file = await getFile(targetPath);
-      if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(data.password, salt);
-      const userData = {
-        email: data.email.toLowerCase().trim(),
-        name: data.name || "Nouvel Auteur",
-        li: data.referralCode ? 250 : 50,
-        status: "active",
-        notifications: [], followers: [], following: [], works: [],
-        bookmarks: [],
-        created_at: new Date().toISOString(),
-        ...data,
-        password: hashedPassword 
-      };
-      await updateFile(targetPath, userData, null, `👤 User Register: ${data.email}`);
-      const { password, ...safeUser } = userData;
-      return NextResponse.json({ success: true, user: safeUser });
-    }
+                    <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between text-gray-400">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1 text-xs">
+                          <Eye className="w-3.5 h-3.5" /> {item.views || 0}
+                        </span>
+                        <span className="flex items-center gap-1 text-xs">
+                          <Heart className="w-3.5 h-3.5" /> {item.likes || 0}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-medium text-gray-300">
+                        #{item.genre || "Libre"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+            <BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+            <h3 className="text-xl font-serif text-gray-400">Aucun manuscrit trouvé</h3>
+          </div>
+        )}
+      </div>
 
-    if (action === 'login') {
-      let file = await getFile(targetPath);
-      if (!file) {
-        const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
-        file = await getFile(legacyPath);
-      }
-      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
-      if (file.content.status === "deleted") {
-        return NextResponse.json({ 
-          error: "Ce compte est en attente de suppression.",
-          isDeleted: true,
-          email: file.content.email 
-        }, { status: 403 });
-      }
-      const storedPassword = file.content.password;
-      const providedPassword = data.password;
-      let isMatch = false;
-      const isHashed = typeof storedPassword === 'string' && storedPassword.startsWith('$2');
-      if (isHashed) {
-        isMatch = bcrypt.compareSync(providedPassword, storedPassword);
-        if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
-      } else {
-        isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
-        if (isMatch) {
-          const salt = bcrypt.genSaltSync(10);
-          file.content.password = bcrypt.hashSync(providedPassword.trim(), salt);
-          await updateFile(targetPath, file.content, file.sha, `🔐 Security Fix: Hashing plain password`);
-        }
-      }
-      if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
-      const { password, ...safeUser } = file.content;
-      return NextResponse.json({ success: true, user: safeUser });
-    }
-
-    if (action === 'publish') {
-      const pubId = data.id || `txt_${Date.now()}`;
-      const pubPath = `data/texts/${pubId}.json`;
-      const indexPath = `data/publications/index.json`;
-      const finalImage = data.image || data.imageBase64 || null;
-      const newPub = { ...data, id: pubId, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
-      await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
-      const indexFile = await getFile(indexPath) || { content: [] };
-      let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
-      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: data.isConcours || false, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
-      indexContent = globalSort(indexContent);
-      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
-      return NextResponse.json({ success: true, id: pubId });
-    }
-
-    if (action === 'toggle_bookmark') {
-      const userFile = await getFile(targetPath);
-      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      const user = userFile.content;
-      if (!user.bookmarks) user.bookmarks = [];
-      const exists = user.bookmarks.find(b => b.id === textId);
-      if (exists) {
-        user.bookmarks = user.bookmarks.filter(b => b.id !== textId);
-      } else {
-        user.bookmarks.push({ 
-          id: textId, 
-          title: data.title, 
-          author: data.authorName, 
-          date: new Date().toISOString() 
-        });
-      }
-      await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
-      return NextResponse.json({ success: true, bookmarks: user.bookmarks });
-    }
-
-    if (action === 'broadcast') {
-      if (adminToken !== process.env.ADMIN_PASSWORD) {
-        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-      }
-
-      let targetEmails = [];
-      if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
-        targetEmails = data.targetEmails;
-      } else {
-        const indexFile = await getFile(`data/publications/index.json`);
-        if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
-        targetEmails = [...new Set(indexFile.content.map(p => p.authorEmail))];
-      }
-      
-      const newSignal = {
-        id: `staff_${Date.now()}`,
-        type: data.type || "info",
-        message: data.message,
-        link: data.link || null,
-        date: new Date().toISOString(),
-        read: false
-      };
-
-      let count = 0;
-      for (const email of targetEmails) {
-        const uPath = getSafePath(email);
-        const uFile = await getFile(uPath);
-        if (uFile) {
-          if (!uFile.content.notifications) uFile.content.notifications = [];
-          uFile.content.notifications.unshift(newSignal);
-          const success = await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff (Targeted)`);
-          if (success) count++;
-        }
-      }
-      return NextResponse.json({ success: true, count });
-    }
-
-    if (action === 'saveDuelText') {
-      const duelFilePath = `data/duels.json`;
-      const file = await getFile(duelFilePath);
-      if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
-      const duels = Array.isArray(file.content) ? file.content : [];
-      const duelIndex = duels.findIndex(d => d.id === duelId);
-      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
-      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
-      if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
-      duels[duelIndex].texts[data.email] = data.text;
-      await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
-      return NextResponse.json({ success: true });
-    }
-
-    if (action === 'edit_text') {
-      const idToEdit = textId || data.id;
-      const path = `data/texts/${idToEdit}.json`;
-      const indexPath = `data/publications/index.json`;
-      const file = await getFile(path);
-      if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
-      const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
-      await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
-      const indexFile = await getFile(indexPath);
-      if (indexFile && Array.isArray(indexFile.content)) {
-        const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
-        if (itemIndex > -1) {
-          indexFile.content[itemIndex] = { ...indexFile.content[itemIndex], title: data.title || indexFile.content[itemIndex].title, category: data.category || indexFile.content[itemIndex].category, genre: data.genre || indexFile.content[itemIndex].genre, image: data.image || indexFile.content[itemIndex].image };
-          await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
-        }
-      }
-      return NextResponse.json({ success: true });
-    }
-
-    if (action === 'delete_text') {
-      const idToDelete = textId || data.textId;
-      const path = `data/texts/${idToDelete}.json`;
-      const indexPath = `data/publications/index.json`;
-      const file = await getFile(path);
-      if (file) {
-        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha }) });
-      }
-      const indexFile = await getFile(indexPath);
-      if (indexFile && Array.isArray(indexFile.content)) {
-        const newIndex = indexFile.content.filter(t => t.id !== idToDelete);
-        await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
-      }
-      return NextResponse.json({ success: true });
-    }
-
-    if (action === 'follow' || action === 'unfollow') {
-      const follower = await getFile(getSafePath(userEmail));
-      const target = await getFile(getSafePath(data.targetEmail));
-      if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      const targetEmailClean = data.targetEmail.toLowerCase().trim();
-      const userEmailClean = userEmail.toLowerCase().trim();
-      if (action === 'follow') {
-        if (!follower.content.following.includes(targetEmailClean)) {
-          follower.content.following.push(targetEmailClean);
-          target.content.followers.push(userEmailClean);
-          target.content.notifications.unshift({ id: `follow_${Date.now()}`, type: "follow", message: `${follower.content.name} s'est abonné à vous !`, date: new Date().toISOString(), read: false });
-        }
-      } else {
-        follower.content.following = follower.content.following.filter(e => e !== targetEmailClean);
-        target.content.followers = target.content.followers.filter(e => e !== userEmailClean);
-      }
-      await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
-      await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
-      return NextResponse.json({ success: true, followersCount: target.content.followers.length });
-    }
-
-    if (action === 'transfer_li' || action === 'gift_li') {
-      if (amount < ECONOMY.MIN_TRANSFER) return NextResponse.json({ error: "Minimum non atteint" }, { status: 400 });
-      const sender = await getFile(getSafePath(userEmail));
-      const receiver = await getFile(getSafePath(data.recipientEmail));
-      if (!sender || !receiver) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
-      sender.content.li -= amount;
-      receiver.content.li += amount;
-      receiver.content.notifications.unshift({ id: `notif_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
-      await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
-      await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
-      return NextResponse.json({ success: true });
-    }
-
-    return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
-  } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
-}
-
-export async function GET(req) {
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get('type');
-  const id = searchParams.get('id');
-  try {
-    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
-    if (type === 'text') {
-        const text = await getFile(`data/texts/${id}.json`);
-        return NextResponse.json(text);
-    }
-    if (type === 'user') {
-        const user = await getFile(getSafePath(id));
-        if (user) {
-            user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
-            user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
-            delete user.content.password;
-        }
-        return NextResponse.json(user);
-    }
-    
-    if (type === 'library' || type === 'publications') {
-      const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) {
-        index.content = globalSort(index.content);
-        // Garantir le renvoi d'un objet avec .content pour le composant front-end
-        return NextResponse.json({ content: index.content });
-      }
-      return NextResponse.json({ content: [] });
-    }
-    
-    return NextResponse.json({ error: "Type invalide" }, { status: 400 });
-  } catch (e) {
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
-  }
-}
-
-export async function PATCH(req) {
-  try {
-    const body = await req.json();
-    const { id, action, notifId } = body;
-
-    if (action === 'mark_read') {
-      const userPath = getSafePath(id);
-      const userFile = await getFile(userPath);
-      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-      
-      const notifs = userFile.content.notifications || [];
-      userFile.content.notifications = notifs.map(n => n.id === notifId ? { ...n, read: true } : n);
-      
-      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notification read: ${notifId}`);
-      return NextResponse.json({ success: true });
-    }
-
-    const path = `data/texts/${id}.json`;
-    const indexPath = `data/publications/index.json`;
-    const textFile = await getFile(path);
-    if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
-    const authorPath = getSafePath(textFile.content.authorEmail);
-    const authorFile = await getFile(authorPath);
-    const indexFile = await getFile(indexPath);
-
-    if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
-    if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
-    if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
-
-    if (indexFile && Array.isArray(indexFile.content)) {
-      const itemIndex = indexFile.content.findIndex(t => t.id === id);
-      if (itemIndex > -1) {
-        indexFile.content[itemIndex].views = textFile.content.views;
-        indexFile.content[itemIndex].likes = textFile.content.likes;
-        indexFile.content[itemIndex].certified = textFile.content.certified;
-        indexFile.content = globalSort(indexFile.content);
-        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
-      }
-    }
-    if (authorFile) {
-      if (action === 'like') {
-        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`, date: new Date().toISOString(), read: false });
-      }
-      if (action === 'certify') {
-        authorFile.content.li = (authorFile.content.li || 0) + 1;
-        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`, date: new Date().toISOString(), read: false });
-      }
-      await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
-    }
-    await updateFile(path, textFile.content, textFile.sha, `📈 Text Update: ${action}`);
-    return NextResponse.json({ success: true, count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) });
-  } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
+      {/* Bouton de Publication flottant (Mobile) */}
+      <Link href="/publish" className="fixed bottom-6 right-6 md:hidden bg-[#8B4513] text-white p-4 rounded-full shadow-2xl active:scale-95 transition-transform">
+        <Zap className="w-6 h-6 fill-current" />
+      </Link>
+    </div>
+  );
 }
