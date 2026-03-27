@@ -1,5 +1,5 @@
 "use client";
-export const dynamic = 'force-dynamic'; // Force Next.js à ne pas mettre la page en cache statique
+export const dynamic = 'force-dynamic'; 
 
 import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
@@ -10,7 +10,6 @@ import {
 import { toast } from "sonner";
 
 export default function Bibliotheque({ initialTexts = [] }) {
-  // Sécurité : s'assurer que texts est toujours un tableau
   const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,26 +21,26 @@ export default function Bibliotheque({ initialTexts = [] }) {
   useEffect(() => {
     setMounted(true);
     fetchInitial();
-    // Rafraîchissement automatique toutes les 30 secondes
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
-    // On ne met loading=true que si on n'a vraiment rien à afficher pour éviter le clignotement
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      // CORRECTION : Utilisation du type 'library' attendu par ton API github-db
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       
-      // Ton API renvoie un objet { content: [...] } ou un tableau directement
-      if (json && Array.isArray(json.content)) {
-        setTexts(json.content); 
-      } else if (Array.isArray(json)) {
-        setTexts(json);
+      // Adaptation à la structure du JSON (Tableau direct ou Objet avec .content)
+      let dataToSet = [];
+      if (Array.isArray(json)) {
+        dataToSet = json;
+      } else if (json && Array.isArray(json.content)) {
+        dataToSet = json.content;
       }
+
+      setTexts(dataToSet);
     } catch (e) { 
       console.error("Fetch error:", e); 
       if (!texts || texts.length === 0) {
@@ -53,7 +52,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
   };
 
   const filteredTexts = useMemo(() => {
-    // Sécurité supplémentaire pour éviter le crash si texts devient null
     const baseTexts = Array.isArray(texts) ? texts : [];
     return baseTexts.filter(t => {
       if (!t) return false;
@@ -62,6 +60,8 @@ export default function Bibliotheque({ initialTexts = [] }) {
       const search = searchTerm.toLowerCase();
       
       const matchesSearch = title.includes(search) || author.includes(search);
+      
+      // Filtrage flexible : vérifie 'genre' et 'category'
       const matchesGenre = activeGenre === "Tous" || 
                            t.genre === activeGenre || 
                            t.category === activeGenre;
@@ -70,7 +70,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
-  // Éviter l'erreur d'hydratation (SSR vs Client)
   if (!mounted) return null;
 
   if (loading && (!texts || texts.length === 0)) {
