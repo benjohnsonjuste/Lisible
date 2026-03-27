@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, BookOpen, Heart, Eye, Clock, ShieldCheck, Award, Zap } from 'lucide-react';
+import { Eye, Heart, Award, Search, BookOpen, User, Zap, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -9,149 +9,133 @@ export default function LibraryPage() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
   const [mounted, setMounted] = useState(false);
 
+  // 1. Gestion de l'hydratation et chargement initial
   useEffect(() => {
     setMounted(true);
-    fetchInitial();
+    fetchLibrary();
   }, []);
 
-  const fetchInitial = async () => {
+  const fetchLibrary = async () => {
     try {
       setLoading(true);
-      // Appel à ton API séparée
-      const res = await fetch(`/api/github-db?type=library`, { cache: 'no-store' });
+      const res = await fetch('/api/github-db?type=library', { cache: 'no-store' });
       const json = await res.json();
       
-      // On récupère les données soit dans .content (si API adaptée), soit à la racine
+      // On extrait les données du champ 'content' envoyé par ton API
       const data = json?.content || (Array.isArray(json) ? json : []);
       setTexts(data);
     } catch (e) {
-      console.error("Erreur bibliothèque:", e);
-      toast.error("Impossible de charger le Grand Livre.");
+      console.error("Erreur de chargement:", e);
+      toast.error("Connexion aux archives interrompue.");
     } finally {
       setLoading(false);
     }
   };
 
+  // 2. Filtrage et Recherche (Performance optimisée avec useMemo)
   const filteredTexts = useMemo(() => {
-    return texts.filter(t => {
-      const matchSearch = 
-        t.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.author?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      if (filter === 'all') return matchSearch;
-      if (filter === 'certified') return matchSearch && (t.certified > 0);
-      if (filter === 'concours') return matchSearch && t.isConcours;
-      return matchSearch;
-    });
-  }, [texts, searchTerm, filter]);
+    return texts.filter(t => 
+      t.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.author?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [texts, searchTerm]);
 
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] pb-20">
-      {/* Header & Filtres Fixes */}
-      <div className="bg-white border-b sticky top-0 z-30 px-4 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-2xl font-serif font-bold text-[#2D2424] flex items-center gap-2">
-            <BookOpen className="text-[#8B4513]" />
-            Le Grand Livre
-          </h1>
+    <div className="min-h-screen bg-[#0a0a0c] text-white">
+      {/* Header Futuriste Fixe */}
+      <div className="sticky top-0 z-50 bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/10 px-6 py-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-600 p-2 rounded-lg shadow-[0_0_15px_rgba(147,51,234,0.5)]">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-black tracking-tighter uppercase">
+              La Bibliothèque
+            </h1>
+          </div>
 
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
             <input 
               type="text"
               placeholder="Rechercher un manuscrit..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-full focus:ring-2 focus:ring-[#8B4513]/20 focus:border-[#8B4513] transition-all outline-none text-sm"
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-            {['all', 'certified', 'concours'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                  filter === f 
-                  ? 'bg-[#2D2424] text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {f === 'all' ? 'Tous' : f === 'certified' ? 'Certifiés' : 'Duels'}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
-      {/* Grille des manuscrits */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Contenu de la page */}
+      <main className="max-w-7xl mx-auto px-6 py-12">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-            <div className="w-12 h-12 border-4 border-[#8B4513]/20 border-t-[#8B4513] rounded-full animate-spin"></div>
-            <p className="text-[#8B4513] font-serif animate-pulse">Consultation des archives...</p>
+          <div className="flex flex-col items-center justify-center py-40 space-y-4">
+            <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />
+            <p className="text-gray-500 font-mono text-sm tracking-widest uppercase">Initialisation du flux...</p>
           </div>
         ) : filteredTexts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredTexts.map((item) => (
-              <Link key={item.id} href={`/reader?id=${item.id}`}>
-                <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full cursor-pointer">
+              <Link key={item.id} href={`/texts/${item.id}`} className="group">
+                <div className="relative h-full bg-[#16161a] border border-white/5 rounded-3xl p-6 transition-all duration-500 hover:border-purple-500/50 hover:bg-[#1c1c22] hover:-translate-y-2 overflow-hidden flex flex-col">
                   
-                  <div className="relative h-48 bg-gray-200 overflow-hidden">
-                    <img 
-                      src={item.image || `https://images.unsplash.com/photo-1457369804590-52c65a46227d?w=800&q=80`} 
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      onError={(e) => { e.target.src = "https://images.unsplash.com/photo-1457369804590-52c65a46227d?w=800&q=80"; }}
-                    />
-                    
-                    <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-                      {item.certified > 0 && (
-                        <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-lg">
-                          <Award className="w-4 h-4 fill-current" />
-                        </div>
-                      )}
-                      {item.isConcours && (
-                        <div className="bg-red-600 text-white px-2 py-1 rounded-md text-[10px] font-bold uppercase flex items-center gap-1">
-                          <Zap className="w-3 h-3 fill-current" /> Duel
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* Effet Visuel Background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                  <div className="p-5 flex flex-col flex-1">
-                    <div className="mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8B4513] bg-[#8B4513]/5 px-2 py-0.5 rounded">
-                        {item.category || "Littérature"}
-                      </span>
+                  {/* Badge Duel / Concours */}
+                  {item.isConcours && (
+                    <div className="self-end mb-4 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1 uppercase tracking-widest">
+                      <Zap className="w-3 h-3 fill-current" /> Duel
                     </div>
-                    
-                    <h3 className="text-lg font-serif font-bold text-[#2D2424] line-clamp-2 group-hover:text-[#8B4513] transition-colors">
+                  )}
+
+                  {/* Header de la carte */}
+                  <div className="mb-6">
+                    <span className="text-[10px] font-bold text-purple-400 uppercase tracking-[0.2em]">
+                      {item.category || "Inclassable"}
+                    </span>
+                    <h3 className="text-xl font-bold mt-2 leading-tight group-hover:text-purple-300 transition-colors line-clamp-2">
                       {item.title}
                     </h3>
-                    
-                    <p className="text-gray-500 text-sm mt-1 mb-4 flex items-center gap-1">
-                      par <span className="font-medium text-gray-700">{item.author}</span>
-                      {item.authorIsOfficial && <ShieldCheck className="w-3 h-3 text-blue-500" />}
-                    </p>
+                  </div>
 
-                    <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between text-gray-400">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1 text-xs">
-                          <Eye className="w-3.5 h-3.5" /> {item.views || 0}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <Heart className="w-3.5 h-3.5" /> {item.likes || 0}
-                        </span>
+                  {/* Auteur */}
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                      <User className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <span className="text-sm text-gray-400 truncate">{item.author}</span>
+                  </div>
+
+                  {/* Stats Standardisées (Futuriste) */}
+                  <div className="mt-auto grid grid-cols-3 gap-2 bg-black/40 rounded-2xl p-4 border border-white/5">
+                    <div className="flex flex-col items-center border-r border-white/5">
+                      <span className="text-[9px] text-gray-500 uppercase font-black mb-1">Views</span>
+                      <div className="flex items-center gap-1 text-blue-400">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-xs font-mono font-bold">{item.views || 0}</span>
                       </div>
-                      <span className="text-[10px] font-medium text-gray-300">
-                        #{item.genre || "Libre"}
-                      </span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center border-r border-white/5">
+                      <span className="text-[9px] text-gray-500 uppercase font-black mb-1">Certifs</span>
+                      <div className="flex items-center gap-1 text-amber-400">
+                        <Award className="w-3.5 h-3.5" />
+                        <span className="text-xs font-mono font-bold">{item.certified || 0}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center">
+                      <span className="text-[9px] text-gray-500 uppercase font-black mb-1">Likes</span>
+                      <div className="flex items-center gap-1 text-pink-500">
+                        <Heart className="w-3.5 h-3.5 fill-current opacity-70" />
+                        <span className="text-xs font-mono font-bold">{item.likes || 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -159,17 +143,13 @@ export default function LibraryPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-100">
-            <BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-xl font-serif text-gray-400">Aucun manuscrit trouvé</h3>
+          <div className="text-center py-40 border-2 border-dashed border-white/5 rounded-3xl">
+            <Search className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-500 uppercase tracking-tighter">Aucun résultat trouvé</h2>
+            <p className="text-gray-600 mt-2">Réessayez avec d'autres termes de recherche.</p>
           </div>
         )}
-      </div>
-
-      {/* Bouton de Publication flottant (Mobile) */}
-      <Link href="/publish" className="fixed bottom-6 right-6 md:hidden bg-[#8B4513] text-white p-4 rounded-full shadow-2xl active:scale-95 transition-transform">
-        <Zap className="w-6 h-6 fill-current" />
-      </Link>
+      </main>
     </div>
   );
 }
