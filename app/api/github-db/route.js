@@ -45,10 +45,8 @@ async function getFile(path) {
     const data = await res.json();
     if (!data.content) return null;
     
-    const b64 = data.content.replace(/\s/g, '');
-    const binString = atob(b64);
-    const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
-    const decodedContent = new TextDecoder().decode(bytes);
+    // CORRECTION UTF-8 : Décodage sécurisé pour les accents
+    const decodedContent = Buffer.from(data.content, 'base64').toString('utf-8');
     
     const result = { content: JSON.parse(decodedContent), sha: data.sha };
     if (CACHE_TTL > 0) localCache.set(path, { data: result, timestamp: now });
@@ -62,9 +60,9 @@ async function getFile(path) {
 async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   const jsonString = JSON.stringify(content, null, 2);
-  const bytes = new TextEncoder().encode(jsonString);
-  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
-  const encodedContent = btoa(binString);
+  
+  // CORRECTION UTF-8 : Encodage sécurisé avec Buffer pour GitHub
+  const encodedContent = Buffer.from(jsonString, 'utf-8').toString('base64');
 
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
@@ -217,7 +215,6 @@ export async function POST(req) {
         return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
 
-      // 1. Déterminer les destinataires
       let targetEmails = [];
       if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
         targetEmails = data.targetEmails;
@@ -236,7 +233,6 @@ export async function POST(req) {
         read: false
       };
 
-      // 2. Diffusion ciblée
       let count = 0;
       for (const email of targetEmails) {
         const uPath = getSafePath(email);
