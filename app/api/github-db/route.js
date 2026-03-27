@@ -363,7 +363,6 @@ export async function GET(req) {
       const index = await getFile(`data/publications/index.json`);
       if (index && Array.isArray(index.content)) {
         index.content = globalSort(index.content);
-        // Garantir le renvoi d'un objet avec .content pour le composant front-end
         return NextResponse.json({ content: index.content });
       }
       return NextResponse.json({ content: [] });
