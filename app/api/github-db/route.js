@@ -45,8 +45,10 @@ async function getFile(path) {
     const data = await res.json();
     if (!data.content) return null;
     
-    // CORRECTION UTF-8 : Décodage sécurisé pour les accents
-    const decodedContent = Buffer.from(data.content, 'base64').toString('utf-8');
+    const b64 = data.content.replace(/\s/g, '');
+    const binString = atob(b64);
+    const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
+    const decodedContent = new TextDecoder().decode(bytes);
     
     const result = { content: JSON.parse(decodedContent), sha: data.sha };
     if (CACHE_TTL > 0) localCache.set(path, { data: result, timestamp: now });
@@ -60,9 +62,9 @@ async function getFile(path) {
 async function updateFile(path, content, sha, message) {
   localCache.delete(path);
   const jsonString = JSON.stringify(content, null, 2);
-  
-  // CORRECTION UTF-8 : Encodage sécurisé avec Buffer pour GitHub
-  const encodedContent = Buffer.from(jsonString, 'utf-8').toString('base64');
+  const bytes = new TextEncoder().encode(jsonString);
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+  const encodedContent = btoa(binString);
 
   try {
     const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
@@ -356,11 +358,17 @@ export async function GET(req) {
         }
         return NextResponse.json(user);
     }
+    
     if (type === 'library' || type === 'publications') {
       const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
-      return NextResponse.json(index);
+      if (index && Array.isArray(index.content)) {
+        index.content = globalSort(index.content);
+        // Garantir le renvoi d'un objet avec .content pour le composant front-end
+        return NextResponse.json({ content: index.content });
+      }
+      return NextResponse.json({ content: [] });
     }
+    
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
