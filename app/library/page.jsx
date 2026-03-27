@@ -1,247 +1,432 @@
-"use client";
-export const dynamic = 'force-dynamic'; 
+import { NextResponse } from 'next/server';
+import * as bcrypt from 'bcrypt-ts';
 
-import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
-import { 
-  Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, Sparkles, Megaphone, AlignLeft
-} from "lucide-react";
-import { toast } from "sonner";
+const localCache = new Map();
+const CACHE_TTL = 0; 
 
-export default function Bibliotheque({ initialTexts = [] }) {
-  const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [mounted, setMounted] = useState(false);
-  
-  const [activeGenre, setActiveGenre] = useState("Tous");
-  const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; 
 
-  useEffect(() => {
-    setMounted(true);
-    fetchInitial();
-    const interval = setInterval(fetchInitial, 30000);
-    return () => clearInterval(interval);
-  }, []);
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+  token: process.env.GITHUB_TOKEN
+};
 
-  const fetchInitial = async () => {
-    if (!texts || texts.length === 0) setLoading(true);
-    
-    try {
-      const res = await fetch(`/api/github-db?type=library`);
-      const json = await res.json();
-      
-      // Adaptation à la structure du JSON (Tableau direct ou Objet avec .content)
-      let dataToSet = [];
-      if (Array.isArray(json)) {
-        dataToSet = json;
-      } else if (json && Array.isArray(json.content)) {
-        dataToSet = json.content;
-      }
+const ECONOMY = {
+  MIN_TRANSFER: 1000,
+  WITHDRAWAL_THRESHOLD: 25000, 
+  REQUIRED_FOLLOWERS: 250,      
+  LI_VALUE_USD: 0.0002 
+};
 
-      setTexts(dataToSet);
-    } catch (e) { 
-      console.error("Fetch error:", e); 
-      if (!texts || texts.length === 0) {
-        toast.error("Le Grand Livre des manuscrits est inaccessible.");
-      }
-    } finally { 
-      setLoading(false); 
-    }
-  };
+// --- HELPERS CORE ---
 
-  const filteredTexts = useMemo(() => {
-    const baseTexts = Array.isArray(texts) ? texts : [];
-    return baseTexts.filter(t => {
-      if (!t) return false;
-      const title = (t.title || "").toLowerCase();
-      const author = (t.author || t.authorName || "").toLowerCase();
-      const search = searchTerm.toLowerCase();
-      
-      const matchesSearch = title.includes(search) || author.includes(search);
-      
-      // Filtrage flexible : vérifie 'genre' et 'category'
-      const matchesGenre = activeGenre === "Tous" || 
-                           t.genre === activeGenre || 
-                           t.category === activeGenre;
-                           
-      return matchesSearch && matchesGenre;
-    });
-  }, [texts, searchTerm, activeGenre]);
-
-  if (!mounted) return null;
-
-  if (loading && (!texts || texts.length === 0)) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
-        <Loader2 className="animate-spin text-teal-600" size={40} />
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
-      </div>
-    );
+async function getFile(path) {
+  const now = Date.now();
+  const cached = localCache.get(path);
+  if (cached && (now - cached.timestamp < CACHE_TTL)) {
+    return cached.data;
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+      headers: { 
+        'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Lisible-App'
+      },
+      cache: 'no-store'
+    });
+    
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    if (!data.content) return null;
+    
+    const b64 = data.content.replace(/\s/g, '');
+    const binString = atob(b64);
+    const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0));
+    const decodedContent = new TextDecoder().decode(bytes);
+    
+    const result = { content: JSON.parse(decodedContent), sha: data.sha };
+    if (CACHE_TTL > 0) localCache.set(path, { data: result, timestamp: now });
+    return result;
+  } catch (err) {
+    console.error(`Fetch error [${path}]:`, err.message);
+    return null;
+  }
+}
+
+async function updateFile(path, content, sha, message) {
+  localCache.delete(path);
+  const jsonString = JSON.stringify(content, null, 2);
+  const bytes = new TextEncoder().encode(jsonString);
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+  const encodedContent = btoa(binString);
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
+        'Content-Type': 'application/json',
+        'User-Agent': 'Lisible-App'
+      },
+      body: JSON.stringify({
+        message: `[DATA] ${message} [skip ci]`,
+        content: encodedContent,
+        sha: sha || undefined
+      }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error(`Update error [${path}]:`, err.message);
+    return false;
+  }
+}
+
+const getSafePath = (email) => {
+  if (!email) return null;
+  const safeEmail = email.toLowerCase().trim()
+    .replace(/@/g, '_')
+    .replace(/\./g, '_')
+    .replace(/[^a-z0-9_]/g, '');
+  return `data/users/${safeEmail}.json`;
+};
+
+const globalSort = (list) => {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort((a, b) => {
+    const certA = Number(a?.certified || a?.totalCertified || 0);
+    const certB = Number(b?.certified || b?.totalCertified || 0);
+    if (certB !== certA) return certB - certA;
+    const likesA = Number(a?.likes || a?.totalLikes || 0);
+    const likesB = Number(b?.likes || b?.totalLikes || 0);
+    if (likesB !== likesA) return likesB - likesA;
+    const dateA = a?.date ? new Date(a.date).getTime() : 0;
+    const dateB = b?.date ? new Date(b.date).getTime() : 0;
+    return dateB - dateA;
+  });
+};
+
+// --- ROUTES ---
+
+export async function POST(req) {
+  try {
+    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is not defined");
+    const body = await req.json();
+    const { action, userEmail, textId, duelId, amount, currentPassword, newPassword, adminToken, ...data } = body;
+    
+    const emailToUse = userEmail || data.email;
+    const targetPath = getSafePath(emailToUse);
+
+    if (action === 'register') {
+      const file = await getFile(targetPath);
+      if (file) return NextResponse.json({ error: "Ce compte existe déjà" }, { status: 400 });
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(data.password, salt);
+      const userData = {
+        email: data.email.toLowerCase().trim(),
+        name: data.name || "Nouvel Auteur",
+        li: data.referralCode ? 250 : 50,
+        status: "active",
+        notifications: [], followers: [], following: [], works: [],
+        bookmarks: [],
+        created_at: new Date().toISOString(),
+        ...data,
+        password: hashedPassword 
+      };
+      await updateFile(targetPath, userData, null, `👤 User Register: ${data.email}`);
+      const { password, ...safeUser } = userData;
+      return NextResponse.json({ success: true, user: safeUser });
+    }
+
+    if (action === 'login') {
+      let file = await getFile(targetPath);
+      if (!file) {
+        const legacyPath = `data/users/${emailToUse.toLowerCase().trim().replace(/@/g, '_')}.json`;
+        file = await getFile(legacyPath);
+      }
+      if (!file) return NextResponse.json({ error: "Compte introuvable" }, { status: 404 });
+      if (file.content.status === "deleted") {
+        return NextResponse.json({ 
+          error: "Ce compte est en attente de suppression.",
+          isDeleted: true,
+          email: file.content.email 
+        }, { status: 403 });
+      }
+      const storedPassword = file.content.password;
+      const providedPassword = data.password;
+      let isMatch = false;
+      const isHashed = typeof storedPassword === 'string' && storedPassword.startsWith('$2');
+      if (isHashed) {
+        isMatch = bcrypt.compareSync(providedPassword, storedPassword);
+        if (!isMatch) isMatch = bcrypt.compareSync(providedPassword.trim(), storedPassword);
+      } else {
+        isMatch = (providedPassword === storedPassword || providedPassword.trim() === storedPassword);
+        if (isMatch) {
+          const salt = bcrypt.genSaltSync(10);
+          file.content.password = bcrypt.hashSync(providedPassword.trim(), salt);
+          await updateFile(targetPath, file.content, file.sha, `🔐 Security Fix: Hashing plain password`);
+        }
+      }
+      if (!isMatch) return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
+      const { password, ...safeUser } = file.content;
+      return NextResponse.json({ success: true, user: safeUser });
+    }
+
+    if (action === 'publish') {
+      const pubId = data.id || `txt_${Date.now()}`;
+      const pubPath = `data/texts/${pubId}.json`;
+      const indexPath = `data/publications/index.json`;
+      const finalImage = data.image || data.imageBase64 || null;
+      const newPub = { ...data, id: pubId, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
+      const indexFile = await getFile(indexPath) || { content: [] };
+      let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
+      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: data.isConcours || false, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
+      indexContent = globalSort(indexContent);
+      await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
+      return NextResponse.json({ success: true, id: pubId });
+    }
+
+    if (action === 'toggle_bookmark') {
+      const userFile = await getFile(targetPath);
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      const user = userFile.content;
+      if (!user.bookmarks) user.bookmarks = [];
+      const exists = user.bookmarks.find(b => b.id === textId);
+      if (exists) {
+        user.bookmarks = user.bookmarks.filter(b => b.id !== textId);
+      } else {
+        user.bookmarks.push({ 
+          id: textId, 
+          title: data.title, 
+          author: data.authorName, 
+          date: new Date().toISOString() 
+        });
+      }
+      await updateFile(targetPath, user, userFile.sha, `🔖 Bookmark toggle: ${textId}`);
+      return NextResponse.json({ success: true, bookmarks: user.bookmarks });
+    }
+
+    if (action === 'broadcast') {
+      if (adminToken !== process.env.ADMIN_PASSWORD) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      }
+
+      let targetEmails = [];
+      if (Array.isArray(data.targetEmails) && data.targetEmails.length > 0) {
+        targetEmails = data.targetEmails;
+      } else {
+        const indexFile = await getFile(`data/publications/index.json`);
+        if (!indexFile) return NextResponse.json({ error: "Index introuvable" }, { status: 404 });
+        targetEmails = [...new Set(indexFile.content.map(p => p.authorEmail))];
+      }
       
-      {/* Header */}
-      <div className="text-center mb-16 space-y-4">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles size={14} className="text-teal-600" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-teal-600">Patrimoine Littéraire</span>
-          </div>
-          <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Les Archives.</h1>
-      </div>
+      const newSignal = {
+        id: `staff_${Date.now()}`,
+        type: data.type || "info",
+        message: data.message,
+        link: data.link || null,
+        date: new Date().toISOString(),
+        read: false
+      };
 
-      {/* Recherche et Filtres */}
-      <div className="space-y-10 mb-20">
-        <div className="relative max-w-2xl mx-auto group">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
-          <input
-            type="text"
-            placeholder="Rechercher une œuvre, une plume..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-7 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-sm"
-          />
-        </div>
+      let count = 0;
+      for (const email of targetEmails) {
+        const uPath = getSafePath(email);
+        const uFile = await getFile(uPath);
+        if (uFile) {
+          if (!uFile.content.notifications) uFile.content.notifications = [];
+          uFile.content.notifications.unshift(newSignal);
+          const success = await updateFile(uPath, uFile.content, uFile.sha, `📢 Broadcast Staff (Targeted)`);
+          if (success) count++;
+        }
+      }
+      return NextResponse.json({ success: true, count });
+    }
 
-        <div className="flex flex-wrap justify-center gap-3">
-          {genres.map((g) => (
-            <button
-              key={g}
-              onClick={() => setActiveGenre(g)}
-              className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border ${
-                activeGenre === g
-                ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105"
-                : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
-              }`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
+    if (action === 'saveDuelText') {
+      const duelFilePath = `data/duels.json`;
+      const file = await getFile(duelFilePath);
+      if (!file) return NextResponse.json({ error: "Fichier duels introuvable" }, { status: 404 });
+      const duels = Array.isArray(file.content) ? file.content : [];
+      const duelIndex = duels.findIndex(d => d.id === duelId);
+      if (duelIndex === -1) return NextResponse.json({ error: "Duel introuvable" }, { status: 404 });
+      if (duels[duelIndex].status === "finished") return NextResponse.json({ error: "Duel clos" }, { status: 403 });
+      if (!duels[duelIndex].texts) duels[duelIndex].texts = {};
+      duels[duelIndex].texts[data.email] = data.text;
+      await updateFile(duelFilePath, duels, file.sha, `✍️ Duel Text: ${data.email} in ${duelId}`);
+      return NextResponse.json({ success: true });
+    }
 
-      {/* Liste des manuscrits */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
-        {filteredTexts.map((item) => {
-          if (!item || !item.id) return null;
-          
-          const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
-          const authorEmail = item.authorEmail || "";
-          const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
-          const isOtherAdmin = ["jb7management@gmail.com"].includes(authorEmail);
-          const hasSceau = (item.certified || item.totalCertified || 0) > 0;
+    if (action === 'edit_text') {
+      const idToEdit = textId || data.id;
+      const path = `data/texts/${idToEdit}.json`;
+      const indexPath = `data/publications/index.json`;
+      const file = await getFile(path);
+      if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
+      const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
+      await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
+        if (itemIndex > -1) {
+          indexFile.content[itemIndex] = { ...indexFile.content[itemIndex], title: data.title || indexFile.content[itemIndex].title, category: data.category || indexFile.content[itemIndex].category, genre: data.genre || indexFile.content[itemIndex].genre, image: data.image || indexFile.content[itemIndex].image };
+          await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
+        }
+      }
+      return NextResponse.json({ success: true });
+    }
 
-          const displayViews = item.views || item.totalViews || 0;
-          const displayLikes = item.likes || item.totalLikes || 0;
+    if (action === 'delete_text') {
+      const idToDelete = textId || data.textId;
+      const path = `data/texts/${idToDelete}.json`;
+      const indexPath = `data/publications/index.json`;
+      const file = await getFile(path);
+      if (file) {
+        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha }) });
+      }
+      const indexFile = await getFile(indexPath);
+      if (indexFile && Array.isArray(indexFile.content)) {
+        const newIndex = indexFile.content.filter(t => t.id !== idToDelete);
+        await updateFile(indexPath, newIndex, indexFile.sha, `🔄 Index Sync (Delete): ${idToDelete}`);
+      }
+      return NextResponse.json({ success: true });
+    }
 
-          return (
-            <Link href={`/texts/${item.id}`} key={item.id} className="group">
-              <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
-                isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
-              } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
-                
-                {!isDuel ? (
-                  <div className="h-64 bg-slate-100 relative overflow-hidden">
-                    <img
-                      src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                      onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
-                    />
-                    
-                    <div className="absolute top-6 left-6 flex flex-col gap-2">
-                      {isAnnouncementAccount ? (
-                        <span className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                          <Megaphone size={12} /> Annonce
-                        </span>
-                      ) : isOtherAdmin ? (
-                        <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                          <ShieldCheck size={12} /> Officiel
-                        </span>
-                      ) : hasSceau && (
-                        <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                          <ShieldCheck size={12} /> Certifié
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-32 bg-teal-50/50 flex items-center px-10 border-b border-teal-100/50">
-                    <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                      <Trophy size={12} /> Duel de Plume
-                    </span>
-                  </div>
-                )}
+    if (action === 'follow' || action === 'unfollow') {
+      const follower = await getFile(getSafePath(userEmail));
+      const target = await getFile(getSafePath(data.targetEmail));
+      if (!follower || !target) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      const targetEmailClean = data.targetEmail.toLowerCase().trim();
+      const userEmailClean = userEmail.toLowerCase().trim();
+      if (action === 'follow') {
+        if (!follower.content.following.includes(targetEmailClean)) {
+          follower.content.following.push(targetEmailClean);
+          target.content.followers.push(userEmailClean);
+          target.content.notifications.unshift({ id: `follow_${Date.now()}`, type: "follow", message: `${follower.content.name} s'est abonné à vous !`, date: new Date().toISOString(), read: false });
+        }
+      } else {
+        follower.content.following = follower.content.following.filter(e => e !== targetEmailClean);
+        target.content.followers = target.content.followers.filter(e => e !== userEmailClean);
+      }
+      await updateFile(getSafePath(userEmail), follower.content, follower.sha, `👥 ${action}: following`);
+      await updateFile(getSafePath(data.targetEmail), target.content, target.sha, `👥 ${action}: followers`);
+      return NextResponse.json({ success: true, followersCount: target.content.followers.length });
+    }
 
-                <div className="p-10 flex-grow flex flex-col">
-                  <div className="flex items-center gap-3 mb-5">
-                    <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-1">
-                      {isDuel && <AlignLeft size={10} />} {item.category || item.genre || "Écrit"}
-                    </span>
-                    <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
-                      {item.date ? new Date(item.date).getFullYear() : "2026"}
-                    </span>
-                    {hasSceau && (
-                        <span className="ml-auto text-teal-600 animate-pulse">
-                            <ShieldCheck size={16} />
-                        </span>
-                    )}
-                  </div>
+    if (action === 'transfer_li' || action === 'gift_li') {
+      if (amount < ECONOMY.MIN_TRANSFER) return NextResponse.json({ error: "Minimum non atteint" }, { status: 400 });
+      const sender = await getFile(getSafePath(userEmail));
+      const receiver = await getFile(getSafePath(data.recipientEmail));
+      if (!sender || !receiver) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      if (sender.content.li < amount) return NextResponse.json({ error: "Li insuffisants" }, { status: 400 });
+      sender.content.li -= amount;
+      receiver.content.li += amount;
+      receiver.content.notifications.unshift({ id: `notif_${Date.now()}`, type: "gift", message: `Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`, date: new Date().toISOString(), read: false });
+      await updateFile(getSafePath(userEmail), sender.content, sender.sha, `💸 Sent Li`);
+      await updateFile(getSafePath(data.recipientEmail), receiver.content, receiver.sha, `💰 Received Li`);
+      return NextResponse.json({ success: true });
+    }
 
-                  <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
-                    {item.title || "Sans titre"}
-                  </h2>
+    return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
 
-                  <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
-                    {item.summary || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé dans les registres de l'Atelier...")}
-                  </p>
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const type = searchParams.get('type');
+  const id = searchParams.get('id');
+  try {
+    if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN is missing");
+    if (type === 'text') {
+        const text = await getFile(`data/texts/${id}.json`);
+        return NextResponse.json(text);
+    }
+    if (type === 'user') {
+        const user = await getFile(getSafePath(id));
+        if (user) {
+            user.content.li_usd_value = (user.content.li * ECONOMY.LI_VALUE_USD).toFixed(2);
+            user.content.is_eligible_withdrawal = (user.content.li >= ECONOMY.WITHDRAWAL_THRESHOLD && (user.content.followers?.length || 0) >= ECONOMY.REQUIRED_FOLLOWERS);
+            delete user.content.password;
+        }
+        return NextResponse.json(user);
+    }
+    
+    if (type === 'library' || type === 'publications') {
+      const index = await getFile(`data/publications/index.json`);
+      if (index && Array.isArray(index.content)) {
+        index.content = globalSort(index.content);
+        // Garantir le renvoi d'un objet avec .content pour le composant front-end
+        return NextResponse.json({ content: index.content });
+      }
+      return NextResponse.json({ content: [] });
+    }
+    
+    return NextResponse.json({ error: "Type invalide" }, { status: 400 });
+  } catch (e) {
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
 
-                  <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white">
-                        {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
-                          {item.author || item.authorName || "Anonyme"}
-                        </span>
-                        <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">
-                          {isAnnouncementAccount ? "Compte Officiel" : hasSceau ? "Plume Certifiée" : "Auteur Scellé"}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {!isAnnouncementAccount && (
-                      <div className="flex gap-5 text-slate-300 text-[11px] font-black">
-                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600">
-                          <Eye size={18} /> {displayViews}
-                        </span>
-                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500">
-                          <Heart size={18} /> {displayLikes}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </article>
-            </Link>
-          );
-        })}
-      </div>
+export async function PATCH(req) {
+  try {
+    const body = await req.json();
+    const { id, action, notifId } = body;
 
-      {/* État Vide */}
-      {filteredTexts.length === 0 && !loading && (
-        <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
-           <Search className="text-slate-100 mx-auto mb-6" size={64} />
-           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
-             Aucun manuscrit n'a été trouvé dans ce compartiment des archives.
-           </p>
-        </div>
-      )}
-    </div>
-  );
+    if (action === 'mark_read') {
+      const userPath = getSafePath(id);
+      const userFile = await getFile(userPath);
+      if (!userFile) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      
+      const notifs = userFile.content.notifications || [];
+      userFile.content.notifications = notifs.map(n => n.id === notifId ? { ...n, read: true } : n);
+      
+      await updateFile(userPath, userFile.content, userFile.sha, `🔕 Notification read: ${notifId}`);
+      return NextResponse.json({ success: true });
+    }
+
+    const path = `data/texts/${id}.json`;
+    const indexPath = `data/publications/index.json`;
+    const textFile = await getFile(path);
+    if (!textFile) return NextResponse.json({ error: "Texte introuvable" }, { status: 404 });
+    const authorPath = getSafePath(textFile.content.authorEmail);
+    const authorFile = await getFile(authorPath);
+    const indexFile = await getFile(indexPath);
+
+    if (action === 'view') textFile.content.views = (textFile.content.views || 0) + 1;
+    if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
+    if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
+
+    if (indexFile && Array.isArray(indexFile.content)) {
+      const itemIndex = indexFile.content.findIndex(t => t.id === id);
+      if (itemIndex > -1) {
+        indexFile.content[itemIndex].views = textFile.content.views;
+        indexFile.content[itemIndex].likes = textFile.content.likes;
+        indexFile.content[itemIndex].certified = textFile.content.certified;
+        indexFile.content = globalSort(indexFile.content);
+        await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
+      }
+    }
+    if (authorFile) {
+      if (action === 'like') {
+        authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`, date: new Date().toISOString(), read: false });
+      }
+      if (action === 'certify') {
+        authorFile.content.li = (authorFile.content.li || 0) + 1;
+        authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`, date: new Date().toISOString(), read: false });
+      }
+      await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
+    }
+    await updateFile(path, textFile.content, textFile.sha, `📈 Text Update: ${action}`);
+    return NextResponse.json({ success: true, count: action === 'view' ? textFile.content.views : (action === 'like' ? textFile.content.likes : textFile.content.certified) });
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }
