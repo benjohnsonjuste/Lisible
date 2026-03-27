@@ -36,12 +36,10 @@ export default function Bibliotheque({ initialTexts = [] }) {
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
       
-      // Ton API renvoie directement l'objet du fichier index.json
-      // On vérifie si 'content' existe car ton helper getFile renvoie { content: ..., sha: ... }
+      // Ton API renvoie un objet { content: [...] } ou un tableau directement
       if (json && Array.isArray(json.content)) {
-        setTexts(json.content); // Le tri globalSort est déjà fait côté API
+        setTexts(json.content); 
       } else if (Array.isArray(json)) {
-        // Au cas où l'API renvoie directement le tableau
         setTexts(json);
       }
     } catch (e) { 
@@ -55,8 +53,9 @@ export default function Bibliotheque({ initialTexts = [] }) {
   };
 
   const filteredTexts = useMemo(() => {
-    if (!Array.isArray(texts)) return [];
-    return texts.filter(t => {
+    // Sécurité supplémentaire pour éviter le crash si texts devient null
+    const baseTexts = Array.isArray(texts) ? texts : [];
+    return baseTexts.filter(t => {
       if (!t) return false;
       const title = (t.title || "").toLowerCase();
       const author = (t.author || t.authorName || "").toLowerCase();
@@ -74,7 +73,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
   // Éviter l'erreur d'hydratation (SSR vs Client)
   if (!mounted) return null;
 
-  if (loading && texts.length === 0) {
+  if (loading && (!texts || texts.length === 0)) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
         <Loader2 className="animate-spin text-teal-600" size={40} />
