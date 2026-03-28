@@ -7,8 +7,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Configuration GitHub
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+  path: "data/publications/index.json"
+};
+
 export default function Bibliotheque({ initialTexts = [] }) {
-  // Sécurité : s'assurer que texts est toujours un tableau
   const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,33 +31,42 @@ export default function Bibliotheque({ initialTexts = [] }) {
   }, []);
 
   const fetchInitial = async () => {
-    // On ne met loading=true que si on n'a vraiment rien à afficher
     if (!texts || texts.length === 0) setLoading(true);
     
     try {
-      const res = await fetch(`/api/github-db?type=library`);
-      const json = await res.json();
+      // Appel direct au fichier index.json via l'API GitHub Content
+      const res = await fetch(
+        `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`,
+        { cache: 'no-store' }
+      );
       
-      if (json && Array.isArray(json.content)) {
-        const sorted = [...json.content].sort((a, b) => {
-          const certA = Number(a?.certified || a?.totalCertified || 0);
-          const certB = Number(b?.certified || b?.totalCertified || 0);
-          if (certB !== certA) return certB - certA;
+      if (!res.ok) throw new Error("Erreur de récupération");
 
-          const likesA = Number(a?.likes || a?.totalLikes || 0);
-          const likesB = Number(b?.likes || b?.totalLikes || 0);
-          if (likesB !== likesA) return likesB - likesA;
+      const data = await res.json();
+      // Décoder le contenu base64 de GitHub
+      const content = JSON.parse(atob(data.content));
+      
+      // On s'assure que le contenu est un tableau (soit direct, soit dans une clé 'publications')
+      const rawList = Array.isArray(content) ? content : (content.publications || []);
 
-          // Sécurité sur la date pour le tri
-          const dateA = a?.date ? new Date(a.date).getTime() : 0;
-          const dateB = b?.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
-        });
-        setTexts(sorted);
-      }
+      const sorted = [...rawList].sort((a, b) => {
+        const certA = Number(a?.certified || a?.totalCertified || 0);
+        const certB = Number(b?.certified || b?.totalCertified || 0);
+        if (certB !== certA) return certB - certA;
+
+        const likesA = Number(a?.likes || a?.totalLikes || 0);
+        const likesB = Number(b?.likes || b?.totalLikes || 0);
+        if (likesB !== likesA) return likesB - likesA;
+
+        const dateA = a?.date ? new Date(a.date).getTime() : 0;
+        const dateB = b?.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setTexts(sorted);
     } catch (e) { 
       console.error("Fetch error:", e); 
-      if (!texts || texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
+      if (!texts || texts.length === 0) toast.error("Le Grand Livre est inaccessible.");
     } finally { 
       setLoading(false); 
     }
@@ -74,7 +89,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
     });
   }, [texts, searchTerm, activeGenre]);
 
-  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
   if (!mounted && initialTexts.length === 0) return null;
 
   if (loading && (!texts || texts.length === 0)) return (
@@ -126,8 +140,9 @@ export default function Bibliotheque({ initialTexts = [] }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
         {filteredTexts.map((item) => {
-          if (!item || !item.id) return null;
+          if (!item || (!item.id && !item.title)) return null;
           
+          const itemId = item.id || item.title?.replace(/\s+/g, '-').toLowerCase();
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const authorEmail = item.authorEmail || "";
           const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
@@ -138,7 +153,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
           const displayLikes = item.likes || item.totalLikes || 0;
 
           return (
-            <Link href={`/texts/${item.id}`} key={item.id} className="group">
+            <Link href={`/texts/${itemId}`} key={itemId} className="group">
               <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
                 isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
               } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
@@ -146,7 +161,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                 {!isDuel ? (
                   <div className="h-64 bg-slate-100 relative overflow-hidden">
                     <img
-                      src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
+                      src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${itemId}`}
                       alt=""
                       className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                       onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
@@ -197,7 +212,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                   </h2>
 
                   <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
-                    {item.summary || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé dans les registres de l'Atelier...")}
+                    {item.summary || item.excerpt || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé dans les registres...")}
                   </p>
 
                   <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
@@ -237,7 +252,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
         <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
             <Search className="text-slate-100 mx-auto mb-6" size={64} />
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
-              Aucun manuscrit n'a été trouvé dans ce compartiment des archives.
+              Aucun manuscrit trouvé dans index.json.
             </p>
         </div>
       )}
