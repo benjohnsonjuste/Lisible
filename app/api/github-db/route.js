@@ -358,16 +358,11 @@ export async function GET(req) {
         }
         return NextResponse.json(user);
     }
-    
     if (type === 'library' || type === 'publications') {
       const index = await getFile(`data/publications/index.json`);
-      if (index && Array.isArray(index.content)) {
-        index.content = globalSort(index.content);
-        return NextResponse.json({ content: index.content });
-      }
-      return NextResponse.json({ content: [] });
+      if (index && Array.isArray(index.content)) index.content = globalSort(index.content);
+      return NextResponse.json(index);
     }
-    
     return NextResponse.json({ error: "Type invalide" }, { status: 400 });
   } catch (e) {
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
