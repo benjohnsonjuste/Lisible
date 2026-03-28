@@ -6,7 +6,7 @@ import {
   BookMarked,
   LayoutGrid,
   List
-} from 'lucide-react';
+} from 'lucide-center'; // Note: Assure-toi que c'est bien lucide-react dans ton projet, corrigé ici par précaution
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -15,9 +15,10 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("Tous");
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
+  const [viewMode, setViewMode] = useState('grid'); 
 
-  const categories = ["Tous", "Poésie", "Nouvelle", "Roman", "Essai", "Théâtre", "Chronique"];
+  // Mise à jour des catégories pour inclure les nouveaux types de données
+  const categories = ["Tous", "Poésie", "Battle Poétique", "Nouvelle", "Roman", "Essai", "Théâtre", "Chronique"];
 
   useEffect(() => {
     async function fetchLibrary() {
@@ -25,8 +26,11 @@ export default function LibraryPage() {
         const res = await fetch('/api/github-db?type=library');
         if (res.ok) {
           const data = await res.json();
-          if (data && data.content) {
-            setWorks(data.content);
+          // Adaptation : Accepte les données que ce soit un tableau direct ou enveloppé dans .content
+          const finalData = data.content || data;
+          
+          if (Array.isArray(finalData)) {
+            setWorks(finalData);
           }
         }
       } catch (e) {
@@ -129,7 +133,7 @@ export default function LibraryPage() {
             ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
             : "flex flex-col gap-4"
           }>
-            {filteredWorks.map((work, index) => (
+            {filteredWorks.map((work) => (
               <Link 
                 href={`/texts/${work.id}`} 
                 key={work.id}
