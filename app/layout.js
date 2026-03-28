@@ -7,11 +7,14 @@ import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import dynamic from "next/dynamic";
-import LiveNotificationListener from "@/components/LiveNotificationListener";
 import PushActivation from "@/components/PushActivation";
 
 // Chargement dynamique des composants clients
 const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { 
+  ssr: false 
+});
+
+const LiveNotificationListener = dynamic(() => import("@/components/LiveNotificationListener"), { 
   ssr: false 
 });
 
@@ -84,7 +87,6 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <ServiceWorkerRegistration />
           
-          {/* Ces composants sont "use client" à l'intérieur, donc ils fonctionnent ici */}
           <LiveNotificationListener />
           <PushActivation />
           
