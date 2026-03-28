@@ -1,237 +1,246 @@
 "use client";
-
 import React, { useEffect, useState, useMemo } from "react";
-import { 
-  BookOpen, Search, Loader2, Star, Eye, Clock, 
-  ChevronRight, Filter, Book, Sparkles, Hash
-} from "lucide-react";
 import Link from "next/link";
+import { 
+  Eye, Heart, Loader2, Trophy, ShieldCheck, 
+  Search, Sparkles, Megaphone, AlignLeft
+} from "lucide-react";
 import { toast } from "sonner";
 
-const GITHUB_CONFIG = {
-  owner: "benjohnsonjuste",
-  repo: "Lisible",
-};
-
-// Cache simple pour éviter le rechargement au changement de page interne
-let libraryCache = null;
-
-export default function LibraryPage() {
-  const [books, setBooks] = useState(libraryCache || []);
-  const [loading, setLoading] = useState(!libraryCache);
+export default function Bibliotheque({ initialTexts = [] }) {
+  // Sécurité : s'assurer que texts est toujours un tableau
+  const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("Tous");
-  const [visibleCount, setVisibleCount] = useState(12);
+  const [mounted, setMounted] = useState(false);
+  
+  const [activeGenre, setActiveGenre] = useState("Tous");
+  const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
   useEffect(() => {
-    loadLibraryData();
+    setMounted(true);
+    fetchInitial();
+    const interval = setInterval(fetchInitial, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  async function loadLibraryData() {
+  const fetchInitial = async () => {
+    // On ne met loading=true que si on n'a vraiment rien à afficher
+    if (!texts || texts.length === 0) setLoading(true);
+    
     try {
-      const pubUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`;
-      const res = await fetch(pubUrl);
+      const res = await fetch(`/api/github-db?type=library`);
+      const json = await res.json();
       
-      if (!res.ok) throw new Error("Impossible d'accéder aux publications");
+      if (json && Array.isArray(json.content)) {
+        const sorted = [...json.content].sort((a, b) => {
+          const certA = Number(a?.certified || a?.totalCertified || 0);
+          const certB = Number(b?.certified || b?.totalCertified || 0);
+          if (certB !== certA) return certB - certA;
 
-      const files = await res.json();
-      
-      // Récupération de chaque fichier JSON individuellement
-      const booksData = await Promise.all(
-        files
-          .filter(f => f.name.endsWith('.json'))
-          .map(async (file) => {
-            try {
-              const fileRes = await fetch(file.download_url);
-              const data = await fileRes.json();
-              return {
-                id: data.id || file.name.replace('.json', ''),
-                title: data.title || "Titre inconnu",
-                author: data.authorName || "Plume Anonyme",
-                authorEmail: data.authorEmail,
-                category: data.category || "Littérature",
-                description: data.description || data.excerpt || "Aucune description disponible.",
-                cover: data.coverImage || data.image || null,
-                views: Number(data.views || 0),
-                likes: Number(data.likes || 0),
-                date: data.createdAt || data.date || new Date().toISOString(),
-                readTime: data.readTime || "5 min"
-              };
-            } catch (err) { return null; }
-          })
-      );
+          const likesA = Number(a?.likes || a?.totalLikes || 0);
+          const likesB = Number(b?.likes || b?.totalLikes || 0);
+          if (likesB !== likesA) return likesB - likesA;
 
-      const finalBooks = booksData
-        .filter(Boolean)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      libraryCache = finalBooks;
-      setBooks(finalBooks);
-    } catch (e) {
-      console.error("Erreur Library:", e);
-      toast.error("Échec du chargement de la bibliothèque.");
-    } finally {
-      setLoading(false);
+          // Sécurité sur la date pour le tri
+          const dateA = a?.date ? new Date(a.date).getTime() : 0;
+          const dateB = b?.date ? new Date(b.date).getTime() : 0;
+          return dateB - dateA;
+        });
+        setTexts(sorted);
+      }
+    } catch (e) { 
+      console.error("Fetch error:", e); 
+      if (!texts || texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
+    } finally { 
+      setLoading(false); 
     }
-  }
+  };
 
-  // Filtrage intelligent
-  const filteredBooks = useMemo(() => {
-    return books.filter(book => {
-      const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            book.author.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = filterCategory === "Tous" || book.category === filterCategory;
-      return matchesSearch && matchesCategory;
+  const filteredTexts = useMemo(() => {
+    if (!Array.isArray(texts)) return [];
+    return texts.filter(t => {
+      if (!t) return false;
+      const title = (t.title || "").toLowerCase();
+      const author = (t.author || t.authorName || "").toLowerCase();
+      const search = searchTerm.toLowerCase();
+      
+      const matchesSearch = title.includes(search) || author.includes(search);
+      const matchesGenre = activeGenre === "Tous" || 
+                           t.genre === activeGenre || 
+                           t.category === activeGenre;
+                           
+      return matchesSearch && matchesGenre;
     });
-  }, [books, searchTerm, filterCategory]);
+  }, [texts, searchTerm, activeGenre]);
 
-  // Extraction des catégories uniques
-  const categories = useMemo(() => {
-    const cats = books.map(b => b.category);
-    return ["Tous", ...new Set(cats)];
-  }, [books]);
+  // Éviter l'erreur d'hydratation : ne rien rendre de dynamique avant le mount
+  if (!mounted && initialTexts.length === 0) return null;
 
-  if (loading && books.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#FCFBF9] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="animate-spin text-teal-600" size={40} />
-        <p className="text-slate-400 font-medium italic">Ouverture des archives...</p>
-      </div>
-    );
-  }
+  if (loading && (!texts || texts.length === 0)) return (
+    <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#FCFBF9] pb-20">
-      {/* Header Stylisé */}
-      <div className="max-w-7xl mx-auto px-6 pt-24 pb-16">
-        <header className="flex flex-col lg:flex-row justify-between items-end gap-8 mb-16">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 text-teal-600 font-bold uppercase tracking-[0.3em] text-xs">
-              <BookOpen size={16} />
-              <span>Archives Numériques</span>
-            </div>
-            <h1 className="text-7xl md:text-8xl font-black italic tracking-tighter text-slate-900 leading-[0.8]">
-              Biblio<span className="text-teal-600">.</span>
-            </h1>
+    <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
+      
+      <div className="text-center mb-16 space-y-4">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Sparkles size={14} className="text-teal-600" />
+            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-teal-600">Patrimoine Littéraire</span>
           </div>
+          <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Les Archives.</h1>
+      </div>
 
-          <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-4">
-            <div className="relative group w-full sm:w-80">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-500 transition-colors" size={18} />
-              <input 
-                type="text" 
-                placeholder="Rechercher un ouvrage..." 
-                className="w-full bg-white border-2 border-slate-100 rounded-2xl pl-14 pr-6 py-4 shadow-sm outline-none focus:border-teal-500/50 transition-all text-sm"
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-        </header>
+      <div className="space-y-10 mb-20">
+        <div className="relative max-w-2xl mx-auto group">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
+          <input
+            type="text"
+            placeholder="Rechercher une œuvre, une plume..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-7 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-sm"
+          />
+        </div>
 
-        {/* Filtres de Catégories */}
-        <div className="flex flex-wrap gap-2 mb-12">
-          {categories.map((cat) => (
+        <div className="flex flex-wrap justify-center gap-3">
+          {genres.map((g) => (
             <button
-              key={cat}
-              onClick={() => setFilterCategory(cat)}
-              className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
-                filterCategory === cat 
-                ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200" 
-                : "bg-white text-slate-400 border-slate-100 hover:border-slate-300"
+              key={g}
+              onClick={() => setActiveGenre(g)}
+              className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border ${
+                activeGenre === g
+                  ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105"
+                  : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
               }`}
             >
-              {cat}
+              {g}
             </button>
           ))}
         </div>
-
-        {/* Grille d'ouvrages */}
-        {filteredBooks.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredBooks.slice(0, visibleCount).map((book) => (
-              <BookCard key={book.id} book={book} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-            <Book className="mx-auto text-slate-200 mb-4" size={48} />
-            <p className="text-slate-400 italic">Aucun ouvrage ne correspond à votre recherche.</p>
-          </div>
-        )}
-
-        {/* Load More */}
-        {filteredBooks.length > visibleCount && (
-          <div className="mt-16 text-center">
-            <button 
-              onClick={() => setVisibleCount(prev => prev + 12)}
-              className="px-10 py-5 bg-white border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-900 hover:text-white transition-all shadow-xl"
-            >
-              Parcourir les étagères suivantes
-            </button>
-          </div>
-        )}
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
+        {filteredTexts.map((item) => {
+          if (!item || !item.id) return null;
+          
+          const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
+          const authorEmail = item.authorEmail || "";
+          const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
+          const isOtherAdmin = ["jb7management@gmail.com"].includes(authorEmail);
+          const hasSceau = (item.certified || item.totalCertified || 0) > 0;
+
+          const displayViews = item.views || item.totalViews || 0;
+          const displayLikes = item.likes || item.totalLikes || 0;
+
+          return (
+            <Link href={`/texts/${item.id}`} key={item.id} className="group">
+              <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
+                isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
+              } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
+                
+                {!isDuel ? (
+                  <div className="h-64 bg-slate-100 relative overflow-hidden">
+                    <img
+                      src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
+                      alt=""
+                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                      onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
+                    />
+                    
+                    <div className="absolute top-6 left-6 flex flex-col gap-2">
+                      {isAnnouncementAccount ? (
+                        <span className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                          <Megaphone size={12} /> Annonce
+                        </span>
+                      ) : isOtherAdmin ? (
+                        <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                          <ShieldCheck size={12} /> Officiel
+                        </span>
+                      ) : hasSceau && (
+                        <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                          <ShieldCheck size={12} /> Certifié
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-32 bg-teal-50/50 flex items-center px-10 border-b border-teal-100/50">
+                    <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                      <Trophy size={12} /> Duel de Plume
+                    </span>
+                  </div>
+                )}
+
+                <div className="p-10 flex-grow flex flex-col">
+                  <div className="flex items-center gap-3 mb-5">
+                    <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-1">
+                      {isDuel && <AlignLeft size={10} />} {item.category || item.genre || "Écrit"}
+                    </span>
+                    <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                    <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
+                      {mounted && item.date ? new Date(item.date).getFullYear() : "2026"}
+                    </span>
+                    {hasSceau && (
+                        <span className="ml-auto text-teal-600 animate-pulse">
+                            <ShieldCheck size={16} />
+                        </span>
+                    )}
+                  </div>
+
+                  <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
+                    {item.title || "Sans titre"}
+                  </h2>
+
+                  <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
+                    {item.summary || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé dans les registres de l'Atelier...")}
+                  </p>
+
+                  <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white">
+                        {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
+                          {item.author || item.authorName || "Anonyme"}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">
+                          {isAnnouncementAccount ? "Compte Officiel" : hasSceau ? "Plume Certifiée" : "Auteur Scellé"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {!isAnnouncementAccount && (
+                      <div className="flex gap-5 text-slate-300 text-[11px] font-black">
+                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600">
+                          <Eye size={18} /> {displayViews}
+                        </span>
+                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500">
+                          <Heart size={18} /> {displayLikes}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </article>
+            </Link>
+          );
+        })}
+      </div>
+
+      {filteredTexts.length === 0 && !loading && mounted && (
+        <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
+            <Search className="text-slate-100 mx-auto mb-6" size={64} />
+            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
+              Aucun manuscrit n'a été trouvé dans ce compartiment des archives.
+            </p>
+        </div>
+      )}
     </div>
-  );
-}
-
-function BookCard({ book }) {
-  return (
-    <Link href={`/read/${book.id}`} className="group">
-      <div className="bg-white rounded-[2.5rem] p-5 border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 h-full flex flex-col">
-        {/* Cover Preview */}
-        <div className="relative aspect-[3/4] rounded-[2rem] overflow-hidden mb-6 bg-slate-50 border border-slate-100">
-          <img 
-            src={book.cover || `https://images.unsplash.com/photo-1543005139-059c1525938e?q=80&w=800`}
-            alt={book.title}
-            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
-            <Star size={10} className="text-amber-500 fill-amber-500" />
-            <span className="text-[10px] font-black text-slate-900">{book.likes}</span>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="px-2 grow flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[9px] font-black text-teal-600 uppercase tracking-widest bg-teal-50 px-2 py-0.5 rounded-md">
-              {book.category}
-            </span>
-            <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1">
-              <Clock size={10} /> {book.readTime}
-            </span>
-          </div>
-          
-          <h3 className="text-xl font-black italic text-slate-900 tracking-tight leading-tight mb-2 group-hover:text-teal-600 transition-colors">
-            {book.title}
-          </h3>
-          
-          <p className="text-slate-500 text-xs line-clamp-2 mb-6 italic leading-relaxed">
-            {book.description}
-          </p>
-
-          <div className="mt-auto pt-4 border-t border-slate-50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                <img 
-                  src={`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${book.authorEmail}`} 
-                  alt={book.author}
-                />
-              </div>
-              <span className="text-[10px] font-bold text-slate-700 uppercase tracking-tight">
-                {book.author}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <Eye size={12} />
-              <span className="text-[10px] font-bold">{book.views}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Link>
   );
 }
