@@ -5,11 +5,14 @@ import Footer from "../components/Footer";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import dynamic from "next/dynamic";
-import PushActivation from "@/components/PushActivation";
 
-// Chargement dynamique des composants clients
+// --- CHARGEMENT DYNAMIQUE (Client-side only) ---
+// On force Next.js à ignorer ces composants lors du rendu serveur (SSR)
+const ServiceWorkerRegistration = dynamic(() => import("@/components/ServiceWorkerRegistration"), { 
+  ssr: false 
+});
+
 const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { 
   ssr: false 
 });
@@ -18,6 +21,11 @@ const LiveNotificationListener = dynamic(() => import("@/components/LiveNotifica
   ssr: false 
 });
 
+const PushActivation = dynamic(() => import("@/components/PushActivation"), { 
+  ssr: false 
+});
+
+// --- POLICES ---
 const inter = Inter({ 
   subsets: ['latin'], 
   variable: '--font-inter',
@@ -31,6 +39,7 @@ const lora = Lora({
   display: 'swap',
 });
 
+// --- METADATA ---
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -66,7 +75,6 @@ export default function RootLayout({ children }) {
           crossOrigin="anonymous"
         ></script>
         
-        {/* Script de thème injecté côté serveur pour éviter le flash blanc */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -85,15 +93,17 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-teal-100 selection:text-teal-900">
         <AuthProvider>
+          {/* Composants Clients isolés du SSR */}
           <ServiceWorkerRegistration />
-          
           <LiveNotificationListener />
           <PushActivation />
           
           <Navbar />
+          
           <main className="flex-1 w-full pt-20 relative">
             {children}
           </main>
+          
           <InstallPrompt />
           <Footer />
           
