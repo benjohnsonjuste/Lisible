@@ -11,7 +11,9 @@ const ADMINS = [
   "jb7management@gmail.com", "cmo.lablitteraire7@gmail.com"
 ];
 
-// --- NOUVELLE FONCTION GET POUR RÉPONDRE AU POLLING DU COMPOSANT ---
+/**
+ * RÉCUPÉRATION (GET) : Permet au LiveNotificationListener de vérifier l'état
+ */
 export async function GET() {
   try {
     const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
@@ -20,7 +22,7 @@ export async function GET() {
         "Cache-Control": "no-cache",
         "Accept": "application/vnd.github.v3+json"
       },
-      next: { revalidate: 0 } // Désactive le cache Next.js
+      next: { revalidate: 0 } 
     });
 
     if (!res.ok) return NextResponse.json({ isActive: false });
@@ -30,10 +32,13 @@ export async function GET() {
     
     return NextResponse.json(content);
   } catch (error) {
-    return NextResponse.json({ isActive: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ isActive: false }, { status: 500 });
   }
 }
 
+/**
+ * UTILITAIRE : Mise à jour du fichier sur GitHub
+ */
 async function updateFile(content, message) {
   const getRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
     headers: { 
@@ -68,12 +73,15 @@ async function updateFile(content, message) {
   return updateRes.ok;
 }
 
+/**
+ * ACTIONS (POST) : Start, Archive, Comment, Heart
+ */
 export async function POST(req) {
   try {
     const body = await req.json();
     const { action, admin, type, title, user, text, avatar, x, playbackId, guestName } = body;
 
-    // A. Action : Démarrer le Live
+    // 1. Action : Démarrer le Live
     if (action === "start") {
       if (!ADMINS.includes(admin?.toLowerCase())) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
       
@@ -85,14 +93,15 @@ export async function POST(req) {
         startedAt: new Date().toISOString(),
         roomID: Buffer.from(admin + Date.now()).toString('base64').substring(0, 12),
         guest: guestName || null,
-        transcript: [] 
+        transcript: [],
+        hearts: 0
       };
       
       const success = await updateFile(liveData, "🎙️ Podcast Studio Started");
       return success ? NextResponse.json(liveData) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // B. Action : ARCHIVER LE PODCAST
+    // 2. Action : ARCHIVER
     if (action === "archive-podcast") {
       if (!ADMINS.includes(admin?.toLowerCase())) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
@@ -106,8 +115,7 @@ export async function POST(req) {
 
       const end = new Date();
       const start = new Date(liveData.startedAt);
-      const diffMs = end - start;
-      const duration = Math.floor(diffMs / 60000) + " min";
+      const duration = Math.floor((end - start) / 60000) + " min";
 
       liveData.isActive = false;
       liveData.endedAt = end.toISOString();
@@ -115,11 +123,35 @@ export async function POST(req) {
       liveData.duration = duration;
 
       const success = await updateFile(liveData, `💾 Podcast Archived: ${liveData.title}`);
-      return success ? NextResponse.json({ success: true, playbackId }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
+      return success ? NextResponse.json({ success: true }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
+    // 3. Action : COMMENTAIRE OU COEUR
     if (action === "comment" || action === "heart") {
-       // Ton code existant ici...
+      const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
+        headers: { Authorization: `Bearer ${TOKEN}` }, cache: 'no-store'
+      });
+      if (!res.ok) return NextResponse.json({ error: "Live not found" }, { status: 404 });
+      
+      const fileData = await res.json();
+      const liveData = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'));
+
+      if (action === "comment") {
+        const newComment = {
+          user: user || "Anonyme",
+          text: text || "",
+          avatar: avatar || null,
+          time: new Date().toISOString()
+        };
+        liveData.transcript = [newComment, ...(liveData.transcript || [])].slice(0, 100);
+      } 
+      
+      if (action === "heart") {
+        liveData.hearts = (liveData.hearts || 0) + 1;
+      }
+
+      const success = await updateFile(liveData, `💬 Update Live Interaction`);
+      return success ? NextResponse.json({ success: true }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
     return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
