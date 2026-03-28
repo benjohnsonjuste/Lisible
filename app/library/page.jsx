@@ -6,7 +6,7 @@ import {
   BookMarked,
   LayoutGrid,
   List
-} from 'lucide-center'; // Note: Assure-toi que c'est bien lucide-react dans ton projet, corrigé ici par précaution
+} from 'lucide-react'; // Corrigé ici : lucide-react
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -17,7 +17,6 @@ export default function LibraryPage() {
   const [activeCategory, setActiveCategory] = useState("Tous");
   const [viewMode, setViewMode] = useState('grid'); 
 
-  // Mise à jour des catégories pour inclure les nouveaux types de données
   const categories = ["Tous", "Poésie", "Battle Poétique", "Nouvelle", "Roman", "Essai", "Théâtre", "Chronique"];
 
   useEffect(() => {
@@ -26,7 +25,6 @@ export default function LibraryPage() {
         const res = await fetch('/api/github-db?type=library');
         if (res.ok) {
           const data = await res.json();
-          // Adaptation : Accepte les données que ce soit un tableau direct ou enveloppé dans .content
           const finalData = data.content || data;
           
           if (Array.isArray(finalData)) {
@@ -61,7 +59,6 @@ export default function LibraryPage() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] pb-32">
-      {/* HEADER SECTION */}
       <header className="pt-20 pb-12 px-6 md:px-12 max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-4">
@@ -91,7 +88,6 @@ export default function LibraryPage() {
           </div>
         </div>
 
-        {/* CATEGORIES & FILTERS */}
         <div className="mt-12 flex flex-wrap items-center justify-between gap-6 border-t border-slate-100 pt-8">
           <div className="flex flex-wrap gap-2">
             {categories.map(cat => (
@@ -126,7 +122,6 @@ export default function LibraryPage() {
         </div>
       </header>
 
-      {/* WORKS GRID */}
       <main className="max-w-7xl mx-auto px-6 md:px-12">
         {filteredWorks.length > 0 ? (
           <div className={viewMode === 'grid' 
@@ -141,7 +136,6 @@ export default function LibraryPage() {
                   viewMode === 'grid' ? "rounded-[2.5rem]" : "rounded-3xl flex items-center p-4 gap-6"
                 }`}
               >
-                {/* Image Container */}
                 <div className={`relative bg-slate-50 overflow-hidden ${
                   viewMode === 'grid' ? "aspect-[4/5] w-full" : "w-24 h-24 rounded-2xl shrink-0"
                 }`}>
@@ -157,7 +151,6 @@ export default function LibraryPage() {
                       <BookOpen size={viewMode === 'grid' ? 60 : 30} />
                     </div>
                   )}
-                  {/* Badge de catégorie flottant */}
                   {viewMode === 'grid' && (
                     <div className="absolute top-4 left-4">
                       <span className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-900">
@@ -167,7 +160,6 @@ export default function LibraryPage() {
                   )}
                 </div>
 
-                {/* Content */}
                 <div className={`flex flex-col justify-between ${viewMode === 'grid' ? "p-8" : "flex-1"}`}>
                   <div>
                     <div className="flex items-center gap-2 mb-2">
