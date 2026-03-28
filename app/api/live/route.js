@@ -11,6 +11,29 @@ const ADMINS = [
   "jb7management@gmail.com", "cmo.lablitteraire7@gmail.com"
 ];
 
+// --- NOUVELLE FONCTION GET POUR RÉPONDRE AU POLLING DU COMPOSANT ---
+export async function GET() {
+  try {
+    const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
+      headers: { 
+        Authorization: `Bearer ${TOKEN}`,
+        "Cache-Control": "no-cache",
+        "Accept": "application/vnd.github.v3+json"
+      },
+      next: { revalidate: 0 } // Désactive le cache Next.js
+    });
+
+    if (!res.ok) return NextResponse.json({ isActive: false });
+
+    const data = await res.json();
+    const content = JSON.parse(Buffer.from(data.content, "base64").toString("utf-8"));
+    
+    return NextResponse.json(content);
+  } catch (error) {
+    return NextResponse.json({ isActive: false, error: error.message }, { status: 500 });
+  }
+}
+
 async function updateFile(content, message) {
   const getRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
     headers: { 
@@ -69,7 +92,7 @@ export async function POST(req) {
       return success ? NextResponse.json(liveData) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // B. Action : ARCHIVER LE PODCAST (Nouvelle action adaptée)
+    // B. Action : ARCHIVER LE PODCAST
     if (action === "archive-podcast") {
       if (!ADMINS.includes(admin?.toLowerCase())) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
@@ -81,23 +104,20 @@ export async function POST(req) {
       const fileData = await res.json();
       const liveData = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'));
 
-      // Calcul de la durée
       const end = new Date();
       const start = new Date(liveData.startedAt);
       const diffMs = end - start;
       const duration = Math.floor(diffMs / 60000) + " min";
 
-      // Mise à jour pour l'archive
       liveData.isActive = false;
       liveData.endedAt = end.toISOString();
-      liveData.playbackId = playbackId; // L'ID Livepeer pour le replay
+      liveData.playbackId = playbackId;
       liveData.duration = duration;
 
       const success = await updateFile(liveData, `💾 Podcast Archived: ${liveData.title}`);
       return success ? NextResponse.json({ success: true, playbackId }) : NextResponse.json({ error: "Git Error" }, { status: 500 });
     }
 
-    // ... (Actions "comment" et "heart" restent identiques à ton code)
     if (action === "comment" || action === "heart") {
        // Ton code existant ici...
     }
