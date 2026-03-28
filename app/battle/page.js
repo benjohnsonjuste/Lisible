@@ -7,15 +7,22 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// Configuration GitHub pour pointer vers votre fichier central
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+  path: "data/publications/index.json"
+};
+
 export default function BattlePoetique() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Logique de tri modifiée : Certifications > Likes > Date
+  // Logique de tri conservée : Certifications > Likes > Date
   const sortBattleTexts = useCallback((data) => {
     return data
-      .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique")
+      .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique" || item.category === "Battle Poétique")
       .sort((a, b) => {
         // Priorité 1 : Certifications
         const certA = Number(a.totalCertified || a.certified || 0);
@@ -28,7 +35,9 @@ export default function BattlePoetique() {
         if (likesB !== likesA) return likesB - likesA;
         
         // Priorité 3 : Date
-        return new Date(b.date) - new Date(a.date);
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
       });
   }, []);
 
@@ -37,14 +46,25 @@ export default function BattlePoetique() {
     else setIsRefreshing(true);
 
     try {
-      const res = await fetch(`/api/github-db?type=library&t=${Date.now()}`); 
-      const json = await res.json();
+      // Récupération directe du fichier index.json sur GitHub
+      const res = await fetch(
+        `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`,
+        { cache: 'no-store' }
+      );
       
-      if (json.content && Array.isArray(json.content)) {
-        setTexts(sortBattleTexts(json.content));
-      }
+      if (!res.ok) throw new Error("Erreur réseau");
+
+      const data = await res.json();
+      // Décodage du contenu Base64
+      const content = JSON.parse(atob(data.content));
+      
+      // Extraction de la liste (gère si c'est un tableau direct ou un objet { publications: [] })
+      const rawList = Array.isArray(content) ? content : (content.publications || []);
+      
+      setTexts(sortBattleTexts(rawList));
     } catch (e) { 
       console.error("Erreur Arène:", e); 
+      toast.error("Impossible de charger l'Arène.");
     } finally { 
       setLoading(false); 
       setIsRefreshing(false);
@@ -175,7 +195,7 @@ export default function BattlePoetique() {
                         </h2>
                         
                         <p className="text-slate-500 line-clamp-4 font-serif italic mb-8 sm:mb-10 text-sm sm:text-lg leading-relaxed flex-grow">
-                          {item.content ? item.content.replace(/<[^>]*>/g, '').substring(0, 300) : 'Lire la suite...'}
+                          {item.content ? item.content.replace(/<[^>]*>/g, '').substring(0, 300) : item.summary || 'Lire la suite...'}
                         </p>
                         
                         <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between pt-6 sm:pt-8 border-t border-slate-50">
