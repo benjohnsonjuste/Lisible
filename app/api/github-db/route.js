@@ -182,13 +182,43 @@ export async function POST(req) {
       const pubPath = `data/texts/${pubId}.json`;
       const indexPath = `data/publications/index.json`;
       const finalImage = data.image || data.imageBase64 || null;
-      const newPub = { ...data, id: pubId, image: finalImage, date: new Date().toISOString(), views: 0, likes: 0, comments: [], certified: 0 };
+      
+      const newPub = { 
+        ...data, 
+        id: pubId, 
+        image: finalImage, 
+        date: new Date().toISOString(), 
+        views: 0, 
+        likes: 0, 
+        comments: [], 
+        certified: 0 
+      };
+      
+      // 1. Sauvegarde du fichier individuel
       await updateFile(pubPath, newPub, null, `🚀 Publish: ${data.title}`);
+      
+      // 2. Mise à jour de l'index central
       const indexFile = await getFile(indexPath) || { content: [] };
       let indexContent = Array.isArray(indexFile.content) ? indexFile.content : [];
-      indexContent.unshift({ id: pubId, title: data.title, author: data.authorName, authorEmail: data.authorEmail, category: data.category, genre: data.genre, isConcours: data.isConcours || false, image: finalImage, date: newPub.date, views: 0, likes: 0, certified: 0 });
+      
+      indexContent.unshift({ 
+        id: pubId, 
+        title: data.title, 
+        author: data.authorName, 
+        authorEmail: data.authorEmail, 
+        category: data.category, 
+        genre: data.genre, 
+        isConcours: data.isConcours || false, 
+        image: finalImage, 
+        date: newPub.date, 
+        views: 0, 
+        likes: 0, 
+        certified: 0 
+      });
+      
       indexContent = globalSort(indexContent);
       await updateFile(indexPath, indexContent, indexFile.sha, `📝 Index Update & Sort`);
+      
       return NextResponse.json({ success: true, id: pubId });
     }
 
@@ -269,13 +299,21 @@ export async function POST(req) {
       const indexPath = `data/publications/index.json`;
       const file = await getFile(path);
       if (!file) return NextResponse.json({ error: "Manuscrit introuvable" }, { status: 404 });
+      
       const updatedText = { ...file.content, ...data, id: idToEdit, lastEdit: new Date().toISOString() };
       await updateFile(path, updatedText, file.sha, `✏️ Edit text: ${updatedText.title}`);
+      
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
         const itemIndex = indexFile.content.findIndex(t => t.id === idToEdit);
         if (itemIndex > -1) {
-          indexFile.content[itemIndex] = { ...indexFile.content[itemIndex], title: data.title || indexFile.content[itemIndex].title, category: data.category || indexFile.content[itemIndex].category, genre: data.genre || indexFile.content[itemIndex].genre, image: data.image || indexFile.content[itemIndex].image };
+          indexFile.content[itemIndex] = { 
+            ...indexFile.content[itemIndex], 
+            title: data.title || indexFile.content[itemIndex].title, 
+            category: data.category || indexFile.content[itemIndex].category, 
+            genre: data.genre || indexFile.content[itemIndex].genre, 
+            image: data.image || indexFile.content[itemIndex].image 
+          };
           await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Index Sync (Edit): ${idToEdit}`);
         }
       }
@@ -288,7 +326,17 @@ export async function POST(req) {
       const indexPath = `data/publications/index.json`;
       const file = await getFile(path);
       if (file) {
-        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: `🗑 Delete text: ${idToDelete} [skip ci]`, sha: file.sha }) });
+        await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, { 
+          method: 'DELETE', 
+          headers: { 
+            'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 
+            'Content-Type': 'application/json' 
+          }, 
+          body: JSON.stringify({ 
+            message: `🗑 Delete text: ${idToDelete} [skip ci]`, 
+            sha: file.sha 
+          }) 
+        });
       }
       const indexFile = await getFile(indexPath);
       if (indexFile && Array.isArray(indexFile.content)) {
@@ -398,6 +446,7 @@ export async function PATCH(req) {
     if (action === 'like') textFile.content.likes = (textFile.content.likes || 0) + 1;
     if (action === 'certify') textFile.content.certified = (textFile.content.certified || 0) + 1;
 
+    // Mise à jour de l'index central pour la cohérence
     if (indexFile && Array.isArray(indexFile.content)) {
       const itemIndex = indexFile.content.findIndex(t => t.id === id);
       if (itemIndex > -1) {
@@ -408,12 +457,15 @@ export async function PATCH(req) {
         await updateFile(indexPath, indexFile.content, indexFile.sha, `🔄 Sync Index: ${id} (${action})`);
       }
     }
+
     if (authorFile) {
       if (action === 'like') {
+        if (!authorFile.content.notifications) authorFile.content.notifications = [];
         authorFile.content.notifications.unshift({ id: `like_${Date.now()}`, type: "like", message: `Quelqu'un a aimé votre texte "${textFile.content.title}" !`, date: new Date().toISOString(), read: false });
       }
       if (action === 'certify') {
         authorFile.content.li = (authorFile.content.li || 0) + 1;
+        if (!authorFile.content.notifications) authorFile.content.notifications = [];
         authorFile.content.notifications.unshift({ id: `cert_${Date.now()}`, type: "certification", message: `Sceau de Certification reçu pour "${textFile.content.title}" (+1 Li).`, date: new Date().toISOString(), read: false });
       }
       await updateFile(authorPath, authorFile.content, authorFile.sha, `🔔 Author Sync: ${action}`);
