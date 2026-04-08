@@ -15,7 +15,7 @@ export default function LibraryPage() {
 
   const fetchLibrary = async () => {
     try {
-      const res = await fetch('/api/votre-route?type=library'); // Remplace par ton chemin réel
+      const res = await fetch('/api/github-db?type=library'); // Remplace par ton chemin réel
       const data = await res.json();
       if (data && data.content) {
         setItems(data.content);
