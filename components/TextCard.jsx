@@ -38,7 +38,7 @@ export default function TextCard({ item }) {
             </span>
           </div>
           <a 
-            href={`/lecture/${item.id}`}
+            href={`/texts/${item.id}`}
             className="flex items-center gap-1 text-blue-600 font-semibold hover:underline"
           >
             Lire <BookOpen className="w-4 h-4" />
