@@ -3,8 +3,18 @@
   "name": "Germain Ilunga",
   "li": 50,
   "status": "active",
-  "notifications": [],
-  "followers": [],
+  "notifications": [
+    {
+      "id": "follow_1776448263934",
+      "type": "follow",
+      "message": "Papy ibond s'est abonné à vous !",
+      "date": "2026-04-17T17:51:03.934Z",
+      "read": false
+    }
+  ],
+  "followers": [
+    "mribondrupas@gmail.com"
+  ],
   "following": [],
   "works": [],
   "created_at": "2026-04-14T03:36:50.317Z",
