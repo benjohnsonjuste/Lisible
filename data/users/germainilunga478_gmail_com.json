@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "follow_1776449755248",
+      "type": "follow",
+      "message": "Enock Mwenz s'est abonné à vous !",
+      "date": "2026-04-17T18:15:55.248Z",
+      "read": false
+    },
+    {
       "id": "follow_1776448263934",
       "type": "follow",
       "message": "Papy ibond s'est abonné à vous !",
@@ -13,7 +20,8 @@
     }
   ],
   "followers": [
-    "mribondrupas@gmail.com"
+    "mribondrupas@gmail.com",
+    "enockvalentin768@gmail.com"
   ],
   "following": [],
   "works": [],
