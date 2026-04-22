@@ -6,35 +6,32 @@ import {
   Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Configuration GitHub pour pointer vers votre fichier central
-const GITHUB_CONFIG = {
-  owner: "benjohnsonjuste",
-  repo: "Lisible",
-  path: "data/publications/index.json"
-};
+// Importation du service centralisé
+import { dataService } from "@/lib/api";
 
 export default function BattlePoetique() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Logique de tri conservée : Certifications > Likes > Date
+  // Logique de tri strictement conservée
   const sortBattleTexts = useCallback((data) => {
     return data
-      .filter(item => item.isConcours === true || item.isConcours === "true" || item.genre === "Battle Poétique" || item.category === "Battle Poétique")
+      .filter(item => 
+        item.isConcours === true || 
+        item.isConcours === "true" || 
+        item.genre === "Battle Poétique" || 
+        item.category === "Battle Poétique"
+      )
       .sort((a, b) => {
-        // Priorité 1 : Certifications
-        const certA = Number(a.totalCertified || a.certified || 0);
-        const certB = Number(b.totalCertified || b.certified || 0);
+        const certA = Number(a.certified || a.totalCertified || 0);
+        const certB = Number(b.certified || b.totalCertified || 0);
         if (certB !== certA) return certB - certA;
         
-        // Priorité 2 : Likes
-        const likesA = Number(a.totalLikes || a.likes || 0);
-        const likesB = Number(b.totalLikes || b.likes || 0);
+        const likesA = Number(a.likes || a.totalLikes || 0);
+        const likesB = Number(b.likes || b.totalLikes || 0);
         if (likesB !== likesA) return likesB - likesA;
         
-        // Priorité 3 : Date
         const dateA = a.date ? new Date(a.date).getTime() : 0;
         const dateB = b.date ? new Date(b.date).getTime() : 0;
         return dateB - dateA;
@@ -46,21 +43,8 @@ export default function BattlePoetique() {
     else setIsRefreshing(true);
 
     try {
-      // Récupération directe du fichier index.json sur GitHub
-      const res = await fetch(
-        `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`,
-        { cache: 'no-store' }
-      );
-      
-      if (!res.ok) throw new Error("Erreur réseau");
-
-      const data = await res.json();
-      // Décodage du contenu Base64
-      const content = JSON.parse(atob(data.content));
-      
-      // Extraction de la liste (gère si c'est un tableau direct ou un objet { publications: [] })
-      const rawList = Array.isArray(content) ? content : (content.publications || []);
-      
+      // Utilisation du dataService au lieu de l'appel GitHub direct
+      const rawList = await dataService.getLibrary();
       setTexts(sortBattleTexts(rawList));
     } catch (e) { 
       console.error("Erreur Arène:", e); 
@@ -147,7 +131,7 @@ export default function BattlePoetique() {
           {texts.length > 0 ? (
             <div className="grid gap-8 md:gap-12 md:grid-cols-2 lg:grid-cols-2">
               {texts.map((item, index) => {
-                const liPoints = Number(item.totalCertified || item.certified || 0);
+                const liPoints = Number(item.certified || item.totalCertified || 0);
                 const isLeader = index === 0 && liPoints > 0;
                 
                 const displayViews = item.views || item.totalViews || 0;
