@@ -9,7 +9,7 @@ export default function WorkForm({
   isConcours = false,
   requireBattleAcceptance = false,
   submitLabel = "Diffuser",
-  onSuccess = null // Ajout de la prop onSuccess
+  onSuccess = null 
 }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -74,7 +74,7 @@ export default function WorkForm({
     e.preventDefault();
     if (loading) return;
     if (!user?.email) return toast.error("Identité introuvable.");
-    if (requireBattleAcceptance && !isBattlePoetic) return toast.error("Veuillez accepter le duel.");
+    if (requireBattleAcceptance && !isBattlePoetic) return toast.error("Veuillez accepter le défi.");
     if (content.trim().length < 50) return toast.error("Le texte est trop court pour être archivé.");
     
     setLoading(true);
@@ -93,6 +93,8 @@ export default function WorkForm({
         authorEmail: user.email.toLowerCase().trim(),
         imageBase64,
         isConcours: isConcours || category === "Battle Poétique",
+        // Logique spécifique pour le Duel des Nouvelles
+        isnovelbattle: isConcours && category === "Nouvelle",
         date: new Date().toISOString()
       };
 
@@ -117,7 +119,7 @@ export default function WorkForm({
           if (followers.length > 0) {
             const newNotification = {
               id: `notif-${Date.now()}`,
-              type: isConcours || category === "Battle Poétique" ? "new_battle" : "new_publication",
+              type: (isConcours || category === "Battle Poétique" || category === "Nouvelle") ? "new_battle" : "new_publication",
               authorName: user.penName || user.name,
               textTitle: title.trim(),
               textId: data.id,
