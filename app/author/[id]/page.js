@@ -1,16 +1,18 @@
 "use client";
-import React, { useEffect, useState, useCallback, use } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { 
   ArrowLeft, Loader2, HeartHandshake, ShieldCheck, Crown, Star, Share2, ChevronRight, Coins 
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-export default function AuthorCataloguePage({ params }) {
+export default function AuthorCataloguePage() {
   const router = useRouter();
-  const resolvedParams = use(params);
-  const authorEmailId = resolvedParams.id || resolvedParams.email;
+  const params = useParams();
+  
+  // Extraction sécurisée de l'ID depuis l'URL
+  const authorEmailId = params?.id || params?.email;
 
   const [author, setAuthor] = useState(null);
   const [texts, setTexts] = useState([]);
@@ -28,57 +30,64 @@ export default function AuthorCataloguePage({ params }) {
   }, []);
 
   const fetchAuthorData = useCallback(async (id) => {
+    if (!id) return;
     setLoading(true);
     try {
       const authorEmail = decodeURIComponent(id).toLowerCase().trim();
       
-      // 1. Récupérer le profil de l'auteur
+      // 1. Récupérer le profil de l'auteur (Raw GitHub pour éviter les délais de cache)
       const userRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/main/data/users/${authorEmail}.json`);
+      
       if (!userRes.ok) throw new Error("Auteur introuvable");
       const userData = await userRes.json();
       setAuthor(userData);
 
-      // 2. Récupérer toutes les publications pour les stats en temps réel
+      // 2. Récupérer l'index des publications
       const indexRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/main/data/publications/index.json`);
-      const indexData = await indexRes.json();
-      
-      if (Array.isArray(indexData)) {
-        // Calcul du record de vues global pour le badge Élite
-        const viewsMap = indexData.reduce((acc, pub) => {
-          const email = pub.authorEmail?.toLowerCase().trim();
-          if (email) acc[email] = (acc[email] || 0) + Number(pub.views || 0);
-          return acc;
-        }, {});
+      if (indexRes.ok) {
+        const indexData = await indexRes.json();
         
-        setGlobalMaxViews(Math.max(...Object.values(viewsMap), 0));
-        
-        // Filtrer les textes de cet auteur précis
-        const authorWorks = indexData.filter(t => t.authorEmail?.toLowerCase().trim() === authorEmail);
-        setTexts(authorWorks);
+        if (Array.isArray(indexData)) {
+          // Calcul du record de vues pour le badge Élite
+          const viewsMap = indexData.reduce((acc, pub) => {
+            const email = pub.authorEmail?.toLowerCase().trim();
+            if (email) acc[email] = (acc[email] || 0) + Number(pub.views || 0);
+            return acc;
+          }, {});
+          
+          const maxViews = Math.max(...Object.values(viewsMap), 0);
+          setGlobalMaxViews(maxViews);
+          
+          // Filtrage des œuvres
+          const authorWorks = indexData.filter(t => t.authorEmail?.toLowerCase().trim() === authorEmail);
+          setTexts(authorWorks);
+        }
       }
     } catch (e) { 
-      console.error(e);
-      toast.error("Profil inaccessible"); 
+      console.error("Erreur Catalogue:", e);
+      toast.error("Impossible de charger le profil."); 
     } finally { 
       setLoading(false); 
     }
   }, []);
 
   useEffect(() => { 
-    if (authorEmailId) fetchAuthorData(authorEmailId); 
+    if (authorEmailId) {
+      fetchAuthorData(authorEmailId);
+    }
   }, [authorEmailId, fetchAuthorData]);
 
   const handleShare = async () => {
     const shareData = { 
       title: author?.penName || author?.name, 
-      text: `Découvrez l'univers littéraire de ${author?.penName || author?.name} sur Lisible ✨`, 
+      text: `Découvrez l'univers de ${author?.penName || author?.name} sur Lisible ✨`, 
       url: window.location.href 
     };
     if (navigator.share) { 
       try { await navigator.share(shareData); } catch (e) {} 
     } else { 
       navigator.clipboard.writeText(window.location.href); 
-      toast.success("Lien du profil copié !"); 
+      toast.success("Lien copié !"); 
     }
   };
 
@@ -109,7 +118,7 @@ export default function AuthorCataloguePage({ params }) {
             alt="Profil"
           />
           {isElite && (
-            <div className="absolute inset-0 border-4 border-amber-400 rounded-[3rem] animate-pulse pointer-events-none" />
+            <div className="absolute inset-0 border-4 border-amber-400 rounded-[3rem] animate-pulse" />
           )}
         </div>
 
@@ -124,17 +133,17 @@ export default function AuthorCataloguePage({ params }) {
 
           <div className="flex flex-wrap gap-2 justify-center md:justify-start">
             {isElite && (
-              <div className="bg-slate-950 text-amber-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-amber-400/20">
+              <div className="bg-slate-950 text-amber-400 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-amber-400/20 shadow-sm">
                 <Crown size={12}/> Élite
               </div>
             )}
             <div className="bg-teal-50 text-teal-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-teal-100">
-              <Coins size={12} className="inline mr-1"/> {author?.li || 0} Li cumulés
+              <Coins size={12} className="inline mr-1"/> {author?.li || 0} Li
             </div>
           </div>
           
           <p className="text-slate-500 text-sm font-medium max-w-lg leading-relaxed italic">
-            {author?.bio || "Cette plume n'a pas encore partagé son histoire."}
+            {author?.bio || "Cette plume n'a pas encore rédigé sa présentation."}
           </p>
         </div>
 
@@ -143,11 +152,11 @@ export default function AuthorCataloguePage({ params }) {
             href={`/donate?to=${btoa(author?.email || "")}`} 
             className="bg-rose-600 text-white px-8 py-5 rounded-[1.5rem] flex items-center justify-center gap-3 font-black text-[10px] uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:bg-slate-950 transition-all active:scale-95"
           >
-            <HeartHandshake size={20} /> Soutenir l'Auteur
+            <HeartHandshake size={20} /> Soutenir
           </Link>
           <button 
             onClick={handleShare} 
-            className="bg-white border-2 border-slate-50 p-5 rounded-[1.5rem] flex items-center justify-center hover:bg-slate-50 hover:border-slate-200 transition-all text-slate-400 hover:text-slate-900"
+            className="bg-white border-2 border-slate-50 p-5 rounded-[1.5rem] flex items-center justify-center hover:bg-slate-50 transition-all text-slate-400 hover:text-slate-900"
           >
             <Share2 size={20}/>
           </button>
@@ -157,7 +166,7 @@ export default function AuthorCataloguePage({ params }) {
       {/* Liste des Œuvres */}
       <div className="space-y-8">
         <div className="flex items-center gap-4 px-2">
-          <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Manuscrits publiés</h2>
+          <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">Manuscrits</h2>
           <div className="h-px bg-slate-100 grow" />
         </div>
 
@@ -167,7 +176,7 @@ export default function AuthorCataloguePage({ params }) {
               <Link 
                 href={`/texts/${txt.id}`} 
                 key={txt.id} 
-                className="group p-10 bg-white rounded-[3rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:border-teal-500/10 transition-all duration-500"
+                className="group p-10 bg-white rounded-[3rem] border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500"
               >
                 <div className="space-y-6">
                   <div className="flex justify-between items-start">
@@ -185,12 +194,9 @@ export default function AuthorCataloguePage({ params }) {
                   </h3>
                   
                   <div className="flex justify-between items-center pt-6 border-t border-slate-50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {txt.views || 0} Lectures
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {txt.views || 0} Lectures
+                    </span>
                     <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-all">
                       <ChevronRight size={20} />
                     </div>
@@ -201,7 +207,7 @@ export default function AuthorCataloguePage({ params }) {
           </div>
         ) : (
           <div className="py-20 text-center bg-white rounded-[3.5rem] border-2 border-dashed border-slate-100">
-            <p className="text-slate-400 font-bold italic">Aucun manuscrit n'a encore été déposé dans ce catalogue.</p>
+            <p className="text-slate-400 font-bold italic">Aucune œuvre dans ce catalogue.</p>
           </div>
         )}
       </div>
