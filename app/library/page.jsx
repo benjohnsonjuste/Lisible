@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { 
-  BookOpen, Search, Loader2, Eye, Heart, ArrowRight, Sparkles 
+  BookOpen, Search, Loader2, Eye, Heart, ArrowRight, Sparkles, Coins, AlignLeft 
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ export default function LibraryPage() {
 
   async function loadLibraryData() {
     try {
-      // 1. Récupérer la liste des fichiers dans data/texts
+      // 1. Récupérer la liste des fichiers live depuis data/texts
       const textsUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/texts`;
       const res = await fetch(textsUrl);
       
@@ -33,7 +33,7 @@ export default function LibraryPage() {
       
       const files = await res.json();
       
-      // 2. Charger le contenu de chaque fichier JSON
+      // 2. Charger le contenu de chaque fichier JSON individuellement
       const allTexts = await Promise.all(
         files
           .filter(f => f.name.endsWith('.json'))
@@ -45,30 +45,26 @@ export default function LibraryPage() {
               const email = (data.authorEmail || data.email || "").toLowerCase().trim();
 
               return {
-                // L'ID est le nom du fichier (ex: 1770848857244)
                 id: file.name.replace('.json', ''), 
-                // On teste plusieurs clés possibles pour le titre et l'auteur
                 title: data.title || data.textTitle || "Texte sans titre",
-                authorName: data.authorName || data.name || data.fullName || "Plume Anonyme",
+                authorName: data.author || data.authorName || data.penName || "Plume Anonyme",
                 views: Number(data.views || 0),
-                li: Number(data.li || 0),
+                li: Number(data.certified || data.totalCertified || data.li || 0),
+                likes: Number(data.likes || data.totalLikes || 0),
                 category: data.category || "Littérature",
                 image: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${email || file.name}`,
                 date: data.date || ""
               };
             } catch (err) { 
-              console.error(`Erreur sur le fichier ${file.name}:`, err);
               return null; 
             }
           })
       );
 
-      // 3. Filtrer les erreurs et trier par les plus vus
       const validTexts = allTexts.filter(Boolean);
       setTexts(validTexts.sort((a, b) => b.views - a.views));
 
     } catch (e) {
-      console.error("Erreur globale Library:", e);
       toast.error("Impossible de joindre la bibliothèque.");
     } finally {
       setLoading(false);
@@ -98,11 +94,11 @@ export default function LibraryPage() {
           <p className="mt-6 text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] ml-2">Exploration des textes</p>
         </div>
         <div className="relative group w-full lg:w-96 self-end">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors" size={20} />
           <input 
             type="text" 
             placeholder="Rechercher un titre ou un auteur..." 
-            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all" 
+            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all font-bold text-sm" 
             onChange={(e) => setSearchTerm(e.target.value)} 
           />
         </div>
@@ -114,16 +110,15 @@ export default function LibraryPage() {
             <Link href={`/texts/${text.id}`} key={text.id} className="group">
               <div className="h-full bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden">
                 
-                {/* Badge Catégorie */}
                 <div className="absolute top-8 right-8">
                   <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2">
-                    <Sparkles size={10} className="text-teal-400" /> {text.category}
+                    <AlignLeft size={10} className="text-teal-400" /> {text.category}
                   </span>
                 </div>
 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100">
+                     <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-inner">
                         <img src={text.image} alt="Auteur" className="w-full h-full object-cover" />
                      </div>
                      <p className="text-[10px] font-black uppercase text-teal-600 tracking-wider italic">{text.authorName}</p>
@@ -137,22 +132,28 @@ export default function LibraryPage() {
                 <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
                   <div className="flex gap-6">
                     <div className="text-center">
-                      <span className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Lectures</span>
-                      <div className="flex items-center gap-1.5 justify-center">
-                        <Eye size={14} className="text-slate-900" />
-                        <span className="text-sm font-black text-slate-900">{text.views}</span>
+                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">Li</span>
+                      <div className="flex items-center gap-1.5 justify-center bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100">
+                        <Coins size={14} className="text-amber-500" />
+                        <span className="text-sm font-black text-amber-700">{text.li}</span>
                       </div>
                     </div>
                     <div className="text-center">
-                      <span className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Li</span>
-                      <div className="flex items-center gap-1.5 justify-center">
-                        <Heart size={13} className="text-rose-500" fill="currentColor" />
-                        <span className="text-sm font-black text-slate-900">{text.li}</span>
+                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">Stats</span>
+                      <div className="flex items-center gap-4 px-1">
+                        <div className="flex items-center gap-1.5">
+                          <Eye size={16} className="text-slate-200" />
+                          <span className="text-sm font-black text-slate-900">{text.views}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Heart size={16} className={`${text.likes > 0 ? 'text-rose-500 fill-rose-500' : 'text-slate-200'}`} />
+                          <span className="text-sm font-black text-slate-900">{text.likes}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="w-12 h-12 bg-slate-50 rounded-[1.2rem] flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
+                  <div className="w-12 h-12 bg-slate-950 text-white rounded-2xl flex items-center justify-center group-hover:bg-teal-600 transition-all shadow-lg active:scale-95">
                     <ArrowRight size={20} />
                   </div>
                 </div>
@@ -161,9 +162,9 @@ export default function LibraryPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-40">
+        <div className="text-center py-40 bg-white rounded-[5rem] border-2 border-dashed border-slate-50">
           <BookOpen className="mx-auto text-slate-100 mb-6" size={80} />
-          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">Aucun texte trouvé</p>
+          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">Le catalogue est silencieux</p>
         </div>
       )}
     </div>
