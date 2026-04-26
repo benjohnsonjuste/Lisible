@@ -29,7 +29,7 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email;
         
-        // Synchro profil
+        // 1. Synchro profil
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
         if (userRes.ok) {
           const userData = await userRes.json();
@@ -39,30 +39,50 @@ export default function AuthorDashboard() {
           }
         }
 
-        // Synchro œuvres avec Tri Universel
-        const libraryRes = await fetch(`/api/github-db?type=library`);
+        // 2. Récupération multi-sources (Bibliothèque + Novel Battle)
+        const [libraryRes, novelBattleRes] = await Promise.all([
+          fetch(`/api/github-db?type=library`),
+          fetch(`/api/novel-battle-db`) // On interroge aussi l'API du concours
+        ]);
+
+        let allWorks = [];
+
         if (libraryRes.ok) {
-          const libraryData = await libraryRes.json();
-          if (libraryData && libraryData.content) {
-            const authorWorks = libraryData.content
-              .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
-              .sort((a, b) => {
-                const certA = Number(a.certified || a.totalCertified || 0);
-                const certB = Number(b.certified || b.totalCertified || 0);
-                if (certB !== certA) return certB - certA;
+          const data = await libraryRes.json();
+          if (data.content) allWorks = [...data.content];
+        }
 
-                const likesA = Number(a.likes || a.totalLikes || 0);
-                const likesB = Number(b.likes || b.totalLikes || 0);
-                if (likesB !== likesA) return likesB - likesA;
-
-                // Sécurité sur la date pour éviter les crashs
-                const dateA = a.date ? new Date(a.date).getTime() : 0;
-                const dateB = b.date ? new Date(b.date).getTime() : 0;
-                return dateB - dateA;
-              });
-            setWorks(authorWorks);
+        // On ajoute les textes du concours s'ils ne sont pas déjà présents dans l'index global
+        if (novelBattleRes.ok) {
+          const data = await novelBattleRes.json();
+          if (data.leaderboard) {
+            data.leaderboard.forEach(nbWork => {
+              if (!allWorks.find(w => w.id === nbWork.id)) {
+                allWorks.push(nbWork);
+              }
+            });
           }
         }
+
+        // 3. Filtrage et Tri Universel
+        const authorWorks = allWorks
+          .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
+          .sort((a, b) => {
+            const certA = Number(a.certified || a.totalCertified || 0);
+            const certB = Number(b.certified || b.totalCertified || 0);
+            if (certB !== certA) return certB - certA;
+
+            const likesA = Number(a.likes || a.totalLikes || 0);
+            const likesB = Number(b.likes || b.totalLikes || 0);
+            if (likesB !== likesA) return likesB - likesA;
+
+            const dateA = a.date ? new Date(a.date).getTime() : 0;
+            const dateB = b.date ? new Date(b.date).getTime() : 0;
+            return dateB - dateA;
+          });
+
+        setWorks(authorWorks);
+        
       } catch (e) {
         console.error("Sync error:", e);
         toast.error("Erreur de synchronisation.");
@@ -154,7 +174,6 @@ export default function AuthorDashboard() {
     }
   };
 
-  // Nouvelle fonction pour partager le profil personnel
   const handleProfileShare = async () => {
     const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
     const shareData = {
@@ -217,7 +236,6 @@ export default function AuthorDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
-            {/* Section Partage Profil */}
             <button 
               onClick={handleProfileShare}
               className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest"
@@ -225,7 +243,6 @@ export default function AuthorDashboard() {
               <LinkIcon size={14} /> Partager mon Profil
             </button>
 
-            {/* Badge Section */}
             <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
               <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-teal-500/20">
                 <Award size={20} />
@@ -300,6 +317,9 @@ export default function AuthorDashboard() {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-xl font-bold text-slate-900 leading-tight">{work.title}</h3>
                         {(work.certified > 0 || work.totalCertified > 0) && <ShieldCheck size={16} className="text-teal-500" />}
+                        {(work.isnovelbattle === true || work.isnovelbattle === "true") && (
+                           <span className="bg-rose-100 text-rose-600 text-[8px] font-black px-2 py-1 rounded-lg uppercase ml-2">Duel</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         <span>{work.category}</span>
