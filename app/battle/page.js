@@ -29,7 +29,6 @@ export default function BattlePoetique() {
   const loadConcoursTexts = useCallback(async (silent = false) => {
     if (!silent) setLoading(true); else setIsRefreshing(true);
     try {
-      // Fetching live from data/texts via GitHub API
       const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/data/texts`);
       if (!res.ok) throw new Error();
       const files = await res.json();
@@ -97,6 +96,9 @@ export default function BattlePoetique() {
               {texts.map((item, index) => {
                 const liPoints = Number(item.certified || item.totalCertified || 0);
                 const isLeader = index === 0 && liPoints > 0;
+                // Correction ici pour trouver le nom de l'auteur
+                const authorName = item.author || item.authorName || item.penName || 'Plume Anonyme';
+                
                 return (
                   <Link href={`/texts/${item.id}`} key={item.id} className="group relative w-full">
                     <div className={`bg-white rounded-[2.5rem] sm:rounded-[4rem] overflow-hidden border transition-all duration-700 flex flex-col h-full ${isLeader ? "border-amber-200 shadow-2xl ring-2 ring-amber-100" : "border-slate-100 shadow-xl shadow-slate-200/40 hover:border-teal-200"}`}>
@@ -111,7 +113,7 @@ export default function BattlePoetique() {
                       <div className="p-8 sm:p-12 flex-grow flex flex-col">
                         <div className="flex flex-wrap items-center gap-3 mb-6">
                            <span className="text-[9px] font-black text-teal-600 uppercase bg-teal-50 px-3 py-1 rounded-lg"><AlignLeft size={10} className="inline mr-1" /> {item.category || "Battle"}</span>
-                           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest truncate">{item.author || 'Anonyme'}</span>
+                           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest truncate">{authorName}</span>
                         </div>
                         <h2 className="text-2xl sm:text-4xl font-black italic text-slate-900 group-hover:text-teal-600 transition-colors mb-6 leading-tight">{item.title}</h2>
                         <p className="text-slate-500 line-clamp-4 font-serif italic mb-10 text-lg leading-relaxed flex-grow">{item.content?.replace(/<[^>]*>/g, '').substring(0, 300) || 'Lire la suite...'}</p>
