@@ -4,6 +4,13 @@
   "li": 888,
   "notifications": [
     {
+      "id": "follow_1777172680293",
+      "type": "follow",
+      "message": "Bénicé Fils Juste s'est abonné à vous !",
+      "date": "2026-04-26T03:04:40.293Z",
+      "read": false
+    },
+    {
       "id": "staff_1773365246333",
       "type": "info",
       "message": "Vérification de connexion staff",
@@ -8426,7 +8433,8 @@
   ],
   "followers": [
     "adamahassoumi1998@gmail.com",
-    "jb7management@gmail.com"
+    "jb7management@gmail.com",
+    "benjohnsonjuste47@gmail.com"
   ],
   "following": [
     "noahlucien91@gmail.com"
