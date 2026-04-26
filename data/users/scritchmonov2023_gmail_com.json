@@ -4,6 +4,13 @@
   "li": 224,
   "notifications": [
     {
+      "id": "like_1777168394920",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Pour te dire je t'aime\" !",
+      "date": "2026-04-26T01:53:14.920Z",
+      "read": false
+    },
+    {
       "id": "cert_1773512013004",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Ode à la jeunesse\" (+1 Li).",
