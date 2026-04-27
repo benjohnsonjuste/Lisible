@@ -29,20 +29,23 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email;
         
-        // 1. Synchro profil
+        // 1. Synchro profil en temps réel depuis data/users via github-db
         const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
+        let currentUserData = null;
+
         if (userRes.ok) {
-          const userData = await userRes.json();
-          if (userData && userData.content) {
-            setUser(userData.content);
-            localStorage.setItem("lisible_user", JSON.stringify(userData.content));
+          const data = await userRes.json();
+          if (data && data.content) {
+            currentUserData = data.content;
+            setUser(currentUserData);
+            localStorage.setItem("lisible_user", JSON.stringify(currentUserData));
           }
         }
 
-        // 2. Récupération multi-sources (Bibliothèque + Novel Battle)
+        // 2. Récupération des statistiques réelles des publications (data/publications & data/texts)
         const [libraryRes, novelBattleRes] = await Promise.all([
           fetch(`/api/github-db?type=library`),
-          fetch(`/api/novel-battle-db`) // On interroge aussi l'API du concours
+          fetch(`/api/novel-battle-db`)
         ]);
 
         let allWorks = [];
@@ -52,7 +55,6 @@ export default function AuthorDashboard() {
           if (data.content) allWorks = [...data.content];
         }
 
-        // On ajoute les textes du concours s'ils ne sont pas déjà présents dans l'index global
         if (novelBattleRes.ok) {
           const data = await novelBattleRes.json();
           if (data.leaderboard) {
@@ -64,28 +66,21 @@ export default function AuthorDashboard() {
           }
         }
 
-        // 3. Filtrage et Tri Universel
+        // 3. Filtrage par auteur et synchronisation des stats individuelles
         const authorWorks = allWorks
           .filter(w => w.authorEmail?.toLowerCase() === email.toLowerCase())
           .sort((a, b) => {
             const certA = Number(a.certified || a.totalCertified || 0);
             const certB = Number(b.certified || b.totalCertified || 0);
             if (certB !== certA) return certB - certA;
-
-            const likesA = Number(a.likes || a.totalLikes || 0);
-            const likesB = Number(b.likes || b.totalLikes || 0);
-            if (likesB !== likesA) return likesB - likesA;
-
-            const dateA = a.date ? new Date(a.date).getTime() : 0;
-            const dateB = b.date ? new Date(b.date).getTime() : 0;
-            return dateB - dateA;
+            return (b.id || 0) - (a.id || 0);
           });
 
         setWorks(authorWorks);
         
       } catch (e) {
         console.error("Sync error:", e);
-        toast.error("Erreur de synchronisation.");
+        toast.error("Erreur de synchronisation des statistiques.");
       } finally {
         setLoading(false);
       }
@@ -213,13 +208,15 @@ export default function AuthorDashboard() {
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture du Studio...</p>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Synchronisation des statistiques...</p>
     </div>
   );
 
   if (!user) return null;
   const followerCount = user.followers?.length || 0;
-  const canWithdraw = (user.li >= 25000) && (followerCount >= 250);
+  const followingCount = user.following?.length || 0;
+  const realLi = user.li || 0;
+  const canWithdraw = (realLi >= 25000) && (followerCount >= 250);
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
@@ -264,7 +261,7 @@ export default function AuthorDashboard() {
             <AlertCircle size={20} className="shrink-0" />
             <p className="text-[11px] font-bold uppercase tracking-tight">
               Monétisation inactive : 25 000 Li et 250 abonnés requis. 
-              ({user.li || 0}/25000 Li • {followerCount}/250 abonnés)
+              ({realLi}/25000 Li • {followerCount}/250 abonnés)
             </p>
           </div>
         )}
@@ -283,12 +280,12 @@ export default function AuthorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm relative overflow-hidden group">
             <Coins className="absolute -right-4 -bottom-4 text-slate-50" size={120} />
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">Bourse Li</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-4">Bourse Li (Réelle)</p>
             <h2 className="text-5xl font-black italic tracking-tighter text-slate-900">
-              {user.li || 0} <span className="text-teal-600 text-xl not-italic ml-1">Li</span>
+              {realLi} <span className="text-teal-600 text-xl not-italic ml-1">Li</span>
             </h2>
             <div className="flex items-center gap-2 mt-2">
-               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Val. estimée: {(user.li * 0.0002).toFixed(2)} USD</p>
+               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Val. estimée: {(realLi * 0.0002).toFixed(2)} USD</p>
                {canWithdraw && <ShieldCheck size={12} className="text-teal-500" />}
             </div>
           </div>
@@ -298,14 +295,14 @@ export default function AuthorDashboard() {
           </div>
           <div className="bg-white p-10 rounded-[3rem] border border-slate-100 shadow-sm flex flex-col justify-between">
              <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-6"><TrendingUp size={24} /></div>
-            <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Suivis</p><h2 className="text-4xl font-black italic text-slate-900">{user.following?.length || 0}</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Suivis</p><h2 className="text-4xl font-black italic text-slate-900">{followingCount}</h2></div>
           </div>
         </div>
 
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Manuscrits.</h2>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{works.length} Œuvres</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{works.length} Œuvres réelles</span>
           </div>
           {works.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
@@ -326,7 +323,7 @@ export default function AuthorDashboard() {
                         <span>•</span>
                         <span className="text-teal-600">{work.certified || work.totalCertified || 0} Sceaux</span>
                         <span>•</span>
-                        <span>{work.date ? new Date(work.date).toLocaleDateString() : 'Date inconnue'}</span>
+                        <span>{work.date ? new Date(work.date).toLocaleDateString() : 'Récemment'}</span>
                       </div>
                     </div>
                   </div>
@@ -340,8 +337,8 @@ export default function AuthorDashboard() {
             </div>
           ) : (
             <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
-              <p className="text-slate-400 font-medium italic">Aucun manuscrit n'a encore été publié...</p>
-              <Link href="/publish" className="inline-block mt-4 text-[10px] font-black uppercase tracking-widest text-teal-600 underline">Commencer à écrire</Link>
+              <p className="text-slate-400 font-medium italic">Aucun manuscrit trouvé dans vos archives...</p>
+              <Link href="/publish" className="inline-block mt-4 text-[10px] font-black uppercase tracking-widest text-teal-600 underline">Démarrer une œuvre</Link>
             </div>
           )}
         </section>
