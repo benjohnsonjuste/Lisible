@@ -36,7 +36,6 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupération des statistiques depuis data/publications
       const pubUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`;
       const pubRes = await fetch(pubUrl);
       let libStats = {};
@@ -59,7 +58,6 @@ export default function CommunautePage() {
         }, {});
       }
 
-      // 2. Récupération des profils utilisateurs depuis data/users
       const userUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
       const userRes = await fetch(userUrl);
       if (!userRes.ok) throw new Error("Erreur fichiers users");
@@ -73,8 +71,6 @@ export default function CommunautePage() {
               const fileRes = await fetch(file.download_url);
               const userData = await fileRes.json();
               const email = userData.email?.toLowerCase().trim();
-              
-              // Injection des stats réelles calculées plus haut
               const stats = libStats[email] || { works: 0, views: 0 };
               
               return {
@@ -83,8 +79,8 @@ export default function CommunautePage() {
                 image: userData.profilePic || userData.image || null,
                 followers: userData.followers || [],
                 li: Number(userData.li || 0),
-                worksCount: stats.works, // Nombre de Textes
-                views: stats.views,      // Nombre de Lectures
+                worksCount: stats.works,
+                views: stats.views,
                 certified: userData.certified || 0
               };
             } catch (err) { return null; }
@@ -185,7 +181,7 @@ export default function CommunautePage() {
                     <StatBadge label="Li" val={a.li} color="amber" />
                 </div>
                 <div className="flex gap-2 justify-center sm:justify-start">
-                  <Link href={`/author/${encodeURIComponent(a.email)}`} className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2">
+                  <Link href={`/author/${a.email}`} className="px-8 py-3 bg-teal-600 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all flex items-center gap-2">
                     Profil <ArrowRight size={14} />
                   </Link>
                   {currentUser && currentUser.email !== a.email && (
