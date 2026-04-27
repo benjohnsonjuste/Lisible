@@ -204,14 +204,14 @@ export default function Navbar() {
       </header>
 
       <aside className={`fixed top-0 left-0 h-full w-80 bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-500 ease-in-out z-[60] border-r border-slate-50 dark:border-white/5 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="p-8 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-10">
+        <div className="p-8 flex flex-col h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-teal-600 scrollbar-track-transparent">
+          <div className="flex items-center justify-between mb-10 shrink-0">
             <span className="font-black italic text-xl tracking-tighter text-teal-600">Lisible.</span>
             <button onClick={() => setIsMenuOpen(false)} className="p-2 text-slate-400 hover:text-teal-600 transition-colors"><X size={24} /></button>
           </div>
 
           {user ? (
-            <Link href="/settings" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group">
+            <Link href="/settings" onClick={() => setIsMenuOpen(false)} className="mb-10 p-5 bg-slate-50 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-900/10 rounded-[2rem] flex items-center justify-between gap-4 border border-slate-100 dark:border-white/5 transition-all group shrink-0">
               <div className="flex items-center gap-4 overflow-hidden">
                 <div className="shrink-0 w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-950 shadow-lg relative">
                   {user.profilePic ? (
@@ -233,7 +233,7 @@ export default function Navbar() {
             <Link 
               href="/login" 
               onClick={() => setIsMenuOpen(false)} 
-              className="mb-10 p-5 bg-teal-600 text-white rounded-[2rem] flex items-center gap-4 border border-teal-500 transition-all shadow-lg active:scale-95"
+              className="mb-10 p-5 bg-teal-600 text-white rounded-[2rem] flex items-center gap-4 border border-teal-500 transition-all shadow-lg active:scale-95 shrink-0"
             >
               <LogIn size={22} />
               <div className="text-left">
@@ -257,7 +257,7 @@ export default function Navbar() {
             )))}
           </nav>
 
-          <footer className="mt-auto pt-10 text-center">
+          <footer className="mt-auto pt-10 pb-4 text-center shrink-0">
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-300 dark:text-slate-700">
               Écosystème Lisible
             </p>
