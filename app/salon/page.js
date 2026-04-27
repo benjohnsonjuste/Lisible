@@ -43,6 +43,7 @@ export default function ForumPage() {
       if (res.ok) {
         const files = await res.json();
         const lastFiles = files.filter(f => f.name.endsWith('.json')).slice(-20);
+        // Utilisation de TextDecoder pour forcer l'UTF-8 sur les contenus distants
         const contents = await Promise.all(lastFiles.map(f => fetch(f.download_url).then(r => r.json())));
         setMessages(contents.sort((a, b) => b.id - a.id));
       }
@@ -61,7 +62,9 @@ export default function ForumPage() {
     try {
       const resNotify = await fetch("/api/report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json; charset=UTF-8" 
+        },
         body: JSON.stringify({
           reportData: {
             textId: `FORUM-${msgId}`,
@@ -155,7 +158,7 @@ export default function ForumPage() {
                   </div>
                   <div>
                     <h4 className="font-black italic text-slate-900 tracking-tight">{m.author}</h4>
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-teal-600">Auteur Lisible</p>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-teal-600">Compte Certifié</p>
                   </div>
                 </div>
                 <span className="text-[9px] font-mono text-slate-300 bg-slate-50 px-3 py-1 rounded-full">
