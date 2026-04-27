@@ -23,20 +23,39 @@ export default function Home() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch("/api/github-db?type=library");
-        const data = await response.json();
+        // Récupération simultanée des deux sources de données
+        const [libRes, battleRes] = await Promise.all([
+          fetch("/api/github-db?type=library"),
+          fetch("/api/novel-battle-db")
+        ]);
+
+        const libData = await libRes.json();
+        const battleData = await battleRes.json();
         
-        if (data && Array.isArray(data.content)) {
-          const content = data.content;
-          const totalViews = content.reduce((acc, p) => acc + (Number(p.views) || 0), 0);
-          const totalLikes = content.reduce((acc, p) => acc + (Number(p.likes) || 0), 0);
-          const uniqueAuthors = new Set(content.map(p => p.authorEmail)).size;
-          const certifiedCount = content.filter(p => p.certified > 0).length;
+        let allContent = [];
+        if (libData && Array.isArray(libData.content)) {
+          allContent = [...libData.content];
+        }
+
+        // Fusion des textes du concours s'ils ne sont pas déjà dans l'index global
+        if (battleData && Array.isArray(battleData.leaderboard)) {
+          battleData.leaderboard.forEach(item => {
+            if (!allContent.find(t => t.id === item.id)) {
+              allContent.push(item);
+            }
+          });
+        }
+        
+        if (allContent.length > 0) {
+          const totalViews = allContent.reduce((acc, p) => acc + (Number(p.views) || 0), 0);
+          const totalLikes = allContent.reduce((acc, p) => acc + (Number(p.likes) || 0), 0);
+          const uniqueAuthors = new Set(allContent.map(p => p.authorEmail?.toLowerCase())).size;
+          const certifiedCount = allContent.reduce((acc, p) => acc + (Number(p.certified || p.totalCertified) > 0 ? 1 : 0), 0);
           
           setStats({
             views: totalViews,
             likes: totalLikes,
-            texts: content.length,
+            texts: allContent.length,
             authors: uniqueAuthors,
             engagement: ((totalLikes / (totalViews || 1)) * 100).toFixed(1),
             certified: certifiedCount
@@ -133,7 +152,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Section Global Stats */}
+        {/* --- SECTION GLOBAL STATS HIGH-TECH --- */}
         <section className="py-20 px-6 max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
             <div className="space-y-2">
@@ -141,6 +160,10 @@ export default function Home() {
                 <Activity size={14} className="animate-pulse" /> Live Network Pulse
               </div>
               <h2 className="text-6xl md:text-7xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-[0.8]">Metrics.</h2>
+            </div>
+            <div className="hidden md:block text-right">
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Dernière mise à jour</p>
+              <p className="font-black text-slate-900 dark:text-white">INSTANT TÉLÉMÉTRIE</p>
             </div>
           </div>
 
@@ -163,10 +186,37 @@ export default function Home() {
               </div>
             </div>
 
-            <StatCard icon={PenTool} label="Manuscrits" value={stats.texts} color="from-blue-500 to-cyan-400" loading={loading} />
-            <StatCard icon={Heart} label="Appréciations" value={stats.likes} color="from-rose-500 to-orange-400" loading={loading} />
-            <StatCard icon={Users} label="Plumes" value={stats.authors} color="from-indigo-500 to-purple-400" loading={loading} />
-            <StatCard icon={ShieldCheck} label="Certifiés" value={stats.certified} color="from-teal-500 to-emerald-400" loading={loading} />
+            <StatCard 
+              icon={PenTool} 
+              label="Manuscrits" 
+              value={stats.texts} 
+              color="from-blue-500 to-cyan-400" 
+              loading={loading}
+            />
+            
+            <StatCard 
+              icon={Heart} 
+              label="Appréciations" 
+              value={stats.likes} 
+              color="from-rose-500 to-orange-400" 
+              loading={loading}
+            />
+
+            <StatCard 
+              icon={Users} 
+              label="Plumes" 
+              value={stats.authors} 
+              color="from-indigo-500 to-purple-400" 
+              loading={loading}
+            />
+
+            <StatCard 
+              icon={ShieldCheck} 
+              label="Certifiés" 
+              value={stats.certified} 
+              color="from-teal-500 to-emerald-400" 
+              loading={loading}
+            />
 
             <div className="md:col-span-2 p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border border-slate-200 dark:border-white/5 flex items-center justify-between shadow-lg">
               <div className="space-y-2">
@@ -179,6 +229,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+
       </main>
     </div>
   );
