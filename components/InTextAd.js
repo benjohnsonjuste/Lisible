@@ -17,10 +17,10 @@ export function InTextAd() {
       const container = document.getElementById(containerId);
       
       if (container) {
-        // Reset du conteneur
+        // Nettoyage préalable
         container.innerHTML = "";
 
-        // Configuration Adsterra
+        // Étape 1 : Configuration des options globales requises par invoke.js
         window.atOptions = {
           'key' : '874a186feecd3e968c16a58bb085fd56',
           'format' : 'iframe',
@@ -29,23 +29,25 @@ export function InTextAd() {
           'params' : {}
         };
 
+        // Étape 2 : Création du script d'appel principal
         const script = document.createElement("script");
         script.type = "text/javascript";
         script.src = "//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
-        script.async = true;
         
-        // Ajout du script spécifique demandé
+        // Étape 3 : Ajout du script de tracking/supplémentaire
         const extraScript = document.createElement("script");
         extraScript.type = "text/javascript";
         extraScript.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
         extraScript.async = true;
 
+        // Injection dans le conteneur spécifique
         container.appendChild(script);
-        container.appendChild(extraScript);
+        document.body.appendChild(extraScript);
       }
 
       return () => {
         if (container) container.innerHTML = "";
+        // Nettoyage optionnel du script extra s'il existe
       };
     }
   }, [isVisible]);
@@ -54,36 +56,36 @@ export function InTextAd() {
 
   return (
     <div className="my-8 flex justify-center w-full animate-in fade-in duration-700">
-      <div className="relative bg-slate-900 border border-slate-800 p-2 rounded-[2.2rem] shadow-2xl">
+      <div className="relative bg-slate-900 border border-slate-800 p-3 rounded-[2.5rem] shadow-2xl">
         
         {/* Barre de contrôle */}
         <div className="flex items-center justify-between px-4 mb-2">
           <div className="flex items-center gap-1.5">
             <Sparkles size={10} className="text-teal-500" />
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Sponsor</span>
+            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Sponsorisé</span>
           </div>
           <button 
             onClick={() => setIsVisible(false)} 
-            className="text-slate-600 hover:text-rose-400"
+            className="text-slate-600 hover:text-rose-400 transition-colors"
           >
             <X size={14} />
           </button>
         </div>
 
-        {/* Zone de rendu 300x250 - Ne pas toucher aux dimensions */}
-        <div className="bg-black/20 rounded-[1.5rem] overflow-hidden flex items-center justify-center border border-white/5">
+        {/* Zone de rendu 300x250 - Structure renforcée pour éviter les débordements */}
+        <div className="bg-black/40 rounded-[1.8rem] overflow-hidden flex items-center justify-center border border-white/5 min-w-[320px] min-h-[270px]">
            <div 
              id="container-874a186feecd3e968c16a58bb085fd56" 
-             className="min-w-[300px] min-h-[250px] flex justify-center items-center"
+             className="w-[300px] h-[250px] flex justify-center items-center"
            >
-             {/* L'iframe Adsterra s'injecte ici */}
+             {/* L'iframe Adsterra s'injecte ici via invoke.js */}
            </div>
         </div>
 
         {/* Label de soutien */}
-        <div className="mt-2 text-center">
-          <p className="text-[7px] font-bold text-slate-700 uppercase tracking-tighter">
-            Lisible est gratuit grâce à nos mécènes
+        <div className="mt-3 text-center">
+          <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest opacity-80">
+            Soutenez la littérature gratuite
           </p>
         </div>
       </div>
