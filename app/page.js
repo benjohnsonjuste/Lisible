@@ -5,7 +5,7 @@ import Link from "next/link";
 import { 
   BookOpen, Users, Sparkles, ArrowRight, Star
 } from "lucide-react";
-import { GlobalStats } from "@/components/GlobalStats";
+import { GlobalStats } from "../components/GlobalStats";
 
 // Obligatoire pour optimiser les performances sur Cloudflare Edge
 export const runtime = "edge";
