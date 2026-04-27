@@ -1,5 +1,6 @@
+// app/evenements/page.js
 import React from "react";
-import { CalendarDays, Sparkles, Trophy, ArrowRight, Lock, Flame, Feather } from "lucide-react";
+import { CalendarDays, Sparkles, Trophy, ArrowRight, Lock, Flame, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
@@ -27,39 +28,39 @@ export default function EvenementsPage() {
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* CARTE 1 : DUEL DES NOUVELLES (ANNONCE / BIENTÔT) */}
+        {/* CARTE 1 : DUEL DES NOUVELLES (À VENIR) */}
         <div className="group relative">
-          <div className="h-full bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 border border-amber-100 dark:border-white/5 shadow-2xl shadow-amber-900/5 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-amber-900/10 relative overflow-hidden">
+          <div className="h-full bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 border border-teal-100 dark:border-white/5 shadow-2xl shadow-teal-900/5 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-teal-900/10 relative overflow-hidden">
             {/* Badge Status */}
             <div className="absolute top-8 right-8 bg-amber-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest z-20">
               Ouverture bientôt
             </div>
             
             <div className="space-y-8 relative z-10">
-              <div className="w-16 h-16 bg-amber-500 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-amber-200 dark:shadow-none">
-                <Feather size={32} />
+              <div className="w-16 h-16 bg-teal-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-teal-200 dark:shadow-none">
+                <BookOpen size={32} />
               </div>
               
               <div className="space-y-4">
-                <h2 className="text-4xl font-black italic tracking-tighter text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-tight">
+                <h2 className="text-4xl font-black italic tracking-tighter text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors leading-tight">
                   Duel Des <br />Nouvelles
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                  Préparez vos plus belles proses. La première édition de ce grand concours narratif arrive très prochainement.
+                  Préparez vos plus belles intrigues. La première édition de ce concours de narration commence en Mai 2026.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 font-black text-[11px] uppercase tracking-widest">
-                Prévu pour Mai 2026 <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" />
+              <div className="flex items-center gap-3 text-teal-600 dark:text-teal-400 font-black text-[11px] uppercase tracking-widest">
+                Première édition : Mai 2026
               </div>
             </div>
 
             {/* Déco fond */}
-            <Sparkles className="absolute -bottom-10 -right-10 text-amber-50 dark:text-amber-900/10 size-40 rotate-12" />
+            <Sparkles className="absolute -bottom-10 -right-10 text-teal-50 dark:text-teal-900/10 size-40 rotate-12" />
           </div>
         </div>
 
-        {/* CARTE 2 : BATTLE POÉTIQUE (FERMÉ) */}
+        {/* CARTE 2 : BATTLE POÉTIQUE (FERMÉE) */}
         <div className="relative group grayscale">
           <div className="h-full bg-slate-50 dark:bg-white/5 rounded-[3.5rem] p-10 border border-slate-200 dark:border-white/5 border-dashed flex flex-col justify-between opacity-80">
             
@@ -76,13 +77,41 @@ export default function EvenementsPage() {
                   Battle Poétique <br />International
                 </h2>
                 <p className="text-slate-400 dark:text-slate-600 leading-relaxed font-medium">
-                  L'édition 2026 s'est achevée le 21 mars. Merci à tous les poètes pour leur participation exceptionnelle.
+                  L'édition 2026 s'est achevée le 21 mars. Merci aux poètes du monde entier pour leur participation.
                 </p>
               </div>
             </div>
 
             <div className="mt-8 pt-8 border-t border-slate-200 dark:border-white/5">
-               <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">Prochaine édition : 2027</p>
+               <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">Prochaine édition : Janvier 2027</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CARTE 3 : FOIRE VIRTUELLE (FERMÉE) */}
+        <div className="relative group grayscale lg:col-span-2">
+          <div className="h-full bg-slate-50 dark:bg-white/5 rounded-[3.5rem] p-10 border border-slate-200 dark:border-white/5 border-dashed flex flex-col justify-between opacity-80">
+            
+            <div className="space-y-8">
+              <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-[1.5rem] flex items-center justify-center text-slate-400">
+                <Lock size={32} />
+              </div>
+              
+              <div className="space-y-4">
+                <div className="inline-block bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
+                  Terminé
+                </div>
+                <h2 className="text-4xl font-black italic tracking-tighter text-slate-400 dark:text-slate-600 leading-tight">
+                  Foire Littéraire <br />Annuelle
+                </h2>
+                <p className="text-slate-400 dark:text-slate-600 leading-relaxed font-medium">
+                  La foire a fermé ses portes. Merci à tous les exposants et visiteurs pour cette édition mémorable.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-white/5">
+               <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">Prochaine édition : Décembre 2026</p>
             </div>
           </div>
         </div>
@@ -95,9 +124,9 @@ export default function EvenementsPage() {
           <Sparkles size={32} />
         </div>
         <div className="text-center md:text-left space-y-2">
-          <h3 className="text-xl font-black italic text-amber-900 dark:text-amber-400 tracking-tight">Le Duel des Nouvelles arrive !</h3>
+          <h3 className="text-xl font-black italic text-amber-900 dark:text-amber-400 tracking-tight">De nouveaux défis arrivent !</h3>
           <p className="text-amber-700/70 dark:text-amber-600/70 text-sm font-medium">
-            L'ouverture des inscriptions pour la session de mai approche. Restez connectés.
+            Autres événements sont en attente. Restez à l'affût des notifications.
           </p>
         </div>
       </div>
@@ -110,4 +139,3 @@ export default function EvenementsPage() {
     </div>
   );
 }
-
