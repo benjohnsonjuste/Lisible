@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { 
   BookOpen, Users, Sparkles, ArrowRight, Star, Activity, Heart, ShieldCheck, Zap, Globe, PenTool, TrendingUp
-} from "lucide-react";
+} from "lucide-center";
 
 // Obligatoire pour optimiser les performances sur Cloudflare Edge
 export const runtime = "edge";
@@ -16,53 +16,31 @@ export default function Home() {
     texts: 0,
     authors: 0,
     engagement: 0,
-    certified: 0
+    certified: 0,
+    visitors: 0
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Récupération simultanée des deux sources de données
-        const [libRes, battleRes] = await Promise.all([
-          fetch("/api/github-db?type=library"),
-          fetch("/api/novel-battle-db")
-        ]);
-
-        const libData = await libRes.json();
-        const battleData = await battleRes.json();
+        const response = await fetch("/api/stats");
+        const data = await response.json();
         
-        let allContent = [];
-        if (libData && Array.isArray(libData.content)) {
-          allContent = [...libData.content];
-        }
-
-        // Fusion des textes du concours s'ils ne sont pas déjà dans l'index global
-        if (battleData && Array.isArray(battleData.leaderboard)) {
-          battleData.leaderboard.forEach(item => {
-            if (!allContent.find(t => t.id === item.id)) {
-              allContent.push(item);
-            }
-          });
-        }
-        
-        if (allContent.length > 0) {
-          const totalViews = allContent.reduce((acc, p) => acc + (Number(p.views) || 0), 0);
-          const totalLikes = allContent.reduce((acc, p) => acc + (Number(p.likes) || 0), 0);
-          const uniqueAuthors = new Set(allContent.map(p => p.authorEmail?.toLowerCase())).size;
-          const certifiedCount = allContent.reduce((acc, p) => acc + (Number(p.certified || p.totalCertified) > 0 ? 1 : 0), 0);
-          
+        if (data && data.success) {
+          const m = data.metrics;
           setStats({
-            views: totalViews,
-            likes: totalLikes,
-            texts: allContent.length,
-            authors: uniqueAuthors,
-            engagement: ((totalLikes / (totalViews || 1)) * 100).toFixed(1),
-            certified: certifiedCount
+            views: m.pageViews || 0,
+            likes: m.engagement?.likes || 0,
+            texts: m.publishedTexts || 0,
+            authors: m.registeredUsers || 0,
+            engagement: m.engagementRate || 0,
+            certified: m.engagement?.certified || 0,
+            visitors: m.uniqueVisitors || 0
           });
         }
       } catch (error) {
-        console.error("Erreur stats:", error);
+        console.error("Erreur stats API:", error);
       } finally {
         setLoading(false);
       }
@@ -204,16 +182,16 @@ export default function Home() {
 
             <StatCard 
               icon={Users} 
-              label="Plumes" 
+              label="Inscrits" 
               value={stats.authors} 
               color="from-indigo-500 to-purple-400" 
               loading={loading}
             />
 
             <StatCard 
-              icon={ShieldCheck} 
-              label="Certifiés" 
-              value={stats.certified} 
+              icon={Globe} 
+              label="Visiteurs" 
+              value={stats.visitors} 
               color="from-teal-500 to-emerald-400" 
               loading={loading}
             />
