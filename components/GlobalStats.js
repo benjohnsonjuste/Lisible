@@ -19,23 +19,19 @@ export default function GlobalStats() {
   useEffect(() => {
     async function fetchGlobalData() {
       try {
-        const res = await fetch('/api/github-db?type=library');
+        // Appel à l'API de statistiques centralisée pour une synchronisation réelle
+        const res = await fetch('/api/stats');
         const data = await res.json();
 
-        if (data && Array.isArray(data.content)) {
-          const content = data.content;
-          const totalViews = content.reduce((acc, p) => acc + (Number(p.views) || 0), 0);
-          const totalLikes = content.reduce((acc, p) => acc + (Number(p.likes) || 0), 0);
-          const uniqueAuthors = new Set(content.map(p => p.authorEmail)).size;
-          const certifiedCount = content.filter(p => p.certified > 0).length;
-          
+        if (data && data.success) {
+          const m = data.metrics;
           setStats({
-            views: totalViews,
-            likes: totalLikes,
-            texts: content.length,
-            authors: uniqueAuthors,
-            engagement: ((totalLikes / (totalViews || 1)) * 100).toFixed(1),
-            certified: certifiedCount
+            views: m.pageViews || 0,
+            likes: m.engagement?.likes || 0,
+            texts: m.publishedTexts || 0,
+            authors: m.registeredUsers || 0,
+            engagement: m.engagementRate || 0,
+            certified: m.engagement?.certified || 0
           });
         }
       } catch (e) {
@@ -44,12 +40,15 @@ export default function GlobalStats() {
         setLoading(false);
       }
     }
+
     fetchGlobalData();
+    // Synchronisation en temps réel toutes les 30 secondes
+    const interval = setInterval(fetchGlobalData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const StatCard = ({ icon: Icon, label, value, color, delay }) => (
+  const StatCard = ({ icon: Icon, label, value, color }) => (
     <div className={`relative group p-6 rounded-[2rem] bg-white border border-slate-100 shadow-xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl`}>
-      {/* Effet de scan High-Tech en arrière-plan */}
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${color} -z-10`} />
       <div className="absolute -right-4 -bottom-4 text-slate-50 group-hover:text-white group-hover:opacity-20 transition-all duration-500">
         <Icon size={120} strokeWidth={1} />
@@ -61,7 +60,7 @@ export default function GlobalStats() {
         </div>
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">{label}</p>
         <h3 className="text-4xl font-black italic tracking-tighter text-slate-900 leading-none">
-          {loading ? "---" : value}
+          {loading ? "---" : value.toLocaleString()}
         </h3>
       </div>
     </div>
@@ -69,7 +68,6 @@ export default function GlobalStats() {
 
   return (
     <section className="py-20 px-6 max-w-7xl mx-auto">
-      {/* Header Statistique */}
       <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-teal-500 font-black text-[10px] uppercase tracking-[0.3em]">
@@ -83,10 +81,8 @@ export default function GlobalStats() {
         </div>
       </div>
 
-      {/* Grille Bento High-Tech */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         
-        {/* Colonne Principale : Lectures */}
         <div className="md:col-span-2 md:row-span-2 relative group p-10 rounded-[3rem] bg-slate-950 text-white overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 p-8 opacity-20">
             <Globe size={200} className="animate-[spin_20s_linear_infinite]" />
@@ -105,7 +101,6 @@ export default function GlobalStats() {
           </div>
         </div>
 
-        {/* Petites Cartes */}
         <StatCard 
           icon={PenTool} 
           label="Manuscrits" 
@@ -134,7 +129,6 @@ export default function GlobalStats() {
           color="from-teal-500 to-emerald-400" 
         />
 
-        {/* Carte Engagement Large */}
         <div className="md:col-span-2 p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white border border-slate-200 flex items-center justify-between shadow-lg">
           <div className="space-y-2">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taux d'engagement</p>
