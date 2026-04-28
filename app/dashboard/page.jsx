@@ -1,56 +1,61 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
 import { 
-  Loader2, Sparkles, Plus, Settings as SettingsIcon, 
-  Download, Award, Link as LinkIcon, BarChart3
+  Coins, BookOpen, TrendingUp, Settings as SettingsIcon, 
+  Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
+  ShieldCheck, AlertCircle, Download, Award, Link as LinkIcon, Share2, BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
-// Import de vos nouveaux composants
-import StatistiquesPersonnelles from '@/components/StatistiquesPersonnelles';
-import MesManuscrits from '@/components/MesManuscrits';
 
 export default function AuthorDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [globalStats, setGlobalStats] = useState({ totalViews: 0, totalLikes: 0 });
   const canvasRef = useRef(null);
 
   useEffect(() => {
     async function loadStudio() {
       try {
         const loggedUser = localStorage.getItem("lisible_user");
-        if (!loggedUser) {
-          router.replace("/login");
-          return;
-        }
+        if (!loggedUser) return router.replace("/login");
 
         const parsedUser = JSON.parse(loggedUser);
-        const email = parsedUser.email;
+        const email = parsedUser.email.toLowerCase().trim();
         
-        // On utilise votre nouvelle API agrégée pour tout récupérer d'un coup
-        const res = await fetch(`/api/user-stats?email=${encodeURIComponent(email)}`);
-        
-        if (res.ok) {
-          const data = await res.json();
-          // L'API renvoie { profile: {...}, works: [...], publications: {...} }
-          setUser(data.profile);
-          setWorks(data.works);
-          
-          // Mise à jour discrète du localStorage avec le dernier solde Li
-          localStorage.setItem("lisible_user", JSON.stringify({
-            ...parsedUser,
-            li: data.profile.liBalance
-          }));
-        } else {
-          throw new Error("Erreur de récupération");
+        // 1. Récupération Profil (data/users)
+        const userRes = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData?.content) {
+            setUser(userData.content);
+            localStorage.setItem("lisible_user", JSON.stringify(userData.content));
+          }
+        }
+
+        // 2. Récupération Bibliothèque & Stats (data/publications)
+        const libraryRes = await fetch(`/api/github-db?type=library`);
+        if (libraryRes.ok) {
+          const libraryData = await libraryRes.json();
+          if (libraryData?.content) {
+            // Filtrage des textes de l'auteur dans data/texts via les métadonnées de la bibliothèque
+            const authorWorks = libraryData.content
+              .filter(w => w.authorEmail?.toLowerCase().trim() === email)
+              .sort((a, b) => (b.certified || 0) - (a.certified || 0));
+
+            setWorks(authorWorks);
+            
+            // Calcul des stats réelles cumulées
+            const views = authorWorks.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
+            const likes = authorWorks.reduce((acc, curr) => acc + Number(curr.likes || 0), 0);
+            setGlobalStats({ totalViews: views, totalLikes: likes });
+          }
         }
       } catch (e) {
-        console.error("Sync error:", e);
-        toast.error("Échec de la synchronisation du Studio.");
+        toast.error("Erreur de synchronisation des données.");
       } finally {
         setLoading(false);
       }
@@ -58,26 +63,20 @@ export default function AuthorDashboard() {
     loadStudio();
   }, [router]);
 
-  const generateBadge = (download = false) => {
-    const canvas = canvasRef.current;
-    if (!canvas || !user) return;
-    const ctx = canvas.getContext('2d');
-    const name = user.name || "Auteur Lisible";
-    canvas.width = 600; canvas.height = 600;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, 600, 600);
-    ctx.strokeStyle = '#14b8a6'; ctx.lineWidth = 20; ctx.strokeRect(10, 10, 580, 580);
-    ctx.fillStyle = '#14b8a6'; ctx.font = 'bold 30px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('COMPTE OFFICIEL', 300, 80);
-    ctx.fillStyle = '#ffffff'; ctx.font = 'italic bold 45px serif'; ctx.fillText(name, 300, 300);
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 25px Arial'; ctx.fillText('lisible.art', 300, 540);
-
-    if (download) {
-      const link = document.createElement('a');
-      link.download = `badge-${name}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.9);
-      link.click();
-      toast.success("Badge enregistré !");
-    }
+  const handleDelete = async (id, title) => {
+    if (!confirm(`Voulez-vous supprimer définitivement "${title}" ?`)) return;
+    const tId = toast.loading("Suppression du texte...");
+    try {
+      const res = await fetch('/api/github-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_text', textId: id })
+      });
+      if (res.ok) {
+        setWorks(works.filter(w => w.id !== id));
+        toast.success("Manuscrit retiré.", { id: tId });
+      }
+    } catch (e) { toast.error("Échec de l'opération.", { id: tId }); }
   };
 
   if (loading) return (
@@ -91,66 +90,106 @@ export default function AuthorDashboard() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
-      <canvas ref={canvasRef} className="hidden" />
       <div className="max-w-6xl mx-auto space-y-12">
         
-        {/* Header */}
+        {/* Header Dynamique */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end pt-12 gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={14} className="text-teal-600" />
-              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Tableau de Bord</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-teal-600">Tableau de bord auteur</span>
             </div>
             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Mon Studio.</h1>
           </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <button className="flex items-center gap-2 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-black text-[10px] uppercase tracking-widest">
-              <LinkIcon size={14} /> Partager Profil
-            </button>
-
-            <div className="flex items-center gap-3 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-              <div className="w-10 h-10 bg-teal-500 text-white rounded-full flex items-center justify-center shadow-lg">
-                <Award size={20} />
-              </div>
-              <button onClick={() => generateBadge(true)} className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-teal-600 transition-colors">
-                <Download size={16} />
-              </button>
-            </div>
-          </div>
+          <Link href="/publish" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-4 rounded-2xl hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 font-bold italic">
+            <Plus size={20} /> Nouveau Texte
+          </Link>
         </header>
 
-        {/* Actions Rapides */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Link href="/publish" className="group flex items-center justify-between p-8 bg-teal-600 text-white rounded-[2.5rem] shadow-xl hover:bg-teal-700 transition-all">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Écriture</p><h3 className="text-xl font-bold italic">Nouveau Manuscrit</h3></div>
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center group-hover:rotate-90 transition-transform"><Plus size={24} /></div>
-          </Link>
-          <Link href="/account" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl hover:bg-black transition-all">
-            <div><p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Configuration</p><h3 className="text-xl font-bold italic">Mon Compte</h3></div>
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><SettingsIcon size={22} /></div>
-          </Link>
-        </section>
-
-        {/* ANALYTIQUES : Utilisation du nouveau composant */}
-        <section className="space-y-6">
-          <div className="flex items-center gap-2 px-2">
-            <BarChart3 size={18} className="text-slate-900" />
-            <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Analyses Globales.</h2>
+        {/* Stats Réelles (data/publications) */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Bourse Li</p>
+            <div className="flex items-end gap-2">
+              <h2 className="text-4xl font-black italic text-slate-900">{user.li || 0}</h2>
+              <span className="text-teal-600 font-bold mb-1">Li</span>
+            </div>
           </div>
-          <StatistiquesPersonnelles user={user} works={works} />
-        </section>
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Vues Réelles</p>
+            <div className="flex items-center gap-3 text-slate-900">
+              <BarChart3 size={20} className="text-blue-500" />
+              <h2 className="text-3xl font-black italic">{globalStats.totalViews.toLocaleString()}</h2>
+            </div>
+          </div>
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Abonnés</p>
+            <div className="flex items-center gap-3 text-slate-900">
+              <User size={20} className="text-teal-500" />
+              <h2 className="text-3xl font-black italic">{user.followers?.length || 0}</h2>
+            </div>
+          </div>
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Certifications</p>
+            <div className="flex items-center gap-3 text-slate-900">
+              <Award size={20} className="text-amber-500" />
+              <h2 className="text-3xl font-black italic">{works.reduce((a,c) => a+(c.certified||0),0)}</h2>
+            </div>
+          </div>
+        </div>
 
-        {/* LISTE DES ŒUVRES : Utilisation du composant MesManuscrits */}
+        {/* Liste des Textes (data/texts) */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Œuvres.</h2>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{works.length} Manuscrit(s)</span>
+            <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Textes Publiés.</h2>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+              {works.length} Manuscrits
+            </div>
           </div>
 
-          <MesManuscrits works={works} setWorks={setWorks} />
+          <div className="grid grid-cols-1 gap-4">
+            {works.length > 0 ? works.map((work) => (
+              <div key={work.id} className="group bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-teal-200 transition-all flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-start gap-5">
+                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                    <FileText size={28} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-xl font-bold text-slate-900">{work.title}</h3>
+                      {work.certified > 0 && <ShieldCheck size={16} className="text-teal-500" />}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <span className="text-teal-600 italic">Sceau de Qualité : {work.certified || 0}</span>
+                      <span>•</span>
+                      <span>{work.views || 0} Lectures</span>
+                      <span>•</span>
+                      <span>{work.category || "Littérature"}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Link href={`/texts/${work.id}`} target="_blank" className="p-4 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-100 transition-all" title="Voir en ligne">
+                    <ExternalLink size={18} />
+                  </Link>
+                  {/* MODIFICATION : Redirige vers la page d'édition dédiée */}
+                  <Link href={`/edit/${work.id}`} className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all" title="Modifier le texte">
+                    <Edit3 size={18} />
+                  </Link>
+                  <button onClick={() => handleDelete(work.id, work.title)} className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all" title="Supprimer">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            )) : (
+              <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
+                <p className="text-slate-400 font-medium italic">Votre plume attend son premier texte...</p>
+                <Link href="/publish" className="mt-4 inline-block text-[10px] font-black uppercase text-teal-600 underline">Commencer ici</Link>
+              </div>
+            )}
+          </div>
         </section>
-
       </div>
     </div>
   );
