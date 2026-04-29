@@ -51,7 +51,7 @@ export default function NovelDuelPublierPage() {
         <div className="mt-10 p-6 bg-white/5 rounded-3xl border border-white/5">
            <p className="text-center text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Code de la compétition</p>
            <p className="text-center text-slate-500 text-xs font-serif italic leading-relaxed">
-             En publiant dans cette section, votre nouvelle sera automatiquement classée dans le Duel de Nouvelles. 
+             En publiant dans cette section, votre nouvelle sera automatiquement classée dans le Duel des Nouvelles. 
              La limite de 10 000 caractères permet d'explorer la profondeur de votre intrigue tout en restant percutant.
            </p>
         </div>
