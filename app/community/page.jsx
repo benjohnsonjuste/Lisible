@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import MessageModal from "../components/MessageModal";
+import MessageModal from "@/components/MessageModal";
 
 export default function CommunautePage() {
   const [authors, setAuthors] = useState([]);
