@@ -173,7 +173,11 @@ export default function TextContent() {
             {canReadFull ? (
               <div className="whitespace-pre-wrap">
                 {text.content?.split('\n').slice(0, 3).join('\n')}
-                {!isFocusMode && <div className="my-12 py-4 border-y border-slate-100/50"><InTextAd /></div>}
+                {!isFocusMode && (
+                  <div className="my-12 w-full min-h-[280px] flex items-center justify-center bg-slate-50/50 rounded-3xl overflow-hidden border border-slate-100/50">
+                    <InTextAd />
+                  </div>
+                )}
                 {text.content?.split('\n').slice(3).join('\n')}
               </div>
             ) : (
