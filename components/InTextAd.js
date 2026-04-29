@@ -5,7 +5,7 @@ import { X, Sparkles } from "lucide-react";
 
 /**
  * Composant de publicité native intégrée au texte (In-Text).
- * Format optimisé 300x250 pour Adsterra.
+ * Format optimisé pour un affichage en largeur "normale longue".
  */
 export function InTextAd() {
   const [isVisible, setIsVisible] = useState(true);
@@ -20,7 +20,7 @@ export function InTextAd() {
         // Nettoyage préalable
         container.innerHTML = "";
 
-        // Étape 1 : Configuration des options globales requises par invoke.js
+        // Étape 1 : Configuration des options globales
         window.atOptions = {
           'key' : '874a186feecd3e968c16a58bb085fd56',
           'format' : 'iframe',
@@ -34,20 +34,18 @@ export function InTextAd() {
         script.type = "text/javascript";
         script.src = "//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
         
-        // Étape 3 : Ajout du script de tracking/supplémentaire
+        // Étape 3 : Ajout du script de tracking
         const extraScript = document.createElement("script");
         extraScript.type = "text/javascript";
         extraScript.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
         extraScript.async = true;
 
-        // Injection dans le conteneur spécifique
         container.appendChild(script);
         document.body.appendChild(extraScript);
       }
 
       return () => {
         if (container) container.innerHTML = "";
-        // Nettoyage optionnel du script extra s'il existe
       };
     }
   }, [isVisible]);
@@ -55,38 +53,41 @@ export function InTextAd() {
   if (!isVisible) return null;
 
   return (
-    <div className="my-8 flex justify-center w-full animate-in fade-in duration-700">
-      <div className="relative bg-slate-900 border border-slate-800 p-3 rounded-[2.5rem] shadow-2xl">
+    <div className="my-12 flex justify-center w-full animate-in fade-in duration-700">
+      {/* Container élargi pour une dimension "longue" équilibrée */}
+      <div className="relative bg-slate-900 border border-slate-800 p-4 rounded-[2rem] shadow-2xl w-full max-w-2xl">
         
         {/* Barre de contrôle */}
-        <div className="flex items-center justify-between px-4 mb-2">
+        <div className="flex items-center justify-between px-4 mb-3">
           <div className="flex items-center gap-1.5">
             <Sparkles size={10} className="text-teal-500" />
-            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Sponsorisé</span>
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Contenu Sponsorisé</span>
           </div>
           <button 
             onClick={() => setIsVisible(false)} 
-            className="text-slate-600 hover:text-rose-400 transition-colors"
+            className="text-slate-600 hover:text-rose-400 transition-colors p-1"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Zone de rendu 300x250 - Structure renforcée pour éviter les débordements */}
-        <div className="bg-black/40 rounded-[1.8rem] overflow-hidden flex items-center justify-center border border-white/5 min-w-[320px] min-h-[270px]">
+        {/* Zone de rendu - Dimension "longue normale" pour l'intégration */}
+        <div className="bg-black/20 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 min-h-[280px] w-full">
            <div 
              id="container-874a186feecd3e968c16a58bb085fd56" 
              className="w-[300px] h-[250px] flex justify-center items-center"
            >
-             {/* L'iframe Adsterra s'injecte ici via invoke.js */}
+             {/* L'iframe s'injecte ici */}
            </div>
         </div>
 
         {/* Label de soutien */}
-        <div className="mt-3 text-center">
-          <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest opacity-80">
-            Soutenez la littérature gratuite
+        <div className="mt-3 flex justify-center items-center gap-2">
+          <div className="h-[1px] w-8 bg-slate-800" />
+          <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.2em] opacity-80">
+            Soutien aux auteurs
           </p>
+          <div className="h-[1px] w-8 bg-slate-800" />
         </div>
       </div>
     </div>
