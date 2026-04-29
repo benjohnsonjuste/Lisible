@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Loader2, Sparkles, Plus, User, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, Award, BarChart3
+  ShieldCheck, Award, BarChart3, Heart
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,7 +13,12 @@ export default function AuthorDashboard() {
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [globalStats, setGlobalStats] = useState({ totalViews: 0, totalLikes: 0 });
+  const [authorStats, setAuthorStats] = useState({ 
+    totalViews: 0, 
+    totalLikes: 0, 
+    totalCertified: 0,
+    textCount: 0 
+  });
 
   useEffect(() => {
     async function loadStudio() {
@@ -24,39 +29,41 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email.toLowerCase().trim();
         
-        // 1. Récupération Profil en temps réel (depuis dossier users)
-        const userRes = await fetch(`/api/realtime-data?folder=users`);
+        // 1. Récupération Profil & Stats via l'API dédiée
+        // On récupère les stats calculées côté serveur pour la performance
+        const [userRes, statsRes, libraryRes] = await Promise.all([
+          fetch(`/api/realtime-data?folder=users`),
+          fetch(`/api/stats/author?email=${encodeURIComponent(email)}`),
+          fetch(`/api/realtime-data?folder=publications`)
+        ]);
+
         const userData = await userRes.json();
+        const statsData = await statsRes.json();
+        const libraryData = await libraryRes.json();
+
+        // Mise à jour Utilisateur
         const currentUserFile = userData.content?.find(u => u.email?.toLowerCase().trim() === email);
-        
         if (currentUserFile) {
           setUser(currentUserFile);
-          // Mettre à jour le cache local pour refléter les changements (ex: gain de Li)
           localStorage.setItem("lisible_user", JSON.stringify(currentUserFile));
         } else {
-          // Si non trouvé dans les fichiers réels, on utilise le cache par défaut
           setUser(parsedUser);
         }
 
-        // 2. Récupération des publications et statistiques (depuis dossier publications)
-        const libraryRes = await fetch(`/api/realtime-data?folder=publications`);
-        const libraryData = await libraryRes.json();
-        
-        // Note: publications contient souvent index.json en premier élément
-        const allPubs = Array.isArray(libraryData.content[0]) ? libraryData.content[0] : (libraryData.content || []);
+        // Mise à jour Stats (via l'API que vous venez de créer)
+        if (statsData.success) {
+          setAuthorStats(statsData.stats);
+        }
 
+        // 2. Gestion des manuscrits pour la liste
+        const allPubs = Array.isArray(libraryData.content[0]) ? libraryData.content[0] : (libraryData.content || []);
         if (Array.isArray(allPubs)) {
           const authorWorks = allPubs
             .filter(w => w.authorEmail?.toLowerCase().trim() === email)
             .sort((a, b) => new Date(b.date) - new Date(a.date));
-
           setWorks(authorWorks);
-          
-          // Calcul des stats cumulées en temps réel
-          const views = authorWorks.reduce((acc, curr) => acc + Number(curr.views || 0), 0);
-          const likes = authorWorks.reduce((acc, curr) => acc + Number(curr.likes || 0), 0);
-          setGlobalStats({ totalViews: views, totalLikes: likes });
         }
+
       } catch (e) {
         console.error(e);
         toast.error("Erreur de synchronisation du Studio.");
@@ -78,7 +85,7 @@ export default function AuthorDashboard() {
       });
       if (res.ok) {
         setWorks(works.filter(w => w.id !== id));
-        toast.success("Manuscrit supprimé avec succès.", { id: tId });
+        toast.success("Manuscrit supprimé.", { id: tId });
       } else {
         throw new Error();
       }
@@ -113,44 +120,47 @@ export default function AuthorDashboard() {
           </Link>
         </header>
 
-        {/* Cartes de Stats Temps Réel */}
+        {/* Cartes de Stats Centralisées */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-transform hover:scale-[1.02]">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Bourse Li</p>
             <div className="flex items-end gap-2">
               <h2 className="text-4xl font-black italic text-slate-900">{user.li || 0}</h2>
               <span className="text-teal-600 font-bold mb-1 uppercase text-xs">Li</span>
             </div>
           </div>
+          
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Lectures</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Lectures Totales</p>
             <div className="flex items-center gap-3 text-slate-900">
               <BarChart3 size={20} className="text-blue-500" />
-              <h2 className="text-3xl font-black italic">{globalStats.totalViews.toLocaleString()}</h2>
+              <h2 className="text-3xl font-black italic">{authorStats.totalViews.toLocaleString()}</h2>
             </div>
           </div>
+
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Abonnés</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Appréciations</p>
             <div className="flex items-center gap-3 text-slate-900">
-              <User size={20} className="text-teal-500" />
-              <h2 className="text-3xl font-black italic">{user.followers?.length || 0}</h2>
+              <Heart size={20} className="text-rose-500" />
+              <h2 className="text-3xl font-black italic">{authorStats.totalLikes.toLocaleString()}</h2>
             </div>
           </div>
+
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Sceaux</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Sceaux Obtenus</p>
             <div className="flex items-center gap-3 text-slate-900">
               <Award size={20} className="text-amber-500" />
-              <h2 className="text-3xl font-black italic">{works.reduce((a,c) => a+(Number(c.certified)||0), 0)}</h2>
+              <h2 className="text-3xl font-black italic">{authorStats.totalCertified.toLocaleString()}</h2>
             </div>
           </div>
         </div>
 
-        {/* Mes Textes */}
+        {/* Liste des Manuscrits */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Manuscrits.</h2>
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
-              {works.length} Textes
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-4 py-2 rounded-full">
+              {works.length} Publications
             </div>
           </div>
 
@@ -167,31 +177,31 @@ export default function AuthorDashboard() {
                       {Number(work.certified) > 0 && <ShieldCheck size={16} className="text-teal-500" />}
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <span className="text-teal-600 italic">Certifié : {work.certified || 0}</span>
+                      <span className="text-teal-600 italic">Sceaux : {work.certified || 0}</span>
                       <span>•</span>
-                      <span>{work.views || 0} Lectures</span>
+                      <span>{work.views || 0} Vues</span>
                       <span>•</span>
-                      <span>{work.category || "Général"}</span>
+                      <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500">{work.category || "Général"}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Link href={`/texts/${work.id}`} target="_blank" className="p-4 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-900 hover:text-white transition-all">
+                  <Link href={`/texts/${work.id}`} target="_blank" className="p-4 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-900 hover:text-white transition-all" title="Voir l'œuvre">
                     <ExternalLink size={18} />
                   </Link>
-                  <Link href={`/edit/${work.id}`} className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all">
+                  <Link href={`/edit/${work.id}`} className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all" title="Modifier">
                     <Edit3 size={18} />
                   </Link>
-                  <button onClick={() => handleDelete(work.id, work.title)} className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all">
+                  <button onClick={() => handleDelete(work.id, work.title)} className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all" title="Supprimer">
                     <Trash2 size={18} />
                   </button>
                 </div>
               </div>
             )) : (
               <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
-                <p className="text-slate-400 font-medium italic">Votre studio est vide.</p>
-                <Link href="/publish" className="mt-4 inline-block text-[10px] font-black uppercase text-teal-600 underline underline-offset-4">Commencer à écrire</Link>
+                <p className="text-slate-400 font-medium italic">Aucun manuscrit publié pour le moment.</p>
+                <Link href="/publish" className="mt-4 inline-block text-[10px] font-black uppercase text-teal-600 underline underline-offset-4">Commencer l'écriture</Link>
               </div>
             )}
           </div>
