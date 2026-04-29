@@ -8,76 +8,78 @@ const GITHUB_CONFIG = {
 
 export async function GET() {
   try {
-    // 1. Récupérer toutes les publications pour calculer les stats (Likes, Certifications)
+    // 1. Récupérer l'index des publications proprement
     const pubRes = await fetch(
-      `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications`,
-      { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }, next: { revalidate: 0 } }
+      `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications/index.json`,
+      { 
+        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
+        cache: 'no-store' 
+      }
     );
-    const pubFiles = await pubRes.json();
+
+    if (!pubRes.ok) throw new Error("Impossible de lire l'index des publications.");
     
-    // On récupère le contenu de l'index ou des fichiers de publications
-    const pubDataRes = await fetch(pubFiles[0].download_url);
-    const allPublications = await pubDataRes.json();
+    const pubFileData = await pubRes.json();
+    const pubContent = JSON.parse(Buffer.from(pubFileData.content, 'base64').toString());
+    const allPublications = Array.isArray(pubContent) ? pubContent : [];
 
     // 2. Récupérer la liste des fichiers utilisateurs
     const usersListRes = await fetch(
       `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`,
-      { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }, next: { revalidate: 0 } }
+      { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }, cache: 'no-store' }
     );
     const userFiles = await usersListRes.json();
 
-    const updateResults = [];
+    const updates = [];
 
-    // 3. Boucler sur chaque utilisateur pour mettre à jour son fichier
+    // 3. Traiter chaque utilisateur
     for (const file of userFiles) {
       if (!file.name.endsWith('.json')) continue;
 
-      // Lire le fichier utilisateur actuel
-      const userContentRes = await fetch(file.download_url);
-      const userData = await userContentRes.json();
+      const userRes = await fetch(file.download_url, { cache: 'no-store' });
+      const userData = await userRes.json();
       const email = userData.email?.toLowerCase().trim();
 
       if (!email) continue;
 
-      // Calculer les nouvelles stats depuis les publications
+      // Calcul des stats
       const userPubs = allPublications.filter(p => p.authorEmail?.toLowerCase().trim() === email);
       
-      const totalLikes = userPubs.reduce((acc, p) => acc + Number(p.likes || 0), 0);
-      const totalCertifications = userPubs.reduce((acc, p) => acc + Number(p.certified || 0), 0);
-      const totalFollowers = Array.isArray(userData.followers) ? userData.followers.length : 0;
-
-      // Créer l'objet mis à jour
-      const updatedUserData = {
+      const updatedData = {
         ...userData,
-        totalLikes: totalLikes,
-        totalCertifications: totalCertifications,
-        totalFollowers: totalFollowers,
-        lastSync: new Date().toISOString()
+        totalLikes: userPubs.reduce((acc, p) => acc + Number(p.likes || 0), 0),
+        totalCertifications: userPubs.reduce((acc, p) => acc + Number(p.certified || 0), 0),
+        totalFollowers: Array.isArray(userData.followers) ? userData.followers.length : 0,
+        lastStatsUpdate: new Date().toISOString()
       };
 
-      // 4. Renvoyer le fichier mis à jour vers GitHub
+      // 4. Encodage sécurisé en Base64 (gestion des caractères spéciaux/accents)
+      const jsonString = JSON.stringify(updatedData, null, 2);
+      const encodedContent = Buffer.from(jsonString, 'utf-8').toString('base64');
+
       const putRes = await fetch(
         `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${file.path}`,
         {
           method: "PUT",
-          headers: { 
-            'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            message: `🔄 Sync stats pour ${email}`,
-            content: Buffer.from(JSON.stringify(updatedUserData, null, 2)).toString('base64'),
-            sha: file.sha // Obligatoire pour mettre à jour un fichier existant
+            message: `📊 Stats Sync: ${email}`,
+            content: encodedContent,
+            sha: file.sha
           })
         }
       );
 
-      updateResults.push({ email, success: putRes.ok });
+      updates.push({ user: email, status: putRes.ok ? "✅ OK" : "❌ Erreur" });
     }
 
-    return NextResponse.json({ message: "Synchronisation terminée", details: updateResults });
+    return NextResponse.json({ success: true, results: updates });
 
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Erreur de formatage JSON détectée", 
+      details: error.message,
+      conseil: "Vérifiez manuellement le fichier data/publications/index.json sur GitHub pour corriger la virgule manquante."
+    }, { status: 500 });
   }
 }
