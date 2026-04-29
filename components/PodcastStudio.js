@@ -36,18 +36,8 @@ export default function PodcastStudio({ currentUser }) {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  // Liste blanche de l'administration
-  const adminEmails = [
-    "cmo.lablitteraire7@gmail.com",
-    "benjohnsonjuste@gmail.com",
-    "jb7management@gmail.com",
-    "adm.lablitteraire7@gmail.com",
-    "robergeaurodley97@gmail.com",
-    "woolsleypierre01@gmail.com",
-    "jeanpierreborlhainiedarha@gmail.com"
-  ];
-
-  const hasAccess = adminEmails.includes(currentUser?.email);
+  // L'accès est autorisé si un utilisateur est connecté
+  const hasAccess = !!currentUser;
 
   useEffect(() => {
     let interval;
@@ -151,7 +141,7 @@ export default function PodcastStudio({ currentUser }) {
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // Rendu de l'état "Accès Refusé"
+  // Rendu de l'état "Accès Refusé" (Uniquement si non connecté)
   if (!hasAccess) {
     return (
       <div className="max-w-2xl mx-auto bg-white border border-slate-100 rounded-[3rem] p-12 shadow-xl text-center relative overflow-hidden">
@@ -162,12 +152,12 @@ export default function PodcastStudio({ currentUser }) {
         <div className="flex items-center justify-center gap-2 mb-4">
           <Sparkles size={16} className="text-amber-500" />
           <h2 className="text-2xl font-black italic tracking-tighter text-slate-900 uppercase">
-            L'Auditorium Privé.
+            Accès Réservé.
           </h2>
           <Sparkles size={16} className="text-amber-500" />
         </div>
         <p className="text-slate-500 text-sm leading-relaxed font-serif italic max-w-sm mx-auto mb-8">
-          "Cet espace est le sanctuaire audio de Lisible, dédié à la création d'émissions littéraires d'exception. L'accès au studio est un privilège réservé aux auteurs ayant atteint le rang d'accréditation Bronze."
+          "Veuillez vous connecter pour accéder au Studio Podcast et commencer votre transmission littéraire."
         </p>
         
         <button 
@@ -176,11 +166,6 @@ export default function PodcastStudio({ currentUser }) {
         >
           <MessageSquare size={14} /> Contacter le Staff
         </button>
-
-        <div className="mt-10 flex items-center justify-center gap-2 grayscale opacity-40">
-           <Award size={18} />
-           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Accréditation Requise</span>
-        </div>
 
         <ContactModal 
           isOpen={isContactOpen} 
@@ -202,7 +187,7 @@ export default function PodcastStudio({ currentUser }) {
           </div>
           <div>
             <h2 className="text-xl font-black italic tracking-tighter uppercase text-white">Studio Podcast</h2>
-            <p className="text-[10px] uppercase font-bold text-slate-400">Session Admin • Solo</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">Session Membre • En Direct</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
