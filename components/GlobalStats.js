@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { 
-  Zap, Eye, Heart, PenTool, Users, 
+  Eye, Heart, PenTool, Users, 
   TrendingUp, Activity, Globe, ShieldCheck
 } from "lucide-react";
 
@@ -11,7 +11,6 @@ export default function GlobalStats() {
     likes: 0,
     texts: 0,
     authors: 0,
-    engagement: 0,
     certified: 0
   });
   const [loading, setLoading] = useState(true);
@@ -30,7 +29,6 @@ export default function GlobalStats() {
             likes: m.engagement?.likes || 0,
             texts: m.publishedTexts || 0,
             authors: m.registeredUsers || 0,
-            engagement: m.engagementRate || 0,
             certified: m.engagement?.certified || 0
           });
         }
@@ -128,16 +126,6 @@ export default function GlobalStats() {
           value={stats.certified} 
           color="from-teal-500 to-emerald-400" 
         />
-
-        <div className="md:col-span-2 p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white border border-slate-200 flex items-center justify-between shadow-lg">
-          <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taux d'engagement</p>
-            <h4 className="text-5xl font-black text-slate-900 tracking-tighter">{stats.engagement}%</h4>
-          </div>
-          <div className="w-24 h-24 rounded-full border-8 border-teal-500/10 border-t-teal-500 flex items-center justify-center relative">
-             <Zap size={24} className="text-teal-500 fill-current" />
-          </div>
-        </div>
 
       </div>
     </section>
