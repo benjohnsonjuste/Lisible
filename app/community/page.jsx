@@ -3,10 +3,11 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
-  Briefcase, HeartHandshake, Feather
+  Briefcase, HeartHandshake, Feather, Mail
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import MessageModal from "../components/MessageModal";
 
 export default function CommunautePage() {
   const [authors, setAuthors] = useState([]);
@@ -16,6 +17,7 @@ export default function CommunautePage() {
   const [submitting, setSubmitting] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [mounted, setMounted] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -170,6 +172,12 @@ export default function CommunautePage() {
                   >
                     Profil <ArrowRight size={14} />
                   </Link>
+                  <button 
+                    onClick={() => currentUser ? setSelectedRecipient(a) : toast.error("Connectez-vous pour envoyer un message")}
+                    className="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center"
+                  >
+                    <Mail size={16} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -190,6 +198,15 @@ export default function CommunautePage() {
         <div className="text-center py-40">
           <p className="text-slate-400 font-medium italic">Aucun auteur ne correspond à votre recherche.</p>
         </div>
+      )}
+
+      {selectedRecipient && (
+        <MessageModal 
+          isOpen={!!selectedRecipient} 
+          onClose={() => setSelectedRecipient(null)} 
+          recipient={selectedRecipient} 
+          sender={currentUser} 
+        />
       )}
     </div>
   );
