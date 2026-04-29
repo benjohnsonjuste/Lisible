@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Loader2, Sparkles, Plus, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, Bookmark, Heart
+  ShieldCheck, Bookmark, Heart, Swords, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -129,6 +129,27 @@ export default function AuthorDashboard() {
           </Link>
         </header>
 
+        {/* Section Duel des Nouvelles */}
+        <Link href="/novel/publier" className="block group">
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 rounded-[2.5rem] border border-slate-700 shadow-2xl relative overflow-hidden transition-all hover:scale-[1.01]">
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Swords size={32} className="text-slate-900" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black italic text-white tracking-tight">Duel Des Nouvelles</h3>
+                  <p className="text-slate-400 text-sm font-medium">Relevez le défi, publiez votre nouvelle et scellez votre destin.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 px-6 py-3 rounded-xl backdrop-blur-md border border-white/10 text-white font-black text-[10px] uppercase tracking-widest group-hover:bg-amber-500 group-hover:text-slate-900 transition-all">
+                Participer au concours <ArrowRight size={14} />
+              </div>
+            </div>
+            <Swords className="absolute -right-8 -bottom-8 text-white/5 rotate-12" size={200} />
+          </div>
+        </Link>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-transform hover:scale-[1.02]">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Bourse Li</p>
@@ -239,5 +260,4 @@ export default function AuthorDashboard() {
       </div>
     </div>
   );
-      }
-      
+}
