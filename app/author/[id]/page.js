@@ -19,23 +19,31 @@ export default function AuthorProfile() {
     async function fetchAuthorData() {
       try {
         const cleanEmail = authorEmail.toLowerCase().trim();
-        // Transformation de l'email pour correspondre au format fichier : nom_gmail_com.json
-        const fileName = cleanEmail.replace('@', '_').replace(/\./g, '_');
         
-        const userRes = await fetch(`/api/github-db?type=user&id=${fileName}`);
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setAuthor(userData.content);
+        // Utilisation de la même méthode que le dashboard : realtime-data
+        const [userRes, libraryRes] = await Promise.all([
+          fetch(`/api/realtime-data?folder=users`),
+          fetch(`/api/realtime-data?folder=publications`)
+        ]);
+
+        const userData = await userRes.json();
+        const libraryData = await libraryRes.json();
+
+        // 1. Trouver le profil de l'auteur dans la liste des utilisateurs
+        const targetAuthor = userData.content?.find(u => u.email?.toLowerCase().trim() === cleanEmail);
+        if (targetAuthor) {
+          setAuthor(targetAuthor);
         }
 
-        const pubRes = await fetch(`/api/github-db?type=library`);
-        if (pubRes.ok) {
-          const pubData = await pubRes.json();
-          const authorWorks = (pubData.content || []).filter(
-            w => w.authorEmail?.toLowerCase().trim() === cleanEmail
-          );
+        // 2. Filtrer les publications (même logique que le dashboard)
+        const allPubs = Array.isArray(libraryData.content[0]) ? libraryData.content[0] : (libraryData.content || []);
+        if (Array.isArray(allPubs)) {
+          const authorWorks = allPubs
+            .filter(w => w.authorEmail?.toLowerCase().trim() === cleanEmail)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
           setWorks(authorWorks);
         }
+
       } catch (e) {
         console.error("Erreur profil:", e);
       } finally {
@@ -45,7 +53,13 @@ export default function AuthorProfile() {
     if (authorEmail) fetchAuthorData();
   }, [authorEmail]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+  if (loading) return (
+    <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+      <Loader2 className="animate-spin text-teal-600" size={40} />
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Chargement du profil...</p>
+    </div>
+  );
+  
   if (!author) return <div className="min-h-screen flex items-center justify-center italic text-slate-400">Profil introuvable.</div>;
 
   return (
@@ -53,20 +67,20 @@ export default function AuthorProfile() {
       <div className="bg-white border-b border-slate-100 p-10">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-8">
           <img 
-            src={`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${author.email}`} 
-            className="w-32 h-32 rounded-3xl bg-slate-900 shadow-xl"
-            alt=""
+            src={author.profilePic || author.image || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author.email}`} 
+            className="w-32 h-32 rounded-3xl bg-slate-900 shadow-xl object-cover"
+            alt={author.name}
           />
           <div className="space-y-2">
             <h1 className="text-4xl font-black italic text-slate-900 tracking-tighter">
-                {author.name || author.penName}
+                {author.name || author.penName || author.fullName}
             </h1>
             <div className="flex gap-4">
               <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400">
-                <Award size={14} className="text-amber-500" /> {author.totalCertifications || author.li || 0} Points Li
+                <Award size={14} className="text-amber-500" /> {author.li || 0} Points Li
               </span>
               <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400">
-                <Heart size={14} className="text-rose-500" /> {author.totalLikes || 0} Likes
+                <Heart size={14} className="text-rose-500" /> {author.followers?.length || 0} Abonnés
               </span>
             </div>
           </div>
