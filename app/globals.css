@@ -6,8 +6,8 @@
    VARIABLES ET THÈME LISIBLE v2.0
 ========================================= */
 :root {
-  --accent: #0ea5a4;       /* Turquoise Lisible */
-  --accent-soft: #f0fdfa;  /* Teal 50 */
+  --accent: #4169e1;       /* Bleu Roi */
+  --accent-soft: #eff6ff;  /* Blue 50 */
   --bg-main: #fcfbf9;      /* Papier luxueux */
   --live-red: #e11d48;
   --slate-950: #020617;
@@ -44,7 +44,7 @@ html {
   .card-lisible {
     @apply bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 
            shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] p-6 md:p-8 
-           transition-all duration-500 hover:shadow-[0_20px_50px_rgba(14,165,164,0.1)]
+           transition-all duration-500 hover:shadow-[0_20px_50px_rgba(65,105,225,0.1)]
            hover:-translate-y-1;
   }
 
@@ -52,14 +52,14 @@ html {
     @apply inline-flex items-center justify-center px-8 py-4 
            rounded-[1.5rem] font-black transition-all duration-300 
            active:scale-90 cursor-pointer text-white shadow-xl
-           hover:shadow-teal-500/20 hover:brightness-110;
+           hover:shadow-blue-500/20 hover:brightness-110;
     background-color: var(--accent);
   }
 
   .input-lisible {
     @apply w-full bg-slate-50 dark:bg-slate-900 border-2 border-transparent 
            rounded-[1.25rem] p-5 text-sm font-bold 
-           focus:bg-white focus:border-teal-500/20 focus:ring-4 focus:ring-teal-500/5 
+           focus:bg-white focus:border-blue-500/20 focus:ring-4 focus:ring-blue-500/5 
            outline-none transition-all dark:text-white shadow-inner;
   }
 
@@ -94,9 +94,9 @@ html {
 }
 
 @keyframes seal-pulse {
-  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(14, 165, 164, 0.4)); }
-  50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(14, 165, 164, 0.2)); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(14, 165, 164, 0)); }
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(65, 105, 225, 0.4)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(65, 105, 225, 0.2)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(65, 105, 225, 0)); }
 }
 
 .pulse-seal {
@@ -139,14 +139,14 @@ html {
 }
 
 .drop-cap::first-letter {
-  @apply text-7xl font-black float-left mr-3 mt-2 text-teal-600 leading-[0.8];
+  @apply text-7xl font-black float-left mr-3 mt-2 text-blue-600 leading-[0.8];
   font-family: var(--font-inter), sans-serif;
   text-transform: uppercase;
 }
 
 ::selection {
-  background-color: rgba(14, 165, 164, 0.15);
-  color: #0d7e7d;
+  background-color: rgba(65, 105, 225, 0.15);
+  color: #2b4cb3;
 }
 
 .reading-progress-track {
