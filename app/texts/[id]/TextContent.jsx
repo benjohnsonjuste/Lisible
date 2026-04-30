@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Eye, Clock, Maximize2, Minimize2, 
   Loader2, Sparkles, ShieldCheck, Lock, Zap, Gem, Crown
-} from "lucide-center";
+} from "lucide-react";
 
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
