@@ -129,26 +129,26 @@ export default function AuthorDashboard() {
           </Link>
         </header>
 
-        {/* Section Duel des Nouvelles */}
-        <Link href="/novel/publier" className="block group">
-          <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 rounded-[2.5rem] border border-slate-700 shadow-2xl relative overflow-hidden transition-all hover:scale-[1.01]">
+        {/* Section Duel des Nouvelles - GRISÂTRE NON CLIQUABLE */}
+        <div className="block cursor-not-allowed opacity-40 grayscale">
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 rounded-[2.5rem] border border-slate-700 shadow-2xl relative overflow-hidden transition-all">
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-6">
-                <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <Swords size={32} className="text-slate-900" />
+                <div className="w-16 h-16 bg-slate-700 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Swords size={32} className="text-slate-400" />
                 </div>
                 <div>
                   <h3 className="text-2xl font-black italic text-white tracking-tight">Duel Des Nouvelles</h3>
-                  <p className="text-slate-400 text-sm font-medium">Relevez le défi, publiez votre nouvelle et scellez votre destin.</p>
+                  <p className="text-slate-400 text-sm font-medium">Prochainement disponible.</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 bg-white/10 px-6 py-3 rounded-xl backdrop-blur-md border border-white/10 text-white font-black text-[10px] uppercase tracking-widest group-hover:bg-amber-500 group-hover:text-slate-900 transition-all">
-                Participer au concours <ArrowRight size={14} />
+              <div className="flex items-center gap-2 bg-white/5 px-6 py-3 rounded-xl border border-white/10 text-white/50 font-black text-[10px] uppercase tracking-widest transition-all">
+                Bientôt disponible <ArrowRight size={14} />
               </div>
             </div>
             <Swords className="absolute -right-8 -bottom-8 text-white/5 rotate-12" size={200} />
           </div>
-        </Link>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm transition-transform hover:scale-[1.02]">
@@ -159,15 +159,16 @@ export default function AuthorDashboard() {
             </div>
           </div>
 
-          <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+          {/* Section Battle Poétique - GRISÂTRE NON CLIQUABLE */}
+          <div className="bg-slate-200 p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden opacity-60 grayscale cursor-not-allowed">
             <div className="relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-widest text-teal-400 mb-2">Mes Préférés</p>
-              <div className="flex items-center gap-3 text-white">
-                <Bookmark size={20} className="text-teal-400" />
-                <h2 className="text-3xl font-black italic">{bookmarks.length} Enregistrés</h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Battle Poétique</p>
+              <div className="flex items-center gap-3 text-slate-600">
+                <Swords size={20} className="text-slate-500" />
+                <h2 className="text-3xl font-black italic text-slate-500">Bientôt disponible</h2>
               </div>
             </div>
-            <Bookmark className="absolute -right-4 -bottom-4 text-white/5 rotate-12 group-hover:scale-110 transition-transform" size={120} />
+            <Swords className="absolute -right-4 -bottom-4 text-slate-900/5 rotate-12" size={120} />
           </div>
         </div>
 
@@ -217,42 +218,6 @@ export default function AuthorDashboard() {
               <div className="py-20 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
                 <p className="text-slate-400 font-medium italic">Aucun manuscrit publié pour le moment.</p>
                 <Link href="/publish" className="mt-4 inline-block text-[10px] font-black uppercase text-teal-600 underline underline-offset-4">Commencer l'écriture</Link>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Section Mes Préférés */}
-        <section className="space-y-6 pt-12">
-          <div className="flex items-center gap-3 px-2">
-            <Heart className="text-rose-500 fill-rose-500" size={20} />
-            <h2 className="text-2xl font-black italic tracking-tight text-slate-900">Mes Préférés.</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {bookmarks.length > 0 ? bookmarks.map((fav) => (
-              <div key={fav.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:shadow-lg transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">
-                    <Bookmark size={18} />
-                  </div>
-                  <div className="max-w-[200px]">
-                    <h4 className="font-bold text-slate-900 truncate">{fav.title}</h4>
-                    <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest truncate">Par {fav.author}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link href={`/texts/${fav.id}`} className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all">
-                    <ExternalLink size={16} />
-                  </Link>
-                  <button onClick={() => removeBookmark(fav.id)} className="p-3 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            )) : (
-              <div className="md:col-span-2 py-12 text-center bg-slate-50 rounded-[2.5rem] border border-dashed border-slate-200">
-                <p className="text-slate-400 font-medium italic text-sm">Votre bibliothèque de coups de cœur est vide.</p>
               </div>
             )}
           </div>
