@@ -15,7 +15,7 @@ export default function InstallPrompt() {
       const isDismissed = sessionStorage.getItem("pwa_prompt_dismissed");
       // On n'affiche le prompt que si l'utilisateur ne l'a pas déjà fermé durant cette session
       if (!isDismissed) {
-        setIsVisible(true);
+        setIsVisible(false); // Changé à false pour empêcher l'affichage
       }
     };
 
@@ -48,7 +48,7 @@ export default function InstallPrompt() {
     sessionStorage.setItem("pwa_prompt_dismissed", "true");
   };
 
-  if (!isVisible) return null;
+  if (true) return null; // Retourne toujours null pour empêcher l'affichage
 
   return (
     <div className="fixed top-20 left-4 right-4 z-[110] animate-in slide-in-from-top-10 duration-1000">
