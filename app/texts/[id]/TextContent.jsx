@@ -103,7 +103,6 @@ export default function TextContent() {
       if (res.ok) { 
         localStorage.setItem(`l_${id}`, "1"); 
         toast.success("Aimé !");
-        // Mise à jour locale pour le feedback
         setText(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
       }
     } catch (e) {
@@ -139,17 +138,21 @@ export default function TextContent() {
   };
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: text.title,
-          text: `Découvrez "${text.title}" sur Lisible.`,
-          url: window.location.href,
-        });
-      } catch (err) { console.log('Erreur partage:', err); }
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié dans le presse-papier !");
+    const shareData = {
+      title: text.title,
+      text: `Je vous invite à lire "${text.title}" de ${text.authorName} sur Lisible. ✨`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Lien copié !");
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') toast.error("Erreur de partage");
     }
   };
 
