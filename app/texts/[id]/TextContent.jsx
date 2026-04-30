@@ -10,7 +10,6 @@ import {
 
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
-import { InTextAd } from "@/components/InTextAd";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock"; 
 
@@ -212,15 +211,7 @@ export default function TextContent() {
           <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
             {canReadFull ? (
               <div className="whitespace-pre-wrap">
-                {text.content?.split('\n').slice(0, 3).join('\n')}
-                
-                {!isFocusMode && (
-                  <div className="my-12 w-full flex items-center justify-center">
-                    <InTextAd />
-                  </div>
-                )}
-
-                {text.content?.split('\n').slice(3).join('\n')}
+                {text.content}
               </div>
             ) : (
               <div className="relative">
@@ -273,7 +264,8 @@ export default function TextContent() {
         isBookmarking={isBookmarking} 
         isBookmarked={isBookmarked}
         handleShare={handleShare} 
-        onReport={() => setIsReportOpen(true)} 
+        onReport={() => setIsReportOpen(true)}
+        userPic={user?.pic}
       />
       <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
     </div>
