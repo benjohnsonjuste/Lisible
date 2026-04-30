@@ -18,22 +18,22 @@ export function InTextAd() {
 
     // 🔥 Détection device
     const widthScreen = window.innerWidth;
-
     let adConfig;
 
     if (widthScreen < 640) {
-      // 📱 Mobile
       adConfig = { width: 300, height: 250 };
     } else if (widthScreen < 1024) {
-      // 📊 Tablette
       adConfig = { width: 300, height: 600 };
     } else {
-      // 💻 Desktop
       adConfig = { width: 728, height: 90 };
     }
 
-    // 🔥 Fonction de chargement avec fallback
+    // 🔥 Chargement de la publicité
     const loadAd = (config) => {
+      // On vide pour éviter les duplications
+      container.innerHTML = "";
+
+      // Configuration globale requise par invoke.js
       window.atOptions = {
         key: "874a186feecd3e968c16a58bb085fd56",
         format: "iframe",
@@ -44,34 +44,21 @@ export function InTextAd() {
 
       const script = document.createElement("script");
       script.type = "text/javascript";
-      script.src =
-        "//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
-
+      script.src = `//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js`;
+      
       container.appendChild(script);
     };
 
-    // 🔥 Load principal
+    // Exécution
     loadAd(adConfig);
 
-    // 🔁 Fallback si rien ne s'affiche
-    const fallbackTimer = setTimeout(() => {
-      if (container.innerHTML.trim() === "") {
-        container.innerHTML = "";
-
-        // fallback universel
-        loadAd({ width: 300, height: 250 });
-      }
-    }, 2500);
-
-    // script tracking (une seule fois proprement)
+    // script tracking secondaire
     const extraScript = document.createElement("script");
-    extraScript.src =
-      "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
+    extraScript.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
     extraScript.async = true;
     document.body.appendChild(extraScript);
 
     return () => {
-      clearTimeout(fallbackTimer);
       container.innerHTML = "";
     };
   }, [isVisible, containerId]);
@@ -98,14 +85,12 @@ export function InTextAd() {
           </button>
         </div>
 
-        {/* Zone publicité auto-size */}
-        <div className="bg-black/20 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 w-full min-h-[260px] md:min-h-[620px]">
-
+        {/* Zone publicité auto-size - min-h ajusté pour le 728x90 */}
+        <div className="bg-black/20 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 w-full min-h-[120px] md:min-h-[280px]">
           <div
             id={containerId}
-            className="flex justify-center items-center w-full"
+            className="flex justify-center items-center w-full min-h-[90px]"
           />
-
         </div>
 
         {/* Footer */}
