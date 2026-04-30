@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import dynamic from "next/dynamic";
+import AdSocialBar from "@/components/AdSocialBar";
 
 // --- CHARGEMENT DYNAMIQUE (Client-side only) ---
 // On force Next.js à ignorer ces composants lors du rendu serveur (SSR)
@@ -91,7 +92,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-teal-100 selection:text-teal-900">
+      <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-blue-100 selection:text-blue-900">
         <AuthProvider>
           {/* Composants Clients isolés du SSR */}
           <ServiceWorkerRegistration />
@@ -121,6 +122,7 @@ export default function RootLayout({ children }) {
             }}
           />
           <Analytics />
+          <AdSocialBar />
         </AuthProvider>
       </body>
     </html>
