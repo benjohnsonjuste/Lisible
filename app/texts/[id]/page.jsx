@@ -1,8 +1,14 @@
 import React from "react";
 import TextContent from "./TextContent"; 
 
+// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
+export const runtime = 'edge';
+
+/**
+ * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
+ */
 export async function generateMetadata({ params }) {
-  // Attendre les params car ils sont asynchrones dans les versions récentes de Next.js
+  // Attendre les params pour garantir la compatibilité avec Next.js 14.2+ et 15
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   const baseUrl = "https://lisible.biz";
@@ -11,15 +17,15 @@ export async function generateMetadata({ params }) {
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
-    if (!res.ok) return { title: "Chargement... | Lisible" };
-    
     const data = await res.json();
     const text = data?.content;
+
     if (!text) return { title: "Manuscrit introuvable | Lisible" };
 
-    const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;
+    const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
+    const ogImage = (isBattle || !text.image) ? `${baseUrl}/og-default.jpg` : text.image;
     const shareTitle = `${text.title} — ${text.authorName}`;
-    const shareDesc = `Découvrez ce texte magnifique sur Lisible.`;
+    const shareDesc = `Je vous invite à apprécier ce magnifique texte sur Lisible. ✨`;
 
     return {
       title: shareTitle,
@@ -44,8 +50,11 @@ export async function generateMetadata({ params }) {
   }
 }
 
+/**
+ * COMPOSANT PRINCIPAL (SERVEUR)
+ */
 export default async function Page({ params }) {
-  // On attend les params côté serveur pour garantir que l'id est passé proprement au composant client
+  // On attend les params côté serveur pour passer l'ID de manière stable au composant client
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   
