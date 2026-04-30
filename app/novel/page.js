@@ -90,7 +90,11 @@ export default function DuelDesNouvelles() {
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/library" className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"><BookOpen size={16} /> Archives</Link>
-            <Link href="/novel/publier" className="flex items-center justify-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30"><PenTool size={18} /> Entrer dans la lice</Link>
+            
+            {/* BOUTON PUBLIER GRISÂTRE NON CLIQUABLE */}
+            <div className="flex items-center justify-center gap-3 bg-slate-200 text-slate-400 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest cursor-not-allowed grayscale opacity-60">
+              <PenTool size={18} /> Entrer dans la lice
+            </div>
           </div>
         </header>
 
@@ -137,7 +141,11 @@ export default function DuelDesNouvelles() {
             <div className="py-40 text-center space-y-10 bg-white rounded-[5rem] border-2 border-dashed border-slate-100">
               <Swords size={30} className="text-slate-200 mx-auto" />
               <h3 className="font-black uppercase text-slate-900 tracking-[0.3em]">Aucun duel engagé</h3>
-              <Link href="/novel/publier" className="inline-flex items-center gap-3 bg-slate-900 text-white px-12 py-6 rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-teal-600 transition-all">Publier une Nouvelle <ArrowRight size={18} /></Link>
+              
+              {/* BOUTON CTA GRISÂTRE NON CLIQUABLE DANS L'ÉTAT VIDE */}
+              <div className="inline-flex items-center gap-3 bg-slate-200 text-slate-400 px-12 py-6 rounded-3xl font-black text-[11px] uppercase tracking-widest cursor-not-allowed opacity-60">
+                Publier une Nouvelle <ArrowRight size={18} />
+              </div>
             </div>
           )}
         </main>
