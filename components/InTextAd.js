@@ -1,107 +1,56 @@
 "use client";
 
-import React, { useState, useEffect, useId } from "react";
-import { X, Sparkles } from "lucide-react";
+import React, { useEffect, useId } from "react";
 
-export function InTextAd() {
-  const [isVisible, setIsVisible] = useState(true);
+/**
+ * Composant AdNativeBanner
+ * Conçu pour l'affichage de bannières natives/directes.
+ */
+export default function AdNativeBanner() {
   const instanceId = useId().replace(/:/g, "");
-  const containerId = `container-${instanceId}`;
+  const containerId = "container-874a186feecd3e968c16a58bb085fd56";
 
   useEffect(() => {
-    if (!isVisible) return;
-
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // Nettoyage du container pour éviter les doublons lors des navigations
     container.innerHTML = "";
 
-    // 🔥 Détection device
-    const widthScreen = window.innerWidth;
-    let adConfig;
-
-    if (widthScreen < 640) {
-      adConfig = { width: 300, height: 250 };
-    } else if (widthScreen < 1024) {
-      adConfig = { width: 300, height: 600 };
-    } else {
-      adConfig = { width: 728, height: 90 };
-    }
-
-    // 🔥 Chargement de la publicité
-    const loadAd = (config) => {
-      // On vide pour éviter les duplications
-      container.innerHTML = "";
-
-      // Configuration globale requise par invoke.js
-      window.atOptions = {
-        key: "874a186feecd3e968c16a58bb085fd56",
-        format: "iframe",
-        height: config.height,
-        width: config.width,
-        params: {},
-      };
-
-      const script = document.createElement("script");
-      script.type = "text/javascript";
-      script.src = `//pl28554024.effectivegatecpm.com/874a186feecd3e968c16a58bb085fd56/invoke.js`;
-      
-      container.appendChild(script);
+    // Configuration globale requise par le réseau publicitaire
+    window.atOptions = {
+      key: "874a186feecd3e968c16a58bb085fd56",
+      format: "iframe",
+      height: 250,
+      width: 300,
+      params: {},
     };
 
-    // Exécution
-    loadAd(adConfig);
-
-    // script tracking secondaire
-    const extraScript = document.createElement("script");
-    extraScript.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-    extraScript.async = true;
-    document.body.appendChild(extraScript);
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "//pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js";
+    script.async = true;
+    
+    // Ajout du script au container
+    container.appendChild(script);
 
     return () => {
-      container.innerHTML = "";
+      if (container) container.innerHTML = "";
     };
-  }, [isVisible, containerId]);
-
-  if (!isVisible) return null;
+  }, [containerId]);
 
   return (
-    <div className="my-12 flex justify-center w-full animate-in fade-in duration-700">
-      <div className="relative bg-slate-900 border border-slate-800 p-4 rounded-[2rem] shadow-2xl w-full max-w-3xl">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 mb-3">
-          <div className="flex items-center gap-1.5">
-            <Sparkles size={10} className="text-teal-500" />
-            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-              Contenu Sponsorisé
-            </span>
-          </div>
-          <button
-            onClick={() => setIsVisible(false)}
-            className="text-slate-600 hover:text-rose-400 transition-colors p-1"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Zone publicité auto-size - min-h ajusté pour le 728x90 */}
-        <div className="bg-black/20 rounded-2xl overflow-hidden flex items-center justify-center border border-white/5 w-full min-h-[120px] md:min-h-[280px]">
-          <div
-            id={containerId}
-            className="flex justify-center items-center w-full min-h-[90px]"
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="mt-3 flex justify-center items-center gap-2">
-          <div className="h-[1px] w-8 bg-slate-800" />
-          <p className="text-[8px] font-bold text-slate-600 uppercase tracking-[0.2em] opacity-80">
-            Soutien aux auteurs
-          </p>
-          <div className="h-[1px] w-8 bg-slate-800" />
-        </div>
-      </div>
+    <div className="my-8 flex flex-col items-center justify-center w-full">
+      {/* Label discret */}
+      <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 opacity-50">
+        Sponsoring
+      </span>
+      
+      {/* Container de la bannière */}
+      <div 
+        id={containerId} 
+        className="min-h-[250px] w-full flex justify-center items-center overflow-hidden rounded-2xl bg-slate-50/50 border border-slate-100"
+      />
     </div>
   );
 }
