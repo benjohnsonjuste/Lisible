@@ -11,7 +11,6 @@ import {
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
 import { InTextAd } from "@/components/InTextAd";
-import { AdSocialBar } from "@/components/AdSocialBar";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock"; 
 
@@ -19,17 +18,15 @@ const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: fal
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
 
-export default function TextContent({ id: propsId }) {
+export default function TextContent() {
   const router = useRouter();
-  const params = useParams();
-  
-  // Utilise l'ID passé par les props (du serveur) ou celui des params client
-  const id = propsId || params?.id;
+  const { id } = useParams();
 
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [isBookmarking, setIsBookmarking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -37,7 +34,6 @@ export default function TextContent({ id: propsId }) {
 
   // --- LOGIQUE DE CHARGEMENT ---
   const loadContent = useCallback(async () => {
-    if (!id) return;
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
       const data = await res.json();
@@ -114,6 +110,33 @@ export default function TextContent({ id: propsId }) {
     } finally { setIsLiking(false); }
   };
 
+  const handleBookmark = async () => {
+    if (!user) return toast.error("Connectez-vous");
+    setIsBookmarking(true);
+    try {
+      const res = await fetch('/api/github-db', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          action: "toggle_bookmark", 
+          userEmail: user.email, 
+          textId: id, 
+          title: text.title, 
+          authorName: text.authorName 
+        }) 
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updated = { ...user, bookmarks: data.bookmarks };
+        setUser(updated);
+        localStorage.setItem("lisible_user", JSON.stringify(updated));
+        toast.success("Bibliothèque mise à jour");
+      }
+    } catch (e) {
+      toast.error("Erreur de sauvegarde");
+    } finally { setIsBookmarking(false); }
+  };
+
   const handleShare = async () => {
     const shareData = {
       title: text.title,
@@ -140,6 +163,7 @@ export default function TextContent({ id: propsId }) {
   const canReadFull = !isPremium || isUnlocked || isAuthor;
 
   const mood = useMemo(() => getMood(text?.content), [text?.content]);
+  const isBookmarked = user?.bookmarks?.some(b => b.id === id);
 
   if (loading) return <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center"><Loader2 className="animate-spin text-blue-700" size={40} /></div>;
   if (!text) return null;
@@ -168,17 +192,6 @@ export default function TextContent({ id: propsId }) {
             {isPremium && (
               <span className="px-5 py-2 bg-rose-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
                 <Lock size={10}/> Premium {text.price} Li
-              </span>
-            )}
-            {/* TAGS DE CONCOURS */}
-            {(text.category === "Duel Des Nouvelles" || text.isConcours === "Duel Des Nouvelles") && (
-              <span className="px-5 py-2 bg-amber-500 text-slate-900 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                🏆 Duel Des Nouvelles
-              </span>
-            )}
-            {(text.category === "Battle Poétique" || text.isConcours === "Battle Poétique") && (
-              <span className="px-5 py-2 bg-blue-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                ✍️ Battle Poétique
               </span>
             )}
             {mood?.score > 0 && <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase border border-current/10 ${mood.color}`}>{mood.icon} {mood.label}</span>}
@@ -256,12 +269,12 @@ export default function TextContent({ id: propsId }) {
         isFocusMode={isFocusMode} 
         handleLike={handleLike} 
         isLiking={isLiking}
+        handleBookmark={handleBookmark} 
+        isBookmarking={isBookmarking} 
+        isBookmarked={isBookmarked}
         handleShare={handleShare} 
         onReport={() => setIsReportOpen(true)} 
       />
-
-      <AdSocialBar />
-
       <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
     </div>
   );
