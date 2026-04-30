@@ -18,7 +18,7 @@ export default function FloatingActions({
         
         <button 
           onClick={handleBookmark} 
-          className={`p-5 rounded-full transition-all ${isBookmarking ? 'animate-pulse text-teal-400' : isBookmarked ? 'text-teal-400 bg-white/10' : 'text-white hover:bg-white/5'}`}
+          className={`p-5 rounded-full transition-all ${isBookmarking ? 'animate-pulse text-blue-400' : isBookmarked ? 'text-blue-400 bg-white/10' : 'text-white hover:bg-white/5'}`}
           title={isBookmarked ? "Retirer des préférés" : "Ajouter aux préférés"}
         >
           <Bookmark size={22} className={isBookmarked ? "fill-current" : ""} />
@@ -28,7 +28,7 @@ export default function FloatingActions({
         
         <button 
           onClick={handleShare} 
-          className="p-5 text-white hover:text-teal-400 rounded-full transition-all active:scale-90"
+          className="p-5 text-white hover:text-blue-400 rounded-full transition-all active:scale-90"
           title="Partager"
         >
           <Share2 size={22} />
