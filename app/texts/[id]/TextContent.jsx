@@ -11,6 +11,7 @@ import {
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
 import { InTextAd } from "@/components/InTextAd";
+import { AdSocialBar } from "@/components/AdSocialBar";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock"; 
 
@@ -194,6 +195,17 @@ export default function TextContent() {
                 <Lock size={10}/> Premium {text.price} Li
               </span>
             )}
+            {/* TAGS DE CONCOURS */}
+            {(text.category === "Duel Des Nouvelles" || text.isConcours === "Duel Des Nouvelles") && (
+              <span className="px-5 py-2 bg-amber-500 text-slate-900 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                🏆 Duel Des Nouvelles
+              </span>
+            )}
+            {(text.category === "Battle Poétique" || text.isConcours === "Battle Poétique") && (
+              <span className="px-5 py-2 bg-blue-500 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                ✍️ Battle Poétique
+              </span>
+            )}
             {mood?.score > 0 && <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase border border-current/10 ${mood.color}`}>{mood.icon} {mood.label}</span>}
           </div>
           <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-tight ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.title}</h1>
@@ -275,6 +287,9 @@ export default function TextContent() {
         handleShare={handleShare} 
         onReport={() => setIsReportOpen(true)} 
       />
+
+      <AdSocialBar />
+
       <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
     </div>
   );
