@@ -1,8 +1,8 @@
 import React from "react";
 import TextContent from "./TextContent"; 
 
-// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
-export const runtime = 'edge';
+// Suppression du runtime 'edge' pour assurer la compatibilité avec les scripts publicitaires tiers
+// qui nécessitent souvent un environnement standard pour l'hydratation des scripts.
 
 /**
  * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
@@ -14,7 +14,6 @@ export async function generateMetadata({ params }) {
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
     
-    // Sécurité : Vérification si la réponse est valide
     if (!res.ok) return { title: "Chargement du manuscrit... | Lisible" };
     
     const data = await res.json();
@@ -22,9 +21,6 @@ export async function generateMetadata({ params }) {
 
     if (!text) return { title: "Manuscrit introuvable | Lisible" };
 
-    const isBattle = text.isConcours === true || text.isConcours === "true" || text.genre === "Battle Poétique";
-    
-    // Priorité à l'image du texte, sinon image par défaut de la plateforme
     const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;
     
     const shareTitle = `${text.title} — ${text.authorName}`;
@@ -57,6 +53,5 @@ export async function generateMetadata({ params }) {
  * COMPOSANT PRINCIPAL (SERVEUR)
  */
 export default function Page({ params }) {
-  // Le suspense ou la gestion d'état de TextContent s'occupera du rendu
   return <TextContent params={params} />;
 }
