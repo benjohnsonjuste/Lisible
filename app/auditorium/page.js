@@ -6,11 +6,13 @@ import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
+// Import correct de AdSocialBar (export default)
+import AdSocialBar from '@/components/AdSocialBar';
+
 export default function Auditorium() {
   const [podcasts, setPodcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPlayingUrl, setCurrentPlayingUrl] = useState(null);
-  const [adVisible, setAdVisible] = useState(true);
 
   useEffect(() => {
     const fetchPodcasts = async () => {
@@ -29,21 +31,6 @@ export default function Auditorium() {
     };
     fetchPodcasts();
   }, []);
-
-  // Injection du script Adsterra
-  useEffect(() => {
-    if (adVisible && !loading) {
-      const container = document.getElementById("ad-auditorium-bottom");
-      if (container) {
-        container.innerHTML = "";
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-        script.async = true;
-        container.appendChild(script);
-      }
-    }
-  }, [adVisible, loading]);
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 min-h-screen">
@@ -98,18 +85,10 @@ export default function Auditorium() {
         </div>
       )}
 
-      {/* Zone Adsterra en fin de page */}
-      {!loading && adVisible && (
-        <div className="mt-20 pt-12 border-t border-slate-100 flex flex-col items-center">
-          <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
-            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Sponsorisé</span>
-            <button onClick={() => setAdVisible(false)} className="text-slate-300 hover:text-rose-500 transition-colors">
-              <X size={12} />
-            </button>
-          </div>
-          <div id="ad-auditorium-bottom" className="min-h-[100px] w-full flex items-center justify-center bg-white rounded-[2rem] p-4 shadow-sm border border-slate-100">
-            {/* Injection du script Adsterra */}
-          </div>
+      {/* Remplacement de la zone Adsterra par AdSocialBar */}
+      {!loading && (
+        <div className="mt-20 pt-12 border-t border-slate-100 w-full flex justify-center">
+          <AdSocialBar />
         </div>
       )}
     </div>
