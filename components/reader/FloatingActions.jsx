@@ -1,13 +1,10 @@
 // /components/reader/FloatingActions.jsx
-import { Heart, Bookmark, Share2, AlertTriangle, Loader2 } from "lucide-react";
+import { Heart, Share2, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function FloatingActions({ 
   isFocusMode, 
   handleLike, 
   isLiking, 
-  handleBookmark, 
-  isBookmarking, 
-  isBookmarked, 
   handleShare, 
   onReport 
 }) {
@@ -25,22 +22,6 @@ export default function FloatingActions({
             <Loader2 size={22} className="animate-spin" />
           ) : (
             <Heart size={22} className={isLiking ? "fill-current" : ""} />
-          )}
-        </button>
-        
-        <div className="w-px h-8 bg-white/10 mx-1" />
-        
-        {/* BOOKMARK : Déclenche POST /api/github-db { action: 'update_user' } */}
-        <button 
-          onClick={handleBookmark} 
-          disabled={isBookmarking}
-          className={`p-5 rounded-full transition-all active:scale-90 ${isBookmarking ? 'animate-pulse text-blue-400' : isBookmarked ? 'text-blue-400 bg-white/10' : 'text-white hover:bg-white/5'}`}
-          title={isBookmarked ? "Retirer des préférés" : "Ajouter aux préférés"}
-        >
-          {isBookmarking ? (
-            <Loader2 size={22} className="animate-spin" />
-          ) : (
-            <Bookmark size={22} className={isBookmarked ? "fill-current text-blue-400" : ""} />
           )}
         </button>
         
