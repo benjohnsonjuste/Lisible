@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import {
   ArrowLeft, Eye, Clock, Maximize2, Minimize2, 
   Loader2, Sparkles, ShieldCheck, Lock, Zap, Gem, Crown
-} from "lucide-react";
+} from "lucide-center";
 
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
@@ -19,9 +19,12 @@ const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: fal
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
 
-export default function TextContent() {
+export default function TextContent({ id: propsId }) {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  
+  // Utilise l'ID passé par les props (du serveur) ou celui des params client
+  const id = propsId || params?.id;
 
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,7 @@ export default function TextContent() {
 
   // --- LOGIQUE DE CHARGEMENT ---
   const loadContent = useCallback(async () => {
+    if (!id) return;
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
       const data = await res.json();
