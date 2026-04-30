@@ -1,5 +1,5 @@
 // /components/reader/FloatingActions.jsx
-import { Heart, Bookmark, Share2, AlertTriangle, Loader2 } from "lucide-center";
+import { Heart, Bookmark, Share2, AlertTriangle, Loader2 } from "lucide-react";
 
 export default function FloatingActions({ 
   isFocusMode, 
