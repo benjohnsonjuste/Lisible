@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import des composants adaptés
+// Import du composant avec export nommé
 import { InTextAd } from '@/components/InTextAd'; 
 
 export default function PodcastPlayerPage() {
@@ -112,7 +112,7 @@ export default function PodcastPlayerPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <Loader2 className="animate-spin text-indigo-600" size={40} />
+      <Loader2 className="animate-spin text-blue-700" size={40} />
     </div>
   );
 
@@ -123,7 +123,7 @@ export default function PodcastPlayerPage() {
       <div className="max-w-3xl mx-auto">
         <button 
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold uppercase text-[10px] tracking-widest mb-8 transition-colors"
+          className="flex items-center gap-2 text-slate-500 hover:text-blue-700 font-bold uppercase text-[10px] tracking-widest mb-8 transition-colors"
         >
           <ChevronLeft size={16} /> Retour à l'auditorium
         </button>
@@ -134,7 +134,7 @@ export default function PodcastPlayerPage() {
               <Headphones size={300} className="text-white" />
             </div>
             <div className="relative z-10 flex flex-col items-center">
-              <span className="bg-indigo-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-6 inline-block">
+              <span className="bg-blue-700 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-6 inline-block">
                 En cours de lecture
               </span>
               <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter leading-tight mb-6">
@@ -147,14 +147,14 @@ export default function PodcastPlayerPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-slate-600 text-xs font-bold uppercase">
-                  <User size={14} className="text-indigo-500" /> {podcast.hostName}
+                  <User size={14} className="text-blue-700" /> {podcast.hostName}
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase">
-                    <Calendar size={14} className="text-indigo-500" /> {format(new Date(podcast.createdAt), 'dd MMMM yyyy', { locale: fr })}
+                    <Calendar size={14} className="text-blue-700" /> {format(new Date(podcast.createdAt), 'dd MMMM yyyy', { locale: fr })}
                   </div>
                   <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase">
-                    <Eye size={14} className="text-indigo-500" /> {podcast.views || 0} lectures
+                    <Eye size={14} className="text-blue-700" /> {podcast.views || 0} lectures
                   </div>
                 </div>
               </div>
@@ -162,7 +162,7 @@ export default function PodcastPlayerPage() {
               <div className="flex items-center gap-2">
                 <button 
                   onClick={handleNativeShare}
-                  className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl hover:bg-indigo-600 transition-all font-bold text-xs uppercase"
+                  className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl hover:bg-blue-700 transition-all font-bold text-xs uppercase"
                 >
                   <Share2 size={16} /> Partager
                 </button>
@@ -183,7 +183,7 @@ export default function PodcastPlayerPage() {
                   type="range"
                   value={progress}
                   onChange={handleSeek}
-                  className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-700"
                 />
                 <div className="flex justify-between mt-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   <span>{currentTime}</span>
@@ -194,8 +194,8 @@ export default function PodcastPlayerPage() {
               <div className="flex items-center justify-center">
                 <button 
                   onClick={togglePlay}
-                  className={`w-24 h-24 rounded-[2rem] flex items-center justify-center transition-all shadow-xl shadow-indigo-200 ${
-                    isPlaying ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-900 text-white hover:scale-105'
+                  className={`w-24 h-24 rounded-[2rem] flex items-center justify-center transition-all shadow-xl shadow-blue-200 ${
+                    isPlaying ? 'bg-blue-700 text-white animate-pulse' : 'bg-slate-900 text-white hover:scale-105'
                   }`}
                 >
                   {isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-2" />}
