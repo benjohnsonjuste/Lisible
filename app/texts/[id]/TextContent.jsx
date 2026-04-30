@@ -27,7 +27,6 @@ export default function TextContent() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
-  const [isBookmarking, setIsBookmarking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -111,33 +110,6 @@ export default function TextContent() {
     } finally { setIsLiking(false); }
   };
 
-  const handleBookmark = async () => {
-    if (!user) return toast.error("Connectez-vous");
-    setIsBookmarking(true);
-    try {
-      const res = await fetch('/api/github-db', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ 
-          action: "toggle_bookmark", 
-          userEmail: user.email, 
-          textId: id, 
-          title: text.title, 
-          authorName: text.authorName 
-        }) 
-      });
-      const data = await res.json();
-      if (data.success) {
-        const updated = { ...user, bookmarks: data.bookmarks };
-        setUser(updated);
-        localStorage.setItem("lisible_user", JSON.stringify(updated));
-        toast.success("Bibliothèque mise à jour");
-      }
-    } catch (e) {
-      toast.error("Erreur de sauvegarde");
-    } finally { setIsBookmarking(false); }
-  };
-
   const handleShare = async () => {
     const shareData = {
       title: text.title,
@@ -164,7 +136,6 @@ export default function TextContent() {
   const canReadFull = !isPremium || isUnlocked || isAuthor;
 
   const mood = useMemo(() => getMood(text?.content), [text?.content]);
-  const isBookmarked = user?.bookmarks?.some(b => b.id === id);
 
   if (loading) return <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center"><Loader2 className="animate-spin text-blue-700" size={40} /></div>;
   if (!text) return null;
@@ -281,9 +252,6 @@ export default function TextContent() {
         isFocusMode={isFocusMode} 
         handleLike={handleLike} 
         isLiking={isLiking}
-        handleBookmark={handleBookmark} 
-        isBookmarking={isBookmarking} 
-        isBookmarked={isBookmarked}
         handleShare={handleShare} 
         onReport={() => setIsReportOpen(true)} 
       />
