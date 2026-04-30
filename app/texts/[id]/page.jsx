@@ -2,8 +2,12 @@ import React from "react";
 import TextContent from "./TextContent"; 
 
 export async function generateMetadata({ params }) {
-  const { id } = params;
+  // Attendre les params car ils sont asynchrones dans les versions récentes de Next.js
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
   const baseUrl = "https://lisible.biz";
+
+  if (!id) return { title: "Chargement... | Lisible" };
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
@@ -40,9 +44,10 @@ export async function generateMetadata({ params }) {
   }
 }
 
-export default function Page({ params }) {
-  // On s'assure de récupérer l'id de manière stable pour le rendu serveur/client
-  const id = params?.id;
+export default async function Page({ params }) {
+  // On attend les params côté serveur pour garantir que l'id est passé proprement au composant client
+  const resolvedParams = await params;
+  const id = resolvedParams?.id;
   
   return <TextContent id={id} />;
 }
