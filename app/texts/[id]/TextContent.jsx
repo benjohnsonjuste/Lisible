@@ -3,18 +3,19 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import Head from "next/head";
 import {
   ArrowLeft, Eye, Clock, Maximize2, Minimize2, 
-  Loader2, Sparkles, ShieldCheck, Lock, Zap, Gem, Crown
+  Loader2, Sparkles, ShieldCheck
 } from "lucide-react";
 
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
 import { InTextAd } from "@/components/InTextAd";
 import FloatingActions from "@/components/reader/FloatingActions";
-import SecurityLock from "@/components/SecurityLock"; // Import du composant de protection
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
+const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
 
@@ -23,32 +24,36 @@ export default function TextContent() {
   const { id } = useParams();
 
   const [text, setText] = useState(null);
+  const [allTexts, setAllTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
   const [isBookmarking, setIsBookmarking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
-  const [isUnlocking, setIsUnlocking] = useState(false);
-  const [readingProgress, setReadingProgress] = useState(0);
+  const [liveViews, setLiveViews] = useState(0);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const viewLogged = useRef(false);
 
   // --- LOGIQUE DE CHARGEMENT ---
-  const loadContent = useCallback(async () => {
+  const loadContent = useCallback(async (force = false) => {
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
       const data = await res.json();
       if (data?.content) {
         setText(data.content);
+        setLiveViews(data.content.views || 0);
+      }
+      const libRes = await fetch(`/api/github-db?type=library`);
+      if (libRes.ok) {
+        const libData = await libRes.json();
+        setAllTexts(libData.content || []);
       }
     } catch (e) { toast.error("Erreur de chargement"); }
     finally { setLoading(false); }
   }, [id]);
 
-  useEffect(() => { 
-    loadContent(); 
-    const stored = localStorage.getItem("lisible_user");
-    if (stored) setUser(JSON.parse(stored));
-  }, [loadContent]);
+  useEffect(() => { loadContent(); }, [loadContent]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,41 +61,12 @@ export default function TextContent() {
       setReadingProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
+    const stored = localStorage.getItem("lisible_user");
+    if (stored) setUser(JSON.parse(stored));
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // --- ACTIONS ---
-  const handleUnlock = async () => {
-    if (!user) return toast.error("Connectez-vous pour débloquer ce texte");
-    if (user.li < text.price) return toast.error("Solde Li insuffisant");
-
-    setIsUnlocking(true);
-    try {
-      const res = await fetch('/api/github-db', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: "unlock_content",
-          userEmail: user.email,
-          textId: id
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        const updatedUser = { ...user, li: data.li, unlocked_texts: [...(user.unlocked_texts || []), id] };
-        setUser(updatedUser);
-        localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
-        toast.success("Œuvre débloquée ! Bonne lecture.");
-      } else {
-        throw new Error(data.error);
-      }
-    } catch (e) {
-      toast.error(e.message || "Erreur lors du déblocage");
-    } finally {
-      setIsUnlocking(false);
-    }
-  };
-
   const handleLike = async () => {
     if (localStorage.getItem(`l_${id}`)) return toast.info("Déjà aimé");
     setIsLiking(true);
@@ -115,12 +91,7 @@ export default function TextContent() {
     } finally { setIsBookmarking(false); }
   };
 
-  // --- ÉTATS DE LECTURE ---
-  const isAuthor = user?.email === text?.authorEmail;
-  const isUnlocked = user?.unlocked_texts?.includes(id);
-  const isPremium = text?.isPremium && text?.price > 0;
-  const canReadFull = !isPremium || isUnlocked || isAuthor;
-
+  // --- RENDU DU CONTENU ---
   const mood = useMemo(() => getMood(text?.content), [text?.content]);
   const isBookmarked = user?.bookmarks?.some(b => b.id === id);
 
@@ -148,11 +119,6 @@ export default function TextContent() {
         <header className={`mb-20 space-y-8 transition-all ${isFocusMode ? 'opacity-40' : ''}`}>
           <div className="flex gap-4 items-center">
             <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-widest">{text.category}</span>
-            {isPremium && (
-              <span className="px-5 py-2 bg-rose-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-                <Lock size={10}/> Premium {text.price} Li
-              </span>
-            )}
             {mood?.score > 0 && <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase border border-current/10 ${mood.color}`}>{mood.icon} {mood.label}</span>}
           </div>
           <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-tight ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.title}</h1>
@@ -167,65 +133,26 @@ export default function TextContent() {
           </div>
         </header>
 
-        {/* Début de la zone protégée */}
-        <SecurityLock userEmail={user?.email}>
-          <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
-            {canReadFull ? (
-              <div className="whitespace-pre-wrap">
-                {/* Paragraphes avant la pub */}
-                {text.content?.split('\n').slice(0, 3).join('\n')}
-                
-                {/* Emplacement Publicitaire */}
-                {!isFocusMode && (
-                  <div className="my-12 w-full flex items-center justify-center">
-                    <InTextAd />
-                  </div>
-                )}
+        <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
+          <div className="whitespace-pre-wrap">
+            {text.content?.split('\n').slice(0, 3).join('\n')}
+          </div>
+          
+          {!isFocusMode && (
+            <div className="my-12 py-4 border-y border-slate-100/50">
+              <InTextAd />
+            </div>
+          )}
 
-                {/* Reste du texte après la pub */}
-                {text.content?.split('\n').slice(3).join('\n')}
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="whitespace-pre-wrap opacity-30 select-none pointer-events-none blur-sm">
-                  {text.content?.substring(0, 400)}...
-                  <div className="h-64" />
-                </div>
-                
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-gradient-to-t from-[#FCFBF9] via-[#FCFBF9]/90 to-transparent">
-                  <div className="p-6 bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 max-w-sm">
-                    <div className="w-16 h-16 bg-rose-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6">
-                      {text.price === 25 ? <Zap size={30} /> : text.price === 50 ? <Gem size={30} /> : <Crown size={30} />}
-                    </div>
-                    <h3 className="text-xl font-black italic text-slate-900 mb-2 tracking-tighter uppercase">Contenu Privilégié</h3>
-                    <p className="text-xs text-slate-500 font-bold leading-relaxed mb-8">
-                      Cette œuvre est réservée aux mécènes. Soutenez l'auteur pour accéder à l'intégralité du manuscrit.
-                    </p>
-                    <button 
-                      onClick={handleUnlock}
-                      disabled={isUnlocking}
-                      className="w-full py-5 bg-slate-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 transition-all flex items-center justify-center gap-3"
-                    >
-                      {isUnlocking ? <Loader2 className="animate-spin" size={16}/> : <>DÉBLOQUER • {text.price} LI</>}
-                    </button>
-                    {user && user.li < text.price && (
-                      <p className="mt-4 text-[9px] font-black text-rose-500 uppercase tracking-widest">
-                        Il vous manque {text.price - user.li} Li
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </article>
-        </SecurityLock>
+          <div className="whitespace-pre-wrap">
+            {text.content?.split('\n').slice(3).join('\n')}
+          </div>
+        </article>
 
-        {canReadFull && (
-          <section className={`mt-32 space-y-48 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-            <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => loadContent()} certifiedCount={text.certified} />
-            <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent()} />
-          </section>
-        )}
+        <section className={`mt-32 space-y-48 ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => loadContent(true)} certifiedCount={text.certified} />
+          <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
+        </section>
       </main>
 
       <FloatingActions 
