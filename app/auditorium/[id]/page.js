@@ -7,7 +7,7 @@ import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 // Import du composant avec export nommé
-import { InTextAd } from '@/components/InTextAd'; 
+import { AdSocialBar } from '@/components/AdSocialBar'; 
 
 export default function PodcastPlayerPage() {
   const { id } = useParams();
@@ -203,7 +203,7 @@ export default function PodcastPlayerPage() {
               </div>
 
               <div className="mt-8 min-h-[250px] w-full flex items-center justify-center overflow-visible">
-                <InTextAd />
+                <AdSocialBar />
               </div>
             </div>
 
