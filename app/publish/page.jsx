@@ -113,7 +113,6 @@ export default function PublishPage() {
       if (!resPublish.ok) throw new Error("Échec de la publication.");
 
       // 2. Gérer les Notifications des Followers
-      // On récupère les données fraîches de l'auteur pour avoir la liste des followers
       const usersRes = await fetch(`/api/github-db?type=users`);
       const usersData = await usersRes.json();
       
@@ -132,7 +131,6 @@ export default function PublishPage() {
             read: false
           };
 
-          // Pour chaque follower, on met à jour son fichier data/users
           await Promise.all(followers.map(async (followerEmail) => {
             const followerProfile = usersData.content.find(u => u.email?.toLowerCase() === followerEmail.toLowerCase());
             if (followerProfile) {
@@ -144,7 +142,7 @@ export default function PublishPage() {
                   id: followerEmail,
                   content: {
                     ...followerProfile,
-                    notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20) // Garder les 20 dernières
+                    notifications: [newNotification, ...(followerProfile.notifications || [])].slice(0, 20)
                   }
                 })
               });
@@ -188,7 +186,8 @@ export default function PublishPage() {
           <div className="w-12" />
         </header>
 
-        <div className="mb-12 p-8 bg-teal-50 rounded-[3rem] border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+        {/* Section Battle Poétique */}
+        <div className="mb-6 p-8 bg-teal-50 rounded-[3rem] border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 bg-teal-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/20">
               <Trophy size={28} />
@@ -199,6 +198,22 @@ export default function PublishPage() {
             </div>
           </div>
           <Link href="/battle/close" className="flex items-center gap-3 px-6 py-4 bg-white text-teal-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100">
+            Rejoindre le Duel <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {/* Section Duel des Nouvelles */}
+        <div className="mb-12 p-8 bg-amber-50 rounded-[3rem] border border-amber-100 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-900/20">
+              <Trophy size={28} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black italic text-slate-900 tracking-tight">Duel des Nouvelles International</h3>
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">Faites triompher votre récit.</p>
+            </div>
+          </div>
+          <Link href="/novel/close" className="flex items-center gap-3 px-6 py-4 bg-white text-amber-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all shadow-sm border border-amber-100">
             Rejoindre le Duel <ArrowRight size={14} />
           </Link>
         </div>
@@ -282,3 +297,4 @@ export default function PublishPage() {
     </div>
   );
 }
+
