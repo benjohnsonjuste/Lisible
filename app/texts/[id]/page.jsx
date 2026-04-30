@@ -1,30 +1,21 @@
 import React from "react";
 import TextContent from "./TextContent"; 
 
-// Suppression du runtime 'edge' pour assurer la compatibilité avec les scripts publicitaires tiers
-// qui nécessitent souvent un environnement standard pour l'hydratation des scripts.
-
-/**
- * GÉNÉRATION DES MÉTADONNÉES (SERVEUR)
- */
 export async function generateMetadata({ params }) {
   const { id } = params;
   const baseUrl = "https://lisible.biz";
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
-    
-    if (!res.ok) return { title: "Chargement du manuscrit... | Lisible" };
+    if (!res.ok) return { title: "Chargement... | Lisible" };
     
     const data = await res.json();
     const text = data?.content;
-
     if (!text) return { title: "Manuscrit introuvable | Lisible" };
 
     const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;
-    
     const shareTitle = `${text.title} — ${text.authorName}`;
-    const shareDesc = `Je vous invite à apprécier ce magnifique texte sur Lisible. ✨`;
+    const shareDesc = `Découvrez ce texte magnifique sur Lisible. ✨`;
 
     return {
       title: shareTitle,
@@ -49,9 +40,7 @@ export async function generateMetadata({ params }) {
   }
 }
 
-/**
- * COMPOSANT PRINCIPAL (SERVEUR)
- */
 export default function Page({ params }) {
-  return <TextContent params={params} />;
+  // On passe l'id directement pour éviter les erreurs de lecture des params côté client
+  return <TextContent id={params.id} />;
 }
