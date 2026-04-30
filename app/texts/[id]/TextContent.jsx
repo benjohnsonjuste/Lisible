@@ -172,12 +172,17 @@ export default function TextContent() {
           <article className={`font-serif leading-[1.9] text-xl sm:text-2xl transition-all ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
             {canReadFull ? (
               <div className="whitespace-pre-wrap">
+                {/* Paragraphes avant la pub */}
                 {text.content?.split('\n').slice(0, 3).join('\n')}
+                
+                {/* Emplacement Publicitaire */}
                 {!isFocusMode && (
-                  <div className="my-12 w-full min-h-[280px] flex items-center justify-center bg-slate-50/50 rounded-3xl overflow-hidden border border-slate-100/50">
+                  <div className="my-12 w-full flex items-center justify-center">
                     <InTextAd />
                   </div>
                 )}
+
+                {/* Reste du texte après la pub */}
                 {text.content?.split('\n').slice(3).join('\n')}
               </div>
             ) : (
