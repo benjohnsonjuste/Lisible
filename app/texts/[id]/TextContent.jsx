@@ -19,9 +19,12 @@ const SmartRecommendations = dynamic(() => import("@/components/reader/SmartReco
 const SceauCertification = dynamic(() => import("@/components/reader/SceauCertification"), { ssr: false });
 const CommentSection = dynamic(() => import("@/components/reader/CommentSection"), { ssr: false });
 
-export default function TextContent() {
+export default function TextContent({ id: propsId }) {
   const router = useRouter();
-  const { id } = useParams();
+  const params = useParams();
+  
+  // Utilisation de l'ID passé par le serveur ou récupéré via l'URL
+  const id = propsId || params?.id;
 
   const [text, setText] = useState(null);
   const [allTexts, setAllTexts] = useState([]);
@@ -37,6 +40,7 @@ export default function TextContent() {
 
   // --- LOGIQUE DE CHARGEMENT ---
   const loadContent = useCallback(async (force = false) => {
+    if (!id) return;
     try {
       const res = await fetch(`/api/github-db?type=text&id=${id}`);
       const data = await res.json();
@@ -72,7 +76,11 @@ export default function TextContent() {
     setIsLiking(true);
     try {
       const res = await fetch('/api/github-db', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, action: "like" }) });
-      if (res.ok) { localStorage.setItem(`l_${id}`, "1"); toast.success("Aimé !"); }
+      if (res.ok) { 
+        localStorage.setItem(`l_${id}`, "1"); 
+        toast.success("Aimé !");
+        setText(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null);
+      }
     } finally { setIsLiking(false); }
   };
 
@@ -124,7 +132,7 @@ export default function TextContent() {
           <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-tight ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.title}</h1>
           <div className="flex items-center gap-5 pt-8 border-t border-slate-100">
             <div className="w-16 h-16 rounded-2xl bg-slate-900 overflow-hidden border-4 border-white shadow-xl">
-              <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" />
+              <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt="Author" />
             </div>
             <div>
               <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-2"><Sparkles size={12}/> Auteur Certifié</p>
