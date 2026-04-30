@@ -5,7 +5,7 @@ import { X, Sparkles } from "lucide-react";
 
 /**
  * Composant de publicité native intégrée au texte (In-Text).
- * Format optimisé pour s'insérer entre les paragraphes.
+ * Format optimisé avec une hauteur accrue pour garantir l'affichage sur tous les supports.
  */
 export function InTextAd() {
   const [isVisible, setIsVisible] = useState(true);
@@ -65,8 +65,8 @@ export function InTextAd() {
           </button>
         </div>
 
-        {/* Zone Pub (Strict 300x250) */}
-        <div className="bg-white/5 rounded-[1.4rem] overflow-hidden min-h-[250px] flex items-center justify-center relative border border-white/5">
+        {/* Zone Pub : Augmentation de la hauteur à 280px pour éviter les coupures d'iframe sur certains navigateurs */}
+        <div className="bg-white/5 rounded-[1.4rem] overflow-hidden min-h-[280px] flex items-center justify-center relative border border-white/5">
            <div 
              id="container-874a186feecd3e968c16a58bb085fd56" 
              className="w-[300px] h-[250px] z-10 flex justify-center items-center"
