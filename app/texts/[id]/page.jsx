@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
 
     const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;
     const shareTitle = `${text.title} — ${text.authorName}`;
-    const shareDesc = `Découvrez ce texte magnifique sur Lisible. ✨`;
+    const shareDesc = `Découvrez ce texte magnifique sur Lisible.`;
 
     return {
       title: shareTitle,
@@ -41,6 +41,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default function Page({ params }) {
-  // On passe l'id directement pour éviter les erreurs de lecture des params côté client
-  return <TextContent id={params.id} />;
+  // On s'assure de récupérer l'id de manière stable pour le rendu serveur/client
+  const id = params?.id;
+  
+  return <TextContent id={id} />;
 }
