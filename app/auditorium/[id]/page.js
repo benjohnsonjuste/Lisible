@@ -6,8 +6,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import du composant avec export nommé
-import { AdSocialBar } from '@/components/AdSocialBar'; 
+// Correction de l'import : AdSocialBar est probablement un export default
+import AdSocialBar from '@/components/AdSocialBar'; 
 
 export default function PodcastPlayerPage() {
   const { id } = useParams();
