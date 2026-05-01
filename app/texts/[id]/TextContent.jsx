@@ -4,13 +4,15 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import {
-  ArrowLeft, Share2, Heart, Trophy,
-  Maximize2, AlertTriangle,
-  Sun, Zap, Loader2, Sparkles, Megaphone, Ghost
+  ArrowLeft, Share2, Heart, Trophy, Bookmark,
+  Maximize2, Minimize2, AlertTriangle,
+  Sun, Zap, Loader2, Sparkles, Megaphone, Ghost,
+  ShieldCheck
 } from "lucide-react";
 
 import { InTextAd } from "@/components/InTextAd";
 import SecurityLock from "@/components/SecurityLock";
+import FloatingActions from "@/components/reader/FloatingActions";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -37,16 +39,17 @@ function BadgeAnnonce() {
   );
 }
 
-export default function TextContent() {
+export default function TextContent({ id: propsId }) {
   const router = useRouter();
   const params = useParams();
-  const id = params.id;
+  const id = propsId || params?.id;
 
   const [text, setText] = useState(null);
   const [allTexts, setAllTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [isBookmarking, setIsBookmarking] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [liveViews, setLiveViews] = useState(0);
   const viewLogged = useRef(false);
@@ -89,6 +92,7 @@ export default function TextContent() {
       setLiveViews(data.content.views || 0);
       saveToLocal(id, data.content);
       setIsOffline(false);
+      
       const indexRes = await fetch(`/api/github-db?type=library&t=${Date.now()}`);
       if (indexRes.ok) {
         const indexData = await indexRes.json();
@@ -112,8 +116,10 @@ export default function TextContent() {
     window.addEventListener("scroll", handleScroll);
     const stored = localStorage.getItem("lisible_user");
     if (stored) setUser(JSON.parse(stored));
+    
     if (isFocusMode) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "auto";
+    
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isFocusMode]);
 
@@ -135,9 +141,47 @@ export default function TextContent() {
   }, [id, text, isOffline]);
 
   // --- ACTIONS ---
-  const handleCertification = async () => { /* Logique certification brute conservée */ };
-  const handleLike = async () => { /* Logique like brute conservée */ };
-  const handleShare = async () => { /* Logique share brute conservée */ };
+  const handleLike = async () => {
+    if (localStorage.getItem(`l_${id}`)) return toast.info("Déjà aimé");
+    setIsLiking(true);
+    try {
+      const res = await fetch('/api/github-db', { 
+        method: 'PATCH', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ id, action: "like" }) 
+      });
+      if (res.ok) { 
+        localStorage.setItem(`l_${id}`, "1"); 
+        toast.success("Aimé !");
+        setText(prev => prev ? { ...prev, likes: (prev.likes || 0) + 1 } : null);
+      }
+    } finally { setIsLiking(false); }
+  };
+
+  const handleBookmark = async () => {
+    if (!user) return toast.error("Connectez-vous pour sauvegarder");
+    setIsBookmarking(true);
+    try {
+      const res = await fetch('/api/github-db', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ 
+          action: "toggle_bookmark", 
+          userEmail: user.email, 
+          textId: id, 
+          title: text.title, 
+          authorName: text.authorName 
+        }) 
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updated = { ...user, bookmarks: data.bookmarks };
+        setUser(updated);
+        localStorage.setItem("lisible_user", JSON.stringify(updated));
+        toast.success(user.bookmarks?.some(b => b.id === id) ? "Retiré de la bibliothèque" : "Ajouté à votre bibliothèque");
+      }
+    } finally { setIsBookmarking(false); }
+  };
 
   const mood = useMemo(() => {
     if (!text?.content) return null;
@@ -174,10 +218,11 @@ export default function TextContent() {
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
   const isBattle = text.isConcours === true || text.genre === "Battle Poétique";
+  const isBookmarked = user?.bookmarks?.some(b => b.id === id);
 
   return (
     <SecurityLock userEmail={user?.email}>
-      <div className={`min-h-screen transition-all duration-700 ${isFocusMode ? 'bg-[#0a0a0a] text-slate-300' : 'bg-[#FCFBF9]'}`}>
+      <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#0a0a0a] text-slate-300' : 'bg-[#FCFBF9]'}`}>
           
           {/* Progress Bar */}
           <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-white/5">
@@ -188,7 +233,7 @@ export default function TextContent() {
           <nav className={`fixed top-0 w-full z-[90] transition-all duration-500 ${isFocusMode ? 'translate-y-[-100%]' : 'translate-y-0'} ${readingProgress > 5 ? 'bg-white/95 backdrop-blur-md py-3 shadow-sm' : 'bg-transparent py-8'}`}>
             <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
               <button onClick={() => router.back()} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:text-teal-600 transition-all"><ArrowLeft size={20} /></button>
-              <button onClick={() => setIsFocusMode(true)} className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest shadow-xl hover:bg-teal-600 transition-all">
+              <button onClick={() => setIsFocusMode(true)} className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-blue-700 text-white font-black uppercase text-[10px] tracking-widest shadow-[0_0_20px_rgba(29,78,216,0.4)] hover:bg-blue-800 transition-all">
                 <Maximize2 size={16} /> Mode Focus
               </button>
             </div>
@@ -197,8 +242,8 @@ export default function TextContent() {
           {/* Focus Mode Close */}
           {isFocusMode && (
             <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-4">
-               <button onClick={() => setIsFocusMode(false)} className="px-8 py-3 rounded-full bg-white/10 text-white font-black uppercase text-[10px] tracking-widest hover:bg-white/20 backdrop-blur-md transition-all">
-                 Quitter le Focus
+               <button onClick={() => setIsFocusMode(false)} className="px-8 py-3 rounded-full bg-blue-700 text-white font-black uppercase text-[10px] tracking-widest hover:bg-blue-800 shadow-[0_0_30px_rgba(29,78,216,0.6)] backdrop-blur-md transition-all">
+                 <Minimize2 size={14} className="inline mr-2" /> Quitter le Focus
                </button>
             </div>
           )}
@@ -211,7 +256,7 @@ export default function TextContent() {
                 
                 <div className="flex flex-wrap items-center gap-4">
                    <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-widest">{text.category || "Inédit"}</span>
-                   {mood?.score > 0 && <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest ${mood.color}`}>{mood.icon} {mood.label}</span>}
+                   {mood?.score > 0 && <span className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest border border-current/10 ${mood.color}`}>{mood.icon} {mood.label}</span>}
                 </div>
 
                 <h1 className={`font-serif font-black italic text-5xl sm:text-7xl leading-none tracking-tighter ${isFocusMode ? 'text-white' : 'text-slate-900'}`}>{text.title}</h1>
@@ -221,18 +266,15 @@ export default function TextContent() {
                       <img src={text.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${text.authorEmail}`} className="w-full h-full object-cover" alt="" />
                    </div>
                    <div>
-                      <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1 flex items-center gap-2"><Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Auteur"}</p>
-                      <p className={`text-xl font-bold italic ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.authorName}</p>
+                      <p className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-1 flex items-center gap-2"><Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Auteur Certifié"}</p>
+                      <p className={`text-xl font-bold italic ${isFocusMode ? 'text-white/80' : 'text-slate-900'}`}>{text.authorName} <ShieldCheck className="inline text-teal-500" size={18}/></p>
                    </div>
                 </div>
              </header>
 
-             {/* Publicité In-Text */}
-             {!isFocusMode && <InTextAd />}
-
              {/* Content Area */}
              <div className="relative">
-                <SocialMargins textId={id} textTitle={text.title} />
+                {!isFocusMode && <SocialMargins textId={id} textTitle={text.title} />}
                 <article className={`relative font-serif leading-[1.9] text-xl sm:text-[23px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
                     {renderedContent}
                 </article>
@@ -243,7 +285,7 @@ export default function TextContent() {
 
              <section className={`transition-all duration-1000 ${isFocusMode ? 'opacity-5 blur-md pointer-events-none' : 'opacity-100'}`}>
                 {!isAnnouncementAccount && (
-                  <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={handleCertification} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
+                  <SceauCertification wordCount={text.content?.length} fileName={id} userEmail={user?.email} onValidated={() => loadContent(true)} certifiedCount={text.certified || 0} authorName={text.authorName} textTitle={text.title} />
                 )}
                 <CommentSection textId={id} comments={text.comments || []} user={user} onCommented={() => loadContent(true)} />
                 <SmartRecommendations currentId={id} allTexts={allTexts} />
@@ -251,13 +293,16 @@ export default function TextContent() {
           </main>
 
           {/* Floating Actions */}
-          <div className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-1 bg-slate-950 p-2 rounded-full shadow-2xl border border-white/10 transition-all duration-500 ${isFocusMode ? 'translate-y-32 opacity-0' : 'translate-y-0 opacity-100'}`}>
-              <button onClick={handleLike} className={`p-5 rounded-full ${isLiking ? 'text-rose-500' : 'text-white hover:bg-white/10'}`}><Heart size={22} fill={isLiking ? "currentColor" : "none"} /></button>
-              <div className="w-px h-8 bg-white/10 mx-1" />
-              <button onClick={handleShare} className="p-5 text-white hover:text-teal-400 rounded-full"><Share2 size={22} /></button>
-              <div className="w-px h-8 bg-white/10 mx-1" />
-              <button onClick={() => setIsReportOpen(true)} className="p-5 text-slate-500 hover:text-rose-500 rounded-full"><AlertTriangle size={22} /></button>
-          </div>
+          <FloatingActions 
+            isFocusMode={isFocusMode} 
+            handleLike={handleLike} 
+            isLiking={isLiking}
+            handleBookmark={handleBookmark} 
+            isBookmarking={isBookmarking} 
+            isBookmarked={isBookmarked}
+            handleShare={() => {}} 
+            onReport={() => setIsReportOpen(true)} 
+          />
 
           <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} textId={id} textTitle={text.title} />
       </div>
