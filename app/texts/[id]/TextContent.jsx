@@ -9,7 +9,7 @@ import {
   Sun, Zap, Loader2, Sparkles, Megaphone, Ghost
 } from "lucide-react";
 
-import { InTextAd } from "@/components/InTextAd";
+import InTextAd from "@/components/InTextAd";
 import SecurityLock from "@/components/SecurityLock";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
@@ -226,6 +226,9 @@ export default function TextContent() {
                    </div>
                 </div>
              </header>
+
+             {/* Publicité In-Text */}
+             {!isFocusMode && <InTextAd />}
 
              {/* Content Area */}
              <div className="relative">
