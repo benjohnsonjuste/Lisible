@@ -6,7 +6,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import dynamic from "next/dynamic";
-import AdSocialBar from "@/components/AdSocialBar";
 
 // --- CHARGEMENT DYNAMIQUE (Client-side only) ---
 // On force Next.js à ignorer ces composants lors du rendu serveur (SSR)
@@ -122,7 +121,6 @@ export default function RootLayout({ children }) {
             }}
           />
           <Analytics />
-          <AdSocialBar />
         </AuthProvider>
       </body>
     </html>
