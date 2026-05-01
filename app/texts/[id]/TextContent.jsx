@@ -9,9 +9,8 @@ import {
 
 // Imports des composants
 import { AdSocialBar } from "@/components/AdSocialBar";
-import { FloatingActions } from "@/components/FloatingActions";
+import { FloatingActions } from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
-import AudioLecteur from "@/components/AudioLecteur";
 
 const ReportModal = dynamic(() => import("@/components/ReportModal"), { ssr: false });
 const SmartRecommendations = dynamic(() => import("@/components/reader/SmartRecommendations"), { ssr: false });
@@ -191,7 +190,6 @@ export default function TextContent() {
   );
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(text.authorEmail);
-  // Condition mise à jour pour inclure le Duel Des Nouvelles International
   const isBattle = text.isConcours === true || text.genre === "Battle Poétique" || text.genre === "Duel Des Nouvelles International";
 
   return (
@@ -242,10 +240,6 @@ export default function TextContent() {
                 </div>
              </header>
 
-             <div className={`mb-16 transition-all duration-1000 ${isFocusMode ? 'scale-105 shadow-2xl' : ''}`}>
-                <AudioLecteur titre={text.title} contenu={text.content} auteurNom={text.authorName} />
-             </div>
-
              <div className="relative">
                 <SocialMargins textId={id} textTitle={text.title} />
                 <article className={`relative font-serif leading-[1.9] text-xl sm:text-[23px] transition-all duration-1000 antialiased ${isFocusMode ? 'text-slate-200' : 'text-slate-800'}`}>
@@ -265,7 +259,6 @@ export default function TextContent() {
              </section>
           </main>
 
-          {/* FloatingActions intégrés */}
           <FloatingActions 
             isFocusMode={isFocusMode}
             handleLike={handleLike}
