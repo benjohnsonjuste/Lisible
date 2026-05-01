@@ -10,7 +10,7 @@ Loader2, Sparkles, ShieldCheck, Lock, Zap, Gem, Crown
 
 // Imports des utilitaires et composants extraits
 import { getMood } from "@/utils/reader-utils";
-import AdSocialBar from "@/components/AdSocialBar";
+import { AdSocialBar } from "@/components/AdSocialBar";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 
@@ -26,7 +26,6 @@ const [text, setText] = useState(null);
 const [loading, setLoading] = useState(true);
 const [user, setUser] = useState(null);
 const [isLiking, setIsLiking] = useState(false);
-const [isBookmarking, setIsBookmarking] = useState(false);
 const [isReportOpen, setIsReportOpen] = useState(false);
 const [isUnlocking, setIsUnlocking] = useState(false);
 const [readingProgress, setReadingProgress] = useState(0);
@@ -35,7 +34,7 @@ const [isFocusMode, setIsFocusMode] = useState(false);
 // --- LOGIQUE DE CHARGEMENT ---
 const loadContent = useCallback(async () => {
 try {
-const res = await fetch(/api/github-db?type=text&id=${id});
+const res = await fetch(`/api/github-db?type=text&id=${id}`);
 const data = await res.json();
 if (data?.content) {
 setText(data.content);
@@ -89,11 +88,10 @@ try {
 } finally {  
   setIsUnlocking(false);  
 }
-
 };
 
 const handleLike = async () => {
-if (localStorage.getItem(l_${id})) return toast.info("Déjà aimé");
+if (localStorage.getItem(`l_${id}`)) return toast.info("Déjà aimé");
 setIsLiking(true);
 try {
 const res = await fetch('/api/github-db', {
@@ -102,7 +100,7 @@ headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({ id, action: "like" })
 });
 if (res.ok) {
-localStorage.setItem(l_${id}, "1");
+localStorage.setItem(`l_${id}`, "1");
 toast.success("Aimé !");
 setText(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
 }
@@ -111,37 +109,10 @@ toast.error("Échec de l'interaction");
 } finally { setIsLiking(false); }
 };
 
-const handleBookmark = async () => {
-if (!user) return toast.error("Connectez-vous");
-setIsBookmarking(true);
-try {
-const res = await fetch('/api/github-db', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-action: "toggle_bookmark",
-userEmail: user.email,
-textId: id,
-title: text.title,
-authorName: text.authorName
-})
-});
-const data = await res.json();
-if (data.success) {
-const updated = { ...user, bookmarks: data.bookmarks };
-setUser(updated);
-localStorage.setItem("lisible_user", JSON.stringify(updated));
-toast.success("Bibliothèque mise à jour");
-}
-} catch (e) {
-toast.error("Erreur de sauvegarde");
-} finally { setIsBookmarking(false); }
-};
-
 const handleShare = async () => {
 const shareData = {
 title: text.title,
-text: Je vous invite à lire "${text.title}" de ${text.authorName} sur Lisible. ✨,
+text: `Je vous invite à lire "${text.title}" de ${text.authorName} sur Lisible. ✨`,
 url: window.location.href,
 };
 
@@ -155,7 +126,6 @@ try {
 } catch (err) {  
   if (err.name !== 'AbortError') toast.error("Erreur de partage");  
 }
-
 };
 
 // --- ÉTATS DE LECTURE ---
@@ -165,15 +135,14 @@ const isPremium = text?.isPremium && text?.price > 0;
 const canReadFull = !isPremium || isUnlocked || isAuthor;
 
 const mood = useMemo(() => getMood(text?.content), [text?.content]);
-const isBookmarked = user?.bookmarks?.some(b => b.id === id);
 
 if (loading) return <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center"><Loader2 className="animate-spin text-blue-700" size={40} /></div>;
 if (!text) return null;
 
 return (
-<div className={min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}}>
+<div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#121212]' : 'bg-[#FCFBF9]'}`}>
 <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/30">
-<div className="h-full bg-blue-700 transition-all duration-300" style={{ width: ${readingProgress}% }} />
+<div className="h-full bg-blue-700 transition-all duration-300" style={{ width: `${readingProgress}%` }} />
 </div>
 
 <nav className={`fixed top-0 w-full z-[90] transition-all p-6 flex justify-between ${isFocusMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>  
@@ -190,7 +159,9 @@ return (
   <main className="max-w-3xl mx-auto px-6 pt-40 pb-48">  
     <header className={`mb-20 space-y-8 transition-all ${isFocusMode ? 'opacity-40' : ''}`}>  
       <div className="flex gap-4 items-center">  
-        <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-widest">{text.category}</span>  
+        <span className="px-5 py-2 bg-slate-950 text-white rounded-full text-[9px] font-black uppercase tracking-widest">
+            {text.category === "Battle Poétique" || text.category === "Duel Des Nouvelles" ? text.category : text.category}
+        </span>  
         {isPremium && (  
           <span className="px-5 py-2 bg-rose-600 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">  
             <Lock size={10}/> Premium {text.price} Li  
@@ -218,7 +189,7 @@ return (
               
             {!isFocusMode && (  
               <div className="my-12 w-full flex items-center justify-center">  
-                <InTextAd />  
+                <AdSocialBar />  
               </div>  
             )}  
 
@@ -271,9 +242,6 @@ return (
     isFocusMode={isFocusMode}   
     handleLike={handleLike}   
     isLiking={isLiking}  
-    handleBookmark={handleBookmark}   
-    isBookmarking={isBookmarking}   
-    isBookmarked={isBookmarked}  
     handleShare={handleShare}   
     onReport={() => setIsReportOpen(true)}   
   />  
