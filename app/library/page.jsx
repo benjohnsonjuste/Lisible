@@ -25,7 +25,12 @@ export default function LibraryPage() {
 
   async function loadLibraryData() {
     try {
-      // 1. Récupérer la liste des fichiers live depuis data/texts
+      // 1. Récupérer les profils utilisateurs réels (Méthode Communauté)
+      const usersRes = await fetch(`/api/realtime-data?folder=users`);
+      const usersJson = await usersRes.json();
+      const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
+
+      // 2. Récupérer la liste des fichiers live depuis data/texts
       const textsUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/texts`;
       const res = await fetch(textsUrl);
       
@@ -33,7 +38,7 @@ export default function LibraryPage() {
       
       const files = await res.json();
       
-      // 2. Charger le contenu de chaque fichier JSON individuellement
+      // 3. Charger le contenu de chaque fichier JSON et fusionner avec l'image de l'utilisateur
       const allTexts = await Promise.all(
         files
           .filter(f => f.name.endsWith('.json'))
@@ -44,6 +49,10 @@ export default function LibraryPage() {
               
               const email = (data.authorEmail || data.email || "").toLowerCase().trim();
 
+              // Trouver l'utilisateur correspondant pour obtenir sa photo de profil réelle
+              const userProfile = allUsers.find(u => (u.email || "").toLowerCase().trim() === email);
+              const realImage = userProfile?.profilePic || userProfile?.image || null;
+
               return {
                 id: file.name.replace('.json', ''), 
                 title: data.title || data.textTitle || "Texte sans titre",
@@ -52,7 +61,8 @@ export default function LibraryPage() {
                 li: Number(data.certified || data.totalCertified || data.li || 0),
                 likes: Number(data.likes || data.totalLikes || 0),
                 category: data.category || "Littérature",
-                image: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${email || file.name}`,
+                // Utilisation de la photo réelle ou de l'avatar par défaut
+                image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || file.name}`,
                 date: data.date || ""
               };
             } catch (err) { 
