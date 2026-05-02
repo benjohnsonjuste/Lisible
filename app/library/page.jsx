@@ -28,21 +28,15 @@ export default function Bibliotheque({ initialTexts = [] }) {
     try {
       const res = await fetch(`/api/github-db?type=library`);
       const json = await res.json();
-      
       if (json && Array.isArray(json.content)) {
-        // MÉTHODE ANCIENNE : Logique de tri identique
         const sorted = [...json.content].sort((a, b) => {
           const certA = Number(a?.certified || a?.totalCertified || 0);
           const certB = Number(b?.certified || b?.totalCertified || 0);
           if (certB !== certA) return certB - certA;
-
           const likesA = Number(a?.likes || a?.totalLikes || 0);
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
-
-          const dateA = a?.date ? new Date(a.date).getTime() : 0;
-          const dateB = b?.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
+          return (b?.date ? new Date(b.date).getTime() : 0) - (a?.date ? new Date(a.date).getTime() : 0);
         });
         setTexts(sorted);
       }
@@ -116,7 +110,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
         {filteredTexts.map((item) => {
           if (!item || !item.id) return null;
           
-          // MÉTHODE ANCIENNE : Extraction exacte des statistiques et statuts
+          // MÉTHODE ANCIENNE : Extraction des données réelles
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const authorEmail = item.authorEmail || "";
           const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
