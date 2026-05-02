@@ -49,9 +49,11 @@ export default async function Page({ params }) {
   
   return (
     <div style={{ 
-      backgroundColor: "#FDFCF8", // Couleur crème pour réduire la fatigue oculaire
-      color: "#1A1A1A",           // Noir doux pour un contraste optimal
+      backgroundColor: "#FDFCF8", 
+      color: "#1A1A1A",           
       minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
       transition: "background-color 0.3s ease"
     }}>
       <TextContent id={id} />
