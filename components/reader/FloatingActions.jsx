@@ -6,6 +6,7 @@ export default function FloatingActions({
   isFocusMode, 
   handleLike, 
   isLiking, 
+  isLiked, // Ajout de la prop pour l'état visuel
   handleShare, 
   onReport 
 }) {
@@ -16,13 +17,18 @@ export default function FloatingActions({
         <button 
           onClick={handleLike} 
           disabled={isLiking}
-          className={`p-5 rounded-full transition-all active:scale-90 ${isLiking ? 'text-rose-500 bg-white/10' : 'text-white hover:bg-white/5'}`}
+          className={`p-5 rounded-full transition-all active:scale-90 ${
+            isLiked ? 'text-rose-500 bg-rose-500/10' : 'text-white hover:bg-white/5'
+          }`}
           title="J'aime"
         >
           {isLiking ? (
             <Loader2 size={22} className="animate-spin" />
           ) : (
-            <Heart size={22} className="hover:fill-rose-500 transition-colors" />
+            <Heart 
+              size={22} 
+              className={`transition-colors ${isLiked ? 'fill-rose-500' : 'hover:fill-rose-500'}`} 
+            />
           )}
         </button>
         
