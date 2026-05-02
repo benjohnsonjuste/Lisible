@@ -40,12 +40,10 @@ const TextContent = ({ id }) => {
 
   return (
     <div className="relative min-h-screen bg-white">
-      {/* Barre sociale latérale ou intégrée selon le design */}
       <SocialMargins />
       <AdSocialBar />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* En-tête du texte */}
         <header className="mb-8 text-center">
           <h1 className="text-4xl font-serif font-bold mb-4">{data.title}</h1>
           <div className="flex items-center justify-center gap-2 text-gray-600">
@@ -54,27 +52,25 @@ const TextContent = ({ id }) => {
           </div>
         </header>
 
-        {/* Protection du contenu */}
+        {/* Méthode d'affichage de l'ancienne page */}
         <SecurityLock>
-          <article 
-            className="prose prose-lg max-w-none font-serif leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: data.body || data.text }} 
-          />
+          <article className="font-serif leading-[1.9] text-xl sm:text-2xl">
+            <div className="whitespace-pre-wrap">
+              {data.content}
+            </div>
+          </article>
         </SecurityLock>
 
-        {/* Section de fin d'article */}
         <footer className="mt-12 border-t pt-8">
           <CommentSection textId={id} />
         </footer>
       </main>
 
-      {/* Actions flottantes (Partage, Scroll to top, etc.) */}
       <FloatingActions 
         onReport={() => setReportModalOpen(true)} 
         title={data.title}
       />
 
-      {/* Modale de signalement */}
       <ReportModal 
         isOpen={isReportModalOpen} 
         onClose={() => setReportModalOpen(false)} 
