@@ -1,251 +1,170 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
+import React, { useEffect, useState } from "react";
 import { 
-  Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, Sparkles, Megaphone, AlignLeft
+  BookOpen, Search, Loader2, Eye, Heart, ArrowRight, Sparkles, Coins, AlignLeft 
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
+import Head from 'next/head';
 
-export default function Bibliotheque({ initialTexts = [] }) {
-  const [texts, setTexts] = useState(Array.isArray(initialTexts) ? initialTexts : []);
-  const [loading, setLoading] = useState(false);
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+};
+
+export default function LibraryPage() {
+  const [texts, setTexts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [activeGenre, setActiveGenre] = useState("Tous");
-
-  const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
   useEffect(() => {
     setMounted(true);
-    fetchInitial();
-    const interval = setInterval(fetchInitial, 30000);
-    return () => clearInterval(interval);
+    loadLibraryData();
   }, []);
 
-  const fetchInitial = async () => {
-    if (!texts || texts.length === 0) setLoading(true);
+  async function loadLibraryData() {
     try {
-      // 1. Scan du dossier data/texts via l'API GitHub
-      const owner = "Lisible-biz"; // Remplacez par votre owner GitHub
-      const repo = "lisible-db";     // Remplacez par votre repo
-      const textsUrl = `https://api.github.com/repos/${owner}/${repo}/contents/data/texts`;
+      // 1. Récupérer la liste des fichiers live depuis data/texts
+      const textsUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/texts`;
+      const res = await fetch(textsUrl);
       
-      const res = await fetch(textsUrl, { cache: 'no-store' });
+      if (!res.ok) throw new Error("Accès au dossier data/texts impossible");
+      
       const files = await res.json();
       
-      if (Array.isArray(files)) {
-        // 2. Récupération du contenu de chaque fichier .json
-        const allTexts = await Promise.all(
-          files
-            .filter(file => file.name.endsWith('.json'))
-            .map(async (file) => {
-              const contentRes = await fetch(file.download_url);
-              const contentJson = await contentRes.json();
+      // 2. Charger le contenu de chaque fichier JSON individuellement
+      const allTexts = await Promise.all(
+        files
+          .filter(f => f.name.endsWith('.json'))
+          .map(async (file) => {
+            try {
+              const textRes = await fetch(file.download_url);
+              const data = await textRes.json();
+              
+              const email = (data.authorEmail || data.email || "").toLowerCase().trim();
+
               return {
-                id: file.name.replace('.json', ''),
-                ...contentJson
+                id: file.name.replace('.json', ''), 
+                title: data.title || data.textTitle || "Texte sans titre",
+                authorName: data.author || data.authorName || data.penName || "Plume Anonyme",
+                views: Number(data.views || 0),
+                li: Number(data.certified || data.totalCertified || data.li || 0),
+                likes: Number(data.likes || data.totalLikes || 0),
+                category: data.category || "Littérature",
+                image: `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${email || file.name}`,
+                date: data.date || ""
               };
-            })
-        );
+            } catch (err) { 
+              return null; 
+            }
+          })
+      );
 
-        // 3. Application du tri (Méthode identique à l'ancienne page)
-        const sorted = allTexts.sort((a, b) => {
-          const certA = Number(a?.certified || a?.totalCertified || 0);
-          const certB = Number(b?.certified || b?.totalCertified || 0);
-          if (certB !== certA) return certB - certA;
+      const validTexts = allTexts.filter(Boolean);
+      setTexts(validTexts.sort((a, b) => b.views - a.views));
 
-          const likesA = Number(a?.likes || a?.totalLikes || 0);
-          const likesB = Number(b?.likes || b?.totalLikes || 0);
-          if (likesB !== likesA) return likesB - likesA;
-
-          const dateA = a?.date ? new Date(a.date).getTime() : 0;
-          const dateB = b?.date ? new Date(b.date).getTime() : 0;
-          return dateB - dateA;
-        });
-
-        setTexts(sorted);
-      }
-    } catch (e) { 
-      if (!texts || texts.length === 0) toast.error("Le Grand Livre est inaccessible.");
-    } finally { 
-      setLoading(false); 
+    } catch (e) {
+      toast.error("Impossible de joindre la bibliothèque.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const filteredTexts = useMemo(() => {
-    if (!Array.isArray(texts)) return [];
-    return texts.filter(t => {
-      if (!t) return false;
-      const title = (t.title || "").toLowerCase();
-      const author = (t.author || t.authorName || "").toLowerCase();
-      const search = searchTerm.toLowerCase();
-      const matchesSearch = title.includes(search) || author.includes(search);
-      const matchesGenre = activeGenre === "Tous" || t.genre === activeGenre || t.category === activeGenre;
-      return matchesSearch && matchesGenre;
-    });
-  }, [texts, searchTerm, activeGenre]);
-
-  if (!mounted && initialTexts.length === 0) return null;
-  if (loading && (!texts || texts.length === 0)) return (
-    <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
+  if (!mounted) return null;
+  
+  if (loading) return (
+    <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center">
       <Loader2 className="animate-spin text-teal-600" size={40} />
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Ouverture des archives...</p>
     </div>
   );
 
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-16 font-sans bg-[#FCFBF9] min-h-screen">
-      
-      <div className="text-center mb-16 space-y-4">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles size={14} className="text-teal-600" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-teal-600">Patrimoine Littéraire</span>
-          </div>
-          <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">Lisible.</h1>
-      </div>
+  const filteredTexts = texts.filter(t => 
+    t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    t.authorName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      <div className="space-y-10 mb-20">
-        <div className="relative max-w-2xl mx-auto group">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-teal-500 transition-colors" size={20} />
-          <input
-            type="text"
-            placeholder="Rechercher une œuvre, une plume..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-7 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-xl shadow-slate-200/50"
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-20 bg-[#FCFBF9] min-h-screen">
+      <Head><title>Bibliothèque | Lisible</title></Head>
+
+      <header className="flex flex-col lg:flex-row justify-between mb-24 gap-8">
+        <div>
+          <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">Lisible.</h1>
+          <p className="mt-6 text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] ml-2">Exploration des textes</p>
+        </div>
+        <div className="relative group w-full lg:w-96 self-end">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors" size={20} />
+          <input 
+            type="text" 
+            placeholder="Rechercher un titre ou un auteur..." 
+            className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all font-bold text-sm" 
+            onChange={(e) => setSearchTerm(e.target.value)} 
           />
         </div>
+      </header>
 
-        <div className="flex flex-wrap justify-center gap-3">
-          {genres.map((g) => (
-            <button
-              key={g}
-              onClick={() => setActiveGenre(g)}
-              className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border ${
-                activeGenre === g ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105" : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
-              }`}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14">
-        {filteredTexts.map((item) => {
-          if (!item || !item.id) return null;
-          
-          const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
-          const authorEmail = item.authorEmail || "";
-          const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
-          const isOtherAdmin = ["jb7management@gmail.com"].includes(authorEmail);
-          const hasSceau = (item.certified || item.totalCertified || 0) > 0;
-
-          const displayViews = item.views || item.totalViews || 0;
-          const displayLikes = item.likes || item.totalLikes || 0;
-
-          return (
-            <Link href={`/texts/${item.id}`} key={item.id} className="group">
-              <article className={`h-full bg-white rounded-[3.5rem] overflow-hidden border transition-all duration-500 flex flex-col relative ${
-                isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
-              } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
+      {filteredTexts.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          {filteredTexts.map((text) => (
+            <Link href={`/texts/${text.id}`} key={text.id} className="group">
+              <div className="h-full bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden">
                 
-                {!isDuel ? (
-                  <div className="h-64 bg-slate-100 relative overflow-hidden">
-                    <img
-                      src={item.image || item.imageBase64 || `https://api.dicebear.com/7.x/shapes/svg?seed=${item.id}`}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                      onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
-                    />
-                    <div className="absolute top-6 left-6 flex flex-col gap-2">
-                      {isAnnouncementAccount ? (
-                        <span className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                          <Megaphone size={12} /> Annonce
-                        </span>
-                      ) : isOtherAdmin ? (
-                        <span className="bg-amber-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                          <ShieldCheck size={12} /> Officiel
-                        </span>
-                      ) : hasSceau && (
-                        <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                          <ShieldCheck size={12} /> Certifié
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-32 bg-teal-50/50 flex items-center px-10 border-b border-teal-100/50">
-                    <span className="bg-teal-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
-                      <Trophy size={12} /> Duel de Plume
-                    </span>
-                  </div>
-                )}
+                <div className="absolute top-8 right-8">
+                  <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2">
+                    <AlignLeft size={10} className="text-teal-400" /> {text.category}
+                  </span>
+                </div>
 
-                <div className="p-10 flex-grow flex flex-col">
-                  <div className="flex items-center gap-3 mb-5">
-                    <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-1">
-                      {isDuel && <AlignLeft size={10} />} {item.category || item.genre || "Écrit"}
-                    </span>
-                    <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
-                      {mounted && item.date ? new Date(item.date).getFullYear() : "2026"}
-                    </span>
-                    {hasSceau && (
-                        <span className="ml-auto text-teal-600 animate-pulse">
-                            <ShieldCheck size={16} />
-                        </span>
-                    )}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                     <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-inner">
+                        <img src={text.image} alt="Auteur" className="w-full h-full object-cover" />
+                     </div>
+                     <p className="text-[10px] font-black uppercase text-teal-600 tracking-wider italic">{text.authorName}</p>
                   </div>
 
-                  <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
-                    {item.title || "Sans titre"}
+                  <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-[1.1] group-hover:text-teal-600 transition-colors">
+                    {text.title}
                   </h2>
+                </div>
 
-                  <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
-                    {item.summary || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé dans les registres de l'Atelier...")}
-                  </p>
-
-                  <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white">
-                        {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
-                          {item.author || item.authorName || "Anonyme"}
-                        </span>
-                        <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter mt-1">
-                          {isAnnouncementAccount ? "Compte Officiel" : hasSceau ? "Plume Certifiée" : "Auteur Scellé"}
-                        </span>
+                <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
+                  <div className="flex gap-6">
+                    <div className="text-center">
+                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">Li</span>
+                      <div className="flex items-center gap-1.5 justify-center bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100">
+                        <Coins size={14} className="text-amber-500" />
+                        <span className="text-sm font-black text-amber-700">{text.li}</span>
                       </div>
                     </div>
-                    
-                    {!isAnnouncementAccount && (
-                      <div className="flex gap-5 text-slate-300 text-[11px] font-black">
-                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600">
-                          <Eye size={18} /> {displayViews}
-                        </span>
-                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500">
-                          <Heart size={18} /> {displayLikes}
-                        </span>
+                    <div className="text-center">
+                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">Stats</span>
+                      <div className="flex items-center gap-4 px-1">
+                        <div className="flex items-center gap-1.5">
+                          <Eye size={16} className="text-slate-200" />
+                          <span className="text-sm font-black text-slate-900">{text.views}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Heart size={16} className={`${text.likes > 0 ? 'text-rose-500 fill-rose-500' : 'text-slate-200'}`} />
+                          <span className="text-sm font-black text-slate-900">{text.likes}</span>
+                        </div>
                       </div>
-                    )}
+                    </div>
+                  </div>
+                  
+                  <div className="w-12 h-12 bg-slate-950 text-white rounded-2xl flex items-center justify-center group-hover:bg-teal-600 transition-all shadow-lg active:scale-95">
+                    <ArrowRight size={20} />
                   </div>
                 </div>
-              </article>
+              </div>
             </Link>
-          );
-        })}
-      </div>
-
-      {filteredTexts.length === 0 && !loading && mounted && (
-        <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
-           <Search className="text-slate-100 mx-auto mb-6" size={64} />
-           <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
-             Aucun manuscrit n'a été trouvé dans ce compartiment des archives.
-           </p>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-40 bg-white rounded-[5rem] border-2 border-dashed border-slate-50">
+          <BookOpen className="mx-auto text-slate-100 mb-6" size={80} />
+          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">Le catalogue est silencieux</p>
         </div>
       )}
     </div>
