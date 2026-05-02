@@ -134,24 +134,32 @@ const TextContent = ({ id }) => {
   };
 
   const renderedContent = useMemo(() => {
-    if (!data?.content) return null;
+    if (!data?.content || !id) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
+    const dropCapClass = `first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${mood.accent}`;
+
+    const renderParaSet = (paras, offset = 0) => paras.map((p, i) => (
+      <SocialMargins key={i + offset} paragraphId={`${id}_p${i + offset}`}>
+        <p className={`mb-6 ${i === 0 && offset === 0 ? dropCapClass : ''}`} dangerouslySetInnerHTML={{ __html: p }} />
+      </SocialMargins>
+    ));
+
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
-          {paragraphs.slice(0, 3).map((p, i) => <p key={i} className="mb-6">{p}</p>)}
+          {renderParaSet(paragraphs.slice(0, 3))}
         </div>
         {paragraphs.length > 3 && (
           <>
             <div className="my-16"><InTextAd /></div>
             <div className="whitespace-pre-wrap">
-              {paragraphs.slice(3).map((p, i) => <p key={i + 3} className="mb-6">{p}</p>)}
+              {renderParaSet(paragraphs.slice(3), 3)}
             </div>
           </>
         )}
       </div>
     );
-  }, [data?.content]);
+  }, [data?.content, mood.accent, id]);
 
   if (loading) return <div className="flex justify-center p-10 font-serif">Chargement...</div>;
   if (!data) return null;
@@ -165,7 +173,6 @@ const TextContent = ({ id }) => {
         <div className={`h-full transition-all duration-300 ${mood.accent.replace('text', 'bg')}`} style={{ width: `${readingProgress}%` }} />
       </div>
 
-      <SocialMargins />
       {!isFocusMode && <AdSocialBar />}
 
       <nav className={`fixed top-0 w-full z-[90] transition-all p-6 flex justify-between ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
