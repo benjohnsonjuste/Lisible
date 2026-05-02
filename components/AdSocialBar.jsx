@@ -5,18 +5,20 @@ import Script from 'next/script';
 export default function AdSocialBar() {
   return (
     <>
-      {/* Premier Script Publicitaire (Existant) */}
+      {/* Premier Script Publicitaire */}
       <Script
         id="ad-social-bar-script-1"
         src="https://pl28594689.profitablecpmratenetwork.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js"
-        strategy="afterInteractive"
+        strategy="lazyOnload" 
+        onError={(e) => console.error("Erreur chargement Ad 1", e)}
       />
 
-      {/* Nouveau Script Publicitaire ajouté */}
+      {/* Nouveau Script Publicitaire */}
       <Script
         id="ad-social-bar-script-2"
         src="https://pl27914784.profitablecpmratenetwork.com/fe/76/e8/fe76e8fd5162320316a889ed12f1364a.js"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
+        onError={(e) => console.error("Erreur chargement Ad 2", e)}
       />
     </>
   );
