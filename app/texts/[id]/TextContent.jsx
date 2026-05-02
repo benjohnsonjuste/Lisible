@@ -13,7 +13,7 @@ import CommentSection from "@/components/reader/CommentSection";
 import SocialMargins from "@/components/reader/SocialMargins";
 import { InTextAd } from "@/components/InTextAd";
 
-// --- COMPOSANTS DE BADGES (Ancienne méthode) ---
+// --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
   return (
     <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
@@ -38,12 +38,12 @@ const TextContent = ({ id }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
-  const [isBookmarking, setIsBookmarking] = useState(false);
+  const [authorProfile, setAuthorProfile] = useState(null);
   const [isReportModalOpen, setReportModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
 
-  // --- CONFIGURATION DU MOOD (Ancienne méthode) ---
+  // --- CONFIGURATION DU MOOD ---
   const moodConfig = useMemo(() => ({
     melancholic: { bg: "bg-[#0a0c1a]", accent: "text-indigo-400", ui: "bg-indigo-50 text-indigo-600", icon: <Ghost size={12}/>, label: "Mélancolique" },
     luminous: { bg: "bg-[#fffdf5]", accent: "text-amber-600", ui: "bg-amber-50 text-amber-600", icon: <Sun size={12}/>, label: "Lumineux" },
@@ -66,16 +66,28 @@ const TextContent = ({ id }) => {
     return topMood.score > 0 ? moodConfig[topMood.key] : moodConfig.default;
   }, [data?.content, moodConfig]);
 
+  // --- CHARGEMENT DU CONTENU ET DE LA PHOTO RÉELLE ---
   const loadContent = useCallback(async () => {
     if (!id) return;
     try {
       const res = await fetch(`https://lisible.biz/api/github-db?type=text&id=${id}`);
       if (res.ok) {
         const result = await res.json();
-        setData(result.content);
+        const textData = result.content;
+        setData(textData);
+
+        // RÉCUPÉRATION PHOTO RÉELLE (Même méthode que Communauté)
+        const usersRes = await fetch(`/api/realtime-data?folder=users`);
+        const usersJson = await usersRes.json();
+        const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
+        const author = allUsers.find(u => (u.email || "").toLowerCase().trim() === (textData.authorEmail || "").toLowerCase().trim());
+        if (author) setAuthorProfile(author.profilePic || author.image || null);
       }
-    } catch (error) { toast.error("Erreur de chargement"); }
-    finally { setLoading(false); }
+    } catch (error) { 
+      toast.error("Erreur de chargement"); 
+    } finally { 
+      setLoading(false); 
+    }
   }, [id]);
 
   useEffect(() => {
@@ -90,11 +102,44 @@ const TextContent = ({ id }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loadContent]);
 
-  // --- RENDU DU TEXTE AVEC PUBLICITÉ (Ancienne méthode) ---
+  // --- ACTIONS ---
+  const handleLike = async () => {
+    if (!user) return toast.error("Connectez-vous pour aimer ce texte");
+    setIsLiking(true);
+    try {
+      const res = await fetch("/api/github-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "like", textId: id, userEmail: user.email })
+      });
+      if (res.ok) {
+        toast.success("Coup de cœur ajouté !");
+        loadContent();
+      }
+    } catch (err) {
+      toast.error("Erreur lors de l'interaction.");
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.share({
+        title: data.title,
+        text: `Découvrez "${data.title}" sur Lisible.`,
+        url: window.location.href,
+      });
+    } catch (err) {
+      // Fallback si l'API share n'est pas dispo
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Lien copié dans le presse-papier !");
+    }
+  };
+
   const renderedContent = useMemo(() => {
     if (!data?.content) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
-    
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
@@ -120,7 +165,6 @@ const TextContent = ({ id }) => {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-slate-900' : mood.bg}`}>
-      
       <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-slate-100/10">
         <div className={`h-full transition-all duration-300 ${mood.accent.replace('text', 'bg')}`} style={{ width: `${readingProgress}%` }} />
       </div>
@@ -161,8 +205,12 @@ const TextContent = ({ id }) => {
           <h1 className={`text-5xl sm:text-7xl font-serif font-black italic leading-tight ${isFocusMode || mood.bg.includes('0a') ? 'text-white' : 'text-slate-900'}`}>{data.title}</h1>
           
           <div className="flex items-center gap-5 pt-8 border-t border-slate-100/20">
-            <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 border-4 border-white shadow-2xl overflow-hidden">
-              <img src={data.authorPic || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${data.authorEmail}`} className="w-full h-full object-cover" alt="" />
+            <div className="w-16 h-16 rounded-[1.5rem] bg-slate-100 border-4 border-white shadow-2xl overflow-hidden">
+              <img 
+                src={authorProfile || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${data.authorEmail}`} 
+                className="w-full h-full object-cover" 
+                alt={data.authorName} 
+              />
             </div>
             <div className="text-left">
               <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1.5 flex items-center gap-2 ${mood.accent}`}>
@@ -180,7 +228,6 @@ const TextContent = ({ id }) => {
         </SecurityLock>
 
         <section className={`mt-32 space-y-48 transition-all ${isFocusMode ? 'opacity-5 blur-xl' : 'opacity-100'}`}>
-          {/* Sceau déplacé à la fin comme demandé */}
           {!isAnnouncementAccount && (
             <SceauCertification 
               wordCount={data.content?.length} 
@@ -199,6 +246,9 @@ const TextContent = ({ id }) => {
       <FloatingActions 
         isFocusMode={isFocusMode}
         onReport={() => setReportModalOpen(true)} 
+        onLike={handleLike}
+        onShare={handleShare}
+        isLiking={isLiking}
         title={data.title}
       />
 
