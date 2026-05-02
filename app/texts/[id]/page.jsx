@@ -2,7 +2,6 @@ import React from "react";
 import TextContent from "./TextContent"; 
 
 export async function generateMetadata({ params }) {
-  // Attendre les params car ils sont asynchrones dans les versions récentes de Next.js
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   const baseUrl = "https://lisible.biz";
@@ -45,9 +44,17 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function Page({ params }) {
-  // On attend les params côté serveur pour garantir que l'id est passé proprement au composant client
   const resolvedParams = await params;
   const id = resolvedParams?.id;
   
-  return <TextContent id={id} />;
+  return (
+    <div style={{ 
+      backgroundColor: "#FDFCF8", // Couleur crème pour réduire la fatigue oculaire
+      color: "#1A1A1A",           // Noir doux pour un contraste optimal
+      minHeight: "100vh",
+      transition: "background-color 0.3s ease"
+    }}>
+      <TextContent id={id} />
+    </div>
+  );
 }
