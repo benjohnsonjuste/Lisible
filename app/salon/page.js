@@ -5,6 +5,7 @@ import {
   ShieldCheck, Sparkles, Globe, X
 } from 'lucide-react';
 import { toast } from 'sonner';
+import AdSocialBar from "@/components/AdSocialBar";
 
 export default function ForumPage() {
   const [messages, setMessages] = useState([]);
@@ -22,28 +23,12 @@ export default function ForumPage() {
     loadMessages();
   }, []);
 
-  // Gestion de l'injection directe du script Adsterra
-  useEffect(() => {
-    if (adVisible) {
-      const container = document.getElementById("ad-forum-bottom");
-      if (container) {
-        container.innerHTML = "";
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = "https://pl28594689.effectivegatecpm.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-        script.async = true;
-        container.appendChild(script);
-      }
-    }
-  }, [adVisible, messages]); // Se recharge si les messages changent pour rester en bas
-
   async function loadMessages() {
     try {
       const res = await fetch(`https://api.github.com/repos/benjohnsonjuste/Lisible/contents/data/forum/messages`);
       if (res.ok) {
         const files = await res.json();
         const lastFiles = files.filter(f => f.name.endsWith('.json')).slice(-20);
-        // Utilisation de TextDecoder pour forcer l'UTF-8 sur les contenus distants
         const contents = await Promise.all(lastFiles.map(f => fetch(f.download_url).then(r => r.json())));
         setMessages(contents.sort((a, b) => b.id - a.id));
       }
@@ -176,7 +161,7 @@ export default function ForumPage() {
         )}
       </div>
 
-      {/* Intégration directe Adsterra en fin de page */}
+      {/* Remplacement par AdSocialBar */}
       {adVisible && (
         <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center">
           <div className="flex items-center justify-between w-full max-w-xl mb-4 px-6">
@@ -185,9 +170,7 @@ export default function ForumPage() {
               <X size={12} />
             </button>
           </div>
-          <div id="ad-forum-bottom" className="min-h-[100px] flex items-center justify-center bg-white rounded-3xl p-4 shadow-sm border border-slate-100">
-            {/* Le script s'injecte ici */}
-          </div>
+          <AdSocialBar />
         </div>
       )}
     </div>
