@@ -12,36 +12,48 @@ export default function Bibliotheque({ initialTexts = [] }) {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
+  
   const [activeGenre, setActiveGenre] = useState("Tous");
-
   const genres = ["Tous", "Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"];
 
   useEffect(() => {
     setMounted(true);
     fetchInitial();
+    // Optionnel : on garde l'intervalle si le fichier est mis à jour côté serveur
     const interval = setInterval(fetchInitial, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchInitial = async () => {
     if (!texts || texts.length === 0) setLoading(true);
+    
     try {
-      const res = await fetch(`/api/github-db?type=library`);
-      const json = await res.json();
-      if (json && Array.isArray(json.content)) {
-        const sorted = [...json.content].sort((a, b) => {
+      // Adaptation pour chercher dans le dossier data/publications/index.json
+      const res = await fetch('/data/publications/index.json');
+      const data = await res.json();
+      
+      // On vérifie si data est directement le tableau ou s'il est dans une propriété
+      const rawContent = Array.isArray(data) ? data : (data.content || []);
+
+      if (Array.isArray(rawContent)) {
+        const sorted = [...rawContent].sort((a, b) => {
           const certA = Number(a?.certified || a?.totalCertified || 0);
           const certB = Number(b?.certified || b?.totalCertified || 0);
           if (certB !== certA) return certB - certA;
+
           const likesA = Number(a?.likes || a?.totalLikes || 0);
           const likesB = Number(b?.likes || b?.totalLikes || 0);
           if (likesB !== likesA) return likesB - likesA;
-          return (b?.date ? new Date(b.date).getTime() : 0) - (a?.date ? new Date(a.date).getTime() : 0);
+
+          const dateA = a?.date ? new Date(a.date).getTime() : 0;
+          const dateB = b?.date ? new Date(b.date).getTime() : 0;
+          return dateB - dateA;
         });
         setTexts(sorted);
       }
     } catch (e) { 
-      if (!texts || texts.length === 0) toast.error("Le Grand Livre est inaccessible.");
+      console.error("Fetch error:", e); 
+      if (!texts || texts.length === 0) toast.error("Le Grand Livre des manuscrits est inaccessible.");
     } finally { 
       setLoading(false); 
     }
@@ -54,13 +66,18 @@ export default function Bibliotheque({ initialTexts = [] }) {
       const title = (t.title || "").toLowerCase();
       const author = (t.author || t.authorName || "").toLowerCase();
       const search = searchTerm.toLowerCase();
+      
       const matchesSearch = title.includes(search) || author.includes(search);
-      const matchesGenre = activeGenre === "Tous" || t.genre === activeGenre || t.category === activeGenre;
+      const matchesGenre = activeGenre === "Tous" || 
+                           t.genre === activeGenre || 
+                           t.category === activeGenre;
+                           
       return matchesSearch && matchesGenre;
     });
   }, [texts, searchTerm, activeGenre]);
 
   if (!mounted && initialTexts.length === 0) return null;
+
   if (loading && (!texts || texts.length === 0)) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
@@ -76,7 +93,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
             <Sparkles size={14} className="text-teal-600" />
             <span className="text-[9px] font-black uppercase tracking-[0.4em] text-teal-600">Patrimoine Littéraire</span>
           </div>
-          <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">Lisible.</h1>
+          <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Les Archives.</h1>
       </div>
 
       <div className="space-y-10 mb-20">
@@ -87,7 +104,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
             placeholder="Rechercher une œuvre, une plume..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-7 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-xl shadow-slate-200/50"
+            className="w-full bg-white border-2 border-slate-100 rounded-[2.5rem] pl-16 pr-8 py-7 text-sm font-bold outline-none focus:border-teal-500/20 transition-all shadow-sm"
           />
         </div>
 
@@ -97,7 +114,9 @@ export default function Bibliotheque({ initialTexts = [] }) {
               key={g}
               onClick={() => setActiveGenre(g)}
               className={`px-7 py-3.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border ${
-                activeGenre === g ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105" : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
+                activeGenre === g
+                  ? "bg-slate-950 border-slate-950 text-white shadow-xl scale-105"
+                  : "bg-white border-slate-100 text-slate-400 hover:border-teal-200 hover:text-teal-600 shadow-sm"
               }`}
             >
               {g}
@@ -110,7 +129,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
         {filteredTexts.map((item) => {
           if (!item || !item.id) return null;
           
-          // MÉTHODE ANCIENNE : Extraction des données réelles
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const authorEmail = item.authorEmail || "";
           const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
@@ -134,6 +152,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
                       className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                       onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1457369804593-54844a3964ad?q=80&w=800"; }}
                     />
+                    
                     <div className="absolute top-6 left-6 flex flex-col gap-2">
                       {isAnnouncementAccount ? (
                         <span className="bg-rose-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg">
