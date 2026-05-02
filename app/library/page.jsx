@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { 
   Eye, Heart, Loader2, Trophy, ShieldCheck, 
-  Search, Sparkles, Megaphone, AlignLeft, Coins
+  Search, Sparkles, Megaphone, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -110,11 +110,15 @@ export default function Bibliotheque({ initialTexts = [] }) {
         {filteredTexts.map((item) => {
           if (!item || !item.id) return null;
           
+          // MÉTHODE ANCIENNE : Extraction des données réelles
           const isDuel = item.isConcours === true || item.category === "Battle Poétique" || item.genre === "Battle Poétique";
           const authorEmail = item.authorEmail || "";
           const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(authorEmail);
           const isOtherAdmin = ["jb7management@gmail.com"].includes(authorEmail);
           const hasSceau = (item.certified || item.totalCertified || 0) > 0;
+
+          const displayViews = item.views || item.totalViews || 0;
+          const displayLikes = item.likes || item.totalLikes || 0;
 
           return (
             <Link href={`/texts/${item.id}`} key={item.id} className="group">
@@ -122,7 +126,6 @@ export default function Bibliotheque({ initialTexts = [] }) {
                 isDuel ? "border-teal-100 shadow-teal-900/5" : "border-slate-50 shadow-slate-200/50"
               } hover:-translate-y-2 hover:shadow-2xl hover:border-teal-500/10`}>
                 
-                {/* MÉTHODE D'AFFICHAGE ANCIENNE : Gestion image ou bannière Duel */}
                 {!isDuel ? (
                   <div className="h-64 bg-slate-100 relative overflow-hidden">
                     <img
@@ -161,9 +164,14 @@ export default function Bibliotheque({ initialTexts = [] }) {
                       {isDuel && <AlignLeft size={10} />} {item.category || item.genre || "Écrit"}
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-300">
+                    <span className="text-[10px] font-bold text-slate-300 tracking-tighter">
                       {mounted && item.date ? new Date(item.date).getFullYear() : "2026"}
                     </span>
+                    {hasSceau && (
+                        <span className="ml-auto text-teal-600 animate-pulse">
+                            <ShieldCheck size={16} />
+                        </span>
+                    )}
                   </div>
 
                   <h2 className="text-3xl font-black italic mb-4 tracking-tighter leading-none text-slate-900 group-hover:text-teal-600 transition-colors">
@@ -171,13 +179,13 @@ export default function Bibliotheque({ initialTexts = [] }) {
                   </h2>
 
                   <p className="text-slate-500 line-clamp-3 font-serif italic mb-10 text-[17px] leading-relaxed">
-                    {item.summary || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé...")}
+                    {item.summary || (isDuel ? "Un défi lancé dans l'arène poétique..." : "Un nouveau manuscrit scellé dans les registres de l'Atelier...")}
                   </p>
 
                   <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white overflow-hidden">
-                        <img src={`https://api.dicebear.com/7.x/initials/svg?seed=${item.author || item.authorName}`} alt="" />
+                      <div className="w-10 h-10 rounded-2xl bg-slate-950 text-white flex items-center justify-center text-[12px] font-black border-4 border-white">
+                        {(item.author || item.authorName || "L").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-800 leading-none">
@@ -190,15 +198,13 @@ export default function Bibliotheque({ initialTexts = [] }) {
                     </div>
                     
                     {!isAnnouncementAccount && (
-                      <div className="flex gap-4 items-center">
-                        <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-lg border border-amber-100">
-                          <Coins size={12} className="text-amber-500" />
-                          <span className="text-[11px] font-black text-amber-700">{item.certified || item.totalCertified || 0}</span>
-                        </div>
-                        <div className="flex gap-4 text-slate-300 text-[11px] font-black">
-                          <span className="flex items-center gap-1.5"><Eye size={16} /> {item.views || item.totalViews || 0}</span>
-                          <span className="flex items-center gap-1.5"><Heart size={16} /> {item.likes || item.totalLikes || 0}</span>
-                        </div>
+                      <div className="flex gap-5 text-slate-300 text-[11px] font-black">
+                        <span className="flex items-center gap-2 transition-colors hover:text-teal-600">
+                          <Eye size={18} /> {displayViews}
+                        </span>
+                        <span className="flex items-center gap-2 transition-colors hover:text-rose-500">
+                          <Heart size={18} /> {displayLikes}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -213,7 +219,7 @@ export default function Bibliotheque({ initialTexts = [] }) {
         <div className="text-center py-40 bg-white rounded-[4rem] border-2 border-dashed border-slate-100 mt-20">
            <Search className="text-slate-100 mx-auto mb-6" size={64} />
            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] max-w-sm mx-auto">
-             Aucun manuscrit trouvé dans ce compartiment des archives.
+             Aucun manuscrit n'a été trouvé dans ce compartiment des archives.
            </p>
         </div>
       )}
