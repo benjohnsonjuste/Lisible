@@ -66,7 +66,6 @@ const TextContent = ({ id }) => {
     return topMood.score > 0 ? moodConfig[topMood.key] : moodConfig.default;
   }, [data?.content, moodConfig]);
 
-  // --- CHARGEMENT DU CONTENU ET DE LA PHOTO RÉELLE ---
   const loadContent = useCallback(async () => {
     if (!id) return;
     try {
@@ -76,7 +75,6 @@ const TextContent = ({ id }) => {
         const textData = result.content;
         setData(textData);
 
-        // RÉCUPÉRATION PHOTO RÉELLE (Même méthode que Communauté)
         const usersRes = await fetch(`/api/realtime-data?folder=users`);
         const usersJson = await usersRes.json();
         const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
@@ -102,7 +100,6 @@ const TextContent = ({ id }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loadContent]);
 
-  // --- ACTIONS ---
   const handleLike = async () => {
     if (!user) return toast.error("Connectez-vous pour aimer ce texte");
     setIsLiking(true);
@@ -131,7 +128,6 @@ const TextContent = ({ id }) => {
         url: window.location.href,
       });
     } catch (err) {
-      // Fallback si l'API share n'est pas dispo
       navigator.clipboard.writeText(window.location.href);
       toast.success("Lien copié dans le presse-papier !");
     }
@@ -246,8 +242,8 @@ const TextContent = ({ id }) => {
       <FloatingActions 
         isFocusMode={isFocusMode}
         onReport={() => setReportModalOpen(true)} 
-        onLike={handleLike}
-        onShare={handleShare}
+        handleLike={handleLike}
+        handleShare={handleShare}
         isLiking={isLiking}
         title={data.title}
       />
