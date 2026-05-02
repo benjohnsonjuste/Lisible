@@ -42,7 +42,6 @@ const TextContent = ({ id }) => {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
 
-  // --- CONFIGURATION DU MOOD (Couleurs optimisées pour la lecture) ---
   const moodConfig = useMemo(() => ({
     melancholic: { bg: "bg-[#0F111A]", text: "text-slate-300", title: "text-white", accent: "text-indigo-400", ui: "bg-indigo-900/30 text-indigo-300", icon: <Ghost size={12}/>, label: "Mélancolique" },
     luminous: { bg: "bg-[#FCF9F0]", text: "text-[#2C2C2C]", title: "text-slate-900", accent: "text-amber-700", ui: "bg-amber-100 text-amber-800", icon: <Sun size={12}/>, label: "Lumineux" },
@@ -98,7 +97,7 @@ const TextContent = ({ id }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loadContent]);
 
-  // --- LOGIQUE LIKE CORRIGÉE ---
+  // --- LOGIQUE LIKE VIA GITHUB-DB ---
   const handleLike = async () => {
     if (!user) return toast.error("Connectez-vous pour aimer ce texte");
     if (isLiking) return;
@@ -110,7 +109,7 @@ const TextContent = ({ id }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           action: "like", 
-          textId: id, 
+          id: id, // Utilisation de l'id pour l'API générale
           userEmail: user.email 
         })
       });
@@ -118,13 +117,13 @@ const TextContent = ({ id }) => {
       const result = await res.json();
       if (res.ok) {
         toast.success("Coup de cœur enregistré !");
-        // Mise à jour optimiste de l'UI
+        // Mise à jour optimiste de l'état local
         setData(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
       } else {
         toast.error(result.error || "Action impossible");
       }
     } catch (err) {
-      toast.error("Erreur de connexion au serveur.");
+      toast.error("Erreur de connexion");
     } finally {
       setIsLiking(false);
     }
@@ -153,7 +152,8 @@ const TextContent = ({ id }) => {
         </div>
         {paragraphs.length > 3 && (
           <>
-            <div className="my-16 py-8 border-y border-slate-200/10">
+            {/* Conteneur de publicité avec dégagement pour affichage correct */}
+            <div className="my-16 py-8 w-full block overflow-visible border-y border-slate-200/10">
               <AdSocialBar />
             </div>
             <div className="whitespace-pre-wrap">
@@ -173,7 +173,6 @@ const TextContent = ({ id }) => {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#050505]' : mood.bg}`}>
-      {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-black/10">
         <div className={`h-full transition-all duration-300 ${mood.accent.replace('text', 'bg')}`} style={{ width: `${readingProgress}%` }} />
       </div>
@@ -193,7 +192,7 @@ const TextContent = ({ id }) => {
         </button>
       )}
 
-      <main className="max-w-3xl mx-auto px-6 pt-32 pb-48">
+      <main className="max-w-3xl mx-auto px-6 pt-32 pb-48 relative">
         {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
 
         <header className={`mb-20 space-y-8 transition-all duration-700 ${isFocusMode ? 'opacity-20 blur-md scale-95' : 'opacity-100'}`}>
