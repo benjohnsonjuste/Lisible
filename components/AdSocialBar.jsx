@@ -4,12 +4,11 @@ import React, { useState, useEffect, useId } from "react";
 import { X, Sparkles } from "lucide-react";
 
 /**
- * Composant de publicité native intégrée au texte (In-Text).
- * Format optimisé pour s'insérer entre les paragraphes.
+ * Composant AdSocialBar.
+ * Note : L'exportation "default" est CRUCIAL pour éviter l'erreur de build.
  */
-export function InTextAd() {
+export default function AdSocialBar() {
   const [isVisible, setIsVisible] = useState(true);
-  const instanceId = useId().replace(/:/g, "");
 
   useEffect(() => {
     if (isVisible) {
@@ -50,7 +49,7 @@ export function InTextAd() {
     <div className="my-6 sm:my-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 px-2 flex justify-center">
       <div className="w-full max-w-[340px] bg-slate-900 border border-slate-800 p-1.5 rounded-[2rem] shadow-xl flex flex-col gap-1.5">
         
-        {/* Header minimaliste pour intégration texte */}
+        {/* Header minimaliste */}
         <div className="flex items-center justify-between px-3 pt-1">
           <div className="flex items-center gap-2">
             <Sparkles size={10} className="text-teal-500 animate-pulse" />
@@ -81,7 +80,7 @@ export function InTextAd() {
            </div>
         </div>
 
-        {/* Note de bas d'annonce */}
+        {/* Footer annonce */}
         <div className="pb-1">
           <p className="text-[6px] font-medium text-slate-700 text-center uppercase tracking-tighter">
             Merci de soutenir la gratuité de Lisible
