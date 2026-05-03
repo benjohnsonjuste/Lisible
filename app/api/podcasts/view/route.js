@@ -23,7 +23,7 @@ async function getFile(path) {
   } catch (err) { return null; }
 }
 
-async function updateFile(path, content, sha) {
+async function updateFile(path, content, sha, message = "Incrémentation vues") {
   const encodedContent = btoa(Array.from(new TextEncoder().encode(JSON.stringify(content, null, 2)), (byte) => String.fromCodePoint(byte)).join(""));
   const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
     method: 'PUT',
@@ -33,7 +33,7 @@ async function updateFile(path, content, sha) {
       'User-Agent': 'Lisible-App'
     },
     body: JSON.stringify({
-      message: `[STATS] Incrémentation vues [skip ci]`,
+      message: `[STATS] ${message} [skip ci]`,
       content: encodedContent,
       sha: sha
     }),
@@ -43,24 +43,27 @@ async function updateFile(path, content, sha) {
 
 export async function POST(req) {
   try {
-    const { id } = await req.json();
-    const path = `data/podcasts.json`;
+    const body = await req.json();
+    const { id, type } = body; // 'type' permet de différencier vues podcast ou live
+    
+    const fileName = type === 'live' ? 'live_sessions.json' : 'podcasts.json';
+    const path = `data/${fileName}`;
     
     const file = await getFile(path);
     if (!file) return NextResponse.json({ error: "Fichier non trouvé" }, { status: 404 });
 
-    const podcasts = file.content;
-    const index = podcasts.findIndex(p => p.id === id);
+    const items = file.content;
+    const index = items.findIndex(item => (item.id === id || item.roomId === id));
 
     if (index !== -1) {
-      // Incrémentation (initialise à 1 si le champ n'existe pas encore)
-      podcasts[index].views = (podcasts[index].views || 0) + 1;
+      // Incrémentation des vues ou participants
+      items[index].views = (items[index].views || 0) + 1;
       
-      const success = await updateFile(path, podcasts, file.sha);
-      if (success) return NextResponse.json({ success: true, views: podcasts[index].views });
+      const success = await updateFile(path, items, file.sha, `Vue sur ${type || 'podcast'}: ${id}`);
+      if (success) return NextResponse.json({ success: true, views: items[index].views });
     }
 
-    return NextResponse.json({ error: "Podcast non trouvé" }, { status: 404 });
+    return NextResponse.json({ error: "Élément non trouvé" }, { status: 404 });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
