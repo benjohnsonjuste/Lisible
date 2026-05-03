@@ -53,43 +53,26 @@ async function updateFile(path, content, sha, message) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { action, podcastData, sessionData } = body;
+    const { action, podcastData } = body;
 
-    // ACTION : AJOUT D'UN PODCAST ENREGISTRÉ
     if (action === 'addPodcast') {
       const path = `data/podcasts.json`;
+      
+      // 1. Récupérer l'index actuel
       const file = await getFile(path) || { content: [], sha: null };
       const podcasts = Array.isArray(file.content) ? file.content : [];
 
+      // 2. Ajouter le nouveau podcast en haut de liste
       podcasts.unshift({
         ...podcastData,
         createdAt: new Date().toISOString()
       });
 
+      // 3. Sauvegarder sur GitHub
       const success = await updateFile(path, podcasts, file.sha, `Ajout podcast: ${podcastData.title}`);
+      
       if (success) return NextResponse.json({ success: true });
       throw new Error("Erreur lors de la mise à jour GitHub");
-    }
-
-    // ACTION : GESTION DES SESSIONS LIVE (DIRECT)
-    if (action === 'createLive') {
-      const path = `data/live_sessions.json`;
-      const file = await getFile(path) || { content: [], sha: null };
-      const sessions = Array.isArray(file.content) ? file.content : [];
-
-      // On ajoute la session active
-      sessions.unshift({
-        ...sessionData,
-        status: 'active',
-        createdAt: new Date().toISOString()
-      });
-
-      // On ne garde que les 10 derniers lives pour ne pas surcharger le JSON
-      const limitedSessions = sessions.slice(0, 10);
-
-      const success = await updateFile(path, limitedSessions, file.sha, `Nouveau Live: ${sessionData.roomId}`);
-      if (success) return NextResponse.json({ success: true, roomId: sessionData.roomId });
-      throw new Error("Erreur lors de la création du Live sur GitHub");
     }
 
     return NextResponse.json({ error: "Action non supportée" }, { status: 400 });
@@ -98,14 +81,9 @@ export async function POST(req) {
   }
 }
 
-export async function GET(req) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type') || 'podcasts'; // podcasts ou live
-    
-    const fileName = type === 'live' ? 'live_sessions.json' : 'podcasts.json';
-    const file = await getFile(`data/${fileName}`);
-    
+    const file = await getFile(`data/podcasts.json`);
     return NextResponse.json(file || { content: [] });
   } catch (e) {
     return NextResponse.json({ content: [] });
