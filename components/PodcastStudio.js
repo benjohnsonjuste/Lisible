@@ -35,6 +35,7 @@ export default function PodcastStudio({ currentUser }) {
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
 
   // L'accès est autorisé si un utilisateur est connecté
   const hasAccess = !!currentUser;
@@ -52,8 +53,45 @@ export default function PodcastStudio({ currentUser }) {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      // Configuration pour le filtrage de la voix locale
+      const voiceConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      };
+
+      // 1. Capture du micro (voix locale)
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: voiceConstraints });
+      
+      // 2. Capture du son du système (pour l'interlocuteur en appel)
+      // Note: L'utilisateur doit accepter le partage audio dans la popup
+      let fullStream;
+      try {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: { displaySurface: "browser" }, // Requis pour déclencher l'option audio
+          audio: voiceConstraints 
+        });
+        
+        // Création d'un contexte audio pour mixer les deux sources
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const dest = audioContext.createMediaStreamDestination();
+        
+        const micSource = audioContext.createMediaStreamSource(micStream);
+        const systemSource = audioContext.createMediaStreamSource(displayStream);
+        
+        micSource.connect(dest);
+        systemSource.connect(dest);
+        
+        fullStream = dest.stream;
+        // On garde la trace des pistes vidéo pour les couper (on ne veut que l'audio)
+        displayStream.getVideoTracks().forEach(track => track.stop());
+      } catch (e) {
+        console.warn("Capture système refusée, enregistrement micro seul.");
+        fullStream = micStream;
+      }
+
+      streamRef.current = fullStream;
+      mediaRecorderRef.current = new MediaRecorder(fullStream);
       audioChunksRef.current = [];
       
       mediaRecorderRef.current.ondataavailable = (e) => {
@@ -67,9 +105,10 @@ export default function PodcastStudio({ currentUser }) {
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
-      toast.success("Enregistrement en cours...");
+      toast.success("Enregistrement (Micro + Appel) en cours...");
     } catch (err) {
-      toast.error("Microphone inaccessible.");
+      console.error(err);
+      toast.error("Erreur d'accès aux flux audio.");
     }
   };
 
@@ -77,7 +116,9 @@ export default function PodcastStudio({ currentUser }) {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     }
   };
 
@@ -141,7 +182,6 @@ export default function PodcastStudio({ currentUser }) {
 
   const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  // Rendu de l'état "Accès Refusé" (Uniquement si non connecté)
   if (!hasAccess) {
     return (
       <div className="max-w-2xl mx-auto bg-white border border-slate-100 rounded-[3rem] p-12 shadow-xl text-center relative overflow-hidden">
@@ -177,7 +217,6 @@ export default function PodcastStudio({ currentUser }) {
     );
   }
 
-  // Rendu normal du Studio
   return (
     <div className="max-w-2xl mx-auto bg-slate-900 text-white rounded-[3rem] p-10 shadow-2xl border border-white/5">
       <div className="flex items-center justify-between mb-8">
