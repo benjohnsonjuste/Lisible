@@ -10,12 +10,13 @@ export async function POST(request) {
       return NextResponse.json({ error: "Aucun fichier trouvé" }, { status: 400 });
     }
 
-    // On upload juste sur Vercel Blob
+    // Le fichier contient désormais le mixage filtré des deux voix (hôte + appel)
     const blob = await put(`podcasts/${Date.now()}-${file.name}`, file, {
       access: 'public',
+      contentType: 'audio/mpeg', // Précision du type pour la lecture directe
     });
 
-    // On renvoie juste l'URL au client
+    // Renvoie l'URL du blob qui sera ensuite utilisée par l'action 'addPodcast' vers GitHub
     return NextResponse.json({ url: blob.url });
 
   } catch (error) {
