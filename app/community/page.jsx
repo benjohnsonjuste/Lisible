@@ -4,7 +4,7 @@ import {
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
   Briefcase, HeartHandshake, Feather, Mail
-} from "lucide-center";
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import MessageModal from "@/components/MessageModal";
@@ -30,21 +30,16 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupérer TOUS les utilisateurs via l'API folder=users
       const usersRes = await fetch(`/api/realtime-data?folder=users`);
       const usersJson = await usersRes.json();
       
-      // Adaptation pour inclure les nouveaux comptes : on aplatit le contenu
-      // car les nouveaux fichiers peuvent arriver dans des sous-tableaux.
       const rawUsers = Array.isArray(usersJson.content) ? usersJson.content.flat() : [];
       const allUsers = rawUsers.filter(u => u && (u.email || u.id));
 
-      // 2. Récupérer l'index des publications
       const libRes = await fetch(`/api/realtime-data?folder=publications`);
       const libJson = await libRes.json();
       const publications = Array.isArray(libJson.content) ? libJson.content.flat() : [];
 
-      // 3. Fusionner les profils avec les stats
       const community = allUsers.map(user => {
         const email = (user.email || "").toLowerCase().trim();
         const userPubs = publications.filter(p => (p.authorEmail || "").toLowerCase().trim() === email);
@@ -62,7 +57,6 @@ export default function CommunautePage() {
         };
       });
 
-      // Tri par influence
       setAuthors(community.sort((a, b) => (b.certified + b.likes) - (a.certified + a.likes)));
       
     } catch (e) { 
@@ -77,18 +71,38 @@ export default function CommunautePage() {
     return authors.length > 0 ? Math.max(...authors.map(a => a.views)) : 0;
   }, [authors]);
 
+  const maxWorks = useMemo(() => {
+    return authors.length > 0 ? Math.max(...authors.map(a => a.worksCount)) : 0;
+  }, [authors]);
+
   const getBadges = (author) => {
     const b = [];
     const mail = author.email?.toLowerCase();
-    const ADMINS = ["adm.lablitteraire7@gmail.com", "jb7management@gmail.com", "robergeaurodley97@gmail.com"];
+    
+    // Badges de l'équipe
+    const TEAM = {
+      "adm.lablitteraire7@gmail.com": "Label Littéraire",
+      "cmo.lablitteraire7@gmail.com": "Support Team",
+      "robergeaurodley97@gmail.com": "Directeur Général",
+      "jb7management@gmail.com": "Fondateur",
+      "woolsleypierre01@gmail.com": "Directrice Artistique",
+      "jeanpierreborlhaïniedarha@gmail.com": "Directrice Marketing"
+    };
 
-    if (ADMINS.includes(mail)) {
-      b.push({ icon: <Settings size={10} />, label: "Staff", color: "bg-rose-600 text-white" });
+    if (TEAM[mail]) {
+      b.push({ icon: <Settings size={10} />, label: TEAM[mail], color: "bg-rose-600 text-white" });
     }
     
+    // Badge Légende (Plus de Textes)
+    if (author.worksCount === maxWorks && maxWorks > 0) {
+      b.push({ icon: <Feather size={10} />, label: "Légende", color: "bg-teal-600 text-white shadow-lg" });
+    }
+
+    // Badge Élite (Plus de Vues)
     if (author.views === maxViews && maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
     }
+    
     return b;
   };
 
@@ -134,7 +148,7 @@ export default function CommunautePage() {
           <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-hover hover:border-teal-200">
             <div className="absolute top-8 right-8 flex flex-col items-end gap-2 z-10">
               {getBadges(a).map((b, i) => (
-                <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5`}>{b.icon} {b.label}</div>
+                <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 mb-1`}>{b.icon} {b.label}</div>
               ))}
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
