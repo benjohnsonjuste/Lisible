@@ -1,8 +1,8 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Loader2, Sparkles, Plus, FileText, Trash2, Edit3, ExternalLink,
-  ShieldCheck, Bookmark, Heart, Swords, ArrowRight
+  ShieldCheck, Swords, ArrowRight, Award, Share2, Download, Link as LinkIcon, Settings as SettingsIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 export default function AuthorDashboard() {
   const router = useRouter();
+  const canvasRef = useRef(null);
   const [user, setUser] = useState(null);
   const [works, setWorks] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
@@ -30,7 +31,6 @@ export default function AuthorDashboard() {
         const parsedUser = JSON.parse(loggedUser);
         const email = parsedUser.email.toLowerCase().trim();
         
-        // Récupération des favoris (bookmarks) enregistrés localement
         const savedBookmarks = localStorage.getItem("lisible_bookmarks");
         if (savedBookmarks) {
           try { setBookmarks(JSON.parse(savedBookmarks)); } catch(e) {}
@@ -76,6 +76,103 @@ export default function AuthorDashboard() {
     loadStudio();
   }, [router]);
 
+  // --- LOGIQUE BADGE ET PARTAGE (Inspirée de l'ancien dashboard) ---
+  const generateBadge = (download = false) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !user) return;
+    const ctx = canvas.getContext('2d');
+    const name = user.penName || user.name || "Auteur.e Lisible";
+
+    canvas.width = 600;
+    canvas.height = 600;
+    ctx.fillStyle = '#0f172a'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#14b8a6'; 
+    ctx.lineWidth = 20;
+    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+    ctx.fillStyle = '#14b8a6';
+    ctx.font = 'bold 30px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('COMPTE OFFICIEL', canvas.width / 2, 80);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'italic bold 45px serif';
+    
+    const words = name.split(' ');
+    let line = '';
+    let y = 280;
+    const maxWidth = 500;
+    const lineHeight = 60;
+
+    for (let n = 0; n < words.length; n++) {
+      let testLine = line + words[n] + ' ';
+      let metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line, canvas.width / 2, y);
+        line = words[n] + ' ';
+        y += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, canvas.width / 2, y);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 25px Arial';
+    ctx.fillText('lisible.biz', canvas.width / 2, 540);
+
+    if (download) {
+      const link = document.createElement('a');
+      link.download = `badge-officiel-${name}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.click();
+      toast.success("Badge téléchargé !");
+    }
+  };
+
+  const handleUniversalShare = async () => {
+    generateBadge();
+    const canvas = canvasRef.current;
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+    const file = new File([blob], 'badge-officiel.jpg', { type: 'image/jpeg' });
+    const shareData = {
+      title: 'Compte Officiel Lisible',
+      text: "J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz",
+      files: [file],
+    };
+
+    if (navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        toast.error("Partage annulé");
+      }
+    } else {
+      const shareUrl = `https://twitter.com/intent/tweet?text=J'ai un Compte Officiel sur Lisible. Visitez-moi sur lisible.biz`;
+      window.open(shareUrl, '_blank');
+      toast.info("Lien de partage généré !");
+    }
+  };
+
+  const handleProfileShare = async () => {
+    const profileUrl = `${window.location.origin}/author/${encodeURIComponent(user.email)}`;
+    const shareData = {
+      title: `Profil de ${user.penName || user.name} | Lisible`,
+      text: `Découvrez mes œuvres et suivez ma plume sur Lisible !`,
+      url: profileUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(profileUrl);
+        toast.success("Lien du profil copié !");
+      }
+    } catch (err) {
+      console.log("Erreur de partage");
+    }
+  };
+  // -----------------------------------------------------------------
+
   const handleDelete = async (id, title) => {
     if (!confirm(`Voulez-vous supprimer définitivement "${title}" ?`)) return;
     const tId = toast.loading("Suppression en cours...");
@@ -96,13 +193,6 @@ export default function AuthorDashboard() {
     }
   };
 
-  const removeBookmark = (id) => {
-    const updated = bookmarks.filter(b => b.id !== id);
-    setBookmarks(updated);
-    localStorage.setItem("lisible_bookmarks", JSON.stringify(updated));
-    toast.success("Retiré de vos préférés.");
-  };
-
   if (loading) return (
     <div className="flex h-screen flex-col items-center justify-center bg-[#FCFBF9] gap-4">
       <Loader2 className="animate-spin text-teal-600" size={40} />
@@ -114,6 +204,7 @@ export default function AuthorDashboard() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] p-6 md:p-12 pb-32">
+      <canvas ref={canvasRef} className="hidden" />
       <div className="max-w-6xl mx-auto space-y-12">
         
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end pt-12 gap-6">
@@ -124,10 +215,32 @@ export default function AuthorDashboard() {
             </div>
             <h1 className="text-5xl font-black italic tracking-tighter text-slate-900 leading-none">Mon Studio.</h1>
           </div>
-          <Link href="/publish" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-4 rounded-2xl hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 font-bold italic">
-            <Plus size={20} /> Nouveau Texte
-          </Link>
+          
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Bouton de partage Profil (Inspiré de l'ancien) */}
+            <button 
+              onClick={handleProfileShare}
+              className="flex items-center gap-2 bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-all text-slate-600 font-bold italic text-sm"
+            >
+              <LinkIcon size={18} className="text-teal-600" /> Partager mon Profil
+            </button>
+
+            <Link href="/publish" className="flex items-center gap-3 bg-teal-600 text-white px-8 py-4 rounded-2xl hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 font-bold italic">
+              <Plus size={20} /> Nouveau Texte
+            </Link>
+          </div>
         </header>
+
+        {/* SECTION PARAMÈTRES (Nouvelle section demandée) */}
+        <Link href="/settings" className="group flex items-center justify-between p-8 bg-slate-900 text-white rounded-[2.5rem] shadow-xl shadow-slate-900/10 hover:bg-black transition-all">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Configuration</p>
+            <h3 className="text-xl font-bold italic">Paramètres du compte</h3>
+          </div>
+          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+            <SettingsIcon size={22} />
+          </div>
+        </Link>
 
         {/* Section Duel des Nouvelles - GRISÂTRE NON CLIQUABLE */}
         <div className="block cursor-not-allowed opacity-40 grayscale">
@@ -159,16 +272,25 @@ export default function AuthorDashboard() {
             </div>
           </div>
 
-          {/* Section Battle Poétique - GRISÂTRE NON CLIQUABLE */}
-          <div className="bg-slate-200 p-8 rounded-[2.5rem] shadow-sm relative overflow-hidden opacity-60 grayscale cursor-not-allowed">
-            <div className="relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Battle Poétique</p>
-              <div className="flex items-center gap-3 text-slate-600">
-                <Swords size={20} className="text-slate-500" />
-                <h2 className="text-3xl font-black italic text-slate-500">Bientôt disponible</h2>
+          {/* Badge Téléchargeable (Inspiré de l'ancien) */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-teal-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Award size={28} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Badge Officiel</p>
+                <p className="text-lg font-bold text-slate-900 italic">Certification Plume</p>
               </div>
             </div>
-            <Swords className="absolute -right-4 -bottom-4 text-slate-900/5 rotate-12" size={120} />
+            <div className="flex gap-2">
+              <button onClick={handleUniversalShare} className="p-4 bg-slate-900 text-white rounded-2xl hover:bg-teal-600 transition-colors" title="Partager mon badge">
+                <Share2 size={20} />
+              </button>
+              <button onClick={() => generateBadge(true)} className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Télécharger">
+                <Download size={20} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -190,10 +312,10 @@ export default function AuthorDashboard() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-xl font-bold text-slate-900 group-hover:text-teal-700 transition-colors">{work.title}</h3>
-                      {Number(work.certified) > 0 && <ShieldCheck size={16} className="text-teal-500" />}
+                      {(Number(work.certified) > 0 || Number(work.totalCertified) > 0) && <ShieldCheck size={16} className="text-teal-500" />}
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <span className="text-teal-600 italic">Sceaux : {work.certified || 0}</span>
+                      <span className="text-teal-600 italic">Sceaux : {work.certified || work.totalCertified || 0}</span>
                       <span>•</span>
                       <span>{work.views || 0} Vues</span>
                       <span>•</span>
