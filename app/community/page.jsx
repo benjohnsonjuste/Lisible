@@ -4,7 +4,7 @@ import {
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
   Briefcase, HeartHandshake, Feather, Mail
-} from "lucide-react";
+} from "lucide-center";
 import Link from "next/link";
 import { toast } from "sonner";
 import MessageModal from "@/components/MessageModal";
@@ -30,24 +30,24 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      // 1. Récupérer TOUS les utilisateurs via l'API folder=users (Temps Réel)
+      // 1. Récupérer TOUS les utilisateurs via l'API folder=users
       const usersRes = await fetch(`/api/realtime-data?folder=users`);
       const usersJson = await usersRes.json();
-      const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
+      
+      // Adaptation pour inclure les nouveaux comptes : on aplatit le contenu
+      // car les nouveaux fichiers peuvent arriver dans des sous-tableaux.
+      const rawUsers = Array.isArray(usersJson.content) ? usersJson.content.flat() : [];
+      const allUsers = rawUsers.filter(u => u && (u.email || u.id));
 
-      // 2. Récupérer l'index des publications pour calculer les statistiques
+      // 2. Récupérer l'index des publications
       const libRes = await fetch(`/api/realtime-data?folder=publications`);
       const libJson = await libRes.json();
-      // On cherche le contenu de index.json qui est dans le dossier publications
-      const publications = Array.isArray(libJson.content[0]) ? libJson.content[0] : (libJson.content || []);
+      const publications = Array.isArray(libJson.content) ? libJson.content.flat() : [];
 
-      // 3. Fusionner les profils avec les stats de l'index
+      // 3. Fusionner les profils avec les stats
       const community = allUsers.map(user => {
         const email = (user.email || "").toLowerCase().trim();
-        // Filtrer les textes écrits par cet utilisateur dans l'index
-        const userPubs = Array.isArray(publications) 
-          ? publications.filter(p => (p.authorEmail || "").toLowerCase().trim() === email)
-          : [];
+        const userPubs = publications.filter(p => (p.authorEmail || "").toLowerCase().trim() === email);
         
         return {
           ...user,
@@ -62,7 +62,7 @@ export default function CommunautePage() {
         };
       });
 
-      // Tri par influence (Certifications + Likes)
+      // Tri par influence
       setAuthors(community.sort((a, b) => (b.certified + b.likes) - (a.certified + a.likes)));
       
     } catch (e) { 
