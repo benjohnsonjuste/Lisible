@@ -17,8 +17,8 @@ export function InTextAd() {
       const container = document.getElementById("container-874a186feecd3e968c16a58bb085fd56");
       if (container) container.innerHTML = "";
 
-      // Configuration globale requise par le script Adsterra
-      window.atOptions = {
+      // Configuration globale requise par le script Adsterra (Casté en any pour TypeScript)
+      (window as any).atOptions = {
         'key' : '874a186feecd3e968c16a58bb085fd56',
         'format' : 'iframe',
         'height' : 250,
@@ -91,3 +91,6 @@ export function InTextAd() {
     </div>
   );
 }
+
+// Ajout de l'export par défaut pour résoudre l'erreur d'import dans TextContent.jsx
+export default InTextAd;
