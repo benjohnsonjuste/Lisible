@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
 import AdSocialBar from "@/components/AdSocialBar";
+import InTextAd from "@/components/reader/InTextAd"; // Import du nouveau composant
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -97,7 +98,6 @@ const TextContent = ({ id }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loadContent]);
 
-  // --- LOGIQUE LIKE VIA GITHUB-DB ---
   const handleLike = async () => {
     if (!user) return toast.error("Connectez-vous pour aimer ce texte");
     if (isLiking) return;
@@ -109,7 +109,7 @@ const TextContent = ({ id }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           action: "like", 
-          id: id, // Utilisation de l'id pour l'API générale
+          id: id, 
           userEmail: user.email 
         })
       });
@@ -117,7 +117,6 @@ const TextContent = ({ id }) => {
       const result = await res.json();
       if (res.ok) {
         toast.success("Coup de cœur enregistré !");
-        // Mise à jour optimiste de l'état local
         setData(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
       } else {
         toast.error(result.error || "Action impossible");
@@ -152,10 +151,9 @@ const TextContent = ({ id }) => {
         </div>
         {paragraphs.length > 3 && (
           <>
-            {/* Conteneur de publicité avec dégagement pour affichage correct */}
-            <div className="my-16 py-8 w-full block overflow-visible border-y border-slate-200/10">
-              <AdSocialBar />
-            </div>
+            {/* Insertion de la publicité Native In-Text */}
+            <InTextAd />
+            
             <div className="whitespace-pre-wrap">
               {paragraphs.slice(3).map((p, i) => <p key={i + 3} className="mb-6 leading-relaxed">{p}</p>)}
             </div>
@@ -173,6 +171,9 @@ const TextContent = ({ id }) => {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#050505]' : mood.bg}`}>
+      {/* Social Bar activée sur la page */}
+      <AdSocialBar />
+      
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-black/10">
         <div className={`h-full transition-all duration-300 ${mood.accent.replace('text', 'bg')}`} style={{ width: `${readingProgress}%` }} />
       </div>
@@ -248,7 +249,7 @@ const TextContent = ({ id }) => {
               textTitle={data.title} 
             />
           )}
-          <CommentSection textId={id} comments={data.comments || []} user={user} onCommented={() => loadContent()} />
+          <commentsection textid={id} comments={data.comments || []} user={user} oncommented={() => loadContent()} />
         </section>
       </main>
 
