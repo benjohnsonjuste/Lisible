@@ -75,7 +75,6 @@ const TextContent = ({ id }) => {
         const result = await res.json();
         setData(result.content);
 
-        // Gestion de la vue unique par appareil
         const viewedTexts = JSON.parse(localStorage.getItem("lisible_views") || "[]");
         if (!viewedTexts.includes(id) && !viewLogged.current) {
           fetch("/api/github-db", {
@@ -106,7 +105,6 @@ const TextContent = ({ id }) => {
     const stored = localStorage.getItem("lisible_user");
     if (stored) setUser(JSON.parse(stored));
 
-    // Vérifier si déjà liké sur cet appareil
     const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
     if (likedTexts.includes(id)) setHasLiked(true);
 
@@ -163,23 +161,30 @@ const TextContent = ({ id }) => {
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
     const dropCapClass = `first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${mood.accent}`;
 
+    const midPoint = Math.ceil(paragraphs.length / 2);
+
     return (
       <div className="space-y-8">
+        {/* HAUT DU TEXTE */}
+        <div className="my-12"><AdSocialBar /></div>
+        
         <div className="whitespace-pre-wrap">
-          {paragraphs.slice(0, 3).map((p, i) => (
+          {paragraphs.slice(0, midPoint).map((p, i) => (
             <p key={i} className={`mb-6 leading-relaxed ${i === 0 ? dropCapClass : ''}`} dangerouslySetInnerHTML={{ __html: p }} />
           ))}
         </div>
-        {paragraphs.length > 3 && (
-          <>
-            <div className="my-16"><AdSocialBar /></div>
-            <div className="whitespace-pre-wrap">
-              {paragraphs.slice(3).map((p, i) => (
-                <p key={i + 3} className="mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
-              ))}
-            </div>
-          </>
-        )}
+
+        {/* MILIEU DU TEXTE */}
+        <div className="my-16"><AdSocialBar /></div>
+
+        <div className="whitespace-pre-wrap">
+          {paragraphs.slice(midPoint).map((p, i) => (
+            <p key={i + midPoint} className="mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+          ))}
+        </div>
+
+        {/* BAS DU TEXTE */}
+        <div className="my-12"><AdSocialBar /></div>
       </div>
     );
   }, [data?.content, mood.accent]);
@@ -192,7 +197,6 @@ const TextContent = ({ id }) => {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#050505]' : mood.bg}`}>
-      <AdSocialBar />
       
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-black/10">
         <div className={`h-full transition-all duration-300 ${mood.accent.replace('text', 'bg')}`} style={{ width: `${readingProgress}%` }} />
