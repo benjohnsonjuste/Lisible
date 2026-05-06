@@ -56,6 +56,7 @@ export default async function Page({ params }) {
       flexDirection: "column",
       transition: "background-color 0.3s ease"
     }}>
+      {/* On passe l'id ici pour que TextContent puisse l'utiliser pour le Like et le Share */}
       <TextContent id={id} />
     </div>
   );
