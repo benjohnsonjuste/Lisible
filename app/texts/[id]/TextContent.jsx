@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
@@ -42,6 +42,9 @@ const TextContent = ({ id }) => {
   const [isReportModalOpen, setReportModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  
+  // Référence pour éviter les doubles vues en mode Strict
+  const viewLogged = useRef(false);
 
   const moodConfig = useMemo(() => ({
     melancholic: { bg: "bg-[#0F111A]", text: "text-slate-300", title: "text-white", accent: "text-indigo-400", ui: "bg-indigo-900/30 text-indigo-300", icon: <Ghost size={12}/>, label: "Mélancolique" },
@@ -72,6 +75,16 @@ const TextContent = ({ id }) => {
       if (res.ok) {
         const result = await res.json();
         setData(result.content);
+
+        // Méthode d'enregistrement de vue de l'ancienne page
+        if (!viewLogged.current) {
+          fetch("/api/github-db", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "view", id: id })
+          });
+          viewLogged.current = true;
+        }
 
         const usersRes = await fetch(`/api/realtime-data?folder=users`);
         const usersJson = await usersRes.json();
@@ -143,22 +156,31 @@ const TextContent = ({ id }) => {
   const renderedContent = useMemo(() => {
     if (!data?.content) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
+    
+    // Style lettrine de l'ancien composant TextContent
+    const dropCapClass = `first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${mood.accent}`;
+
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
-          {paragraphs.slice(0, 3).map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
+          {paragraphs.slice(0, 3).map((p, i) => (
+            <p key={i} className={`mb-6 leading-relaxed ${i === 0 ? dropCapClass : ''}`} dangerouslySetInnerHTML={{ __html: p }} />
+          ))}
         </div>
         {paragraphs.length > 3 && (
           <>
-            <InTextAd />
+            {/* Méthode d'affichage publicité intext de l'ancien composant */}
+            <div className="my-16"><InTextAd /></div>
             <div className="whitespace-pre-wrap">
-              {paragraphs.slice(3).map((p, i) => <p key={i + 3} className="mb-6 leading-relaxed">{p}</p>)}
+              {paragraphs.slice(3).map((p, i) => (
+                <p key={i + 3} className="mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
+              ))}
             </div>
           </>
         )}
       </div>
     );
-  }, [data?.content]);
+  }, [data?.content, mood.accent]);
 
   if (loading) return <div className="flex justify-center items-center min-h-screen font-serif animate-pulse">Immersion en cours...</div>;
   if (!data) return null;
@@ -220,7 +242,7 @@ const TextContent = ({ id }) => {
             </div>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5 ${mood.accent}`}>
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /><Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
+                <Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
               </p>
               <p className={`text-xl font-bold italic ${mood.title}`}>{data.authorName}</p>
             </div>
