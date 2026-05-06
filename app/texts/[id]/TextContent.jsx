@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
 import AdSocialBar from "@/components/AdSocialBar";
-import InTextAd from "@/components/reader/InTextAd"; 
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -38,12 +37,12 @@ const TextContent = ({ id }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isReportModalOpen, setReportModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
   
-  // Référence pour éviter les doubles vues en mode Strict
   const viewLogged = useRef(false);
 
   const moodConfig = useMemo(() => ({
@@ -76,13 +75,16 @@ const TextContent = ({ id }) => {
         const result = await res.json();
         setData(result.content);
 
-        // Méthode d'enregistrement de vue de l'ancienne page
-        if (!viewLogged.current) {
+        // Gestion de la vue unique par appareil
+        const viewedTexts = JSON.parse(localStorage.getItem("lisible_views") || "[]");
+        if (!viewedTexts.includes(id) && !viewLogged.current) {
           fetch("/api/github-db", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "view", id: id })
           });
+          viewedTexts.push(id);
+          localStorage.setItem("lisible_views", JSON.stringify(viewedTexts));
           viewLogged.current = true;
         }
 
@@ -103,35 +105,38 @@ const TextContent = ({ id }) => {
     loadContent();
     const stored = localStorage.getItem("lisible_user");
     if (stored) setUser(JSON.parse(stored));
+
+    // Vérifier si déjà liké sur cet appareil
+    const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
+    if (likedTexts.includes(id)) setHasLiked(true);
+
     const handleScroll = () => {
       const total = document.documentElement.scrollHeight - window.innerHeight;
       setReadingProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [loadContent]);
+  }, [loadContent, id]);
 
   const handleLike = async () => {
-    if (!user) return toast.error("Connectez-vous pour aimer ce texte");
-    if (isLiking) return;
+    if (hasLiked || isLiking) return;
     
     setIsLiking(true);
     try {
       const res = await fetch("/api/github-db", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "like", 
-          id: id
-        })
+        body: JSON.stringify({ action: "like", id: id })
       });
       
-      const result = await res.json();
       if (res.ok) {
-        toast.success("Coup de cœur enregistré !");
+        const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
+        likedTexts.push(id);
+        localStorage.setItem("lisible_likes", JSON.stringify(likedTexts));
+        
+        setHasLiked(true);
         setData(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
-      } else {
-        toast.error(result.error || "Action impossible");
+        toast.success("Coup de cœur enregistré !");
       }
     } catch (err) {
       toast.error("Erreur de connexion");
@@ -156,8 +161,6 @@ const TextContent = ({ id }) => {
   const renderedContent = useMemo(() => {
     if (!data?.content) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
-    
-    // Style lettrine de l'ancien composant TextContent
     const dropCapClass = `first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${mood.accent}`;
 
     return (
@@ -169,8 +172,7 @@ const TextContent = ({ id }) => {
         </div>
         {paragraphs.length > 3 && (
           <>
-            {/* Méthode d'affichage publicité intext de l'ancien composant */}
-            <div className="my-16"><InTextAd /></div>
+            <div className="my-16"><AdSocialBar /></div>
             <div className="whitespace-pre-wrap">
               {paragraphs.slice(3).map((p, i) => (
                 <p key={i + 3} className="mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
@@ -277,7 +279,7 @@ const TextContent = ({ id }) => {
         handleLike={handleLike}
         handleShare={handleShare}
         textId={id}
-        isLoading={isLiking}
+        isLoading={isLiking || hasLiked}
       />
 
       <ReportModal isOpen={isReportModalOpen} onClose={() => setReportModalOpen(false)} textId={id} textTitle={data.title} />
