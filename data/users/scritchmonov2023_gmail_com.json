@@ -4,6 +4,13 @@
   "li": 224,
   "notifications": [
     {
+      "id": "like_1778081070648",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Ode à la jeunesse\" !",
+      "date": "2026-05-06T15:24:30.648Z",
+      "read": false
+    },
+    {
       "id": "like_1778080970040",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Ode à la jeunesse\" !",
