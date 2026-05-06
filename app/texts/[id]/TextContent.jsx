@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
 import AdSocialBar from "@/components/AdSocialBar";
-import InTextAd from "@/components/reader/InTextAd"; // Import du nouveau composant
+import InTextAd from "@/components/reader/InTextAd"; 
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -105,12 +105,11 @@ const TextContent = ({ id }) => {
     setIsLiking(true);
     try {
       const res = await fetch("/api/github-db", {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           action: "like", 
-          id: id, 
-          userEmail: user.email 
+          id: id
         })
       });
       
@@ -151,9 +150,7 @@ const TextContent = ({ id }) => {
         </div>
         {paragraphs.length > 3 && (
           <>
-            {/* Insertion de la publicité Native In-Text */}
             <InTextAd />
-            
             <div className="whitespace-pre-wrap">
               {paragraphs.slice(3).map((p, i) => <p key={i + 3} className="mb-6 leading-relaxed">{p}</p>)}
             </div>
@@ -171,7 +168,6 @@ const TextContent = ({ id }) => {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#050505]' : mood.bg}`}>
-      {/* Social Bar activée sur la page */}
       <AdSocialBar />
       
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-black/10">
@@ -224,7 +220,7 @@ const TextContent = ({ id }) => {
             </div>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5 ${mood.accent}`}>
-                <Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /><Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
               </p>
               <p className={`text-xl font-bold italic ${mood.title}`}>{data.authorName}</p>
             </div>
@@ -249,7 +245,7 @@ const TextContent = ({ id }) => {
               textTitle={data.title} 
             />
           )}
-          <commentsection textid={id} comments={data.comments || []} user={user} oncommented={() => loadContent()} />
+          <CommentSection textId={id} comments={data.comments || []} user={user} onCommented={() => loadContent()} />
         </section>
       </main>
 
@@ -258,9 +254,8 @@ const TextContent = ({ id }) => {
         onReport={() => setReportModalOpen(true)} 
         handleLike={handleLike}
         handleShare={handleShare}
-        isLiking={isLiking}
-        title={data.title}
-        likeCount={data.likes || 0}
+        textId={id}
+        isLoading={isLiking}
       />
 
       <ReportModal isOpen={isReportModalOpen} onClose={() => setReportModalOpen(false)} textId={id} textTitle={data.title} />
