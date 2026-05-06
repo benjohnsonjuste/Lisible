@@ -14,11 +14,11 @@ export function InTextAd() {
   useEffect(() => {
     if (isVisible) {
       // Nettoyage préalable du conteneur
-      const container = document.getElementById("container-874a186feecd3e968c16a58bb085fd56");
+      const container = document.getElementById(`container-874a186feecd3e968c16a58bb085fd56-${instanceId}`);
       if (container) container.innerHTML = "";
 
-      // Configuration globale requise par le script Adsterra (Casté en any pour TypeScript)
-      (window as any).atOptions = {
+      // Configuration globale requise par le script Adsterra
+      window.atOptions = {
         'key' : '874a186feecd3e968c16a58bb085fd56',
         'format' : 'iframe',
         'height' : 250,
@@ -42,7 +42,7 @@ export function InTextAd() {
         }
       };
     }
-  }, [isVisible]);
+  }, [isVisible, instanceId]);
 
   if (!isVisible) return null;
 
@@ -68,7 +68,7 @@ export function InTextAd() {
         {/* Zone Pub (Strict 300x250) */}
         <div className="bg-white/5 rounded-[1.4rem] overflow-hidden min-h-[250px] flex items-center justify-center relative border border-white/5">
            <div 
-             id="container-874a186feecd3e968c16a58bb085fd56" 
+             id={`container-874a186feecd3e968c16a58bb085fd56-${instanceId}`}
              className="w-[300px] h-[250px] z-10 flex justify-center items-center"
            >
              {/* Injection Ad */}
@@ -92,5 +92,4 @@ export function InTextAd() {
   );
 }
 
-// Ajout de l'export par défaut pour résoudre l'erreur d'import dans TextContent.jsx
 export default InTextAd;
