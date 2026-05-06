@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1778026568851",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"On n'est pas seul dans l'univers\" !",
+      "date": "2026-05-06T00:16:08.851Z",
+      "read": false
+    },
+    {
       "id": "staff_1773365246333",
       "type": "info",
       "message": "Vérification de connexion staff",
