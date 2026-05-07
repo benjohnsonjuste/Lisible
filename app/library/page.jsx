@@ -1,16 +1,11 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
-  BookOpen, Search, Loader2, Eye, Heart, ArrowRight, Sparkles, Coins, AlignLeft 
+  BookOpen, Search, Loader2, Eye, Heart, ArrowRight, AlignLeft, Coins, Sparkles 
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import Head from 'next/head';
-
-const GITHUB_CONFIG = {
-  owner: "benjohnsonjuste",
-  repo: "Lisible",
-};
 
 export default function LibraryPage() {
   const [texts, setTexts] = useState([]);
@@ -21,77 +16,68 @@ export default function LibraryPage() {
   useEffect(() => {
     setMounted(true);
     loadLibraryData();
+    
+    // Rafraîchissement automatique toutes les 30 secondes (Méthode Ancienne Library)
+    const interval = setInterval(loadLibraryData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   async function loadLibraryData() {
     try {
-      // 1. Récupérer les profils utilisateurs réels (Méthode Communauté)
+      // 1. Récupérer les profils utilisateurs pour les photos
       const usersRes = await fetch(`/api/realtime-data?folder=users`);
       const usersJson = await usersRes.json();
       const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
 
-      // 2. Récupérer la liste des fichiers live depuis data/texts
-      const textsUrl = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/texts`;
-      const res = await fetch(textsUrl);
+      // 2. Récupérer les données globales via l'API centralisée (Méthode Ancienne Library)
+      const res = await fetch(`/api/github-db?type=library`);
+      const json = await res.json();
       
-      if (!res.ok) throw new Error("Accès au dossier data/texts impossible");
-      
-      const files = await res.json();
-      
-      // 3. Charger le contenu de chaque fichier JSON et fusionner avec l'image de l'utilisateur
-      const allTexts = await Promise.all(
-        files
-          .filter(f => f.name.endsWith('.json'))
-          .map(async (file) => {
-            try {
-              const textRes = await fetch(file.download_url);
-              const data = await textRes.json();
-              
-              const email = (data.authorEmail || data.email || "").toLowerCase().trim();
+      if (json && Array.isArray(json.content)) {
+        const enrichedTexts = json.content.map(data => {
+          const email = (data.authorEmail || data.email || "").toLowerCase().trim();
+          
+          // Fusion avec les profils utilisateurs réels
+          const userProfile = allUsers.find(u => (u.email || "").toLowerCase().trim() === email);
+          const realImage = userProfile?.profilePic || userProfile?.image || null;
 
-              // Trouver l'utilisateur correspondant pour obtenir sa photo de profil réelle
-              const userProfile = allUsers.find(u => (u.email || "").toLowerCase().trim() === email);
-              const realImage = userProfile?.profilePic || userProfile?.image || null;
+          return {
+            id: data.id,
+            title: data.title || "Texte sans titre",
+            authorName: data.author || data.authorName || "Plume Anonyme",
+            views: Number(data.views || data.totalViews || 0),
+            li: Number(data.certified || data.totalCertified || 0),
+            likes: Number(data.likes || data.totalLikes || 0),
+            category: data.category || data.genre || "Littérature",
+            image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || data.id}`,
+            date: data.date || ""
+          };
+        });
 
-              return {
-                id: file.name.replace('.json', ''), 
-                title: data.title || data.textTitle || "Texte sans titre",
-                authorName: data.author || data.authorName || data.penName || "Plume Anonyme",
-                views: Number(data.views || 0),
-                li: Number(data.certified || data.totalCertified || data.li || 0),
-                likes: Number(data.likes || data.totalLikes || 0),
-                category: data.category || "Littérature",
-                // Utilisation de la photo réelle ou de l'avatar par défaut
-                image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || file.name}`,
-                date: data.date || ""
-              };
-            } catch (err) { 
-              return null; 
-            }
-          })
-      );
-
-      const validTexts = allTexts.filter(Boolean);
-      setTexts(validTexts.sort((a, b) => b.views - a.views));
-
+        // Tri par vues (ou selon vos préférences)
+        setTexts(enrichedTexts.sort((a, b) => b.views - a.views));
+      }
     } catch (e) {
-      toast.error("Impossible de joindre la bibliothèque.");
+      console.error("Library load error:", e);
+      if (texts.length === 0) toast.error("Impossible de joindre la bibliothèque.");
     } finally {
       setLoading(false);
     }
   }
 
+  const filteredTexts = useMemo(() => {
+    return texts.filter(t => 
+      t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      t.authorName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [texts, searchTerm]);
+
   if (!mounted) return null;
   
-  if (loading) return (
+  if (loading && texts.length === 0) return (
     <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center">
       <Loader2 className="animate-spin text-teal-600" size={40} />
     </div>
-  );
-
-  const filteredTexts = texts.filter(t => 
-    t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    t.authorName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -109,6 +95,7 @@ export default function LibraryPage() {
             type="text" 
             placeholder="Rechercher un titre ou un auteur..." 
             className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all font-bold text-sm" 
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)} 
           />
         </div>
