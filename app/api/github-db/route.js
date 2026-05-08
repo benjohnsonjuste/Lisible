@@ -15,7 +15,12 @@ try{const res=await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/$
 
 async function updateFile(path,content,sha,message){localCache.delete(path);const jsonString=JSON.stringify(content,null,2);const bytes=new TextEncoder().encode(jsonString);const binString=Array.from(bytes,(byte)=>String.fromCodePoint(byte)).join("");const encodedContent=btoa(binString);try{const res=await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,{method:'PUT',headers:{'Authorization':`Bearer ${GITHUB_CONFIG.token}`,'Content-Type':'application/json','User-Agent':'Lisible-App'},body:JSON.stringify({message:`[DATA] ${message} [skip ci]`,content:encodedContent,sha:sha||undefined}),});return res.ok;}catch(err){console.error(`Update error [${path}]:`,err.message);return false;}}
 
-const getSafePath=(email)=>{if(!email)return null;const safeEmail=email.toLowerCase().trim().replace(/@/g,'_').replace(/\./g,'_').replace(/[^a-z0-9_]/g,'');return `data/users/${safeEmail}.json`;};
+const getSafePath=(email)=>{
+  if(!email)return null;
+  // Adaptation pour correspondre aux fichiers existants : remplace @ et . par _
+  const safeEmail=email.toLowerCase().trim().replace(/[@.]/g,'_');
+  return `data/users/${safeEmail}.json`;
+};
 
 const globalSort=(list)=>{if(!Array.isArray(list))return [];return [...list].sort((a,b)=>{const certA=Number(a?.certified||a?.totalCertified||0);const certB=Number(b?.certified||b?.totalCertified||0);if(certB!==certA)return certB-certA;const likesA=Number(a?.likes||a?.totalLikes||0);const likesB=Number(b?.likes||b?.totalLikes||0);if(likesB!==likesA)return likesB-likesA;const dateA=a?.date?new Date(a.date).getTime():0;const dateB=b?.date?new Date(b.date).getTime():0;return dateB-dateA;});};
 
