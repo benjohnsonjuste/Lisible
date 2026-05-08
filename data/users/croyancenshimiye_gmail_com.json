@@ -3,12 +3,20 @@
   "name": "Croyance Nshimiye",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "reset_1778244425349",
+      "type": "security",
+      "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+      "date": "2026-05-08T12:47:05.349Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
   "created_at": "2026-05-08T12:11:28.311Z",
-  "password": "$2b$10$tzc3NGb/w3rRNInE48bMu.0JvlpZ2sNWNY1/et/4YpXQcO1AiQGn6",
+  "password": "$2b$10$xmdW8//x/Kgz26sbpX9gnu0ERO95I58LaHTp7pu7lAo09yJedGjya",
   "referralCode": null,
   "guestBonus": 0,
   "penName": "Croyance Nshimiye",
