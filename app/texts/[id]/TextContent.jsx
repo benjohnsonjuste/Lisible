@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
 import AdSocialBar from "@/components/AdSocialBar";
+import InTextAd from "@/components/reader/InTextAd"; 
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -37,13 +38,10 @@ const TextContent = ({ id }) => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isLiking, setIsLiking] = useState(false);
-  const [hasLiked, setHasLiked] = useState(false);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isReportModalOpen, setReportModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
-  
-  const viewLogged = useRef(false);
 
   const moodConfig = useMemo(() => ({
     melancholic: { bg: "bg-[#0F111A]", text: "text-slate-300", title: "text-white", accent: "text-indigo-400", ui: "bg-indigo-900/30 text-indigo-300", icon: <Ghost size={12}/>, label: "Mélancolique" },
@@ -75,19 +73,6 @@ const TextContent = ({ id }) => {
         const result = await res.json();
         setData(result.content);
 
-        // Gestion de la vue unique par appareil
-        const viewedTexts = JSON.parse(localStorage.getItem("lisible_views") || "[]");
-        if (!viewedTexts.includes(id) && !viewLogged.current) {
-          fetch("/api/github-db", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "view", id: id })
-          });
-          viewedTexts.push(id);
-          localStorage.setItem("lisible_views", JSON.stringify(viewedTexts));
-          viewLogged.current = true;
-        }
-
         const usersRes = await fetch(`/api/realtime-data?folder=users`);
         const usersJson = await usersRes.json();
         const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
@@ -105,38 +90,35 @@ const TextContent = ({ id }) => {
     loadContent();
     const stored = localStorage.getItem("lisible_user");
     if (stored) setUser(JSON.parse(stored));
-
-    // Vérifier si déjà liké sur cet appareil
-    const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
-    if (likedTexts.includes(id)) setHasLiked(true);
-
     const handleScroll = () => {
       const total = document.documentElement.scrollHeight - window.innerHeight;
       setReadingProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [loadContent, id]);
+  }, [loadContent]);
 
   const handleLike = async () => {
-    if (hasLiked || isLiking) return;
+    if (!user) return toast.error("Connectez-vous pour aimer ce texte");
+    if (isLiking) return;
     
     setIsLiking(true);
     try {
       const res = await fetch("/api/github-db", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "like", id: id })
+        body: JSON.stringify({ 
+          action: "like", 
+          id: id
+        })
       });
       
+      const result = await res.json();
       if (res.ok) {
-        const likedTexts = JSON.parse(localStorage.getItem("lisible_likes") || "[]");
-        likedTexts.push(id);
-        localStorage.setItem("lisible_likes", JSON.stringify(likedTexts));
-        
-        setHasLiked(true);
-        setData(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
         toast.success("Coup de cœur enregistré !");
+        setData(prev => ({ ...prev, likes: (prev.likes || 0) + 1 }));
+      } else {
+        toast.error(result.error || "Action impossible");
       }
     } catch (err) {
       toast.error("Erreur de connexion");
@@ -161,28 +143,22 @@ const TextContent = ({ id }) => {
   const renderedContent = useMemo(() => {
     if (!data?.content) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
-    const dropCapClass = `first-letter:text-8xl first-letter:font-black first-letter:mr-4 first-letter:float-left first-letter:leading-none first-letter:mt-2 ${mood.accent}`;
-
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
-          {paragraphs.slice(0, 3).map((p, i) => (
-            <p key={i} className={`mb-6 leading-relaxed ${i === 0 ? dropCapClass : ''}`} dangerouslySetInnerHTML={{ __html: p }} />
-          ))}
+          {paragraphs.slice(0, 3).map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
         </div>
         {paragraphs.length > 3 && (
           <>
-            <div className="my-16"><AdSocialBar /></div>
+            <InTextAd />
             <div className="whitespace-pre-wrap">
-              {paragraphs.slice(3).map((p, i) => (
-                <p key={i + 3} className="mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: p }} />
-              ))}
+              {paragraphs.slice(3).map((p, i) => <p key={i + 3} className="mb-6 leading-relaxed">{p}</p>)}
             </div>
           </>
         )}
       </div>
     );
-  }, [data?.content, mood.accent]);
+  }, [data?.content]);
 
   if (loading) return <div className="flex justify-center items-center min-h-screen font-serif animate-pulse">Immersion en cours...</div>;
   if (!data) return null;
@@ -244,7 +220,7 @@ const TextContent = ({ id }) => {
             </div>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5 ${mood.accent}`}>
-                <Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /><Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
               </p>
               <p className={`text-xl font-bold italic ${mood.title}`}>{data.authorName}</p>
             </div>
@@ -279,7 +255,7 @@ const TextContent = ({ id }) => {
         handleLike={handleLike}
         handleShare={handleShare}
         textId={id}
-        isLoading={isLiking || hasLiked}
+        isLoading={isLiking}
       />
 
       <ReportModal isOpen={isReportModalOpen} onClose={() => setReportModalOpen(false)} textId={id} textTitle={data.title} />
