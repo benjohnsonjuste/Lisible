@@ -10,7 +10,7 @@ export default function Auditorium() {
   const [podcasts, setPodcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPlayingUrl, setCurrentPlayingUrl] = useState(null);
-  const adRef = useRef<HTMLDivElement | null>(null);
+  const adRef = useRef(null);
 
   useEffect(() => {
     const fetchPodcasts = async () => {
