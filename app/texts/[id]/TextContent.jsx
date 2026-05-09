@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
-import AdSocialBar from "@/components/AdSocialBar";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -159,7 +158,6 @@ const TextContent = ({ id }) => {
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#050505]' : mood.bg}`}>
-      <AdSocialBar />
       
       <div className="fixed top-0 left-0 w-full h-1 z-[100] bg-black/10">
         <div className={`h-full transition-all duration-300 ${mood.accent.replace('text', 'bg')}`} style={{ width: `${readingProgress}%` }} />
