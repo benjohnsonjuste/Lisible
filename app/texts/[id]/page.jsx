@@ -1,5 +1,6 @@
 import React from "react";
-import TextContent from "./TextContent"; 
+import Script from "next/script";
+import TextContent from "./TextContent";
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -48,14 +49,35 @@ export default async function Page({ params }) {
   const id = resolvedParams?.id;
   
   return (
-    <div style={{ 
-      backgroundColor: "#FDFCF8", 
+    <div style={{
+      backgroundColor: "#FDFCF8",
       color: "#1A1A1A",           
       minHeight: "100vh",
       display: "flex",
       flexDirection: "column",
       transition: "background-color 0.3s ease"
     }}>
+      {/* Publicité Native In-Text */}
+      <div
+        style={{
+          width: "100%",
+          minHeight: "280px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden"
+        }}
+      >
+        <Script
+          async
+          strategy="afterInteractive"
+          data-cfasync="false"
+          src="https://pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"
+        />
+
+        <div id="container-874a186feecd3e968c16a58bb085fd56"></div>
+      </div>
+
       {/* On passe l'id ici pour que TextContent puisse l'utiliser pour le Like et le Share */}
       <TextContent id={id} />
     </div>
