@@ -14,7 +14,7 @@ export default function ForumPage() {
   const [isSending, setIsSending] = useState(false);
   const [adVisible, setAdVisible] = useState(true);
 
-  const adRef = useRef<HTMLDivElement | null>(null);
+  const adRef = useRef(null);
 
   useEffect(() => {
     const loggedUser = localStorage.getItem("lisible_user");
