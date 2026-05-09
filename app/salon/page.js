@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
 Send, Loader2, User, MessageSquare,
 ShieldCheck, Sparkles, Globe, X
-} from 'lucide-center';
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ForumPage() {
