@@ -60,8 +60,8 @@ export default function NotificationsPage() {
           localStorage.setItem("lisible_user", JSON.stringify(userData));
           
           const myNotifs = userData.notifications || [];
-          // Tri par date mais on pourrait aussi remonter les invitations podcast non lues en haut
-          const sorted = [...myNotifs].sort((a, b) => new Date(b.date) - new Date(a.date));
+          // Tri par date : les plus récentes en haut
+          const sorted = [...myNotifs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           
           setNotifications(sorted);
           
@@ -101,7 +101,7 @@ export default function NotificationsPage() {
       interval = setInterval(() => fetchNotifications(parsedUser.email, true), 45000);
       
       return () => {
-        clearInterval(interval);
+        if (interval) clearInterval(interval);
         pusher.unsubscribe(`user-${userKey}`);
       };
     } else {
@@ -118,12 +118,12 @@ export default function NotificationsPage() {
 
     try {
       const res = await fetch("/api/github-db", {
-        method: "PATCH",
+        method: "POST", // Utilisation de POST car ton API traite les modifications via POST/action
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: user.email, 
-          action: "mark_read",
-          notifId: notifId
+          userEmail: user.email, 
+          action: "update_user", // Ton API utilise update_user pour synchroniser les données dont les notifs lues
+          notifications: updatedNotifs
         })
       });
 
