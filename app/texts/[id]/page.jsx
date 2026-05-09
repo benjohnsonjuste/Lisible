@@ -1,6 +1,5 @@
 import React from "react";
 import TextContent from "./TextContent";
-import Script from "next/script";
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -11,35 +10,36 @@ export async function generateMetadata({ params }) {
 
   try {
     const res = await fetch(`${baseUrl}/api/github-db?type=text&id=${id}`, { cache: 'no-store' });
-    
     if (!res.ok) return { title: "Chargement... | Lisible" };
 
-    const data = await res.json();  
-    const text = data?.content;  
-    if (!text) return { title: "Manuscrit introuvable | Lisible" };  
+    const data = await res.json();
+    const text = data?.content;
 
-    const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;  
-    const shareTitle = `${text.title} — ${text.authorName}`;  
-    const shareDesc = `Découvrez ce texte magnifique sur Lisible.`;  
+    if (!text) return { title: "Manuscrit introuvable | Lisible" };
 
-    return {  
+    const ogImage = text.image ? text.image : `${baseUrl}/og-default.jpg`;
+    const shareTitle = `${text.title} — ${text.authorName}`;
+    const shareDesc = `Découvrez ce texte magnifique sur Lisible.`;
+
+    return {
       title: shareTitle,
       description: shareDesc,
-      openGraph: {  
+      openGraph: {
         title: shareTitle,
         description: shareDesc,
         url: `${baseUrl}/texts/${id}`,
         siteName: 'Lisible',
         images: [{ url: ogImage, width: 1200, height: 630 }],
         type: 'article',
-      },  
-      twitter: {  
+      },
+      twitter: {
         card: 'summary_large_image',
         title: shareTitle,
         description: shareDesc,
         images: [ogImage],
-      },  
+      },
     };
+
   } catch (e) {
     return { title: "Lecture | Lisible" };
   }
@@ -58,16 +58,30 @@ export default async function Page({ params }) {
       flexDirection: "column",
       transition: "background-color 0.3s ease"
     }}>
-      {/* Chargement du script publicitaire */}
-      <Script 
-        src="https://pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"
-        strategy="afterInteractive"
+
+      {/* Publicité en haut */}
+      <div
+        dangerouslySetInnerHTML={{
+          __html: `
+            <script async="async" data-cfasync="false" src="https://pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"></script>
+            <div id="container-874a186feecd3e968c16a58bb085fd56"></div>
+          `,
+        }}
       />
 
-      {/* Le composant TextContent doit contenir la logique de découpage 
-          pour insérer la div "container-874a186feecd3e968c16a58bb085fd56" 
-          au milieu de son rendu HTML. */}
+      {/* On passe l'id ici pour que TextContent puisse l'utiliser pour le Like et le Share */}
       <TextContent id={id} />
+
+      {/* Publicité en bas */}
+      <div
+        dangerouslySetInnerHTML={{
+          __html: `
+            <script async="async" data-cfasync="false" src="https://pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"></script>
+            <div id="container-874a186feecd3e968c16a58bb085fd56"></div>
+          `,
+        }}
+      />
+
     </div>
   );
 }
