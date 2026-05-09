@@ -310,19 +310,13 @@ const TextContent = ({ id }) => {
               dangerouslySetInnerHTML={{ __html: p }}
             />
 
-            {/* PUBLICITÉ NATIVE IN-TEXT */}
+            {/* PUBLICITÉ NATIVE IN-TEXT (Toutes les 3 itérations) */}
             {i > 0 && i % 3 === 0 && (
-              <div className="my-16">
-                <div className="relative overflow-hidden rounded-3xl min-h-[320px] flex items-center justify-center bg-transparent">
-                  <script
-                    async
-                    data-cfasync="false"
-                    src="https://pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"
-                  ></script>
-
+              <div className="my-12 py-4 border-y border-slate-100/50">
+                <div className="relative overflow-hidden rounded-3xl min-h-[250px] flex items-center justify-center bg-white/5">
                   <div
-                    id={`container-874a186feecd3e968c16a58bb085fd56-${i}`}
-                    className="w-full min-h-[320px]"
+                    id={`container-874a186feecd3e968c16a58bb085fd56`}
+                    className="w-full"
                   />
                 </div>
               </div>
