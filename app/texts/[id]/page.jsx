@@ -1,5 +1,6 @@
 import React from "react";
 import TextContent from "./TextContent";
+import Script from "next/script";
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -57,6 +58,15 @@ export default async function Page({ params }) {
       flexDirection: "column",
       transition: "background-color 0.3s ease"
     }}>
+      {/* Chargement du script publicitaire */}
+      <Script 
+        src="https://pl28554024.profitablecpmratenetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"
+        strategy="afterInteractive"
+      />
+
+      {/* Le composant TextContent doit contenir la logique de découpage 
+          pour insérer la div "container-874a186feecd3e968c16a58bb085fd56" 
+          au milieu de son rendu HTML. */}
       <TextContent id={id} />
     </div>
   );
