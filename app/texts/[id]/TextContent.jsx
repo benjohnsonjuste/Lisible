@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
 import AdSocialBar from "@/components/AdSocialBar";
-import InTextAd from "@/components/reader/InTextAd"; 
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -146,16 +145,8 @@ const TextContent = ({ id }) => {
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
-          {paragraphs.slice(0, 3).map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
+          {paragraphs.map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
         </div>
-        {paragraphs.length > 3 && (
-          <>
-            <InTextAd />
-            <div className="whitespace-pre-wrap">
-              {paragraphs.slice(3).map((p, i) => <p key={i + 3} className="mb-6 leading-relaxed">{p}</p>)}
-            </div>
-          </>
-        )}
       </div>
     );
   }, [data?.content]);
@@ -220,7 +211,7 @@ const TextContent = ({ id }) => {
             </div>
             <div>
               <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5 ${mood.accent}`}>
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /><Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
+                <Sparkles size={12} /> {isAnnouncementAccount ? "Officiel" : "Plume Certifiée"}
               </p>
               <p className={`text-xl font-bold italic ${mood.title}`}>{data.authorName}</p>
             </div>
