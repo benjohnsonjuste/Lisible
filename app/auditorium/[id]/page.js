@@ -31,7 +31,7 @@ export default function PodcastPlayerPage() {
 
   const audioRef = useRef(null);
   const hasIncrementedView = useRef(false);
-  const adRef = useRef<HTMLDivElement | null>(null);
+  const adRef = useRef(null);
 
   useEffect(() => {
     const fetchPodcast = async () => {
@@ -305,3 +305,4 @@ export default function PodcastPlayerPage() {
     </div>
   );
 }
+```</HTMLDivElement>
