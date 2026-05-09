@@ -24,7 +24,18 @@ const getSafePath=(email)=>{
 
 const globalSort=(list)=>{if(!Array.isArray(list))return [];return [...list].sort((a,b)=>{const certA=Number(a?.certified||a?.totalCertified||0);const certB=Number(b?.certified||b?.totalCertified||0);if(certB!==certA)return certB-certA;const likesA=Number(a?.likes||a?.totalLikes||0);const likesB=Number(b?.likes||b?.totalLikes||0);if(likesB!==likesA)return likesB-likesA;const dateA=a?.date?new Date(a.date).getTime():0;const dateB=b?.date?new Date(b.date).getTime():0;return dateB-dateA;});};
 
-export async function POST(req){try{if(!GITHUB_CONFIG.token)throw new Error("GITHUB_TOKEN is not defined");const body=await req.json();const {action,userEmail,textId,amount,currentPassword,newPassword,...data}=body;const emailToUse=userEmail||data.email;const targetPath=getSafePath(emailToUse);if(action==='register'){const file=await getFile(targetPath);if(file)return NextResponse.json({error:"Ce compte existe déjà"},{status:400});const salt=bcrypt.genSaltSync(10);const hashedPassword=bcrypt.hashSync(data.password.trim(),salt);const userData={email:data.email.toLowerCase().trim(),name:data.name||"Nouvel Auteur",li:data.referralCode?250:50,status:"active",notifications:[],followers:[],following:[],works:[],created_at:new Date().toISOString(),...data,password:hashedPassword};await updateFile(targetPath,userData,null,`👤 User Register: ${data.email}`);const {password,...safeUser}=userData;return NextResponse.json({success:true,user:safeUser});}
+export async function POST(req){try{if(!GITHUB_CONFIG.token)throw new Error("GITHUB_TOKEN is not defined");const body=await req.json();const {action,userEmail,textId,amount,currentPassword,newPassword,adminToken,...data}=body;const emailToUse=userEmail||data.email;const targetPath=getSafePath(emailToUse);
+
+// Gestion de la connexion Admin
+if(action==='broadcast'){
+  const ADMIN_PWD = process.env.ADMIN_PASSWORD;
+  if(!adminToken || adminToken !== ADMIN_PWD){
+    return NextResponse.json({error:"Code d'accès invalide"},{status:401});
+  }
+  return NextResponse.json({success:true, message:"Accès admin validé"});
+}
+
+if(action==='register'){const file=await getFile(targetPath);if(file)return NextResponse.json({error:"Ce compte existe déjà"},{status:400});const salt=bcrypt.genSaltSync(10);const hashedPassword=bcrypt.hashSync(data.password.trim(),salt);const userData={email:data.email.toLowerCase().trim(),name:data.name||"Nouvel Auteur",li:data.referralCode?250:50,status:"active",notifications:[],followers:[],following:[],works:[],created_at:new Date().toISOString(),...data,password:hashedPassword};await updateFile(targetPath,userData,null,`👤 User Register: ${data.email}`);const {password,...safeUser}=userData;return NextResponse.json({success:true,user:safeUser});}
 if(action==='login'){let file=await getFile(targetPath);if(!file){const legacyPath=`data/users/${emailToUse.toLowerCase().trim().replace(/@/g,'_')}.json`;file=await getFile(legacyPath);}
 if(!file)return NextResponse.json({error:"Compte introuvable"},{status:404});if(file.content.status==="deleted"){return NextResponse.json({error:"Ce compte est en attente de suppression.",isDeleted:true,email:file.content.email},{status:403});}
 const storedPassword=file.content.password;const providedPassword=data.password;let isMatch=false;const isHashed=typeof storedPassword==='string'&&storedPassword.startsWith('$2');if(isHashed){isMatch=bcrypt.compareSync(providedPassword,storedPassword);if(!isMatch)isMatch=bcrypt.compareSync(providedPassword.trim(),storedPassword);}else{isMatch=(providedPassword===storedPassword||providedPassword.trim()===storedPassword);if(isMatch){const salt=bcrypt.genSaltSync(10);file.content.password=bcrypt.hashSync(providedPassword.trim(),salt);await updateFile(targetPath,file.content,file.sha,`🔐 Security Fix: Hashing plain password`);}}
