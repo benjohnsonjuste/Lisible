@@ -3,11 +3,12 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
-  Briefcase, HeartHandshake, Feather, Mail
+  Briefcase, HeartHandshake, Feather, Mail, Gift, X
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import MessageModal from "@/components/MessageModal";
+import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
 
 export default function CommunautePage() {
   const [authors, setAuthors] = useState([]);
@@ -18,6 +19,7 @@ export default function CommunautePage() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [mounted, setMounted] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState(null);
+  const [giftRecipient, setGiftRecipient] = useState(null); // État pour le cadeau
 
   useEffect(() => {
     setMounted(true);
@@ -79,7 +81,6 @@ export default function CommunautePage() {
     const b = [];
     const mail = author.email?.toLowerCase();
     
-    // Badges de l'équipe
     const TEAM = {
       "adm.lablitteraire7@gmail.com": "Label Littéraire",
       "cmo.lablitteraire7@gmail.com": "Support Team",
@@ -93,12 +94,10 @@ export default function CommunautePage() {
       b.push({ icon: <Settings size={10} />, label: TEAM[mail], color: "bg-rose-600 text-white" });
     }
     
-    // Badge Légende (Plus de Textes)
     if (author.worksCount === maxWorks && maxWorks > 0) {
       b.push({ icon: <Feather size={10} />, label: "Légende", color: "bg-teal-600 text-white shadow-lg" });
     }
 
-    // Badge Élite (Plus de Vues)
     if (author.views === maxViews && maxViews > 0) {
       b.push({ icon: <Crown size={10} className="animate-pulse" />, label: "Élite", color: "bg-slate-950 text-amber-400 border border-amber-400/20 shadow-lg" });
     }
@@ -192,6 +191,13 @@ export default function CommunautePage() {
                   >
                     <Mail size={16} />
                   </button>
+                  {/* BOUTON CADEAU */}
+                  <button 
+                    onClick={() => currentUser ? setGiftRecipient(a) : toast.error("Connectez-vous pour offrir des Li")}
+                    className="px-4 py-3 bg-teal-50 text-teal-600 border border-teal-100 rounded-2xl hover:bg-teal-600 hover:text-white transition-all flex items-center justify-center"
+                  >
+                    <Gift size={16} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -207,10 +213,19 @@ export default function CommunautePage() {
           Découvrir plus de plumes
         </button>
       )}
-      
-      {filteredAuthors.length === 0 && !loading && (
-        <div className="text-center py-40">
-          <p className="text-slate-400 font-medium italic">Aucun auteur ne correspond à votre recherche.</p>
+
+      {/* MODALE CADEAU */}
+      {giftRecipient && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setGiftRecipient(null)}
+              className="absolute -top-12 right-0 p-2 text-white hover:text-teal-400 transition-colors"
+            >
+              <X size={32} />
+            </button>
+            <CadeauLi />
+          </div>
         </div>
       )}
 
