@@ -7,11 +7,11 @@ import { Loader2, Image as ImageIcon, X, CheckCircle2, PenTool, Type, BookOpen, 
 export default function WorkForm({
   initialData = {},
   isConcours = false,
-  isnovelbattle = false, // Nouvelle prop pour le Duel de Nouvelles
-  apiEndpoint = "/api/github-db", // Prop pour choisir l'API
+  isnovelbattle = false, 
+  apiEndpoint = "/api/github-db", 
   requireBattleAcceptance = false,
-  maxChars = null, // Prop pour limiter la longueur du texte
-  allowImage = true, // Prop pour autoriser ou non l'image
+  maxChars = 10000, // Modifié : 10000 par défaut pour s'aligner sur le Duel des Nouvelles
+  allowImage = true, 
   submitLabel = "Diffuser",
   onSuccess = null 
 }) {
@@ -26,6 +26,8 @@ export default function WorkForm({
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
+  // ... (le reste du code demeure inchangé)
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (!storedUser) {
@@ -111,7 +113,6 @@ export default function WorkForm({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Échec de l'archivage");
 
-      // --- LOGIQUE DE NOTIFICATION ---
       try {
         const usersRes = await fetch(`/api/github-db?type=users`);
         const usersData = await usersRes.json();
@@ -288,7 +289,7 @@ export default function WorkForm({
         >
           {loading ? <div className="flex items-center gap-4"><Loader2 className="animate-spin" size={24} /><span>Scellement...</span></div> : submitLabel}
         </button>
-        <p className="text-center text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-8">En archivant, vous contribuez au patrimoine de Lisible.biz</p>
+        <p className="text-center text-[9px] font-bold text-slate-300 uppercase tracking-widest mt-8">En archivant, vous contribuez au patrimoine de Lisible</p>
       </div>
     </form>
   );
