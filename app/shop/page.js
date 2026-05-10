@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Coins, ArrowLeft } from "lucide-react";
+import { Loader2, Coins, ArrowLeft, ExternalLink } from "lucide-react";
 
 function ShopContent() {
   const router = useRouter();
@@ -10,64 +10,50 @@ function ShopContent() {
   const targetAuthor = searchParams.get("for");
   
   const [user, setUser] = useState(null);
-  const [paypalLoaded, setPaypalLoaded] = useState(false);
 
   useEffect(() => {
     const logged = localStorage.getItem("lisible_user");
     if (logged) setUser(JSON.parse(logged));
 
-    const script = document.createElement("script");
-    script.src = "https://www.paypal.com/sdk/js?client-id=BAA9zAKhtObqSV9s3pR7qm9T7htZSBsqCJaWynDpxAFu5qQ1zHU2kI5cx4Q_yQNjjHBGGWf5ea-FBn2gFQ&currency=CAD";
-    script.async = true;
-    script.onload = () => setPaypalLoaded(true);
-    document.body.appendChild(script);
-
-    return () => { if(document.body.contains(script)) document.body.removeChild(script); };
-  }, []);
+    // Simulation de retour de paiement (si PayPal redirige vers /shop?status=success)
+    const status = searchParams.get("status");
+    const packId = searchParams.get("pack");
+    if (status === "success" && packId) {
+      const pack = packs.find(p => p.id === packId);
+      if (pack) handlePurchaseSuccess(pack);
+    }
+  }, [searchParams]);
 
   const packs = [
-    { id: "p1", name: "Pack Curieux", amount: 4000, price: "2.00", icon: "🌱" },
-    { id: "p2", name: "Pack Mécène", amount: 10000, price: "4.50", icon: "✨" },
-    { id: "p3", name: "Pack Fondateur", amount: 25000, price: "10.00", icon: "🏆" }
+    { 
+      id: "p1", 
+      name: "Pack Curieux", 
+      amount: 4000, 
+      price: "2.00", 
+      icon: "🌱",
+      link: "https://www.paypal.com/ncp/payment/KJK2WVTN6GHUY" 
+    },
+    { 
+      id: "p2", 
+      name: "Pack Mécène", 
+      amount: 10000, 
+      price: "4.50", 
+      icon: "✨",
+      link: "https://www.paypal.com/ncp/payment/XS2UPYWEAQMHY"
+    },
+    { 
+      id: "p3", 
+      name: "Pack Fondateur", 
+      amount: 25000, 
+      price: "10.00", 
+      icon: "🏆",
+      link: "https://www.paypal.com/ncp/payment/AEQEBDN2XMMNY"
+    }
   ];
 
-  useEffect(() => {
-    // On attend que PayPal soit chargé ET que l'utilisateur soit identifié
-    if (paypalLoaded && window.paypal && user) {
-      packs.forEach(pack => {
-        const containerId = `paypal-container-${pack.id}`;
-        const container = document.getElementById(containerId);
-        
-        // Sécurité pour éviter les rendus multiples
-        if (container && container.childElementCount === 0) {
-          window.paypal.Buttons({
-            style: { layout: 'vertical', color: 'black', shape: 'rect', label: 'paypal' },
-            createOrder: (data, actions) => {
-              return actions.order.create({
-                purchase_units: [{
-                  description: `${pack.name} - ${pack.amount} Li`,
-                  amount: { currency_code: "CAD", value: pack.price }
-                }]
-              });
-            },
-            onApprove: async (data, actions) => {
-              const order = await actions.order.capture();
-              if (order.status === "COMPLETED") {
-                handlePurchaseSuccess(pack);
-              }
-            },
-            onError: (err) => {
-              toast.error("Le paiement a échoué.");
-              console.error(err);
-            }
-          }).render(`#${containerId}`);
-        }
-      });
-    }
-  }, [paypalLoaded, user, packs]); // Ajout de packs dans les dépendances
-
   const handlePurchaseSuccess = async (pack) => {
-    const recipient = targetAuthor || user.email;
+    const recipient = targetAuthor || user?.email;
+    if (!recipient) return;
     
     try {
       const res = await fetch("/api/github-db", {
@@ -77,12 +63,12 @@ function ShopContent() {
           action: "add_li",
           userEmail: recipient,
           amount: pack.amount,
-          metadata: { source: "paypal_v2", packId: pack.id, buyer: user.email }
+          metadata: { source: "paypal_link", packId: pack.id, buyer: user?.email }
         })
       });
 
       if (res.ok) {
-        if (!targetAuthor) {
+        if (!targetAuthor && user) {
           const updatedUser = { ...user, li: (user.li || 0) + pack.amount };
           localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
           setUser(updatedUser);
@@ -122,8 +108,15 @@ function ShopContent() {
                 <span className="text-xs font-black text-teal-600 uppercase">Li</span>
               </div>
             </div>
-            {/* PayPal Button Container - Assuré d'être vide au départ */}
-            <div id={`paypal-container-${pack.id}`} className="w-full min-h-[150px]"></div>
+            
+            <a
+              href={pack.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-teal-600 transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95"
+            >
+              Acheter {pack.price} CAD <ExternalLink size={14} />
+            </a>
           </div>
         ))}
       </div>
