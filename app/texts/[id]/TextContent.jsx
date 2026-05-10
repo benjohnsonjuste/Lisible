@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles } from "lucide-react";
+import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X } from "lucide-react";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
 import SceauCertification from "@/components/reader/SceauCertification";
 import CommentSection from "@/components/reader/CommentSection";
 import SocialMargins from "@/components/reader/SocialMargins";
+import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
@@ -38,6 +39,7 @@ const TextContent = ({ id }) => {
   const [isLiking, setIsLiking] = useState(false);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isReportModalOpen, setReportModalOpen] = useState(false);
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false); // État pour le cadeau
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
 
@@ -243,9 +245,25 @@ const TextContent = ({ id }) => {
         onReport={() => setReportModalOpen(true)} 
         handleLike={handleLike}
         handleShare={handleShare}
+        onGift={() => user ? setIsGiftModalOpen(true) : toast.error("Connectez-vous pour offrir des Li")} // Ajout action cadeau
         textId={id}
         isLoading={isLiking}
       />
+
+      {/* MODALE CADEAU */}
+      {isGiftModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-6">
+          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setIsGiftModalOpen(false)}
+              className="absolute -top-12 right-0 p-2 text-white/50 hover:text-white transition-colors"
+            >
+              <X size={32} />
+            </button>
+            <CadeauLi />
+          </div>
+        </div>
+      )}
 
       <ReportModal isOpen={isReportModalOpen} onClose={() => setReportModalOpen(false)} textId={id} textTitle={data.title} />
     </div>
