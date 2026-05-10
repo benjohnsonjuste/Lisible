@@ -3,9 +3,10 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft
+  Heart, Share2, ArrowRight, RefreshCcw, Zap, Coins, Sparkles, AlignLeft, Gift, X
 } from "lucide-react";
 import { toast } from "sonner";
+import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
 
 const GITHUB = { owner: "benjohnsonjuste", repo: "Lisible" };
 
@@ -13,6 +14,7 @@ export default function BattlePoetique() {
   const [texts, setTexts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [giftRecipient, setGiftRecipient] = useState(null); // État pour la modale cadeau
 
   const sortBattleTexts = useCallback((data) => {
     return data
@@ -63,6 +65,13 @@ export default function BattlePoetique() {
     } catch (err) {}
   };
 
+  const openGiftModal = (e, item) => {
+    e.preventDefault(); e.stopPropagation();
+    const loggedUser = localStorage.getItem("lisible_user");
+    if (!loggedUser) return toast.error("Connectez-vous pour offrir un cadeau");
+    setGiftRecipient({ email: item.authorEmail, name: item.authorName || item.author });
+  };
+
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#FCFBF9] gap-6 px-4">
       <div className="relative"><Loader2 className="animate-spin text-teal-600" size={50}/><Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-teal-200" size={20} /></div>
@@ -96,7 +105,6 @@ export default function BattlePoetique() {
               {texts.map((item, index) => {
                 const liPoints = Number(item.certified || item.totalCertified || 0);
                 const isLeader = index === 0 && liPoints > 0;
-                // Correction ici pour trouver le nom de l'auteur
                 const authorName = item.author || item.authorName || item.penName || 'Plume Anonyme';
                 
                 return (
@@ -108,7 +116,16 @@ export default function BattlePoetique() {
                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isLeader ? 'bg-amber-400 text-white' : 'bg-slate-900 text-white'}`}>{index + 1}</div>
                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Position</span>
                         </div>
-                        <button onClick={(e) => handleShare(e, item)} className="p-4 bg-white text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-slate-100"><Share2 size={18} /></button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={(e) => openGiftModal(e, item)} 
+                            className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100"
+                            title="Soutenir avec des Li"
+                          >
+                            <Gift size={18} />
+                          </button>
+                          <button onClick={(e) => handleShare(e, item)} className="p-4 bg-white text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-slate-100"><Share2 size={18} /></button>
+                        </div>
                       </div>
                       <div className="p-8 sm:p-12 flex-grow flex flex-col">
                         <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -139,6 +156,22 @@ export default function BattlePoetique() {
           )}
         </main>
       </div>
+
+      {/* MODALE CADEAU */}
+      {giftRecipient && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setGiftRecipient(null)}
+              className="absolute -top-12 right-0 p-2 text-white hover:text-teal-400 transition-colors"
+            >
+              <X size={32} />
+            </button>
+            <CadeauLi />
+          </div>
+        </div>
+      )}
+
       <footer className="mt-32 text-center pb-10"><p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 flex items-center justify-center gap-4"><span className="w-8 h-px bg-slate-100"></span>Arène Officielle • {new Date().getFullYear()}<span className="w-8 h-px bg-slate-100"></span></p></footer>
     </div>
   );
