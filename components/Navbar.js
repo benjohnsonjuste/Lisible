@@ -24,12 +24,14 @@ export default function Navbar() {
 
   const syncUnreadCount = async (email) => {
     try {
-      const res = await fetch(`/api/github-db?type=user&id=${email}`);
+      const res = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email.toLowerCase().trim())}`);
       if (res.ok) {
         const data = await res.json();
-        const count = (data.content.notifications || []).filter(n => !n.read).length;
-        setUnreadCount(count);
-        localStorage.setItem("unread_notifs", count.toString());
+        if (data && data.content) {
+          const count = (data.content.notifications || []).filter(n => !n.read).length;
+          setUnreadCount(count);
+          localStorage.setItem("unread_notifs", count.toString());
+        }
       }
     } catch (e) {
       console.error("Erreur sync notifs:", e);
@@ -110,12 +112,20 @@ export default function Navbar() {
       if (updatedUser?.email) syncUnreadCount(updatedUser.email);
     };
     
+    const onSyncNotif = () => {
+        const checkUser = localStorage.getItem("lisible_user");
+        if(checkUser) {
+            const p = JSON.parse(checkUser);
+            if(p.email) syncUnreadCount(p.email);
+        }
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('sync-notifications', () => currentUser?.email && syncUnreadCount(currentUser.email));
+    window.addEventListener('sync-notifications', onSyncNotif);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('sync-notifications', handleStorageChange);
+      window.removeEventListener('sync-notifications', onSyncNotif);
       pusher.unsubscribe('global-notifications');
     };
   }, [router, pathname]);
@@ -133,9 +143,9 @@ export default function Navbar() {
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
-    { href: "/arena", label: "Arène", icon: <Trophy size={20} /> }, // Ajout Arène
+    { href: "/arena", label: "Arène", icon: <Trophy size={20} /> },
     { href: "/salon", label: "Salon Lisible", icon: <MessageSquare size={20} /> },
-    { href: "/shop", label: "Réserve de Li", icon: <ShoppingBag size={20} /> }, // Ajout Shop
+    { href: "/shop", label: "Réserve de Li", icon: <ShoppingBag size={20} /> },
     { href: "/studio/podcast", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
     { href: "/dashboard", label: "Tableau de bord", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/community", label: "Communauté", icon: <Users size={20} /> },
@@ -223,7 +233,7 @@ export default function Navbar() {
                 </div>
                 <div className="text-left overflow-hidden">
                   <p className="text-sm font-black text-slate-900 dark:text-white truncate">{user.penName || user.name}</p>
-                  <p className="text-[9px] uppercase font-black text-teal-600 tracking-widest">Compte Lisible</p>
+                  <p className="text-[9px] uppercase font-black text-teal-600 tracking-widest">Paramètres</p>
                 </div>
               </div>
               <ChevronRight size={18} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
@@ -255,7 +265,6 @@ export default function Navbar() {
               </Link>
             )))}
             
-            {/* Bouton Cadeaux - Ouvre la modale */}
             <button 
               onClick={() => { setIsMenuOpen(false); setIsGiftModalOpen(true); }}
               className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"
@@ -273,7 +282,6 @@ export default function Navbar() {
         </div>
       </aside>
 
-      {/* Modale CadeauLi */}
       {isGiftModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
           <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
