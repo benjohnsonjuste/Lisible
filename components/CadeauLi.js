@@ -2,7 +2,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Send, Gift, Loader2, AlertCircle, Search } from "lucide-react";
+import { Send, Gift, Loader2, AlertCircle, Search, Users } from "lucide-react";
+
+const GITHUB_CONFIG = {
+  owner: "benjohnsonjuste",
+  repo: "Lisible",
+};
 
 export default function CadeauLi() {
   const router = useRouter();
@@ -10,27 +15,48 @@ export default function CadeauLi() {
   const [loading, setLoading] = useState(false);
   const [targetEmail, setTargetEmail] = useState("");
   const [amount, setAmount] = useState(250);
+  const [allEmails, setAllEmails] = useState([]);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(false);
 
   const MIN_GIFT = 250;
 
+  // Récupération des utilisateurs (même technique que la page admin/signaux)
   useEffect(() => {
     const logged = localStorage.getItem("lisible_user");
     if (logged) setUser(JSON.parse(logged));
+
+    const fetchAllUsers = async () => {
+      setIsFetchingUsers(true);
+      try {
+        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const files = await res.json();
+          const emails = files
+            .filter(f => f.name.endsWith('.json'))
+            .map(f => f.name.replace('.json', '').replace(/_/g, '.'));
+          setAllEmails(emails);
+        }
+      } catch (err) {
+        console.error("Erreur récupération utilisateurs:", err);
+      } finally {
+        setIsFetchingUsers(false);
+      }
+    };
+
+    fetchAllUsers();
   }, []);
 
   const handleSendGift = async (e) => {
     e.preventDefault();
     if (!user) return toast.error("Connectez-vous pour offrir des Li.");
     
-    // 1. Vérification du montant minimum
     if (amount < MIN_GIFT) {
       return toast.error(`Le don minimum est de ${MIN_GIFT} Li.`);
     }
 
-    // 2. Vérification du solde
     if (user.li < amount) {
       toast.error("Solde insuffisant pour ce cadeau.");
-      // On redirige vers le shop avec un paramètre pour revenir après
       setTimeout(() => {
         router.push(`/shop?for=${targetEmail || user.email}&back=gift`);
       }, 2000);
@@ -40,12 +66,11 @@ export default function CadeauLi() {
     setLoading(true);
 
     try {
-      // 3. Appel à l'API pour le transfert
       const res = await fetch("/api/github-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "gift_li", // Utilise l'action de transfert de ton API
+          action: "gift_li",
           userEmail: user.email,
           recipientEmail: targetEmail.toLowerCase().trim(),
           amount: parseInt(amount)
@@ -55,7 +80,6 @@ export default function CadeauLi() {
       const result = await res.json();
 
       if (res.ok) {
-        // 4. Mise à jour locale du compte de l'envoyeur
         const updatedUser = { ...user, li: user.li - amount };
         localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
         setUser(updatedUser);
@@ -69,7 +93,7 @@ export default function CadeauLi() {
     } catch (err) {
       toast.error(err.message);
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
@@ -86,21 +110,28 @@ export default function CadeauLi() {
       </div>
 
       <form onSubmit={handleSendGift} className="space-y-6">
-        {/* Destinataire */}
+        {/* Destinataire avec Auto-complétion */}
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block flex justify-between">
             Email de la plume
+            {isFetchingUsers && <Loader2 size={10} className="animate-spin" />}
           </label>
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
             <input
               type="email"
+              list="users-list"
               required
               value={targetEmail}
               onChange={(e) => setTargetEmail(e.target.value)}
-              placeholder="auteur@exemple.com"
+              placeholder="Sélectionner ou saisir un email"
               className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-teal-500/20 transition-all"
             />
+            <datalist id="users-list">
+              {allEmails.map((email) => (
+                <option key={email} value={email} />
+              ))}
+            </datalist>
           </div>
         </div>
 
@@ -143,6 +174,11 @@ export default function CadeauLi() {
           )}
         </button>
       </form>
+      
+      <div className="mt-6 flex items-center justify-center gap-2 text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+        <Users size={10} />
+        {allEmails.length} plumes disponibles dans l'Atelier
+      </div>
     </div>
   );
 }
