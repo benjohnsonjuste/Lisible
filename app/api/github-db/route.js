@@ -17,7 +17,6 @@ async function updateFile(path,content,sha,message){localCache.delete(path);cons
 
 const getSafePath=(email)=>{
   if(!email)return null;
-  // Adaptation pour correspondre aux fichiers existants : remplace @ et . par _
   const safeEmail=email.toLowerCase().trim().replace(/[@.]/g,'_');
   return `data/users/${safeEmail}.json`;
 };
@@ -26,7 +25,6 @@ const globalSort=(list)=>{if(!Array.isArray(list))return [];return [...list].sor
 
 export async function POST(req){try{if(!GITHUB_CONFIG.token)throw new Error("GITHUB_TOKEN is not defined");const body=await req.json();const {action,userEmail,textId,amount,currentPassword,newPassword,adminToken,...data}=body;const emailToUse=userEmail||data.email;const targetPath=getSafePath(emailToUse);
 
-// Gestion de la connexion Admin
 if(action==='broadcast'){
   const ADMIN_PWD = process.env.ADMIN_PASSWORD;
   if(!adminToken || adminToken !== ADMIN_PWD){
@@ -53,8 +51,34 @@ return NextResponse.json({success:true});}
 if(action==='user_sync'||action==='update_user'){const file=await getFile(targetPath);if(!file)return NextResponse.json({error:"Sync impossible"},{status:404});const userData={...file.content,...data};await updateFile(targetPath,userData,file.sha,`👤 User Sync/Update`);const {password,...safeUser}=userData;return NextResponse.json({success:true,user:safeUser});}
 if(action==='follow'||action==='unfollow'){const follower=await getFile(getSafePath(userEmail));const target=await getFile(getSafePath(data.targetEmail));if(!follower||!target)return NextResponse.json({error:"Utilisateur introuvable"},{status:404});const targetEmailClean=data.targetEmail.toLowerCase().trim();const userEmailClean=userEmail.toLowerCase().trim();if(action==='follow'){if(!follower.content.following.includes(targetEmailClean)){follower.content.following.push(targetEmailClean);target.content.followers.push(userEmailClean);target.content.notifications.unshift({id:`follow_${Date.now()}`,type:"follow",message:`${follower.content.name} s'est abonné à vous !`,date:new Date().toISOString(),read:false});}}else{follower.content.following=follower.content.following.filter(e=>e!==targetEmailClean);target.content.followers=target.content.followers.filter(e=>e!==userEmailClean);}
 await updateFile(getSafePath(userEmail),follower.content,follower.sha,`👥 ${action}: following`);await updateFile(getSafePath(data.targetEmail),target.content,target.sha,`👥 ${action}: followers`);return NextResponse.json({success:true,followersCount:target.content.followers.length});}
-if(action==='publish'){const pubId=data.id||`txt_${Date.now()}`;const pubPath=`data/texts/${pubId}.json`;const indexPath=`data/publications/index.json`;const isConcours=data.isConcours===true||data.genre==="Battle Poétique";const finalImage=isConcours?null:(data.image||data.imageBase64);const newPub={...data,id:pubId,isConcours,image:finalImage,date:new Date().toISOString(),views:0,likes:0,comments:[],certified:0};await updateFile(pubPath,newPub,null,`🚀 Publish: ${data.title}`);const indexFile=await getFile(indexPath)||{content:[]};let indexContent=Array.isArray(indexFile.content)?indexFile.content:[];indexContent.unshift({id:pubId,title:data.title,author:data.authorName,authorEmail:data.authorEmail,category:data.category,genre:data.genre,isConcours,image:finalImage,date:newPub.date,views:0,likes:0,certified:0});indexContent=globalSort(indexContent);await updateFile(indexPath,indexContent,indexFile.sha,`📝 Index Update & Sort`);return NextResponse.json({success:true,id:pubId});}
+if(action==='publish'){const pubId=data.id||`txt_${Date.now()}`;const pubPath=`data/texts/${pubId}.json`;const indexPath=`data/publications/index.json`;const isConcours=data.isConcours===true||data.genre==="Battle Poétique";const finalImage=isConcours?null:(data.image||data.imageBase64);const newPub={...data,id:pubId,isConcours,image:finalImage,date:new Date().toISOString(),views:0,likes:0,certified:0};await updateFile(pubPath,newPub,null,`🚀 Publish: ${data.title}`);const indexFile=await getFile(indexPath)||{content:[]};let indexContent=Array.isArray(indexFile.content)?indexFile.content:[];indexContent.unshift({id:pubId,title:data.title,author:data.authorName,authorEmail:data.authorEmail,category:data.category,genre:data.genre,isConcours,image:finalImage,date:newPub.date,views:0,likes:0,certified:0});indexContent=globalSort(indexContent);await updateFile(indexPath,indexContent,indexFile.sha,`📝 Index Update & Sort`);return NextResponse.json({success:true,id:pubId});}
 if(action==='transfer_li'||action==='gift_li'){if(amount<ECONOMY.MIN_TRANSFER)return NextResponse.json({error:"Minimum non atteint"},{status:400});const sender=await getFile(getSafePath(userEmail));const receiver=await getFile(getSafePath(data.recipientEmail));if(!sender||!receiver)return NextResponse.json({error:"Utilisateur introuvable"},{status:404});if(sender.content.li<amount)return NextResponse.json({error:"Li insuffisants"},{status:400});sender.content.li-=amount;receiver.content.li+=amount;receiver.content.notifications.unshift({id:`notif_${Date.now()}`,type:"gift",message:`Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`,date:new Date().toISOString(),read:false});await updateFile(getSafePath(userEmail),sender.content,sender.sha,`💸 Sent Li`);await updateFile(getSafePath(data.recipientEmail),receiver.content,receiver.sha,`💰 Received Li`);return NextResponse.json({success:true});}
+
+// --- AJOUTS BOUTIQUE ---
+if(action==='add_li'){
+  const file=await getFile(targetPath);
+  if(!file)return NextResponse.json({error:"Compte introuvable"},{status:404});
+  file.content.li = (file.content.li || 0) + amount;
+  await updateFile(targetPath, file.content, file.sha, `💳 Shop Purchase: +${amount} Li`);
+  return NextResponse.json({success:true});
+}
+if(action==='create_notif'){
+  const targetEmail = data.targetEmail || emailToUse;
+  const file=await getFile(getSafePath(targetEmail));
+  if(!file)return NextResponse.json({error:"Destinataire introuvable"},{status:404});
+  file.content.notifications.unshift({
+    id: `notif_${Date.now()}`,
+    type: data.type || "info",
+    title: data.title,
+    message: data.message,
+    date: new Date().toISOString(),
+    read: false
+  });
+  await updateFile(getSafePath(targetEmail), file.content, file.sha, `🔔 Custom Notification`);
+  return NextResponse.json({success:true});
+}
+// -----------------------
+
 return NextResponse.json({error:"Action inconnue"},{status:400});}catch(e){return NextResponse.json({error:e.message},{status:500});}}
 
 export async function GET(req){const {searchParams}=new URL(req.url);const type=searchParams.get('type');const id=searchParams.get('id');const path=searchParams.get('path');try{if(!GITHUB_CONFIG.token)throw new Error("GITHUB_TOKEN is missing");if(type==='text'){const text=await getFile(`data/texts/${id}.json`);return NextResponse.json(text);}
