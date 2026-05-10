@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Coins, ArrowLeft, ExternalLink } from "lucide-react";
+import { Loader2, Coins, ArrowLeft } from "lucide-react";
 
 function ShopContent() {
   const router = useRouter();
@@ -10,19 +10,7 @@ function ShopContent() {
   const targetAuthor = searchParams.get("for");
   
   const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const logged = localStorage.getItem("lisible_user");
-    if (logged) setUser(JSON.parse(logged));
-
-    // Simulation de retour de paiement (si PayPal redirige vers /shop?status=success)
-    const status = searchParams.get("status");
-    const packId = searchParams.get("pack");
-    if (status === "success" && packId) {
-      const pack = packs.find(p => p.id === packId);
-      if (pack) handlePurchaseSuccess(pack);
-    }
-  }, [searchParams]);
+  const [paypalReady, setPaypalReady] = useState(false);
 
   const packs = [
     { 
@@ -31,7 +19,7 @@ function ShopContent() {
       amount: 4000, 
       price: "2.00", 
       icon: "🌱",
-      link: "https://www.paypal.com/ncp/payment/KJK2WVTN6GHUY" 
+      hostedButtonId: "XXWLWF2FHX5NQ" 
     },
     { 
       id: "p2", 
@@ -39,7 +27,7 @@ function ShopContent() {
       amount: 10000, 
       price: "4.50", 
       icon: "✨",
-      link: "https://www.paypal.com/ncp/payment/XS2UPYWEAQMHY"
+      hostedButtonId: "UD9EU326J2CCU"
     },
     { 
       id: "p3", 
@@ -47,13 +35,58 @@ function ShopContent() {
       amount: 25000, 
       price: "10.00", 
       icon: "🏆",
-      link: "https://www.paypal.com/ncp/payment/AEQEBDN2XMMNY"
+      hostedButtonId: "GFZHFWJGFADTQ"
     }
   ];
+
+  // 1. Initialisation utilisateur et script PayPal
+  useEffect(() => {
+    const logged = localStorage.getItem("lisible_user");
+    if (logged) setUser(JSON.parse(logged));
+
+    const script = document.createElement("script");
+    script.src = "https://www.paypal.com/sdk/js?client-id=BAA9zAKhtObqSV9s3pR7qm9T7htZSBsqCJaWynDpxAFu5qQ1zHU2kI5cx4Q_yQNjjHBGGWf5ea-FBn2gFQ&components=hosted-buttons&disable-funding=venmo&currency=USD";
+    script.async = true;
+    script.onload = () => setPaypalReady(true);
+    document.body.appendChild(script);
+
+    return () => { if(document.body.contains(script)) document.body.removeChild(script); };
+  }, []);
+
+  // 2. Rendu des boutons PayPal
+  useEffect(() => {
+    if (paypalReady && window.paypal && user) {
+      packs.forEach(pack => {
+        const containerId = `paypal-container-${pack.hostedButtonId}`;
+        const container = document.getElementById(containerId);
+        
+        if (container && container.innerHTML === "") {
+          window.paypal.HostedButtons({
+            hostedButtonId: pack.hostedButtonId,
+          }).render(`#${containerId}`);
+        }
+      });
+    }
+  }, [paypalReady, user]);
+
+  // 3. Capture du succès après redirection (via tes réglages PayPal)
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const packId = searchParams.get("pack");
+    
+    if (status === "success" && packId) {
+      const pack = packs.find(p => p.id === packId);
+      if (pack) {
+        handlePurchaseSuccess(pack);
+      }
+    }
+  }, [searchParams]);
 
   const handlePurchaseSuccess = async (pack) => {
     const recipient = targetAuthor || user?.email;
     if (!recipient) return;
+    
+    const t = toast.loading("Validation de vos Li...");
     
     try {
       const res = await fetch("/api/github-db", {
@@ -63,7 +96,7 @@ function ShopContent() {
           action: "add_li",
           userEmail: recipient,
           amount: pack.amount,
-          metadata: { source: "paypal_link", packId: pack.id, buyer: user?.email }
+          metadata: { source: "paypal_hosted", packId: pack.id, buyer: user?.email }
         })
       });
 
@@ -73,11 +106,14 @@ function ShopContent() {
           localStorage.setItem("lisible_user", JSON.stringify(updatedUser));
           setUser(updatedUser);
         }
-        toast.success("Transaction validée ! Vos Li sont arrivés.");
-        setTimeout(() => router.push("/dashboard"), 1500);
+        toast.success(`Succès ! +${pack.amount} Li ajoutés.`, { id: t });
+        // Nettoyage de l'URL pour éviter les doublons au rafraîchissement
+        router.replace("/dashboard");
+      } else {
+        throw new Error();
       }
     } catch (e) {
-      toast.error("Erreur de synchronisation avec la banque.");
+      toast.error("Erreur de synchronisation.", { id: t });
     }
   };
 
@@ -99,7 +135,7 @@ function ShopContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {packs.map(pack => (
-          <div key={pack.id} className="bg-white border border-slate-100 p-10 rounded-[3.5rem] hover:shadow-xl transition-all flex flex-col justify-between min-h-[400px]">
+          <div key={pack.id} className="bg-white border border-slate-100 p-10 rounded-[3.5rem] hover:shadow-xl transition-all flex flex-col justify-between min-h-[450px]">
             <div>
               <div className="text-4xl mb-6">{pack.icon}</div>
               <h3 className="font-black italic text-xl text-slate-900 mb-1">{pack.name}</h3>
@@ -109,14 +145,8 @@ function ShopContent() {
               </div>
             </div>
             
-            <a
-              href={pack.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-teal-600 transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95"
-            >
-              Acheter {pack.price} CAD <ExternalLink size={14} />
-            </a>
+            {/* Conteneur pour le bouton PayPal officiel */}
+            <div id={`paypal-container-${pack.hostedButtonId}`} className="w-full min-h-[150px]"></div>
           </div>
         ))}
       </div>
