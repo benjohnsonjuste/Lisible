@@ -54,7 +54,6 @@ await updateFile(getSafePath(userEmail),follower.content,follower.sha,`👥 ${ac
 if(action==='publish'){const pubId=data.id||`txt_${Date.now()}`;const pubPath=`data/texts/${pubId}.json`;const indexPath=`data/publications/index.json`;const isConcours=data.isConcours===true||data.genre==="Battle Poétique";const finalImage=isConcours?null:(data.image||data.imageBase64);const newPub={...data,id:pubId,isConcours,image:finalImage,date:new Date().toISOString(),views:0,likes:0,certified:0};await updateFile(pubPath,newPub,null,`🚀 Publish: ${data.title}`);const indexFile=await getFile(indexPath)||{content:[]};let indexContent=Array.isArray(indexFile.content)?indexFile.content:[];indexContent.unshift({id:pubId,title:data.title,author:data.authorName,authorEmail:data.authorEmail,category:data.category,genre:data.genre,isConcours,image:finalImage,date:newPub.date,views:0,likes:0,certified:0});indexContent=globalSort(indexContent);await updateFile(indexPath,indexContent,indexFile.sha,`📝 Index Update & Sort`);return NextResponse.json({success:true,id:pubId});}
 if(action==='transfer_li'||action==='gift_li'){if(amount<ECONOMY.MIN_TRANSFER)return NextResponse.json({error:"Minimum non atteint"},{status:400});const sender=await getFile(getSafePath(userEmail));const receiver=await getFile(getSafePath(data.recipientEmail));if(!sender||!receiver)return NextResponse.json({error:"Utilisateur introuvable"},{status:404});if(sender.content.li<amount)return NextResponse.json({error:"Li insuffisants"},{status:400});sender.content.li-=amount;receiver.content.li+=amount;receiver.content.notifications.unshift({id:`notif_${Date.now()}`,type:"gift",message:`Vous avez reçu ${amount} Li de la part de ${sender.content.name}.`,date:new Date().toISOString(),read:false});await updateFile(getSafePath(userEmail),sender.content,sender.sha,`💸 Sent Li`);await updateFile(getSafePath(data.recipientEmail),receiver.content,receiver.sha,`💰 Received Li`);return NextResponse.json({success:true});}
 
-// --- AJOUTS BOUTIQUE ---
 if(action==='add_li'){
   const file=await getFile(targetPath);
   if(!file)return NextResponse.json({error:"Compte introuvable"},{status:404});
@@ -77,7 +76,6 @@ if(action==='create_notif'){
   await updateFile(getSafePath(targetEmail), file.content, file.sha, `🔔 Custom Notification`);
   return NextResponse.json({success:true});
 }
-// -----------------------
 
 return NextResponse.json({error:"Action inconnue"},{status:400});}catch(e){return NextResponse.json({error:e.message},{status:500});}}
 
