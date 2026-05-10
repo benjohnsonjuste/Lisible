@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Coins, ArrowLeft, Heart, Sparkles } from "lucide-react";
+import { Loader2, Coins, ArrowLeft } from "lucide-react";
 
 function ShopContent() {
   const router = useRouter();
@@ -17,7 +17,6 @@ function ShopContent() {
     if (logged) setUser(JSON.parse(logged));
 
     const script = document.createElement("script");
-    // On charge le SDK standard (sans hosted-buttons)
     script.src = "https://www.paypal.com/sdk/js?client-id=BAA9zAKhtObqSV9s3pR7qm9T7htZSBsqCJaWynDpxAFu5qQ1zHU2kI5cx4Q_yQNjjHBGGWf5ea-FBn2gFQ&currency=CAD";
     script.async = true;
     script.onload = () => setPaypalLoaded(true);
@@ -33,13 +32,16 @@ function ShopContent() {
   ];
 
   useEffect(() => {
+    // On attend que PayPal soit chargé ET que l'utilisateur soit identifié
     if (paypalLoaded && window.paypal && user) {
       packs.forEach(pack => {
-        const container = document.getElementById(`paypal-container-${pack.id}`);
-        if (container && container.innerHTML === "") {
+        const containerId = `paypal-container-${pack.id}`;
+        const container = document.getElementById(containerId);
+        
+        // Sécurité pour éviter les rendus multiples
+        if (container && container.childElementCount === 0) {
           window.paypal.Buttons({
             style: { layout: 'vertical', color: 'black', shape: 'rect', label: 'paypal' },
-            // Création de la commande avec le prix du pack
             createOrder: (data, actions) => {
               return actions.order.create({
                 purchase_units: [{
@@ -48,7 +50,6 @@ function ShopContent() {
                 }]
               });
             },
-            // Validation après paiement réussi
             onApprove: async (data, actions) => {
               const order = await actions.order.capture();
               if (order.status === "COMPLETED") {
@@ -59,11 +60,11 @@ function ShopContent() {
               toast.error("Le paiement a échoué.");
               console.error(err);
             }
-          }).render(`#paypal-container-${pack.id}`);
+          }).render(`#${containerId}`);
         }
       });
     }
-  }, [paypalLoaded, user]);
+  }, [paypalLoaded, user, packs]); // Ajout de packs dans les dépendances
 
   const handlePurchaseSuccess = async (pack) => {
     const recipient = targetAuthor || user.email;
@@ -102,7 +103,7 @@ function ShopContent() {
         </button>
         <div className="text-center">
             <h1 className="text-3xl font-black italic tracking-tighter text-slate-900 leading-none">Banque de Li</h1>
-            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 mt-2">Réserve monétaire</p>
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400 mt-2">Réserve monétaire {targetAuthor && `pour ${targetAuthor}`}</p>
         </div>
         <div className="flex items-center gap-2 bg-white border-2 border-teal-50 px-5 py-2.5 rounded-2xl text-teal-600 font-black">
            <Coins size={18} className="animate-bounce" /> 
@@ -112,7 +113,7 @@ function ShopContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {packs.map(pack => (
-          <div key={pack.id} className="bg-white border border-slate-100 p-10 rounded-[3.5rem] hover:shadow-xl transition-all flex flex-col justify-between">
+          <div key={pack.id} className="bg-white border border-slate-100 p-10 rounded-[3.5rem] hover:shadow-xl transition-all flex flex-col justify-between min-h-[400px]">
             <div>
               <div className="text-4xl mb-6">{pack.icon}</div>
               <h3 className="font-black italic text-xl text-slate-900 mb-1">{pack.name}</h3>
@@ -121,8 +122,8 @@ function ShopContent() {
                 <span className="text-xs font-black text-teal-600 uppercase">Li</span>
               </div>
             </div>
-            {/* PayPal Button Container */}
-            <div id={`paypal-container-${pack.id}`} className="w-full"></div>
+            {/* PayPal Button Container - Assuré d'être vide au départ */}
+            <div id={`paypal-container-${pack.id}`} className="w-full min-h-[150px]"></div>
           </div>
         ))}
       </div>
