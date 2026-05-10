@@ -76,6 +76,8 @@ export default function PublishPage() {
     const cleanContent = content.trim();
     if (!title.trim()) return toast.error("Votre œuvre a besoin d'un titre.");
     if (cleanContent.length === 0) return toast.error("Le Grand Livre ne peut pas sceller une page blanche.");
+    // Ajout de la sécurité 10k au submit pour correspondre au visuel
+    if (cleanContent.length > 10000) return toast.error("Votre texte dépasse la limite de 10 000 caractères.");
 
     setLoading(true);
     const toastId = toast.loading("Publication et notification des abonnés...");
@@ -271,8 +273,9 @@ export default function PublishPage() {
               />
               <div className="flex items-center justify-between">
                 <p className="text-[9px] font-black text-teal-600 uppercase tracking-widest">Registre de l'Atelier</p>
-                <div className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-colors ${content.length > 2800 ? 'text-rose-500 border-rose-100 bg-rose-50' : 'text-slate-300 border-slate-100'}`}>
-                  {content.length.toLocaleString()} caractères
+                {/* Modifié : seuil visuel à 10 000 */}
+                <div className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-colors ${content.length > 10000 ? 'text-rose-500 border-rose-100 bg-rose-50' : 'text-slate-300 border-slate-100'}`}>
+                  {content.length.toLocaleString()} / 10 000 caractères
                 </div>
               </div>
             </div>
@@ -297,4 +300,3 @@ export default function PublishPage() {
     </div>
   );
 }
-
