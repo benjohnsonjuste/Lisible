@@ -67,7 +67,7 @@ export default function CadeauLi() {
     if (user.li < amount) {
       toast.error("Solde insuffisant pour ce cadeau.");
       setTimeout(() => {
-        router.push(`/shop?for=${targetEmail || user.email}&back=gift`);
+        router.push("/shop");
       }, 2000);
       return;
     }
