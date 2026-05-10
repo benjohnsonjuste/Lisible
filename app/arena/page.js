@@ -22,7 +22,7 @@ export default function ArenaPage() {
       description: "L'arène sacrée où le verbe se fait flamme. Un affrontement poétique mondial pour les maîtres de la rime et du rythme.",
       href: "/battle",
       icon: <Flame className="text-orange-500" size={32} />,
-      status: "Saison 2 en cours",
+      status: "Saison 2 terminée",
       color: "from-orange-500/10 to-amber-500/10",
       border: "border-orange-100",
       label: "Poésie"
@@ -57,7 +57,7 @@ export default function ArenaPage() {
                 <span className="text-teal-600">Lisible.</span>
               </h1>
               <p className="text-slate-500 font-medium max-w-lg leading-relaxed text-lg">
-                La plateforme de streaming littéraire **Lisible**, propulsée par le label **La Belle Littéraire**, 
+                La plateforme de streaming littéraire Lisible, propulsée par le label La Belle Littéraire, 
                 devient le théâtre des plus grands prix internationaux. Découvrez nos galeries de compétitions.
               </p>
             </div>
@@ -144,7 +144,7 @@ export default function ArenaPage() {
           <div className="text-center">
             <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 mb-2">Hébergé par Lisible</p>
             <p className="text-sm font-black italic text-slate-900">
-              Un projet du label <span className="text-teal-600">La Belle Littéraire</span>
+              Une plateforme du label <span className="text-teal-600">La Belle Littéraire</span>
             </p>
           </div>
         </footer>
