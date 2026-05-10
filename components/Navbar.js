@@ -6,7 +6,6 @@ import { useRouter, usePathname } from "next/navigation";
 import Pusher from "pusher-js";
 import { toast } from "sonner";
 import ThemeToggle from "./ThemeToggle"; 
-import CadeauLi from "./CadeauLi"; // Import du composant Cadeau
 
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
@@ -20,7 +19,6 @@ export default function Navbar() {
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false); // État pour la modale cadeaux
 
   const syncUnreadCount = async (email) => {
     try {
@@ -143,7 +141,7 @@ export default function Navbar() {
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
-    { href: "/arena", label: "Arène", icon: <Trophy size={20} /> },
+    { href: "/arena", label: "Arène d'écriture", icon: <Trophy size={20} /> },
     { href: "/salon", label: "Salon Lisible", icon: <MessageSquare size={20} /> },
     { href: "/shop", label: "Réserve de Li", icon: <ShoppingBag size={20} /> },
     { href: "/studio/podcast", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
@@ -265,13 +263,14 @@ export default function Navbar() {
               </Link>
             )))}
             
-            <button 
-              onClick={() => { setIsMenuOpen(false); setIsGiftModalOpen(true); }}
-              className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"
+            <Link 
+              href="/cadeau"
+              onClick={() => setIsMenuOpen(false)}
+              className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm ${pathname === "/cadeau" ? "bg-slate-950 dark:bg-white text-white dark:text-slate-900 shadow-xl" : "text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"}`}
             >
-              <span className="text-slate-300 dark:text-slate-600"><Gift size={20} /></span>
-              <span className="flex-grow text-left">Cadeaux</span>
-            </button>
+              <span className={pathname === "/cadeau" ? "text-teal-400" : "text-slate-300 dark:text-slate-600"}><Gift size={20} /></span>
+              <span className="flex-grow">Cadeaux</span>
+            </Link>
           </nav>
 
           <footer className="mt-auto pt-10 pb-4 text-center shrink-0">
@@ -281,20 +280,6 @@ export default function Navbar() {
           </footer>
         </div>
       </aside>
-
-      {isGiftModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
-          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
-            <button 
-              onClick={() => setIsGiftModalOpen(false)}
-              className="absolute -top-12 right-0 p-2 text-white hover:text-teal-400 transition-colors"
-            >
-              <X size={32} />
-            </button>
-            <CadeauLi />
-          </div>
-        </div>
-      )}
 
       {isMenuOpen && <div onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />}
     </>
