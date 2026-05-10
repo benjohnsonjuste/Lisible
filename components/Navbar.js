@@ -6,11 +6,12 @@ import { useRouter, usePathname } from "next/navigation";
 import Pusher from "pusher-js";
 import { toast } from "sonner";
 import ThemeToggle from "./ThemeToggle"; 
+import CadeauLi from "./CadeauLi"; // Import du composant Cadeau
 
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, X, Sparkles,
-  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, UserPlus, Mic2, Clapperboard
+  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, Mic2, Clapperboard, Gift, Trophy, ShoppingBag
 } from "lucide-react";
 
 export default function Navbar() {
@@ -19,8 +20,8 @@ export default function Navbar() {
   const [user, setUser] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false); // État pour la modale cadeaux
 
-  // Fonction pour rafraîchir le compteur depuis la DB
   const syncUnreadCount = async (email) => {
     try {
       const res = await fetch(`/api/github-db?type=user&id=${email}`);
@@ -36,7 +37,6 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    // 1. Hydratation initiale
     const loggedUser = localStorage.getItem("lisible_user");
     const currentUser = loggedUser ? JSON.parse(loggedUser) : null;
     setUser(currentUser);
@@ -48,7 +48,6 @@ export default function Navbar() {
       if (savedCount) setUnreadCount(parseInt(savedCount));
     }
 
-    // 2. Configuration Pusher
     const pusher = new Pusher('1da55287e2911ceb01dd', { cluster: 'us2' });
     const channel = pusher.subscribe('global-notifications');
     
@@ -64,7 +63,6 @@ export default function Navbar() {
         return next;
       });
 
-      // Feedback Audio
       const playNotifSound = () => {
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -113,7 +111,6 @@ export default function Navbar() {
     };
     
     window.addEventListener('storage', handleStorageChange);
-    // Écouteur personnalisé pour les mises à jour internes de l'application
     window.addEventListener('sync-notifications', () => currentUser?.email && syncUnreadCount(currentUser.email));
 
     return () => {
@@ -136,7 +133,9 @@ export default function Navbar() {
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
     { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
+    { href: "/arena", label: "Arène", icon: <Trophy size={20} /> }, // Ajout Arène
     { href: "/salon", label: "Salon Lisible", icon: <MessageSquare size={20} /> },
+    { href: "/shop", label: "Réserve de Li", icon: <ShoppingBag size={20} /> }, // Ajout Shop
     { href: "/studio/podcast", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
     { href: "/dashboard", label: "Tableau de bord", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/community", label: "Communauté", icon: <Users size={20} /> },
@@ -255,6 +254,15 @@ export default function Navbar() {
                 <span className="flex-grow">{item.label}</span>
               </Link>
             )))}
+            
+            {/* Bouton Cadeaux - Ouvre la modale */}
+            <button 
+              onClick={() => { setIsMenuOpen(false); setIsGiftModalOpen(true); }}
+              className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600"
+            >
+              <span className="text-slate-300 dark:text-slate-600"><Gift size={20} /></span>
+              <span className="flex-grow text-left">Cadeaux</span>
+            </button>
           </nav>
 
           <footer className="mt-auto pt-10 pb-4 text-center shrink-0">
@@ -264,6 +272,21 @@ export default function Navbar() {
           </footer>
         </div>
       </aside>
+
+      {/* Modale CadeauLi */}
+      {isGiftModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
+          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setIsGiftModalOpen(false)}
+              className="absolute -top-12 right-0 p-2 text-white hover:text-teal-400 transition-colors"
+            >
+              <X size={32} />
+            </button>
+            <CadeauLi />
+          </div>
+        </div>
+      )}
 
       {isMenuOpen && <div onClick={() => setIsMenuOpen(false)} className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />}
     </>
