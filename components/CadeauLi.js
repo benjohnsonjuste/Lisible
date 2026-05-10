@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Send, Gift, Loader2, AlertCircle, Search, Users } from "lucide-react";
+import { Send, Gift, Loader2, AlertCircle, CheckCircle2, Circle, Users } from "lucide-react";
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -13,14 +13,13 @@ export default function CadeauLi() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [targetEmail, setTargetEmail] = useState("");
+  const [targetEmail, setTargetEmail] = useState(""); // Stocke l'utilisateur sélectionné
   const [amount, setAmount] = useState(250);
   const [allEmails, setAllEmails] = useState([]);
   const [isFetchingUsers, setIsFetchingUsers] = useState(false);
 
   const MIN_GIFT = 250;
 
-  // Récupération des utilisateurs (même technique que la page admin/signaux)
   useEffect(() => {
     const logged = localStorage.getItem("lisible_user");
     if (logged) setUser(JSON.parse(logged));
@@ -47,9 +46,19 @@ export default function CadeauLi() {
     fetchAllUsers();
   }, []);
 
+  // Logique de sélection identique à LanceurDeSignaux
+  const toggleUser = (email) => {
+    if (targetEmail === email) {
+      setTargetEmail(""); // Désélectionne si on reclique
+    } else {
+      setTargetEmail(email); // Sélectionne le nouveau
+    }
+  };
+
   const handleSendGift = async (e) => {
     e.preventDefault();
     if (!user) return toast.error("Connectez-vous pour offrir des Li.");
+    if (!targetEmail) return toast.error("Sélectionnez un destinataire.");
     
     if (amount < MIN_GIFT) {
       return toast.error(`Le don minimum est de ${MIN_GIFT} Li.`);
@@ -110,28 +119,40 @@ export default function CadeauLi() {
       </div>
 
       <form onSubmit={handleSendGift} className="space-y-6">
-        {/* Destinataire avec Auto-complétion */}
+        {/* Section de listing inspirée de LanceurDeSignaux */}
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block flex justify-between">
-            Email de la plume
-            {isFetchingUsers && <Loader2 size={10} className="animate-spin" />}
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2 mb-2 block">
+            Choisir une plume {targetEmail && "✓"}
           </label>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-            <input
-              type="email"
-              list="users-list"
-              required
-              value={targetEmail}
-              onChange={(e) => setTargetEmail(e.target.value)}
-              placeholder="Sélectionner ou saisir un email"
-              className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:ring-2 focus:ring-teal-500/20 transition-all"
-            />
-            <datalist id="users-list">
-              {allEmails.map((email) => (
-                <option key={email} value={email} />
-              ))}
-            </datalist>
+          
+          <div className="max-h-48 overflow-y-auto bg-slate-50 rounded-[2rem] p-4 border border-slate-100 space-y-2 custom-scrollbar">
+            {isFetchingUsers ? (
+              <div className="flex items-center justify-center py-6 text-[10px] font-bold text-slate-400 uppercase animate-pulse">
+                <Loader2 size={14} className="animate-spin mr-2" /> Recherche des plumes...
+              </div>
+            ) : allEmails.length === 0 ? (
+              <div className="flex items-center justify-center py-6 text-[10px] font-bold text-slate-400 uppercase">Aucun utilisateur trouvé</div>
+            ) : (
+              allEmails.map(email => (
+                <button 
+                  key={email}
+                  type="button"
+                  onClick={() => toggleUser(email)}
+                  className={`flex items-center justify-between w-full p-3 rounded-xl border transition-all shadow-sm ${
+                    targetEmail === email ? 'bg-teal-50 border-teal-200' : 'bg-white border-transparent hover:border-teal-100'
+                  }`}
+                >
+                  <span className={`text-[11px] font-bold truncate ${targetEmail === email ? 'text-teal-700' : 'text-slate-600'}`}>
+                    {email}
+                  </span>
+                  {targetEmail === email ? (
+                    <CheckCircle2 size={16} className="text-teal-500" />
+                  ) : (
+                    <Circle size={16} className="text-slate-200" />
+                  )}
+                </button>
+              ))
+            )}
           </div>
         </div>
 
