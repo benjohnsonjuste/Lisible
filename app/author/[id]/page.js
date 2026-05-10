@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { 
   Loader2, ShieldCheck, Award, Heart, Eye, BookOpen, 
-  FileText, ExternalLink 
+  FileText, ExternalLink, Gift 
 } from 'lucide-react';
 import Link from 'next/link';
+import CadeauLi from '@/components/CadeauLi'; // Import du composant cadeau
 
 export default function AuthorProfile() {
   const params = useParams();
@@ -14,13 +15,13 @@ export default function AuthorProfile() {
   const [author, setAuthor] = useState(null);
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showGiftModal, setShowGiftModal] = useState(false);
 
   useEffect(() => {
     async function fetchAuthorData() {
       try {
         const cleanEmail = authorEmail.toLowerCase().trim();
         
-        // Utilisation de la même méthode que le dashboard : realtime-data
         const [userRes, libraryRes] = await Promise.all([
           fetch(`/api/realtime-data?folder=users`),
           fetch(`/api/realtime-data?folder=publications`)
@@ -29,13 +30,11 @@ export default function AuthorProfile() {
         const userData = await userRes.json();
         const libraryData = await libraryRes.json();
 
-        // 1. Trouver le profil de l'auteur dans la liste des utilisateurs
         const targetAuthor = userData.content?.find(u => u.email?.toLowerCase().trim() === cleanEmail);
         if (targetAuthor) {
           setAuthor(targetAuthor);
         }
 
-        // 2. Filtrer les publications (même logique que le dashboard)
         const allPubs = Array.isArray(libraryData.content[0]) ? libraryData.content[0] : (libraryData.content || []);
         if (Array.isArray(allPubs)) {
           const authorWorks = allPubs
@@ -64,29 +63,56 @@ export default function AuthorProfile() {
 
   return (
     <div className="min-h-screen bg-[#FCFBF9] pb-20">
+      {/* En-tête du profil */}
       <div className="bg-white border-b border-slate-100 p-10">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-8">
-          <img 
-            src={author.profilePic || author.image || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author.email}`} 
-            className="w-32 h-32 rounded-3xl bg-slate-900 shadow-xl object-cover"
-            alt={author.name}
-          />
-          <div className="space-y-2">
-            <h1 className="text-4xl font-black italic text-slate-900 tracking-tighter">
-                {author.name || author.penName || author.fullName}
-            </h1>
-            <div className="flex gap-4">
-              <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400">
-                <Award size={14} className="text-amber-500" /> {author.li || 0} Points Li
-              </span>
-              <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400">
-                <Heart size={14} className="text-rose-500" /> {author.followers?.length || 0} Abonnés
-              </span>
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <img 
+              src={author.profilePic || author.image || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${author.email}`} 
+              className="w-32 h-32 rounded-3xl bg-slate-900 shadow-xl object-cover"
+              alt={author.name}
+            />
+            <div className="space-y-2 text-center md:text-left">
+              <h1 className="text-4xl font-black italic text-slate-900 tracking-tighter">
+                  {author.name || author.penName || author.fullName}
+              </h1>
+              <div className="flex gap-4 justify-center md:justify-start">
+                <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400">
+                  <Award size={14} className="text-amber-500" /> {author.li || 0} Points Li
+                </span>
+                <span className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-400">
+                  <Heart size={14} className="text-rose-500" /> {author.followers?.length || 0} Abonnés
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Bouton pour déclencher le transfert de Li */}
+          <button 
+            onClick={() => setShowGiftModal(!showGiftModal)}
+            className="flex items-center gap-3 bg-teal-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-teal-100 active:scale-95"
+          >
+            <Gift size={18} /> Offrir des Li
+          </button>
         </div>
       </div>
 
+      {/* Zone d'envoi de cadeaux (affichée si bouton cliqué) */}
+      {showGiftModal && (
+        <div className="max-w-5xl mx-auto px-6 mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="relative">
+            <button 
+              onClick={() => setShowGiftModal(false)}
+              className="absolute top-4 right-4 z-10 text-slate-300 hover:text-slate-900 transition-colors"
+            >
+              Fermer
+            </button>
+            <CadeauLi />
+          </div>
+        </div>
+      )}
+
+      {/* Liste des publications */}
       <div className="max-w-5xl mx-auto px-6 mt-12 space-y-8">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <h2 className="text-2xl font-black italic tracking-tighter text-slate-900 flex items-center gap-2">
