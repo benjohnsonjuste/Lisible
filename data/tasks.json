@@ -1,0 +1,13 @@
+[
+  {
+    "id": "task-1715412000",
+    "title": "Correction de manuscrit (50 pages)",
+    "description": "Recherche d'un correcteur pour un roman de fantasy. Focus sur la syntaxe.",
+    "clientEmail": "user@exemple.com",
+    "writerEmail": null,
+    "status": "open",
+    "priceLi": 15000,
+    "category": "Correction",
+    "createdAt": "2026-05-11T01:30:00Z"
+  }
+]
