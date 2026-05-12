@@ -3,12 +3,20 @@
   "name": "Mbuku Nuni",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "reset_1778595524007",
+      "type": "security",
+      "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+      "date": "2026-05-12T14:18:44.007Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
   "created_at": "2026-05-05T00:11:29.439Z",
-  "password": "$2b$10$V2jN0De.FFB7tbAmmwWa5ewVexqDhpSwA5lM2vnjWAYQYE/v/npVS",
+  "password": "$2b$10$NPh.4yMG0fz4PG7rGIsMj.UKmGGccIR/iFMVFPT3lczsHZJwXpPD2",
   "referralCode": null,
   "guestBonus": 0
 }
