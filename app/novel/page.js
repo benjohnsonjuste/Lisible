@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { 
   Trophy, Loader2, BookOpen, PenTool, Eye, 
-  Heart, Share2, ArrowRight, RefreshCcw, Swords, Coins, Sparkles, Feather, Gift, X
+  Heart, Share2, ArrowRight, RefreshCcw, Swords, Coins, Sparkles, Feather, Gift, X, AlignLeft
 } from "lucide-react";
 import { toast } from "sonner";
 import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
@@ -73,7 +73,6 @@ export default function DuelDesNouvelles() {
     e.preventDefault(); e.stopPropagation();
     const loggedUser = localStorage.getItem("lisible_user");
     if (!loggedUser) return toast.error("Connectez-vous pour offrir un cadeau");
-    // On passe l'objet auteur simulé pour le composant CadeauLi
     setGiftRecipient({ email: item.authorEmail, name: item.authorName || item.author });
   };
 
@@ -100,7 +99,6 @@ export default function DuelDesNouvelles() {
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link href="/library" className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"><BookOpen size={16} /> Archives</Link>
-            
             <div className="flex items-center justify-center gap-3 bg-slate-200 text-slate-400 px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest cursor-not-allowed grayscale opacity-60">
               <PenTool size={18} /> Entrer dans la lice
             </div>
@@ -118,15 +116,18 @@ export default function DuelDesNouvelles() {
                 return (
                   <Link href={`/texts/${item.id}`} key={item.id} className="group relative w-full">
                     <div className={`bg-white rounded-[2.5rem] sm:rounded-[4rem] overflow-hidden border transition-all duration-700 flex flex-col h-full ${isLeader ? "border-amber-200 shadow-2xl ring-2 ring-amber-100" : "border-slate-100 shadow-xl shadow-slate-200/40 hover:border-teal-200"}`}>
-                      {isLeader && <div className="absolute -top-3 -left-3 z-40 rotate-[-12deg] bg-amber-400 text-slate-900 px-6 py-2 rounded-xl shadow-xl border-2 border-white flex items-center gap-2"><Sparkles size={14} className="animate-pulse" /><span className="text-[10px] font-black uppercase">Premier Rang</span></div>}
+                      {isLeader && <div className="absolute -top-3 -left-3 z-40 rotate-[-12deg] bg-amber-400 text-slate-900 px-6 py-2 rounded-xl shadow-xl border-2 border-white flex items-center gap-2"><Sparkles size={14} className="animate-pulse" /><span className="text-[10px] font-black uppercase">Légende</span></div>}
                       <div className={`p-6 sm:p-8 flex justify-between items-center ${isLeader ? 'bg-amber-50/50' : 'bg-slate-50/30'}`}>
                         <div className="flex items-center gap-4">
                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${isLeader ? 'bg-amber-400 text-white' : 'bg-slate-900 text-white'}`}>{index + 1}</div>
-                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Hiérarchie</span>
+                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Position</span>
                         </div>
                         <div className="flex gap-2">
-                          {/* BOUTON CADEAU */}
-                          <button onClick={(e) => openGiftModal(e, item)} className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100" title="Soutenir avec des Li">
+                          <button 
+                            onClick={(e) => openGiftModal(e, item)} 
+                            className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-teal-100"
+                            title="Soutenir avec des Li"
+                          >
                             <Gift size={18} />
                           </button>
                           <button onClick={(e) => handleShare(e, item)} className="p-4 bg-white text-slate-900 rounded-2xl hover:bg-teal-600 hover:text-white transition-all shadow-sm border border-slate-100"><Share2 size={18} /></button>
@@ -134,13 +135,13 @@ export default function DuelDesNouvelles() {
                       </div>
                       <div className="p-8 sm:p-12 flex-grow flex flex-col">
                         <div className="flex flex-wrap items-center gap-3 mb-6">
-                           <span className="text-[9px] font-black text-teal-600 uppercase bg-teal-50 px-3 py-1 rounded-lg"><Feather size={10} className="inline mr-1" /> Duel</span>
+                           <span className="text-[9px] font-black text-teal-600 uppercase bg-teal-50 px-3 py-1 rounded-lg"><Feather size={10} className="inline mr-1" /> {item.category || "Duel"}</span>
                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest truncate">{authorName}</span>
                         </div>
                         <h2 className="text-2xl sm:text-4xl font-black italic text-slate-900 group-hover:text-teal-600 transition-colors mb-6 leading-tight">{item.title}</h2>
-                        <p className="text-slate-500 line-clamp-4 font-serif italic mb-10 text-lg leading-relaxed flex-grow">{item.content?.replace(/<[^>]*>/g, '').substring(0, 300) || 'Découvrir le manuscrit...'}</p>
+                        <p className="text-slate-500 line-clamp-4 font-serif italic mb-10 text-lg leading-relaxed flex-grow">{item.content?.replace(/<[^>]*>/g, '').substring(0, 300) || 'Lire la suite...'}</p>
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-8 border-t border-slate-50">
-                          <div className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-black text-[12px] border ${liPoints > 0 ? "bg-amber-50 border-amber-200 text-amber-600 shadow-inner" : "bg-slate-50 border-slate-100 text-slate-300"}`}><Coins size={16} className={liPoints > 0 ? "animate-pulse" : ""}/> {liPoints} <span className="text-[9px] opacity-60 ml-1 uppercase">Sceaux</span></div>
+                          <div className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl font-black text-[12px] border ${liPoints > 0 ? "bg-amber-50 border-amber-200 text-amber-600 shadow-inner" : "bg-slate-50 border-slate-100 text-slate-300"}`}><Coins size={16} className={liPoints > 0 ? "animate-pulse" : ""}/> {liPoints} <span className="text-[9px] opacity-60 ml-1 uppercase">Li</span></div>
                           <div className="flex gap-6 text-slate-400 font-black text-[11px]">
                             <div className="flex items-center gap-2"><Eye size={18} className="text-slate-200"/> {item.views || 0}</div>
                             <div className={`flex items-center gap-2 ${Number(item.likes) > 0 ? 'text-rose-500' : ''}`}><Heart size={20} fill={Number(item.likes) > 0 ? "currentColor" : "none"}/> {item.likes || 0}</div>
@@ -156,7 +157,6 @@ export default function DuelDesNouvelles() {
             <div className="py-40 text-center space-y-10 bg-white rounded-[5rem] border-2 border-dashed border-slate-100">
               <Swords size={30} className="text-slate-200 mx-auto" />
               <h3 className="font-black uppercase text-slate-900 tracking-[0.3em]">Aucun duel engagé</h3>
-              
               <div className="inline-flex items-center gap-3 bg-slate-200 text-slate-400 px-12 py-6 rounded-3xl font-black text-[11px] uppercase tracking-widest cursor-not-allowed opacity-60">
                 Publier une Nouvelle <ArrowRight size={18} />
               </div>
