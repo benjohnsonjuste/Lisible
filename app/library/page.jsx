@@ -10,6 +10,8 @@ import {
   ArrowRight,
   Coins,
   AlignLeft,
+  Trophy,
+  Swords,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -59,6 +61,10 @@ export default function LibraryPage() {
           userProfile?.image ||
           null;
 
+        // Détection des concours
+        const isNovelDuel = data.genre === "Duel Des Nouvelles" || data.category === "Duel Des Nouvelles";
+        const isBattlePoetique = data.isConcours === true || ["Battle Poétique", "Battle Poétique International"].includes(data.genre || data.category);
+
         return {
           id:
             data.id ||
@@ -105,6 +111,8 @@ export default function LibraryPage() {
             }`,
 
           date: data.date || "",
+          isNovelDuel,
+          isBattlePoetique
         };
       });
 
@@ -206,14 +214,26 @@ export default function LibraryPage() {
               className="group"
             >
               <div className="h-full bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden">
-                <div className="absolute top-8 right-8">
-                  <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2">
-                    <AlignLeft
-                      size={10}
-                      className="text-teal-400"
-                    />
-                    {text.category}
-                  </span>
+                <div className="absolute top-8 right-8 flex flex-col items-end gap-2">
+                  {text.isNovelDuel ? (
+                    <span className="bg-teal-600 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2 border border-teal-400">
+                      <Swords size={10} className="animate-pulse" />
+                      Duel des Nouvelles
+                    </span>
+                  ) : text.isBattlePoetique ? (
+                    <span className="bg-emerald-700 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2">
+                      <Trophy size={10} className="animate-bounce" />
+                      Duel de Plume
+                    </span>
+                  ) : (
+                    <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2">
+                      <AlignLeft
+                        size={10}
+                        className="text-teal-400"
+                      />
+                      {text.category}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-6">
