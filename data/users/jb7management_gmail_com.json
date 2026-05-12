@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1778558981527",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La nuit sera longue\" !",
+      "date": "2026-05-12T04:09:41.527Z",
+      "read": false
+    },
+    {
       "id": "staff_1773365246333",
       "type": "info",
       "message": "Vérification de connexion staff",
