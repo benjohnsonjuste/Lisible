@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords } from "lucide-react";
@@ -10,7 +10,7 @@ import ReportModal from "@/components/ReportModal";
 import SceauCertification from "@/components/reader/SceauCertification";
 import CommentSection from "@/components/reader/CommentSection";
 import SocialMargins from "@/components/reader/SocialMargins";
-import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
+import CadeauLi from "@/components/CadeauLi"; 
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
@@ -48,9 +48,13 @@ const TextContent = ({ id }) => {
   const [isLiking, setIsLiking] = useState(false);
   const [authorProfile, setAuthorProfile] = useState(null);
   const [isReportModalOpen, setReportModalOpen] = useState(false);
-  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false); // État pour le cadeau
+  const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  
+  // TECHNIQUE VUES RÉELLES (Inspirée du composant A)
+  const [liveViews, setLiveViews] = useState(0);
+  const viewLogged = useRef(false);
 
   const moodConfig = useMemo(() => ({
     melancholic: { bg: "bg-[#0F111A]", text: "text-slate-300", title: "text-white", accent: "text-indigo-400", ui: "bg-indigo-900/30 text-indigo-300", icon: <Ghost size={12}/>, label: "Mélancolique" },
@@ -80,12 +84,16 @@ const TextContent = ({ id }) => {
       const res = await fetch(`https://lisible.biz/api/github-db?type=text&id=${id}`);
       if (res.ok) {
         const result = await res.json();
-        setData(result.content);
+        const content = result.content;
+        setData(content);
+        
+        // Mise à jour des vues réelles
+        setLiveViews(content.views || 0);
 
         const usersRes = await fetch(`/api/realtime-data?folder=users`);
         const usersJson = await usersRes.json();
         const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
-        const author = allUsers.find(u => (u.email || "").toLowerCase().trim() === (result.content.authorEmail || "").toLowerCase().trim());
+        const author = allUsers.find(u => (u.email || "").toLowerCase().trim() === (content.authorEmail || "").toLowerCase().trim());
         if (author) setAuthorProfile(author.profilePic || author.image || null);
       }
     } catch (error) { 
@@ -208,7 +216,8 @@ const TextContent = ({ id }) => {
               </span>
             )}
             <div className="ml-auto flex items-center gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-tighter">
-              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-md"><Eye size={14}/> {data.views || 0}</span>
+              {/* UTILISATION DES VUES RÉELLES ICI */}
+              <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-md"><Eye size={14}/> {liveViews}</span>
               <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-md"><Clock size={14}/> {Math.ceil((data.content?.length || 0) / 1000)} min</span>
             </div>
           </div>
@@ -259,12 +268,11 @@ const TextContent = ({ id }) => {
         onReport={() => setReportModalOpen(true)} 
         handleLike={handleLike}
         handleShare={handleShare}
-        onGift={() => user ? setIsGiftModalOpen(true) : toast.error("Connectez-vous pour offrir des Li")} // Ajout action cadeau
+        onGift={() => user ? setIsGiftModalOpen(true) : toast.error("Connectez-vous pour offrir des Li")} 
         textId={id}
         isLoading={isLiking}
       />
 
-      {/* MODALE CADEAU */}
       {isGiftModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-6">
           <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
