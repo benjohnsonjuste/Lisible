@@ -3,7 +3,15 @@
   "name": "Ouellette André",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1778600269352",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Duel de Nouvelles: 1er tour\" !",
+      "date": "2026-05-12T15:37:49.352Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
