@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "reset_1778595567816",
+      "type": "security",
+      "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+      "date": "2026-05-12T14:19:27.816Z",
+      "read": false
+    },
+    {
       "id": "reset_1778595524007",
       "type": "security",
       "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
@@ -16,7 +23,7 @@
   "following": [],
   "works": [],
   "created_at": "2026-05-05T00:11:29.439Z",
-  "password": "$2b$10$NPh.4yMG0fz4PG7rGIsMj.UKmGGccIR/iFMVFPT3lczsHZJwXpPD2",
+  "password": "$2b$10$nwmlX5v8LynWrICJs9sltOOI9yXqQBiEegUbEfHdPqoiZHx8dyuqK",
   "referralCode": null,
   "guestBonus": 0
 }
