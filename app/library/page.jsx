@@ -12,6 +12,7 @@ import {
   AlignLeft,
   Trophy,
   Swords,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -23,110 +24,63 @@ export default function LibraryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  // 🔥 Méthode inspirée de TextContent
+  // 🔥 Méthode adaptée selon la technique de la page library A
   const loadLibraryData = useCallback(async () => {
     try {
       // Profils utilisateurs
       const usersRes = await fetch(`/api/realtime-data?folder=users`);
       const usersJson = await usersRes.json();
+      const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
 
-      const allUsers = Array.isArray(usersJson.content)
-        ? usersJson.content
-        : [];
-
-      // 🔥 API temps réel identique à TextContent
-      const textsRes = await fetch(`/api/realtime-data?folder=texts`);
+      // API Bibliothèque (identique à TextContent / Library A)
+      const textsRes = await fetch(`/api/github-db?type=library`);
       const textsJson = await textsRes.json();
-
-      const rawTexts = Array.isArray(textsJson.content)
-        ? textsJson.content
-        : [];
+      const rawTexts = Array.isArray(textsJson.content) ? textsJson.content : [];
 
       const parsedTexts = rawTexts.map((data, index) => {
-        const email = (
-          data.authorEmail ||
-          data.email ||
-          ""
-        )
-          .toLowerCase()
-          .trim();
-
+        const email = (data.authorEmail || data.email || "").toLowerCase().trim();
         const userProfile = allUsers.find(
-          (u) =>
-            (u.email || "").toLowerCase().trim() === email
+          (u) => (u.email || "").toLowerCase().trim() === email
         );
 
-        const realImage =
-          userProfile?.profilePic ||
-          userProfile?.image ||
-          null;
+        const realImage = userProfile?.profilePic || userProfile?.image || null;
 
         // Détection des concours
         const isNovelDuel = data.genre === "Duel Des Nouvelles" || data.category === "Duel Des Nouvelles";
         const isBattlePoetique = data.isConcours === true || ["Battle Poétique", "Battle Poétique International"].includes(data.genre || data.category);
 
         return {
-          id:
-            data.id ||
-            data.fileName ||
-            data.slug ||
-            `text-${index}`,
+          id: data.id || data.fileName || data.slug || `text-${index}`,
+          title: data.title || data.textTitle || "Texte sans titre",
+          authorName: data.author || data.authorName || data.penName || "Plume Anonyme",
+          
+          // 🔥 Stats réelles selon technique library A
+          views: Number(data.views || data.totalViews || 0),
+          likes: Number(data.likes || data.totalLikes || 0),
+          li: Number(data.certified || data.totalCertified || data.li || 0),
 
-          title:
-            data.title ||
-            data.textTitle ||
-            "Texte sans titre",
-
-          authorName:
-            data.author ||
-            data.authorName ||
-            data.penName ||
-            "Plume Anonyme",
-
-          // 🔥 Stats temps réel
-          views: Number(data.views || 0),
-
-          likes: Number(
-            data.likes ||
-              data.totalLikes ||
-              0
-          ),
-
-          li: Number(
-            data.certified ||
-              data.totalCertified ||
-              data.li ||
-              0
-          ),
-
-          category:
-            data.category ||
-            data.genre ||
-            "Littérature",
-
-          image:
-            realImage ||
-            `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${
-              email || index
-            }`,
-
+          category: data.category || data.genre || "Littérature",
+          image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || index}`,
           date: data.date || "",
           isNovelDuel,
-          isBattlePoetique
+          isBattlePoetique,
+          hasSceau: Number(data.certified || data.totalCertified || 0) > 0
         };
       });
 
-      // 🔥 Tri live sur les vues
-      const sorted = parsedTexts.sort(
-        (a, b) => b.views - a.views
-      );
+      // 🔥 Tri identique à la library A (Certifiés d'abord, puis Likes, puis Date)
+      const sorted = parsedTexts.sort((a, b) => {
+        if (b.li !== a.li) return b.li - a.li;
+        if (b.likes !== a.likes) return b.likes - a.likes;
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      });
 
       setTexts(sorted);
     } catch (e) {
       console.error(e);
-      toast.error(
-        "Impossible de joindre la bibliothèque."
-      );
+      toast.error("Impossible de joindre la bibliothèque.");
     } finally {
       setLoading(false);
     }
@@ -138,36 +92,28 @@ export default function LibraryPage() {
     loadLibraryData();
   }, [loadLibraryData]);
 
-  // 🔥 Refresh temps réel automatique
+  // Refresh temps réel automatique
   useEffect(() => {
     const interval = setInterval(() => {
       loadLibraryData();
-    }, 15000); // refresh toutes les 15 sec
-
+    }, 30000); // 30 sec comme Library A
     return () => clearInterval(interval);
   }, [loadLibraryData]);
 
   const filteredTexts = useMemo(() => {
     return texts.filter(
       (t) =>
-        t.title
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        t.authorName
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
+        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.authorName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [texts, searchTerm]);
 
   if (!mounted) return null;
 
-  if (loading)
+  if (loading && texts.length === 0)
     return (
       <div className="min-h-screen bg-[#FCFBF9] flex items-center justify-center">
-        <Loader2
-          className="animate-spin text-teal-600"
-          size={40}
-        />
+        <Loader2 className="animate-spin text-teal-600" size={40} />
       </div>
     );
 
@@ -182,7 +128,6 @@ export default function LibraryPage() {
           <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">
             Lisible.
           </h1>
-
           <p className="mt-6 text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px] ml-2">
             Exploration des textes
           </p>
@@ -193,14 +138,11 @@ export default function LibraryPage() {
             className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-teal-600 transition-colors"
             size={20}
           />
-
           <input
             type="text"
             placeholder="Rechercher un titre ou un auteur..."
             className="w-full bg-white border-2 border-slate-50 rounded-[2rem] pl-16 pr-8 py-5 shadow-xl outline-none focus:border-teal-500 transition-all font-bold text-sm"
-            onChange={(e) =>
-              setSearchTerm(e.target.value)
-            }
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </header>
@@ -208,11 +150,7 @@ export default function LibraryPage() {
       {filteredTexts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {filteredTexts.map((text) => (
-            <Link
-              href={`/texts/${text.id}`}
-              key={text.id}
-              className="group"
-            >
+            <Link href={`/texts/${text.id}`} key={text.id} className="group">
               <div className="h-full bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl transition-all hover:shadow-2xl hover:-translate-y-2 flex flex-col justify-between relative overflow-hidden">
                 <div className="absolute top-8 right-8 flex flex-col items-end gap-2">
                   {text.isNovelDuel ? (
@@ -227,11 +165,13 @@ export default function LibraryPage() {
                     </span>
                   ) : (
                     <span className="bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl flex items-center gap-2">
-                      <AlignLeft
-                        size={10}
-                        className="text-teal-400"
-                      />
+                      <AlignLeft size={10} className="text-teal-400" />
                       {text.category}
+                    </span>
+                  )}
+                  {text.hasSceau && (
+                    <span className="bg-teal-600 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md">
+                      <ShieldCheck size={10} /> Certifié
                     </span>
                   )}
                 </div>
@@ -239,18 +179,12 @@ export default function LibraryPage() {
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-inner">
-                      <img
-                        src={text.image}
-                        alt="Auteur"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={text.image} alt="Auteur" className="w-full h-full object-cover" />
                     </div>
-
                     <p className="text-[10px] font-black uppercase text-teal-600 tracking-wider italic">
                       {text.authorName}
                     </p>
                   </div>
-
                   <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-[1.1] group-hover:text-teal-600 transition-colors">
                     {text.title}
                   </h2>
@@ -259,52 +193,23 @@ export default function LibraryPage() {
                 <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
                   <div className="flex gap-6">
                     <div className="text-center">
-                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">
-                        Li
-                      </span>
-
+                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">Li</span>
                       <div className="flex items-center gap-1.5 justify-center bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100">
-                        <Coins
-                          size={14}
-                          className="text-amber-500"
-                        />
-
-                        <span className="text-sm font-black text-amber-700">
-                          {text.li}
-                        </span>
+                        <Coins size={14} className="text-amber-500" />
+                        <span className="text-sm font-black text-amber-700">{text.li}</span>
                       </div>
                     </div>
 
                     <div className="text-center">
-                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">
-                        Stats
-                      </span>
-
+                      <span className="block text-[8px] font-black uppercase text-slate-300 tracking-widest mb-2">Stats</span>
                       <div className="flex items-center gap-4 px-1">
                         <div className="flex items-center gap-1.5">
-                          <Eye
-                            size={16}
-                            className="text-slate-200"
-                          />
-
-                          <span className="text-sm font-black text-slate-900">
-                            {text.views}
-                          </span>
+                          <Eye size={16} className="text-slate-200" />
+                          <span className="text-sm font-black text-slate-900">{text.views}</span>
                         </div>
-
                         <div className="flex items-center gap-1.5">
-                          <Heart
-                            size={16}
-                            className={`${
-                              text.likes > 0
-                                ? "text-rose-500 fill-rose-500"
-                                : "text-slate-200"
-                            }`}
-                          />
-
-                          <span className="text-sm font-black text-slate-900">
-                            {text.likes}
-                          </span>
+                          <Heart size={16} className={text.likes > 0 ? "text-rose-500 fill-rose-500" : "text-slate-200"} />
+                          <span className="text-sm font-black text-slate-900">{text.likes}</span>
                         </div>
                       </div>
                     </div>
@@ -320,14 +225,8 @@ export default function LibraryPage() {
         </div>
       ) : (
         <div className="text-center py-40 bg-white rounded-[5rem] border-2 border-dashed border-slate-50">
-          <BookOpen
-            className="mx-auto text-slate-100 mb-6"
-            size={80}
-          />
-
-          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">
-            Le catalogue est silencieux
-          </p>
+          <BookOpen className="mx-auto text-slate-100 mb-6" size={80} />
+          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">Le catalogue est silencieux</p>
         </div>
       )}
     </div>
