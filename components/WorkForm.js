@@ -10,7 +10,7 @@ export default function WorkForm({
   isnovelbattle = false, 
   apiEndpoint = "/api/github-db", 
   requireBattleAcceptance = false,
-  maxChars = 10000, // Modifié : 10000 par défaut pour s'aligner sur le Duel des Nouvelles
+  maxChars = 10000, 
   allowImage = true, 
   submitLabel = "Diffuser",
   onSuccess = null 
@@ -26,8 +26,6 @@ export default function WorkForm({
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // ... (le reste du code demeure inchangé)
-  
   useEffect(() => {
     const storedUser = localStorage.getItem("lisible_user");
     if (!storedUser) {
@@ -96,6 +94,7 @@ export default function WorkForm({
         title: title.trim(),
         content: content.trim(),
         category,
+        email: user.email.toLowerCase().trim(), // Ajouté pour la compatibilité API
         authorName: user.penName || user.name || "Plume Anonyme",
         authorEmail: user.email.toLowerCase().trim(),
         imageBase64,
