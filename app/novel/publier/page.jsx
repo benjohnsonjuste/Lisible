@@ -33,7 +33,7 @@ export default function NovelDuelPublierPage() {
             <WorkForm 
               submitLabel="Lancer le Duel" 
               // On utilise ici l'endpoint spécifique
-              apiEndpoint="/api/novel-battle-db" 
+              apiEndpoint="/api/github-db" 
               isnovelbattle={true}
               isConcours={true}
               requireBattleAcceptance={true}
