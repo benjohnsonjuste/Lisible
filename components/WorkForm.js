@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; 
 import { toast } from "sonner";
-import { Loader2, Image as ImageIcon, X, CheckCircle2, PenTool, Type, BookOpen, Sparkles } from "lucide-react";
+import { Loader2, Image as ImageIcon, X, CheckCircle2, PenTool, Type, BookOpen, Sparkles, Swords } from "lucide-react";
 
 export default function WorkForm({
   initialData = {},
@@ -19,8 +19,8 @@ export default function WorkForm({
   const [user, setUser] = useState(null);
   const [title, setTitle] = useState(initialData.title || "");
   const [content, setContent] = useState(initialData.content || "");
-  const [category, setCategory] = useState(initialData.category || (isnovelbattle ? "Nouvelle" : (isConcours ? "Battle Poétique" : "Poésie")));
-  const [isBattlePoetic, setIsBattlePoetic] = useState(requireBattleAcceptance || false);
+  const [category, setCategory] = useState(initialData.category || (isnovelbattle ? "Duel Des Nouvelles" : (isConcours ? "Battle Poétique" : "Poésie")));
+  const [isBattleAccepted, setIsBattleAccepted] = useState(requireBattleAcceptance || false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(initialData.imageBase64 || null);
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ export default function WorkForm({
     e.preventDefault();
     if (loading) return;
     if (!user?.email) return toast.error("Identité introuvable.");
-    if (requireBattleAcceptance && !isBattlePoetic) return toast.error("Veuillez accepter le défi.");
+    if (requireBattleAcceptance && !isBattleAccepted) return toast.error("Veuillez accepter le défi.");
     if (content.trim().length < 50) return toast.error("Le texte est trop court pour être archivé.");
     if (maxChars && content.length > maxChars) return toast.error(`Le texte dépasse la limite de ${maxChars} caractères.`);
     
@@ -94,12 +94,12 @@ export default function WorkForm({
         title: title.trim(),
         content: content.trim(),
         category,
-        email: user.email.toLowerCase().trim(), // Ajouté pour la compatibilité API
+        email: user.email.toLowerCase().trim(),
         authorName: user.penName || user.name || "Plume Anonyme",
         authorEmail: user.email.toLowerCase().trim(),
         imageBase64,
-        isConcours: isConcours || isnovelbattle || category === "Battle Poétique",
-        isnovelbattle: isnovelbattle || (isConcours && category === "Nouvelle"),
+        isConcours: isConcours || isnovelbattle || ["Battle Poétique", "Duel Des Nouvelles"].includes(category),
+        isnovelbattle: isnovelbattle || category === "Duel Des Nouvelles",
         date: new Date().toISOString()
       };
 
@@ -176,20 +176,26 @@ export default function WorkForm({
     );
   }
 
+  const isDuelNouvelles = isnovelbattle || category === "Duel Des Nouvelles";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-12 font-sans max-w-4xl mx-auto px-4">
       {requireBattleAcceptance && (
         <div className="flex justify-center animate-in fade-in zoom-in duration-700">
           <div 
             className={`p-10 w-full max-w-md rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-4 ${
-              isBattlePoetic ? 'border-rose-500 bg-rose-50 shadow-inner' : 'border-slate-100 bg-white hover:border-slate-200'
+              isBattleAccepted 
+                ? (isDuelNouvelles ? 'border-teal-500 bg-teal-50 shadow-inner' : 'border-rose-500 bg-rose-50 shadow-inner') 
+                : 'border-slate-100 bg-white hover:border-slate-200'
             }`}
-            onClick={() => setIsBattlePoetic(!isBattlePoetic)}
+            onClick={() => setIsBattleAccepted(!isBattleAccepted)}
           >
-            <div className={`p-4 rounded-2xl ${isBattlePoetic ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-300'}`}>
-               <CheckCircle2 size={28} />
+            <div className={`p-4 rounded-2xl ${isBattleAccepted ? (isDuelNouvelles ? 'bg-teal-600 text-white' : 'bg-rose-600 text-white') : 'bg-slate-50 text-slate-300'}`}>
+               {isDuelNouvelles ? <Swords size={28} /> : <CheckCircle2 size={28} />}
             </div>
-            <p className="text-[11px] font-black uppercase text-slate-900 tracking-[0.2em]">Engager le Duel</p>
+            <p className="text-[11px] font-black uppercase text-slate-900 tracking-[0.2em]">
+              {isDuelNouvelles ? "Accepter le Duel" : "Engager le Duel"}
+            </p>
           </div>
         </div>
       )}
@@ -220,7 +226,7 @@ export default function WorkForm({
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full bg-slate-50 border-none rounded-2xl px-8 py-5 font-bold text-slate-600 outline-none focus:bg-white shadow-inner appearance-none cursor-pointer"
               >
-                {["Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique"].map((c) => (
+                {["Poésie", "Nouvelle", "Roman", "Chronique", "Essai", "Battle Poétique", "Duel Des Nouvelles"].map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -284,7 +290,9 @@ export default function WorkForm({
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-slate-950 text-white py-8 rounded-[2.5rem] font-black uppercase tracking-[0.5em] text-[14px] flex justify-center items-center hover:bg-rose-600 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
+          className={`w-full py-8 rounded-[2.5rem] font-black uppercase tracking-[0.5em] text-[14px] flex justify-center items-center transition-all shadow-2xl active:scale-95 disabled:opacity-50 text-white ${
+            isDuelNouvelles ? 'bg-teal-600 hover:bg-teal-700' : 'bg-slate-950 hover:bg-rose-600'
+          }`}
         >
           {loading ? <div className="flex items-center gap-4"><Loader2 className="animate-spin" size={24} /><span>Scellement...</span></div> : submitLabel}
         </button>
