@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X } from "lucide-react";
+import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords } from "lucide-react";
 import FloatingActions from "@/components/reader/FloatingActions";
 import SecurityLock from "@/components/SecurityLock";
 import ReportModal from "@/components/ReportModal";
@@ -18,6 +18,15 @@ function BadgeConcours() {
     <div className="inline-flex items-center gap-2 bg-emerald-700 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8">
       <Trophy size={14} className="animate-bounce" />
       <span className="text-[10px] font-black uppercase tracking-[0.2em]">Duel de Plume</span>
+    </div>
+  );
+}
+
+function BadgeDuelNouvelles() {
+  return (
+    <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8 border border-teal-400">
+      <Swords size={14} className="animate-pulse" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Duel des Nouvelles</span>
     </div>
   );
 }
@@ -156,7 +165,8 @@ const TextContent = ({ id }) => {
   if (!data) return null;
 
   const isAnnouncementAccount = ["adm.lablitteraire7@gmail.com", "cmo.lablitteraire7@gmail.com"].includes(data.authorEmail);
-  const isBattle = data.isConcours === true || ["Battle Poétique", "Duel Des Nouvelles", "Battle Poétique International"].includes(data.genre || data.category);
+  const isNovelDuel = data.genre === "Duel Des Nouvelles" || data.category === "Duel Des Nouvelles";
+  const isBattlePoetique = data.isConcours === true || ["Battle Poétique", "Battle Poétique International"].includes(data.genre || data.category);
 
   return (
     <div className={`min-h-screen transition-all duration-1000 ${isFocusMode ? 'bg-[#050505]' : mood.bg}`}>
@@ -181,7 +191,11 @@ const TextContent = ({ id }) => {
       )}
 
       <main className="max-w-3xl mx-auto px-6 pt-32 pb-48 relative">
-        {!isFocusMode && (isAnnouncementAccount ? <BadgeAnnonce /> : isBattle ? <BadgeConcours /> : null)}
+        {!isFocusMode && (
+          isAnnouncementAccount ? <BadgeAnnonce /> : 
+          isNovelDuel ? <BadgeDuelNouvelles /> : 
+          isBattlePoetique ? <BadgeConcours /> : null
+        )}
 
         <header className={`mb-20 space-y-8 transition-all duration-700 ${isFocusMode ? 'opacity-20 blur-md scale-95' : 'opacity-100'}`}>
           <div className="flex flex-wrap items-center gap-3">
