@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1778600439688",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Toujours\" !",
+      "date": "2026-05-12T15:40:39.688Z",
+      "read": false
+    },
+    {
       "id": "like_1778600269352",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Duel de Nouvelles: 1er tour\" !",
