@@ -3,7 +3,15 @@
   "name": "Chrystel Carte",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1778601724214",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le sel du vent\" !",
+      "date": "2026-05-12T16:02:04.214Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
