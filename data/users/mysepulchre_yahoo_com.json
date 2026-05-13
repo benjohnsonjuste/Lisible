@@ -1,9 +1,16 @@
 {
   "email": "mysepulchre@yahoo.com",
   "name": "Myriam Sepulchre",
-  "li": 50,
+  "li": 51,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1778691350461",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Fuga\" (+1 Li).",
+      "date": "2026-05-13T16:55:50.461Z",
+      "read": false
+    },
     {
       "id": "reset_1778685286446",
       "type": "security",
