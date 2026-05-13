@@ -1,9 +1,16 @@
 {
   "email": "cartechrystel9@gmail.com",
   "name": "Chrystel Carte",
-  "li": 50,
+  "li": 51,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1778652481974",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Le sel du vent\" (+1 Li).",
+      "date": "2026-05-13T06:08:01.974Z",
+      "read": false
+    },
     {
       "id": "like_1778601724214",
       "type": "like",
