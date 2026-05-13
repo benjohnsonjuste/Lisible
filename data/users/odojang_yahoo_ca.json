@@ -44,7 +44,7 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Duel de Nouvelles: 1er tour\" !",
       "date": "2026-05-12T15:37:49.352Z",
-      "read": false
+      "read": true
     }
   ],
   "followers": [],
