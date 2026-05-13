@@ -1,9 +1,16 @@
 {
   "email": "vendarion@gmx.fr",
   "name": "Vendarion d'Orépée",
-  "li": 50,
+  "li": 51,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1778664207816",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Le Manoir Hanté\" (+1 Li).",
+      "date": "2026-05-13T09:23:27.816Z",
+      "read": false
+    },
     {
       "id": "like_1778664174308",
       "type": "like",
