@@ -37,7 +37,7 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Toujours\" !",
       "date": "2026-05-12T15:40:39.688Z",
-      "read": false
+      "read": true
     },
     {
       "id": "like_1778600269352",
