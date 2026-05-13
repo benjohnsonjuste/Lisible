@@ -3,7 +3,15 @@
   "name": "Vendarion d'Orépée",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1778664174308",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le Manoir Hanté\" !",
+      "date": "2026-05-13T09:22:54.308Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
