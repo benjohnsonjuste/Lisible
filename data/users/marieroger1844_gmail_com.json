@@ -3,12 +3,20 @@
   "name": "Sonia Vandeneycken",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "reset_1778717477805",
+      "type": "security",
+      "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+      "date": "2026-05-14T00:11:17.805Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
   "created_at": "2026-05-07T22:12:09.558Z",
-  "password": "$2b$10$V2oOEW4KejXorBWauu7Ci.sJDsy4s9A5p99PTITMg3RWHtx5ujGHK",
+  "password": "$2b$10$CA3kswNcXJzNCOzmEpTC0.UpcbOomeWwBly/nqRStLAEg2/kafC.i",
   "referralCode": null,
   "guestBonus": 0,
   "penName": "Sonia Vandeneycken",
