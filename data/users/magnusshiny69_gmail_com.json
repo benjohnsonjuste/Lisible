@@ -1,9 +1,17 @@
 {
   "email": "magnusshiny69@gmail.com",
   "name": "Faradja Kayeye Delphin",
-  "li": 50,
+  "li": 51,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "cert_1778912157838",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"M'envole de la voix d'une mère\" (+1 Li).",
+      "date": "2026-05-16T06:15:57.838Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
