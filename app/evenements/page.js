@@ -11,10 +11,10 @@ export const metadata = {
 export default function EvenementsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-16 pb-20 animate-in fade-in duration-700 px-4">
-      {/* En-tête stylisé */}
+      
       <header className="text-center space-y-6 pt-10">
         <div className="inline-flex p-4 bg-slate-900 dark:bg-teal-600 text-white rounded-[2rem] shadow-xl shadow-slate-200 dark:shadow-none">
-          <CalendarDays size={32} />
+          <CalendarDays size="{32}"/>
         </div>
         <div className="space-y-2">
           <h1 className="text-5xl md:text-7xl font-black text-slate-900 dark:text-white tracking-tighter italic leading-none">
@@ -28,17 +28,17 @@ export default function EvenementsPage() {
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* CARTE 1 : DUEL DES NOUVELLES (OUVERT & CLIQUABLE) */}
-        <Link href="/novel" className="group relative block">
+        
+        <Link className="group relative block" href="/novel">
           <div className="h-full bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 border border-teal-100 dark:border-white/5 shadow-2xl shadow-teal-900/5 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-teal-900/10 relative overflow-hidden">
-            {/* Badge Status */}
+            
             <div className="absolute top-8 right-8 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest z-20">
               Actuellement ouvert
             </div>
             
             <div className="space-y-8 relative z-10">
               <div className="w-16 h-16 bg-teal-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-lg shadow-teal-200 dark:shadow-none">
-                <BookOpen size={32} />
+                <BookOpen size="{32}"/>
               </div>
               
               <div className="space-y-4">
@@ -55,18 +55,18 @@ export default function EvenementsPage() {
               </div>
             </div>
 
-            {/* Déco fond */}
-            <Sparkles className="absolute -bottom-10 -right-10 text-teal-50 dark:text-teal-900/10 size-40 rotate-12" />
+            
+            <Sparkles className="absolute -bottom-10 -right-10 text-teal-50 dark:text-teal-900/10 size-40 rotate-12"/>
           </div>
         </Link>
 
-        {/* CARTE 2 : BATTLE POÉTIQUE (FERMÉE) */}
+        
         <div className="relative group grayscale">
           <div className="h-full bg-slate-50 dark:bg-white/5 rounded-[3.5rem] p-10 border border-slate-200 dark:border-white/5 border-dashed flex flex-col justify-between opacity-80">
             
             <div className="space-y-8">
               <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-[1.5rem] flex items-center justify-center text-slate-400">
-                <Lock size={32} />
+                <Lock size="{32}"/>
               </div>
               
               <div className="space-y-4">
@@ -88,13 +88,13 @@ export default function EvenementsPage() {
           </div>
         </div>
 
-        {/* CARTE 3 : FOIRE VIRTUELLE (FERMÉE) */}
+        
         <div className="relative group grayscale lg:col-span-2">
           <div className="h-full bg-slate-50 dark:bg-white/5 rounded-[3.5rem] p-10 border border-slate-200 dark:border-white/5 border-dashed flex flex-col justify-between opacity-80">
             
             <div className="space-y-8">
               <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-[1.5rem] flex items-center justify-center text-slate-400">
-                <Lock size={32} />
+                <Lock size="{32}"/>
               </div>
               
               <div className="space-y-4">
@@ -121,7 +121,7 @@ export default function EvenementsPage() {
       {/* FOOTER / TEASING */}
       <div className="max-w-3xl mx-auto bg-amber-50 dark:bg-amber-900/10 rounded-[3rem] p-10 flex flex-col md:flex-row items-center gap-8 border border-amber-100/50 dark:border-amber-900/20">
         <div className="p-4 bg-white dark:bg-amber-900/20 rounded-2xl text-amber-500 shadow-sm">
-          <Sparkles size={32} />
+          <Sparkles size="{32}"/>
         </div>
         <div className="text-center md:text-left space-y-2">
           <h3 className="text-xl font-black italic text-amber-900 dark:text-amber-400 tracking-tight">De nouveaux défis arrivent !</h3>
@@ -139,4 +139,3 @@ export default function EvenementsPage() {
     </div>
   );
 }
-```</Link>
