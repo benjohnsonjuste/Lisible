@@ -28,12 +28,12 @@ export default function EvenementsPage() {
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* CARTE 1 : DUEL DES NOUVELLES (À VENIR) */}
-        <div className="group relative">
+        {/* CARTE 1 : DUEL DES NOUVELLES (OUVERT & CLIQUABLE) */}
+        <Link href="/novel" className="group relative block">
           <div className="h-full bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 border border-teal-100 dark:border-white/5 shadow-2xl shadow-teal-900/5 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-teal-900/10 relative overflow-hidden">
             {/* Badge Status */}
-            <div className="absolute top-8 right-8 bg-amber-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest z-20">
-              Ouverture bientôt
+            <div className="absolute top-8 right-8 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest z-20">
+              Actuellement ouvert
             </div>
             
             <div className="space-y-8 relative z-10">
@@ -43,22 +43,22 @@ export default function EvenementsPage() {
               
               <div className="space-y-4">
                 <h2 className="text-4xl font-black italic tracking-tighter text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors leading-tight">
-                  Duel Des <br />Nouvelles
+                  Duel Des <br />Nouvelles International
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                  Préparez vos plus belles intrigues. La première édition de ce concours de narration commence en Mai 2026.
+                  Préparez vos plus belles intrigues. La première édition de ce concours de narration est ouverte et se termine le 21 juin 2026.
                 </p>
               </div>
 
               <div className="flex items-center gap-3 text-teal-600 dark:text-teal-400 font-black text-[11px] uppercase tracking-widest">
-                Première édition : Mai 2026
+                Clôture : 21 Juin 2026
               </div>
             </div>
 
             {/* Déco fond */}
             <Sparkles className="absolute -bottom-10 -right-10 text-teal-50 dark:text-teal-900/10 size-40 rotate-12" />
           </div>
-        </div>
+        </Link>
 
         {/* CARTE 2 : BATTLE POÉTIQUE (FERMÉE) */}
         <div className="relative group grayscale">
@@ -139,3 +139,4 @@ export default function EvenementsPage() {
     </div>
   );
 }
+```</Link>
