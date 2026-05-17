@@ -1,9 +1,16 @@
 {
   "email": "hangijosue66@gmail.com",
   "name": "Hangi Josué",
-  "li": 50,
+  "li": 51,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1779045639861",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"La voix que la guerre n'a pas tuée\" (+1 Li).",
+      "date": "2026-05-17T19:20:39.861Z",
+      "read": false
+    },
     {
       "id": "like_1778992177706",
       "type": "like",
