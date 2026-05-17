@@ -39,11 +39,14 @@ export default function LibraryPage() {
       // 3. Pour chaque texte, on va chercher les datas réelles comme dans TextContent
       const parsedTexts = await Promise.all(rawTexts.map(async (data, index) => {
         const textId = data.id || data.fileName || data.slug || `text-${index}`;
+        const isNovelDuel = data.genre === "Duel Des Nouvelles" || data.category === "Duel Des Nouvelles";
+        const isBattlePoetique = data.isConcours === true || ["Battle Poétique", "Battle Poétique International"].includes(data.genre || data.category);
         
         // --- INSPIRATION TEXTCONTENT : Fetch individuel pour les stats réelles ---
         let liveStats = { views: 0, likes: 0, certified: 0 };
         try {
-          const detailRes = await fetch(`https://lisible.biz/api/github-db?type=text&id=${textId}`);
+          const fetchType = isNovelDuel ? "novel" : "text";
+          const detailRes = await fetch(`https://lisible.biz/api/github-db?type=${fetchType}&id=${textId}`);
           if (detailRes.ok) {
             const detailJson = await detailRes.json();
             liveStats = detailJson.content;
@@ -72,8 +75,8 @@ export default function LibraryPage() {
 
           category: data.category || data.genre || "Littérature",
           image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || index}`,
-          isNovelDuel: data.genre === "Duel Des Nouvelles" || data.category === "Duel Des Nouvelles",
-          isBattlePoetique: data.isConcours === true || ["Battle Poétique", "Battle Poétique International"].includes(data.genre || data.category)
+          isNovelDuel,
+          isBattlePoetique
         };
       }));
 
