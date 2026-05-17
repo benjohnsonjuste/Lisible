@@ -3,7 +3,15 @@
   "name": "Hangi Josué",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "like_1778992177706",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La voix que la guerre n'a pas tuée\" !",
+      "date": "2026-05-17T04:29:37.706Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
