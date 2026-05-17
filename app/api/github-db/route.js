@@ -79,7 +79,7 @@ if(action==='create_notif'){
 
 return NextResponse.json({error:"Action inconnue"},{status:400});}catch(e){return NextResponse.json({error:e.message},{status:500});}}
 
-export async function GET(req){const {searchParams}=new URL(req.url);const type=searchParams.get('type');const id=searchParams.get('id');const path=searchParams.get('path');try{if(!GITHUB_CONFIG.token)throw new Error("GITHUB_TOKEN is missing");if(type==='text'){const text=await getFile(`data/texts/${id}.json`);return NextResponse.json(text);}
+export async function GET(req){const {searchParams}=new URL(req.url);const type=searchParams.get('type');const id=searchParams.get('id');const path=searchParams.get('path');try{if(!GITHUB_CONFIG.token)throw new Error("GITHUB_TOKEN is missing");if(type==='text'||type==='novel'){const text=await getFile(`data/texts/${id}.json`);return NextResponse.json(text);}
 if(type==='user'){const user=await getFile(getSafePath(id));if(user){user.content.li_usd_value=(user.content.li*ECONOMY.LI_VALUE_USD).toFixed(2);user.content.is_eligible_withdrawal=(user.content.li>=ECONOMY.WITHDRAWAL_THRESHOLD&&(user.content.followers?.length||0)>=ECONOMY.REQUIRED_FOLLOWERS);delete user.content.password;}
 return NextResponse.json(user);}
 if(type==='users'||type==='users_list'){const list=await getFile('data/users');return NextResponse.json(list);}
