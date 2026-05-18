@@ -52,6 +52,10 @@ const TextContent = ({ id }) => {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
   
+  // ÉTAT DE DÉVERROUILLAGE ADSTERRA
+  const [isAdUnlocked, setIsAdUnlocked] = useState(false);
+  const [hasClickedAd, setHasClickedAd] = useState(false);
+  
   // TECHNIQUE VUES RÉELLES (Inspirée du composant A)
   const [liveViews, setLiveViews] = useState(0);
   const viewLogged = useRef(false);
@@ -160,14 +164,68 @@ const TextContent = ({ id }) => {
   const renderedContent = useMemo(() => {
     if (!data?.content) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
+    
+    // Si l'article est très court (moins de 3 paragraphes), on ne le verrouille pas
+    if (paragraphs.length < 3) {
+      return (
+        <div className="space-y-8">
+          <div className="whitespace-pre-wrap">
+            {paragraphs.map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
+          </div>
+        </div>
+      );
+    }
+
+    // Séparation du contenu à la moitié de la lecture
+    const halfIndex = Math.ceil(paragraphs.length / 2);
+    const firstHalf = paragraphs.slice(0, halfIndex);
+    const secondHalf = paragraphs.slice(halfIndex);
+
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
-          {paragraphs.map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
+          {firstHalf.map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
         </div>
+
+        {!isAdUnlocked ? (
+          <div className="my-12 p-8 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-black/5 dark:bg-white/5 text-center backdrop-blur-sm animate-in fade-in duration-500">
+            <span className="inline-block text-3xl mb-3">{hasClickedAd ? "🔓" : "🔒"}</span>
+            <h3 className={`text-xl font-bold font-serif mb-2 ${mood.title}`}>
+              {hasClickedAd ? "Lien publicitaire validé" : "Continuer la lecture"}
+            </h3>
+            <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
+              {hasClickedAd 
+                ? "Le contenu est prêt. Cliquez ci-dessous pour faire apparaître la suite." 
+                : "Cliquez sur le bouton ci-dessous pour débloquer immédiatement la suite de cette œuvre."}
+            </p>
+            
+            {!hasClickedAd ? (
+              <a 
+                href="https://www.effectivecpmnetwork.com/iiir1d271?key=242538469425387af7d917435b2cb69a"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setHasClickedAd(true)}
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform hover:scale-105 active:scale-95 text-white ${mood.accent.replace('text', 'bg') || 'bg-teal-600'}`}
+              >
+                🔓 Débloquer la suite du texte
+              </a>
+            ) : (
+              <button 
+                onClick={() => setIsAdUnlocked(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-transform hover:scale-105 active:scale-95 text-white bg-emerald-600"
+              >
+                👁️ Accéder à la suite du texte
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {secondHalf.map((p, i) => <p key={i} className="mb-6 leading-relaxed">{p}</p>)}
+          </div>
+        )}
       </div>
     );
-  }, [data?.content]);
+  }, [data?.content, isAdUnlocked, hasClickedAd, mood]);
 
   if (loading) return <div className="flex justify-center items-center min-h-screen font-serif animate-pulse">Immersion en cours...</div>;
   if (!data) return null;
