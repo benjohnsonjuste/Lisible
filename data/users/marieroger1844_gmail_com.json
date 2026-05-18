@@ -30,7 +30,7 @@
       "type": "security",
       "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
       "date": "2026-05-14T00:11:17.805Z",
-      "read": false
+      "read": true
     }
   ],
   "followers": [],
