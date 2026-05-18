@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779117951995",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Toujours\" !",
+      "date": "2026-05-18T15:25:51.995Z",
+      "read": false
+    },
+    {
       "id": "cert_1778951326241",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Toujours\" (+1 Li).",
