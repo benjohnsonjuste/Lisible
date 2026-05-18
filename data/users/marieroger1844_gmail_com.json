@@ -16,7 +16,7 @@
       "type": "security",
       "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
       "date": "2026-05-15T12:07:26.304Z",
-      "read": false
+      "read": true
     },
     {
       "id": "reset_1778717960355",
