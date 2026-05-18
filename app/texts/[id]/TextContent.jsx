@@ -22,6 +22,7 @@ function BadgeConcours() {
   );
 }
 
+// --- COMPOSANTS DE BADGES ---
 function BadgeDuelNouvelles() {
   return (
     <div className="inline-flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl shadow-xl mb-8 border border-teal-400">
@@ -91,8 +92,22 @@ const TextContent = ({ id }) => {
         const content = result.content;
         setData(content);
         
-        // Mise à jour des vues réelles
-        setLiveViews(content.views || 0);
+        // Incrémentation locale temporaire initiale
+        let currentViews = content.views || 0;
+
+        // 🔥 TECHNIQUE VUES RÉELLES : Incrémentation automatique unique en base de données
+        if (!viewLogged.current) {
+          viewLogged.current = true;
+          currentViews += 1;
+          
+          fetch("/api/github-db", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "view", id: id })
+          }).catch(err => console.error("Erreur enregistrement vue", err));
+        }
+
+        setLiveViews(currentViews);
 
         const usersRes = await fetch(`/api/realtime-data?folder=users`);
         const usersJson = await usersRes.json();
