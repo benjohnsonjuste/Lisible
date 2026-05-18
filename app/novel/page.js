@@ -43,7 +43,32 @@ export default function DuelDesNouvelles() {
         files.filter(f => f.name.endsWith('.json')).map(async (f) => {
           try {
             const r = await fetch(f.download_url);
-            return r.ok ? await r.json() : null;
+            if (!r.ok) return null;
+            const data = await r.json();
+            
+            // --- INSPIRATION SYNCHRONISATION EN TEMPS RÉEL ---
+            const textId = data.id || data.fileName || data.slug;
+            let liveStats = { views: 0, likes: 0, certified: 0 };
+            
+            try {
+              const detailRes = await fetch(`https://lisible.biz/api/github-db?type=novel&id=${textId}`);
+              if (detailRes.ok) {
+                const detailJson = await detailRes.json();
+                liveStats = detailJson.content;
+              }
+            } catch (err) {
+              console.error(`Erreur stats réelles pour ${textId}`, err);
+            }
+
+            return {
+              ...data,
+              views: Number(liveStats.views || data.views || 0),
+              likes: Number(liveStats.likes || data.likes || 0),
+              certified: Number(liveStats.certified || data.certified || 0),
+              totalCertified: Number(liveStats.certified || data.totalCertified || 0)
+            };
+            // --- FIN DE LA SYNCHRONISATION ---
+
           } catch { return null; }
         })
       );
