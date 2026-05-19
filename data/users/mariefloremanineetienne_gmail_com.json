@@ -3,12 +3,20 @@
   "name": "Marie Flore Manine",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "reset_1779202390714",
+      "type": "security",
+      "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
+      "date": "2026-05-19T14:53:10.714Z",
+      "read": false
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
   "created_at": "2026-05-07T22:05:12.311Z",
-  "password": "$2b$10$1YDnbhIIbHEwMFxeEhV.aehv8PilCg7F7T0uIu5TX4ATW/4SqA6wa",
+  "password": "$2b$10$6QUhNW/bVg15pQeLDDyPoet.6ACJFvpCZa65H8u/M7MemOtYO/FVK",
   "referralCode": null,
   "guestBonus": 0,
   "penName": "Marie Flore Manine",
