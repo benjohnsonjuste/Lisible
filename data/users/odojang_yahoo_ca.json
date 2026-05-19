@@ -1,9 +1,16 @@
 {
   "email": "odojang@yahoo.ca",
   "name": "Ouellette André",
-  "li": 54,
+  "li": 55,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1779234478258",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"AU BORD DU GOUFFRE (extrait)\" (+1 Li).",
+      "date": "2026-05-19T23:47:58.258Z",
+      "read": false
+    },
     {
       "id": "like_1779233825194",
       "type": "like",
