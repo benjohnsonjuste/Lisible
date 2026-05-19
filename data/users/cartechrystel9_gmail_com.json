@@ -30,7 +30,7 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Le sel du vent\" !",
       "date": "2026-05-12T16:02:04.214Z",
-      "read": false
+      "read": true
     }
   ],
   "followers": [],
