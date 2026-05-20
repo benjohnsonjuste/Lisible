@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // Configuration de la marketplace
 const PLATFORM_FEE_PERCENT = 0.15; // Ta commission de 15%
-const ADMIN_EMAIL = "ton-email@admin.com"; // Compte qui reçoit les commissions
+const ADMIN_EMAIL = "cmo.lablitteraire7@gmail.com"; // Compte qui reçoit les commissions
 
 export async function POST(req) {
   try {
