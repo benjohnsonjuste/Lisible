@@ -10,34 +10,6 @@ export const runtime='nodejs';
 const GITHUB_CONFIG={owner:"benjohnsonjuste",repo:"Lisible",token:process.env.GITHUB_TOKEN};
 const ECONOMY={MIN_TRANSFER:1000,WITHDRAWAL_THRESHOLD:25000,REQUIRED_FOLLOWERS:250,LI_VALUE_USD:0.0002};
 
-// --- FONCTIONS MARKETPLACE POUR LES TÂCHES GITHUB ---
-
-export async function getMarketplaceTasks() {
-  const file = await getFile("data/tasks.json");
-  return file && Array.isArray(file.content) ? file.content : [];
-}
-
-export async function saveMarketplaceTask(newTask) {
-  const file = await getFile("data/tasks.json");
-  const tasks = file && Array.isArray(file.content) ? file.content : [];
-  tasks.unshift(newTask); // Ajoute la nouvelle tâche en haut de liste
-  return await updateFile("data/tasks.json", tasks, file?.sha || null, "Add Marketplace Task");
-}
-
-export async function updateTaskStatus(taskId, status, extraData = {}) {
-  const file = await getFile("data/tasks.json");
-  if (!file || !Array.isArray(file.content)) return false;
-  
-  const tasks = file.content;
-  const index = tasks.findIndex(t => t.id === taskId);
-
-  if (index !== -1) {
-    tasks[index] = { ...tasks[index], status, ...extraData };
-    return await updateFile("data/tasks.json", tasks, file.sha, `Update Task Status: ${taskId}`);
-  }
-  return false;
-}
-
 // --- FONCTIONS DE BASE DE DONNÉES GITHUB EXISTANTES ---
 
 async function getFile(path){const now=Date.now();const cached=localCache.get(path);if(cached&&(now-cached.timestamp<CACHE_TTL)){return cached.data;}
