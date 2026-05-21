@@ -1,69 +1,47 @@
 'use client';
-
 import React, { useState } from 'react';
-
 export default function ManuscriptAnalyzer() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
-
   const handleAnalyze = async () => {
     if (!text || text.trim().length < 10) {
       setError("Veuillez entrer un texte un peu plus long pour lancer l'audit.");
       return;
     }
-
     setLoading(true);
     setError(null);
     setReport(null);
-
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ textChunk: text }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Une erreur est survenue.");
-      }
-
+      if (!response.ok) throw new Error(data.error || "Une erreur est survenue.");
       setReport(data);
     } catch (err) {
       setError(err.message);
-    } finally {
+    } finaly {
       setLoading(false);
     }
   };
-
   return (
     <div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900">
       <div className="max-w-5xl mx-auto space-y-8">
-        
-        {/* Header */}
         <header className="border-b border-slate-800 pb-6">
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
             PlumAI <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full ml-2">v1.1 (Édition Pro)</span>
           </h1>
-          <p className="text-slate-400 mt-2 text-sm">
-            Soumettez votre texte pour un audit stylistique profond et découvrez votre indice d'acceptation en maison d'édition.
-          </p>
+          <p className="text-slate-400 mt-2 text-sm">Soumettez votre texte pour un audit stylistique profond et découvrez votre indice d'acceptation en maison d'édition.</p>
         </header>
-
-        {/* Formulaire d'entrée */}
-        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4">
+        <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4 print:hidden">
           <div className="flex justify-between items-center">
-            <label className="block text-sm font-semibold text-slate-300">
-              Collez votre extrait (Idéalement un incipit ou un chapitre complet)
-            </label>
-            <span className="text-xs font-mono text-slate-500">
-              {text.length} caractères
-            </span>
+            <label className="block text-sm font-semibold text-slate-300">Collez votre extrait (Idéalement un incipit ou un chapitre complet)</label>
+            <span className="text-xs font-mono text-slate-500">{text.length} caractères</span>
           </div>
-          
           <textarea
             className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-serif leading-relaxed text-base"
             placeholder="Le jour où la pluie cessa de tomber..."
@@ -71,13 +49,7 @@ export default function ManuscriptAnalyzer() {
             onChange={(e) => setText(e.target.value)}
             disabled={loading}
           />
-
-          {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-sm">
-              ⚠️ {error}
-            </div>
-          )}
-
+          {error && <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-sm">⚠️ {error}</div>}
           <button
             onClick={handleAnalyze}
             disabled={loading || !text.trim()}
@@ -91,138 +63,91 @@ export default function ManuscriptAnalyzer() {
                 </svg>
                 <span>Le comité virtuel analyse votre plume...</span>
               </>
-            ) : (
-              <span>Lancer le diagnostic littéraire</span>
-            )}
+            ) : <span>Lancer le diagnostic littéraire</span>}
           </button>
         </section>
-
-        {/* Dashboard des Résultats */}
         {report && (
           <div className="space-y-6">
-            
-            <h2 className="text-xl font-bold tracking-tight text-slate-200 mt-8">Tableau de bord de votre manuscrit</h2>
-            
-            {/* Section Métriques Clés */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8">
+              <h2 className="text-xl font-bold tracking-tight text-slate-200">Tableau de bord de votre manuscrit</h2>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-slate-100 font-medium rounded-lg text-xs transition-all flex items-center space-x-2 shadow-sm print:hidden"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                <span>Exporter le rapport en PDF</span>
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center space-y-2">
                 <span className="text-xs uppercase font-mono tracking-wider text-slate-500 block">Hook Score</span>
                 <span className="text-5xl font-black text-emerald-400 block">{report.metrics?.hookScore}%</span>
                 <span className="text-xs text-slate-400 block">Capacité de rétention du lecteur</span>
               </div>
-              
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-1">
                 <span className="text-xs uppercase font-mono tracking-wider text-slate-500 block">Analyse du Rythme</span>
                 <p className="text-sm text-slate-200 font-medium leading-relaxed pt-2">{report.metrics?.rhythmStyle}</p>
               </div>
-
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-1">
                 <span className="text-xs uppercase font-mono tracking-wider text-slate-500 block">Densité stylistique</span>
                 <p className="text-sm text-slate-200 font-medium leading-relaxed pt-2">{report.metrics?.adverbDensity}</p>
               </div>
             </div>
-
-            {/* SECTION COMPATIBILITÉ ÉDITEURS */}
             {report.publisherCompatibility && (
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
-                <h3 className="text-lg font-bold text-slate-200 flex items-center space-x-2">
-                  <span>🎯 Indice de pénétration éditoriale</span>
-                </h3>
+                <h3 className="text-lg font-bold text-slate-200 flex items-center space-x-2"><span>🎯 Indice de pénétration éditoriale</span></h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {report.publisherCompatibility.map((pub, idx) => (
                     <div key={idx} className="bg-slate-950 p-4 rounded-lg border border-slate-800/60 space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-sm text-slate-200">{pub.name}</span>
-                        <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                          pub.score >= 70 ? 'bg-emerald-500/10 text-emerald-400' :
-                          pub.score >= 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'
-                        }`}>
-                          {pub.score}%
-                        </span>
+                        <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${pub.score >= 70 ? 'bg-emerald-500/10 text-emerald-400' : pub.score >= 50 ? 'bg-amber-500/10 text-amber-400' : 'bg-rose-500/10 text-rose-400'}`}>{pub.score}%</span>
                       </div>
-                      
-                      {/* Jauge animée */}
                       <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
-                        <div 
-                          className={`h-full transition-all duration-500 ${
-                            pub.score >= 70 ? 'bg-emerald-500' :
-                            pub.score >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${pub.score}%` }}
-                        />
+                        <div className={`h-full transition-all duration-500 ${pub.score >= 70 ? 'bg-emerald-500' : pub.score >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${pub.score}%` }} />
                       </div>
-
-                      <p className="text-xs text-slate-400 leading-relaxed">
-                        <span className="text-slate-500 font-medium">Diagnostic :</span> {pub.reasons}
-                      </p>
-                      <p className="text-xs text-cyan-400 bg-cyan-950/30 p-2 rounded border border-cyan-900/30">
-                        <span className="text-cyan-500 font-semibold">Axe d'amélioration :</span> {pub.adjustmentsNeeded}
-                      </p>
+                      <p className="text-xs text-slate-400 leading-relaxed"><span className="text-slate-500 font-medium">Diagnostic :</span> {pub.reasons}</p>
+                      <p className="text-xs text-cyan-400 bg-cyan-950/30 p-2 rounded border border-cyan-900/30"><span className="text-cyan-500 font-semibold">Axe d'amélioration :</span> {pub.adjustmentsNeeded}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {/* Verdict Global */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
               <span className="text-xs uppercase font-mono tracking-wider text-slate-500 block mb-2">Synthèse du Comité de lecture</span>
-              <blockquote className="border-l-2 border-emerald-500 pl-4 text-slate-300 italic text-base leading-relaxed">
-                "{report.editorialVerdict}"
-              </blockquote>
+              <blockquote className="border-l-2 border-emerald-500 pl-4 text-slate-300 italic text-base leading-relaxed">"{report.editorialVerdict}"</blockquote>
             </div>
-
-            {/* Alertes corrections */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* Phrases Lourdes */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-                <h3 className="text-md font-bold text-rose-400">
-                  🔴 Obstacles à la lecture ({report.heavyPhrases?.length || 0})
-                </h3>
+                <h3 className="text-md font-bold text-rose-400">🔴 Obstacles à la lecture ({report.heavyPhrases?.length || 0})</h3>
                 <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
                   {report.heavyPhrases?.map((item, idx) => (
                     <div key={idx} className="bg-slate-950 p-4 rounded-lg border border-rose-500/10 space-y-2 text-sm">
                       <p className="text-rose-300/90 font-serif italic">"{item.text}"</p>
                       <p className="text-xs text-slate-400"><strong className="text-slate-300">Critique :</strong> {item.reason}</p>
-                      <p className="text-xs text-emerald-400 bg-emerald-500/5 p-2 rounded border border-emerald-500/10 mt-1">
-                        <strong className="text-emerald-500">Proposition :</strong> {item.suggestion}
-                      </p>
+                      <p className="text-xs text-emerald-400 bg-emerald-500/5 p-2 rounded border border-emerald-500/10 mt-1"><strong className="text-emerald-500">Proposition :</strong> {item.suggestion}</p>
                     </div>
                   ))}
-                  {(!report.heavyPhrases || report.heavyPhrases.length === 0) && (
-                    <p className="text-xs text-slate-500">Fluidité parfaite. Aucune lourdeur majeure syntaxique.</p>
-                  )}
+                  {(!report.heavyPhrases || report.heavyPhrases.length === 0) && <p className="text-xs text-slate-500">Fluidité parfaite. Aucune lourdeur majeure syntaxique.</p>}
                 </div>
               </div>
-
-              {/* Clichés Détectés */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-                <h3 className="text-md font-bold text-amber-400">
-                  🟡 Clichés et redondances ({report.clichesDetected?.length || 0})
-                </h3>
+                <h3 className="text-md font-bold text-amber-400">🟡 Clichés et redondances ({report.clichesDetected?.length || 0})</h3>
                 <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
                   {report.clichesDetected?.map((item, idx) => (
                     <div key={idx} className="bg-slate-950 p-3 rounded-lg border border-amber-500/10 flex flex-col space-y-1 text-sm">
-                      <div className="flex justify-between items-start">
-                        <span className="line-through text-amber-300/70 font-mono text-xs">"{item.expression}"</span>
-                      </div>
-                      <p className="text-xs text-emerald-400 pt-1">
-                        <strong className="text-slate-500 font-normal">Alternative originale :</strong> {item.alternative}
-                      </p>
+                      <div className="flex justify-between items-start"><span className="line-through text-amber-300/70 font-mono text-xs">"{item.expression}"</span></div>
+                      <p className="text-xs text-emerald-400 pt-1"><strong className="text-slate-500 font-normal">Alternative originale :</strong> {item.alternative}</p>
                     </div>
                   ))}
-                  {(!report.clichesDetected || report.clichesDetected.length === 0) && (
-                    <p className="text-xs text-slate-500">Vocabulaire pur et singulier. Aucun cliché détecté.</p>
-                  )}
+                  {(!report.clichesDetected || report.clichesDetected.length === 0) && <p className="text-xs text-slate-500">Vocabulaire pur et singulier. Aucun cliché détecté.</p>}
                 </div>
               </div>
-
             </div>
-
           </div>
         )}
-
       </div>
     </div>
   );
