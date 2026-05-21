@@ -19,7 +19,7 @@
     "@zegocloud/zego-uikit-prebuilt": "^2.10.0",
     "next": "14.2.15",
     "pusher": "^5.2.0",
-    "@google/genai": "^0.1.1",
+    "@google/generative-ai": "^0.1.1",
     "framer-motion": "^11.0.0",
     "three": "^0.160.0",
     "@react-three/fiber": "^8.15.0",
