@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(request) {
   try {
@@ -10,8 +10,8 @@ export async function POST(request) {
       );
     }
 
-    // Initialisation du client officiel Google Gen AI
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    // Utilisation de la bonne classe GoogleGenerativeAI
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const { textChunk } = await request.json();
 
     if (!textChunk || textChunk.trim().length < 10) {
@@ -72,18 +72,24 @@ Tu devez STRICTEMENT répondre au format JSON suivant, sans aucune autre phrase 
   "editorialVerdict": "Ton analyse globale synthétique destinée à l'auteur."
 }`;
 
-    // Appel via le SDK officiel (Méthode robuste et moderne)
-    const response = await ai.models.generateContent({
+    // Récupération correcte du modèle
+    const model = ai.getGenerativeModel({
       model: 'gemini-1.5-flash',
-      contents: `Voici l'extrait du manuscrit à analyser :\n\n--- \n${textChunk}\n---`,
-      config: {
-        systemInstruction: systemPrompt,
+      systemInstruction: systemPrompt,
+    });
+
+    // Exécution de la génération de contenu
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `Voici l'extrait du manuscrit à analyser :\n\n--- \n${textChunk}\n---` }] }],
+      generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.3,
       },
     });
 
-    const reportData = JSON.parse(response.text);
+    const response = await result.response;
+    const reportData = JSON.parse(response.text());
+    
     return NextResponse.json(reportData);
 
   } catch (error) {
