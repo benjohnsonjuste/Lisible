@@ -1,11 +1,28 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { 
+  Sparkles, 
+  ShieldCheck, 
+  Printer, 
+  Gauge, 
+  Activity, 
+  Compass, 
+  Clock, 
+  Construction, 
+  Wrench, 
+  Ban, 
+  Flame,
+  AlertTriangle,
+  Loader2
+} from 'lucide-react';
+
 export default function ManuscriptAnalyzer() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
   const [scanStep, setScanStep] = useState(0);
+
   const steps = [
     "Initialisation du scan spatial...",
     "Extraction de la matrice syntaxique en local...",
@@ -17,6 +34,7 @@ export default function ManuscriptAnalyzer() {
     "Détection des tics de langage et clichés...",
     "Génération du verdict éditorial final..."
   ];
+
   useEffect(() => {
     if (!window.mammoth) {
       const script = document.createElement('script');
@@ -25,6 +43,7 @@ export default function ManuscriptAnalyzer() {
       document.body.appendChild(script);
     }
   }, []);
+
   useEffect(() => {
     let interval;
     if (loading) {
@@ -35,6 +54,7 @@ export default function ManuscriptAnalyzer() {
     }
     return () => clearInterval(interval);
   }, [loading]);
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -62,6 +82,7 @@ export default function ManuscriptAnalyzer() {
       setError("Seuls les formats .txt et .docx sont supportés en lecture locale.");
     }
   };
+
   const handleAnalyze = async () => {
     if (!text || text.trim().length < 10) {
       setError("Veuillez entrer un texte un peu plus long pour lancer l'audit.");
@@ -85,15 +106,17 @@ export default function ManuscriptAnalyzer() {
       setLoading(false);
     }
   };
+
   return (
     <div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900">
       <div className="max-w-5xl mx-auto space-y-8">
         <header className="border-b border-slate-800 pb-6">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-            PlumAI <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full ml-2">v1.1 (Édition Pro)</span>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
+            PlumAI <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">v1.2 (Édition Pro)</span>
           </h1>
           <p className="text-slate-400 mt-2 text-sm">Soumettez votre texte pour un audit stylistique profond et découvrez votre indice d'acceptation en maison d'édition.</p>
         </header>
+
         <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4 print:hidden">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
             <label className="block text-sm font-semibold text-slate-300">Collez votre extrait ou déposez un fichier (.txt, .docx)</label>
@@ -114,13 +137,13 @@ export default function ManuscriptAnalyzer() {
               <div className="absolute inset-0 bg-emerald-950/10 pointer-events-none flex flex-col justify-end p-4">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-[bounce_2s_infinite]" />
                 <div className="bg-slate-950/90 border border-emerald-500/30 font-mono text-xs p-3 rounded shadow-lg text-emerald-400 max-w-md backdrop-blur-sm self-start space-y-1 animate-pulse">
-                  <div className="flex items-center space-x-2"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"/><span>[SYSTEM MONITOR] : IN PROGRESS</span></div>
+                  <div className="flex items-center space-x-2"><Loader2 className="w-3 h-3 text-emerald-500 animate-spin"/><span>[SYSTEM MONITOR] : IN PROGRESS</span></div>
                   <div className="text-slate-400">&gt; {steps[scanStep]}</div>
                 </div>
               </div>
             )}
           </div>
-          {error && <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-sm">⚠️ {error}</div>}
+          {error && <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}</div>}
           <div className="space-y-4">
             <button
               onClick={handleAnalyze}
@@ -129,18 +152,18 @@ export default function ManuscriptAnalyzer() {
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
+                  <Loader2 className="animate-spin h-4 w-4 text-emerald-400" />
                   <span className="text-emerald-400 font-mono text-xs tracking-wider">SCAN SPATIAL EN COURS...</span>
                 </>
-              ) : <span>Lancer le diagnostic littéraire</span>}
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Lancer le diagnostic littéraire</span>
+                </>
+              )}
             </button>
             <div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-start space-x-3 max-w-2xl">
-              <svg className="w-5 h-5 text-emerald-500/80 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-              </svg>
+              <ShieldCheck className="w-5 h-5 text-emerald-500/80 mt-0.5 flex-shrink-0" />
               <div className="text-xs text-slate-400 space-y-1">
                 <p className="font-semibold text-slate-300">Garantie Souveraine de Confidentialité</p>
                 <p className="leading-relaxed">Votre œuvre est lue exclusivement en mémoire vive locale (RAM). Aucun stockage, base de données ou archivage n'est effectué sur nos serveurs. Le flux transite de manière chiffrée de bout en bout et le manuscrit reste votre <span className="text-emerald-400 font-medium">propriété intellectuelle exclusive et inaliénable</span>.</p>
@@ -148,6 +171,7 @@ export default function ManuscriptAnalyzer() {
             </div>
           </div>
         </section>
+
         {report && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8">
@@ -156,12 +180,12 @@ export default function ManuscriptAnalyzer() {
                 onClick={() => window.print()}
                 className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-slate-100 font-medium rounded-lg text-xs transition-all flex items-center space-x-2 shadow-sm print:hidden"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
+                <Printer className="w-4 h-4" />
                 <span>Exporter le rapport en PDF</span>
               </button>
             </div>
+
+            {/* Rangée Principale des KPI */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center space-y-2">
                 <span className="text-xs uppercase font-mono tracking-wider text-slate-500 block">Hook Score</span>
@@ -177,9 +201,66 @@ export default function ManuscriptAnalyzer() {
                 <p className="text-sm text-slate-200 font-medium leading-relaxed pt-2">{report.metrics?.adverbDensity}</p>
               </div>
             </div>
+
+            {/* BLOC DES STATISTIQUES LINGUISTIQUES AVANCÉES */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+              <h3 className="text-xs uppercase font-mono tracking-wider text-slate-500 mb-4">Indicateurs Quantitatifs de Calibre Professionnel</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
+                  <span className="text-xs text-slate-400 block mb-1">Diversité lexicale</span>
+                  <span className="text-xl font-bold text-cyan-400">{report.metrics?.vocabularyRichness || 0}%</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Mots uniques (TTR)</span>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
+                  <span className="text-xs text-slate-400 block mb-1">Coefficient dynamique</span>
+                  <span className="text-xl font-bold text-amber-400">{report.metrics?.dynamicCoefficient || 0}%</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Force des verbes</span>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
+                  <span className="text-xs text-slate-400 block mb-1">Verbes « béquilles »</span>
+                  <span className="text-xl font-bold text-rose-400">{report.metrics?.weakVerbsCount || 0}</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Être / Avoir / Faire</span>
+                </div>
+                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50">
+                  <span className="text-xs text-slate-400 block mb-1">Temps de lecture</span>
+                  <span className="text-xl font-bold text-emerald-400">~{report.metrics?.readingTime || 1} min</span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">Vitesse humaine</span>
+                </div>
+              </div>
+            </div>
+
+            {/* FEUILLE DE ROUTE OPÉRATIONNELLE DE L'AUTEUR */}
+            {report.actionPlan && report.actionPlan.length > 0 && (
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+                <h3 className="text-md font-bold text-slate-200 flex items-center space-x-2">
+                  <Wrench className="w-4 h-4 text-cyan-400" />
+                  <span>Feuille de route stratégique de réécriture</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {report.actionPlan.map((step, index) => (
+                    <div key={index} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col justify-between space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-mono uppercase font-semibold text-slate-500">{step.target}</span>
+                        <span className={`text-[9px] font-mono uppercase font-bold px-1.5 py-0.5 rounded ${
+                          step.priority === 'Haute' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                          step.priority === 'Modérée' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                          'bg-slate-800 text-slate-400'
+                        }`}>{step.priority}</span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed pt-1">{step.instruction}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* INDICE DE PÉNÉTRATION ÉDITORIALE */}
             {report.publisherCompatibility && (
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
-                <h3 className="text-lg font-bold text-slate-200 flex items-center space-x-2"><span>🎯 Indice de pénétration éditoriale</span></h3>
+                <h3 className="text-lg font-bold text-slate-200 flex items-center space-x-2">
+                  <Compass className="w-5 h-5 text-emerald-400" />
+                  <span>Indice de pénétration éditoriale</span>
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {report.publisherCompatibility.map((pub, idx) => (
                     <div key={idx} className="bg-slate-950 p-4 rounded-lg border border-slate-800/60 space-y-3">
@@ -197,13 +278,19 @@ export default function ManuscriptAnalyzer() {
                 </div>
               </div>
             )}
+
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
               <span className="text-xs uppercase font-mono tracking-wider text-slate-500 block mb-2">Synthèse du Comité de lecture</span>
               <blockquote className="border-l-2 border-emerald-500 pl-4 text-slate-300 italic text-base leading-relaxed">"{report.editorialVerdict}"</blockquote>
             </div>
+
+            {/* OBSTACLES, PLÉONASMES ET CLICHÉS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-                <h3 className="text-md font-bold text-rose-400">🔴 Obstacles à la lecture ({report.heavyPhrases?.length || 0})</h3>
+                <h3 className="text-md font-bold text-rose-400 flex items-center gap-2">
+                  <Ban className="w-4 h-4" />
+                  <span>Obstacles à la lecture ({report.heavyPhrases?.length || 0})</span>
+                </h3>
                 <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
                   {report.heavyPhrases?.map((item, idx) => (
                     <div key={idx} className="bg-slate-950 p-4 rounded-lg border border-rose-500/10 space-y-2 text-sm">
@@ -216,7 +303,10 @@ export default function ManuscriptAnalyzer() {
                 </div>
               </div>
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-                <h3 className="text-md font-bold text-amber-400">🟡 Clichés et redondances ({report.clichesDetected?.length || 0})</h3>
+                <h3 className="text-md font-bold text-amber-400 flex items-center gap-2">
+                  <Flame className="w-4 h-4" />
+                  <span>Clichés, pléonasmes et tics ({report.clichesDetected?.length || 0})</span>
+                </h3>
                 <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
                   {report.clichesDetected?.map((item, idx) => (
                     <div key={idx} className="bg-slate-950 p-3 rounded-lg border border-amber-500/10 flex flex-col space-y-1 text-sm">
@@ -224,7 +314,7 @@ export default function ManuscriptAnalyzer() {
                       <p className="text-xs text-emerald-400 pt-1"><strong className="text-slate-500 font-normal">Alternative originale :</strong> {item.alternative}</p>
                     </div>
                   ))}
-                  {(!report.clichesDetected || report.clichesDetected.length === 0) && <p className="text-xs text-slate-500">Vocabulaire pur et singulier. Aucun cliché détecté.</p>}
+                  {(!report.clichesDetected || report.clichesDetected.length === 0) && <p className="text-xs text-slate-500">Vocabulaire pur et singulier. Aucun cliché ou pléonasme détecté.</p>}
                 </div>
               </div>
             </div>
