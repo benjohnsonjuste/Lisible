@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// Initialisation du client OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // GitHub/Vercel lira cette variable d'environnement
-});
-
 export async function POST(request) {
   try {
+    // Vérification de la présence de la clé avant instanciation pour le build Vercel
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "Configuration manquante : La clé API n'est pas configurée." },
+        { status: 500 }
+      );
+    }
+
+    // Initialisation du client OpenAI déplacée à l'intérieur de la route
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     // Récupération du texte envoyé par le frontend
     const { textChunk } = await request.json();
 
