@@ -5,6 +5,21 @@ export default function ManuscriptAnalyzer() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== "text/plain") {
+      setError("Seuls les fichiers .txt sont supportés pour le moment en lecture locale.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setText(evt.target.result);
+      setError(null);
+    };
+    reader.onerror = () => setError("Erreur lors de la lecture locale du fichier.");
+    reader.readAsText(file);
+  };
   const handleAnalyze = async () => {
     if (!text || text.trim().length < 10) {
       setError("Veuillez entrer un texte un peu plus long pour lancer l'audit.");
@@ -24,7 +39,7 @@ export default function ManuscriptAnalyzer() {
       setReport(data);
     } catch (err) {
       setError(err.message);
-    } finaly {
+    } finally {
       setLoading(false);
     }
   };
@@ -38,13 +53,16 @@ export default function ManuscriptAnalyzer() {
           <p className="text-slate-400 mt-2 text-sm">Soumettez votre texte pour un audit stylistique profond et découvrez votre indice d'acceptation en maison d'édition.</p>
         </header>
         <section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4 print:hidden">
-          <div className="flex justify-between items-center">
-            <label className="block text-sm font-semibold text-slate-300">Collez votre extrait (Idéalement un incipit ou un chapitre complet)</label>
-            <span className="text-xs font-mono text-slate-500">{text.length} caractères</span>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+            <label className="block text-sm font-semibold text-slate-300">Collez votre extrait ou déposez un fichier (.txt)</label>
+            <div className="flex items-center space-x-3">
+              <input type="file" accept=".txt" onChange={handleFileUpload} disabled={loading} className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer" />
+              <span className="text-xs font-mono text-slate-500">{text.length} caractères</span>
+            </div>
           </div>
           <textarea
             className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-serif leading-relaxed text-base"
-            placeholder="Le jour où la pluie cessa de tomber..."
+            placeholder="Le jour où la pluie cessa de tomber... (Le fichier chargé apparaîtra ici instantanément en local)"
             value={text}
             onChange={(e) => setText(e.target.value)}
             disabled={loading}
