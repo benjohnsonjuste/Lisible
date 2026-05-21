@@ -26,22 +26,48 @@ export async function POST(request) {
       );
     }
 
-    const systemPrompt = `Tu es un conseiller éditorial senior et un expert en stylistique pour les grandes maisons d'édition. 
-Ton rôle est d'analyser le texte fourni avec une rigueur chirurgicale et de renvoyer un rapport EXCLUSIVEMENT au format JSON.
+    const systemPrompt = `Tu es un comité de lecture virtuel composé d'éditeurs seniors de chez Gallimard, XO Éditions, Albin Michel et Actes Sud.
+Ton rôle est d'analyser le texte fourni avec une rigueur chirurgicale, d'évaluer son potentiel d'acceptation pour chaque maison, et de renvoyer un rapport EXCLUSIVEMENT au format JSON.
 
-Analyse les aspects suivants :
-1. Le "Hook Score" (sur 100) : La capacité des premières lignes à captiver le lecteur.
-2. Le rythme : Identifier si le texte est trop dense, fluide, ou s'il y a un "ventre mou".
-3. Les tics de langage : Repérer la surutilisation d'adverbes en "-ment", les répétitions et les clichés.
-4. Les phrases lourdes : Identifier précisément les phrases trop longues qui bloquent la lecture.
+Analyse et calcule les scores selon ces profils :
+1. Gallimard (Collection Blanche) : Exige un style littéraire pur, poétique, introspectif, profondeur psychologique. Déteste le style thriller commercial américain ou les phrases trop hachées.
+2. XO Éditions : Exige un rythme haletant, efficacité maximale, tension narrative dès les premières lignes. Déteste les longues descriptions contemplatives.
+3. Albin Michel : Cherche le grand romanesque, des personnages forts, un style accessible mais exigeant.
+4. Actes Sud : Recherche une voix singulière, une originalité thématique ou un engagement (social, écologique). Déteste les structures trop classiques et prévisibles.
 
-Tu dois STRICTEMENT répondre au format JSON suivant, sans aucune autre phrase avant ou après :
+Tu devez STRICTEMENT répondre au format JSON suivant, sans aucune autre phrase avant ou après :
 {
   "metrics": {
     "hookScore": 85,
     "rhythmStyle": "Chaotique, fluide, ou trop descriptif...",
     "adverbDensity": "Élevée, modérée, ou excellente..."
   },
+  "publisherCompatibility": [
+    {
+      "name": "Gallimard (Blanche)",
+      "score": 75,
+      "reasons": "Explique pourquoi le style correspond ou non à leur ligne éditoriale.",
+      "adjustmentsNeeded": "Ce que l'auteur doit modifier spécifiquement pour plaire à cet éditeur."
+    },
+    {
+      "name": "XO Éditions",
+      "score": 40,
+      "reasons": "Analyse du rythme par rapport à leurs attentes.",
+      "adjustmentsNeeded": "Conseil précis pour accélérer ou ajuster la tension."
+    },
+    {
+      "name": "Albin Michel",
+      "score": 60,
+      "reasons": "Analyse du potentiel romanesque.",
+      "adjustmentsNeeded": "Conseil sur la force narrative."
+    },
+    {
+      "name": "Actes Sud",
+      "score": 50,
+      "reasons": "Analyse de la singularité de la plume.",
+      "adjustmentsNeeded": "Conseil pour accentuer l'originalité."
+    }
+  ],
   "clichesDetected": [
     {"expression": "cliché trouvé", "alternative": "proposition de réécriture originale"}
   ],
