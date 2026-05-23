@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779569907455",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Minuit t'appelle\" !",
+      "date": "2026-05-23T20:58:27.455Z",
+      "read": false
+    },
+    {
       "id": "like_1779567634543",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Minuit t'appelle\" !",
