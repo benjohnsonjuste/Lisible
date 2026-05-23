@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779566517272",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le murmure des martyrs\" !",
+      "date": "2026-05-23T20:01:57.272Z",
+      "read": false
+    },
+    {
       "id": "cert_1778641243496",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Défaite en famille\" (+1 Li).",
