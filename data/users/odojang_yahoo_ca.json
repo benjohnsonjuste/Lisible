@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779567634543",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Minuit t'appelle\" !",
+      "date": "2026-05-23T20:20:34.543Z",
+      "read": false
+    },
+    {
       "id": "cert_1779567627612",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Minuit t'appelle\" (+1 Li).",
