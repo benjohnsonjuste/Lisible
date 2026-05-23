@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779571981846",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le sel du vent\" !",
+      "date": "2026-05-23T21:33:01.846Z",
+      "read": false
+    },
+    {
       "id": "like_1779571960956",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Le sel du vent\" !",
