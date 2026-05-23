@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779571911292",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le sel du vent\" !",
+      "date": "2026-05-23T21:31:51.292Z",
+      "read": false
+    },
+    {
       "id": "reset_1779227315580",
       "type": "security",
       "message": "Votre mot de passe a été réinitialisé en : Lisible2026. Changez-le vite !",
