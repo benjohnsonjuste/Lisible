@@ -117,7 +117,7 @@ export default function ManuscriptAnalyzer() {
             <ShieldCheck className="w-5 h-5 text-emerald-500/80 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-slate-400 space-y-1">
               <p className="font-semibold text-slate-300">Garantie Souveraine de Confidentialité</p>
-              <p className="leading-relaxed">Votre œuvre est lue exclusivement en mémoire vive locale sans stockage dans nos serveurs.</p>
+              <p className="leading-relaxed">Votre œuvre est lue exclusivement en mémoire vive locale sans stockage sur nos serveurs.</p>
             </div>
           </div>
         </section>
