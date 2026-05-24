@@ -56,6 +56,24 @@ export default async function Page({ params }) {
       flexDirection: "column",
       transition: "background-color 0.3s ease"
     }}>
+      {/* Native Banner Adsterra */}
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+          padding: "16px 0",
+        }}
+      >
+        <div id="container-874a186feecd3e968c16a58bb085fd56"></div>
+
+        <script
+          async={true}
+          data-cfasync="false"
+          src="https://pl28554024.effectivecpmnetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"
+        ></script>
+      </div>
+
       {/* On passe l'id ici pour que TextContent puisse l'utiliser pour le Like et le Share */}
       <TextContent id={id} />
     </div>
