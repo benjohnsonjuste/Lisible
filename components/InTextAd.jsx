@@ -9,7 +9,6 @@ export default function InTextAd({ index = 0 }) {
   useEffect(() => {
     if (scriptInjectedRef.current) return;
 
-    // ID UNIQUE pour éviter les conflits entre plusieurs pubs
     const containerId = `container-874a186feecd3e968c16a58bb085fd56-${index}`;
 
     const existingContainer = document.getElementById(containerId);
@@ -50,7 +49,7 @@ export default function InTextAd({ index = 0 }) {
         id={`container-874a186feecd3e968c16a58bb085fd56-${index}`}
         className="
           w-full
-          min-h-[180px]
+          min-h-[1200px]
           rounded-3xl
           overflow-hidden
           border
@@ -59,12 +58,16 @@ export default function InTextAd({ index = 0 }) {
           backdrop-blur-sm
           shadow-xl
           flex
-          items-center
-          justify-center
+          flex-col
+          items-stretch
+          justify-start
           transition-all
           duration-300
           hover:shadow-2xl
         "
+        style={{
+          height: "auto",
+        }}
       />
     </div>
   );
