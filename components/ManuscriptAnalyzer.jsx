@@ -60,7 +60,7 @@ export default function ManuscriptAnalyzer() {
     setError(null);
     setReport(null);
     try {
-      const r = await fetch('/api/analyze-full', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ textChunk: text }) });
+      const r = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ textChunk: text }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Une erreur est survenue lors de l'analyse.");
       setReport(d);
