@@ -10,8 +10,8 @@ export default function ManuscriptAnalyzer() {
   const [scanStep, setScanStep] = useState(0);
   const [isFormatting, setIsFormatting] = useState(false);
   const steps = [
-    "Initialisation du scan spatial synoptique...", "Extraction de la matrice syntaxique locale (RAM)...",
-    "Mesure du filtre d'érosion textuelle (chevilles syntaxiques)...", "Calcul de l'indice d'ancrage mnésique structural...",
+    "Initialisation du scan spatial synoptique...", "Extraction de la matrice syntaxique...",
+    "Mesure du filtre d'érosion textuelle...", "Calcul de l'indice d'ancrage mnésique structural...",
     "Simulation vectorielle du comité Gallimard (Blanche)...", "Analyse biomécanique de tension dramatique (XO Éditions)...",
     "Cartographie du souffle et amplitude romanesque (Albin Michel)...", "Calcul de la densité gravitationnelle et des clichés...",
     "Compilation du bilan d'ingénierie éditoriale final..."
@@ -117,7 +117,7 @@ export default function ManuscriptAnalyzer() {
             <ShieldCheck className="w-5 h-5 text-emerald-500/80 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-slate-400 space-y-1">
               <p className="font-semibold text-slate-300">Garantie Souveraine de Confidentialité</p>
-              <p className="leading-relaxed">Votre œuvre est lue exclusivement en mémoire vive locale (RAM).</p>
+              <p className="leading-relaxed">Votre œuvre est lue exclusivement en mémoire vive locale sans stockage dans nos serveurs.</p>
             </div>
           </div>
         </section>
