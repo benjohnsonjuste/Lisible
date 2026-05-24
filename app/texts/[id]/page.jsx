@@ -60,11 +60,13 @@ export default async function Page({ params }) {
     }}>
 
       {/* Publicité Social Bar */}
-      <script
-        async
-        data-cfasync="false"
-        src="https://pl28594689.profitablecpmratenetwork.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js"
-      ></script>
+      <div
+        dangerouslySetInnerHTML={{
+          __html: `
+            <script async="async" data-cfasync="false" src="https://pl28594689.profitablecpmratenetwork.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js"></script>
+          `,
+        }}
+      />
 
       {/* Publicité en haut */}
       <div
