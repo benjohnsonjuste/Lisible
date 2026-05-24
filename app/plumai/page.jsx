@@ -1,12 +1,1 @@
-import ManuscriptAnalyzer from '@/components/ManuscriptAnalyzer';
-
-export default function PlumaiPage() {
-  return (
-    <main className="min-h-screen bg-slate-950 flex flex-col justify-between">
-      {/* Intégration de votre module d'analyse stylistique */}
-      <div className="py-8">
-        <ManuscriptAnalyzer />
-      </div>
-    </main>
-  );
-}
+'use client';import React,{useState} from 'react';import StyleAnalyzer from '@/components/StyleAnalyzer';import EditorialStudio from '@/components/EditorialStudio';export default function Page(){const[text,setText]=useState('');const[metrics,setMetrics]=useState(null);return(<div className="p-6 md:p-12 space-y-8 max-w-6xl mx-auto"><h1 className="text-2xl font-black text-slate-200 font-mono text-center">PLUMAI DASHBOARD PRO</h1><StyleAnalyzer text={text} setText={setText} onAnalysisComplete={(d)=>setMetrics(d.metrics)}/><EditorialStudio text={text} analysisMetrics={metrics}/></div>);}
