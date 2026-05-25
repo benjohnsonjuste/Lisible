@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779671365059",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Les soixante  secondes\" !",
+      "date": "2026-05-25T01:09:25.059Z",
+      "read": false
+    },
+    {
       "id": "cert_1779572834792",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Le sel du vent\" (+1 Li).",
