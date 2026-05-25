@@ -9,7 +9,7 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Les soixante  secondes\" !",
       "date": "2026-05-25T01:09:25.059Z",
-      "read": false
+      "read": true
     },
     {
       "id": "cert_1779572834792",
