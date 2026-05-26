@@ -50,6 +50,7 @@
     "@octokit/rest": "^20.0.0",
     "lucide-react": "latest",
     "next-pwa": "^5.6.0",
+    "pdf-lib": "^1.17.1",
     "@radix-ui/react-slot": "^1.0.2",
     "@prisma/client": "^5.10.0",
     "@vercel/blob": "latest",
