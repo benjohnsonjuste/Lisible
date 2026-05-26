@@ -9,7 +9,7 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Minuit t'appelle\" !",
       "date": "2026-05-25T19:29:36.052Z",
-      "read": false
+      "read": true
     },
     {
       "id": "cert_1779737369863",
