@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { BookOpen, Shield, Cpu, Award, ArrowRight, Star, FileText, Sparkles, Database, Layers, Eye, Activity } from 'lucide-react';
 import ManuscriptAnalyzer from '@/components/ManuscriptAnalyzer';
-export default function LandingPage() {
+export default function PlumaiLandingPage() {
   const [activeGenre, setActiveGenre] = useState('blanche');
   const [simulationText, setSimulationText] = useState('');
   const [quantumReport, setQuantumReport] = useState(null);
@@ -53,7 +53,7 @@ export default function LandingPage() {
       <header className="relative max-w-5xl mx-auto pt-16 pb-12 px-6 text-center space-y-6">
         <div className="inline-flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-purple-950/40 to-emerald-950/40 border border-emerald-800/30 text-emerald-400 rounded-full text-xs font-mono tracking-wider"><Activity className="w-3 h-3 text-cyan-400 animate-pulse" /> <span>SYSTÈME QUANTIQUE LOCAL DÉCENTRALISÉ</span></div>
         <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1] bg-gradient-to-b from-slate-50 to-slate-400 bg-clip-text text-transparent max-w-4xl mx-auto">L'ingénierie littéraire du futur, sans cloud.</h1>
-        <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto font-normal leading-relaxed">Cartographiez la signature stylométrique profonde de vos textes. Évaluez la cohérence structurelle et estimez votre indice d'assimilation transmédia en local.</p>
+        <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto font-normal leading-relaxed">Cartographiez la signature stylométrique profonde de vos textes. Évaluez la coherence structurelle et estimez votre indice d'assimilation transmédia en local.</p>
       </header>
       <main className="max-w-6xl mx-auto px-4 md:px-6 space-y-20 pb-24">
         <section id="analyzer" className="scroll-mt-24">
