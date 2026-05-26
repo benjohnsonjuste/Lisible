@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779769487116",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"AU BORD DU GOUFFRE (extrait)\" !",
+      "date": "2026-05-26T04:24:47.116Z",
+      "read": false
+    },
+    {
       "id": "cert_1779769445892",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Toujours\" (+1 Li).",
