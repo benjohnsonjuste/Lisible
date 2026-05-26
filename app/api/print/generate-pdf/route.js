@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
+// Activation du Edge Runtime pour éviter les plantages ou timeouts sur les longs manuscrits
+export const runtime = 'edge';
+
 const FORMATS = {
   roman: { width: 419.53, height: 595.28, margin: 56.69, fontSize: 10, leading: 14 },
   poche: { width: 311.81, height: 504.57, margin: 42.51, fontSize: 9, leading: 12.5 },
