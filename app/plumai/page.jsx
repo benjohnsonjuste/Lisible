@@ -2,6 +2,8 @@
 import React from 'react';
 import { BookOpen, Shield, Cpu, Award, ArrowRight, Star, Quote } from 'lucide-react';
 import ManuscriptAnalyzer from '@/components/ManuscriptAnalyzer';
+import FreePrintGenerator from '@/components/FreePrintGenerator';
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-300 overflow-x-hidden">
@@ -30,9 +32,15 @@ export default function LandingPage() {
         <div className="flex justify-center pt-2"><a href="#analyzer" className="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-medium rounded-xl text-sm text-slate-950 shadow-xl shadow-emerald-950/20 transition-all flex items-center space-x-2 group"><span>Déployer la console d'analyse</span><ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" /></a></div>
       </header>
       <main className="max-w-6xl mx-auto px-4 md:px-6 space-y-24 pb-24">
-        <section id="analyzer" className="scroll-mt-24 relative rounded-3xl p-0.5 bg-gradient-to-b from-slate-800/50 to-transparent shadow-2xl">
-          <div className="absolute inset-0 bg-slate-950 rounded-3xl -z-10" />
-          <ManuscriptAnalyzer />
+        <section id="analyzer" className="scroll-mt-24 space-y-12">
+          <div className="relative rounded-3xl p-0.5 bg-gradient-to-b from-slate-800/50 to-transparent shadow-2xl">
+            <div className="absolute inset-0 bg-slate-950 rounded-3xl -z-10" />
+            <ManuscriptAnalyzer />
+          </div>
+          
+          <div className="pt-8">
+            <FreePrintGenerator />
+          </div>
         </section>
         <section id="features" className="scroll-mt-24 space-y-12">
           <div className="text-center space-y-3">
