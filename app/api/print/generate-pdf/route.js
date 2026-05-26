@@ -1,50 +1,37 @@
-// /pages/api/print/generate-pdf.js ou /app/api/print/generate-pdf/route.js
+import { NextResponse } from 'next/server';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-// Configuration stricte des formats éditoriaux (dimensions en Points PostScript : 1 mm = 2.83465 points)
 const FORMATS = {
-  roman: { width: 419.53, height: 595.28, margin: 56.69, fontSize: 10, leading: 14 }, // Format A5 standard
+  roman: { width: 419.53, height: 595.28, margin: 56.69, fontSize: 10, leading: 14 },
   poche: { width: 311.81, height: 504.57, margin: 42.51, fontSize: 9, leading: 12.5 },
   royal: { width: 442.20, height: 663.30, margin: 65.20, fontSize: 11, leading: 16 }
 };
 
-export default async function handler(req, res) {
-  // Sécurité élémentaire de la méthode HTTP
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Méthode non autorisée. Utilisez POST.' });
-  }
-
+export async function POST(req) {
   try {
-    const { title, author, contentText, formatType = 'roman' } = req.body;
+    const { title, author, contentText, formatType = 'roman' } = await req.json();
 
-    // Validation rapide des données requises
     if (!title || !contentText) {
-      return res.status(400).json({ error: 'Le titre et le contenu du texte sont obligatoires.' });
+      return NextResponse.json({ error: 'Le titre et le contenu sont obligatoires.' }, { status: 400 });
     }
-    
-    // 1. Sélection de la charte de mise en page selon le choix de l'auteur
+
     const config = FORMATS[formatType] || FORMATS.roman;
-    
-    // 2. Initialisation du document PDF vierge
     const pdfDoc = await PDFDocument.create();
     
-    // Utilisation de polices standardisées (Times-Roman apporte une vraie texture "livre")
     const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
     const fontBold = await pdfDoc.embedFont(StandardFonts.TimesBold);
 
-    // 3. Moteur de calcul typographique (Gestion du Word-wrap et des marges)
     const printableWidth = config.width - (config.margin * 2);
     const printableHeight = config.height - (config.margin * 2);
     const linesPerPage = Math.floor(printableHeight / config.leading);
 
-    // Fonction de découpage du texte brut en lignes physiques respectant la largeur maximale
     const splitTextIntoLines = (text, maxWidth, fontSize) => {
       const paragraphs = text.split('\n');
       const lines = [];
       
       for (const para of paragraphs) {
         if (para.trim() === '') {
-          lines.push(''); // Conserve les sauts de paragraphe
+          lines.push('');
           continue;
         }
         const words = para.split(' ');
@@ -67,45 +54,19 @@ export default async function handler(req, res) {
     };
 
     const allLines = splitTextIntoLines(contentText, printableWidth, config.fontSize);
-
-    // 4. Distribution des Pages & Application des standards d'imprimerie
     let currentLineIndex = 0;
     let pageNumber = 1;
 
-    // --- PAGE DE TITRE / PREMIÈRE PAGE ÉPURÉE ---
+    // --- PAGE DE TITRE ---
     let currentPage = pdfDoc.addPage([config.width, config.height]);
-    
-    // Centrage ou placement vertical élégant du titre
-    currentPage.drawText(title, { 
-      x: config.margin, 
-      y: config.height * 0.6, 
-      size: config.fontSize + 8, 
-      font: fontBold,
-      color: rgb(0.05, 0.05, 0.05)
-    });
-    
-    currentPage.drawText(author || "Auteur Anonyme", { 
-      x: config.margin, 
-      y: config.height * 0.5, 
-      size: config.fontSize + 2, 
-      font,
-      color: rgb(0.3, 0.3, 0.3)
-    });
+    currentPage.drawText(title, { x: config.margin, y: config.height * 0.6, size: config.fontSize + 8, font: fontBold });
+    currentPage.drawText(author || "Auteur Lisible", { x: config.margin, y: config.height * 0.5, size: config.fontSize + 2, font });
+    currentPage.drawText("Document généré gratuitement par Lisible", { x: config.margin, y: config.margin, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
 
-    // Mention de courtoisie technique en bas
-    currentPage.drawText("Document généré gratuitement par Lisible (lisible.biz)", { 
-      x: config.margin, 
-      y: config.margin, 
-      size: 8, 
-      font,
-      color: rgb(0.5, 0.5, 0.5)
-    });
-
-    // --- CORPS DE TEXTE PRINCIPAL & PAGINATION ---
+    // --- CORPS DE TEXTE ---
     while (currentLineIndex < allLines.length) {
       pageNumber++;
       currentPage = pdfDoc.addPage([config.width, config.height]);
-      
       let yPosition = config.height - config.margin;
 
       for (let i = 0; i < linesPerPage; i++) {
@@ -118,14 +79,14 @@ export default async function handler(req, res) {
             y: yPosition,
             size: config.fontSize,
             font,
-            color: rgb(0.02, 0.02, 0.02), // Noir pur "Encre d'Imprimerie"
+            color: rgb(0.02, 0.02, 0.02),
           });
         }
         yPosition -= config.leading;
         currentLineIndex++;
       }
 
-      // Numérotation alternée (Gauche pour les pages paires, Droite pour les impaires pour la reliure)
+      // Pagination alternée
       const isEven = pageNumber % 2 === 0;
       const pageNumStr = pageNumber.toString();
       const numWidth = font.widthOfTextAtSize(pageNumStr, 8);
@@ -140,17 +101,19 @@ export default async function handler(req, res) {
       });
     }
 
-    // 5. Finalisation et Envoi du binaire
     const pdfBytes = await pdfDoc.save();
-    
-    // Déclaration des en-têtes HTTP pour forcer le téléchargement du fichier par le navigateur
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="lisible-print-${formatType}.pdf"`);
-    
-    return res.status(200).send(Buffer.from(pdfBytes));
+
+    // Renvoi du fichier binaire avec les en-têtes de téléchargement adaptés à l'App Router
+    return new Response(pdfBytes, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="lisible-print-${formatType}.pdf"`,
+      },
+    });
 
   } catch (error) {
-    console.error('Erreur de génération d\'impression:', error);
-    return res.status(500).json({ error: 'Une erreur interne est survenue lors de la compilation du PDF.' });
+    console.error('Erreur backend:', error);
+    return NextResponse.json({ error: 'Une erreur est survenue.' }, { status: 500 });
   }
 }
