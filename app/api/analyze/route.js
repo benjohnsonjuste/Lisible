@@ -1,5 +1,9 @@
 'use client';
 import { NextResponse } from 'next/server';
+
+// Activation du Edge Runtime pour gérer les gros volumes textuels sans timeout (limite des 10s sautée)
+export const runtime = 'edge';
+
 export async function POST(request) {
   try {
     const { textChunk } = await request.json();
