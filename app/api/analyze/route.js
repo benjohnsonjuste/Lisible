@@ -1,3 +1,4 @@
+'use client';
 import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
@@ -133,7 +134,7 @@ export async function POST(request) {
           name: "XO Éditions",
           score: xoScore,
           reasons: xoScore > 70 ? "Structure nerveuse, sens du tempo et immédiateté narrative calibrés pour le grand public et le thriller." : "Rythme trop ample ou contemplatif, risquant d'atténuer la tension dramatique exigée.",
-          adjustmentsNeeded: "Augmentez le ratio de verbes d'action, réduisez les modalisateurs et élaguez les descriptions."
+          adjustmentsNeeded: "Augmentez le ratio de verbes d'action, réduisez les modalisateurs and élaguez les descriptions."
         },
         {
           name: "Albin Michel",
