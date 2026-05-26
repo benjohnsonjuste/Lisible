@@ -1,9 +1,16 @@
 {
   "email": "odojang@yahoo.ca",
   "name": "Ouellette André",
-  "li": 58,
+  "li": 59,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1779769445892",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Toujours\" (+1 Li).",
+      "date": "2026-05-26T04:24:05.892Z",
+      "read": false
+    },
     {
       "id": "like_1779737376052",
       "type": "like",
