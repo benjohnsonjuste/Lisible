@@ -1,14 +1,12 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Sparkles, FileText, Download, Layout, ShieldCheck, Cpu, CheckCircle2 } from 'lucide-react';
-
 export default function FreePrintGenerator() {
   const [format, setFormat] = useState('roman');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStepText, setCurrentStepText] = useState('');
   const [isReady, setIsReady] = useState(false);
-
-  // Les étapes du "Facteur Wow" pour valoriser la puissance de l'outil gratuit
   const loadingSteps = [
     { min: 0, max: 20, text: "Analyse sémantique du manuscrit..." },
     { min: 21, max: 45, text: "Calcul de l'empagement et des grilles typographiques..." },
@@ -16,19 +14,16 @@ export default function FreePrintGenerator() {
     { min: 71, max: 90, text: "Vectorisation des polices et conversion colorimétrique CMJN (FOGRA39)..." },
     { min: 91, max: 100, text: "Finalisation du document PDF prêt pour l'imprimerie..." }
   ];
-
   useEffect(() => {
     if (isGenerating) {
       const step = loadingSteps.find(s => progress >= s.min && progress <= s.max);
       if (step) setCurrentStepText(step.text);
     }
   }, [progress, isGenerating]);
-
   const startGeneration = () => {
     setIsGenerating(true);
     setIsReady(false);
     setProgress(0);
-    
     const interval = setInterval(() => {
       setProgress((oldProgress) => {
         if (oldProgress >= 100) {
@@ -39,49 +34,38 @@ export default function FreePrintGenerator() {
         }
         return oldProgress + 2;
       });
-    }, 60); // Un peu plus rapide pour une expérience utilisateur fluide
+    }, 60);
   };
-
   const handleDownload = async () => {
     try {
       const response = await fetch('/api/print/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: "Mon Beau Livre de Poèmes", // À lier dynamiquement à l'œuvre actuelle si nécessaire
+          title: "Mon Beau Livre de Poèmes",
           author: "Auteur Lisible",
-          contentText: "Le contenu entier textuel du livre va ici...", // À lier au texte de l'auteur
+          contentText: "Le contenu entier textuel du livre va ici...",
           formatType: format
         })
       });
-
       if (!response.ok) throw new Error("Erreur serveur lors du téléchargement");
-
-      // Traitement du flux binaire (Blob) reçu depuis l'API
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      
-      // Simulation d'un clic pour lancer le téléchargement automatique du fichier
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `lisible-${format}-print.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
-      
     } catch (error) {
       console.error("Échec du téléchargement :", error);
       alert("Impossible de récupérer le fichier. Réessayez dans quelques instants.");
     }
   };
-
   return (
     <div className="w-full max-w-5xl mx-auto p-6 bg-slate-950 text-slate-100 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden relative font-sans">
-      {/* Background Neon Glows */}
       <div className="absolute top-0 -left-40 w-80 h-80 bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 -right-40 w-80 h-80 bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800 pb-6 mb-8 gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-emerald-400 mb-1 font-mono">
@@ -98,12 +82,8 @@ export default function FreePrintGenerator() {
           Outil 100% Gratuit • Lisible Open-Publishing
         </div>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Controls */}
         <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
-          
-          {/* Step 1: Format */}
           <div className="space-y-3">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block font-mono">1. Format du Livre</label>
             <div className="grid grid-cols-1 gap-3">
@@ -133,8 +113,6 @@ export default function FreePrintGenerator() {
               ))}
             </div>
           </div>
-
-          {/* Step 2: Inclusions */}
           <div className="space-y-3">
             <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block font-mono">2. Inclusions automatiques</label>
             <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800/80 space-y-2.5 text-xs text-slate-300">
@@ -143,8 +121,6 @@ export default function FreePrintGenerator() {
               <div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-violet-400" /> Intégration des mentions légales de Lisible</div>
             </div>
           </div>
-
-          {/* Action Trigger */}
           <div className="pt-4">
             {!isGenerating && !isReady && (
               <button
@@ -154,7 +130,6 @@ export default function FreePrintGenerator() {
                 <Sparkles className="w-4 h-4" /> Lancer la mise en page
               </button>
             )}
-
             {isGenerating && (
               <div className="space-y-3">
                 <div className="w-full bg-slate-900 rounded-full h-2.5 border border-slate-800 overflow-hidden">
@@ -169,7 +144,6 @@ export default function FreePrintGenerator() {
                 </div>
               </div>
             )}
-
             {isReady && (
               <div className="space-y-3 animate-fadeIn">
                 <div className="bg-emerald-950/30 border border-emerald-500/30 text-emerald-400 p-3.5 rounded-xl text-xs flex items-start gap-2.5">
@@ -185,29 +159,16 @@ export default function FreePrintGenerator() {
               </div>
             )}
           </div>
-
         </div>
-
-        {/* Right Column: Immersive 3D Preview */}
         <div className="lg:col-span-7 flex flex-col bg-slate-900/40 rounded-2xl border border-slate-800 p-6 min-h-[400px] justify-between relative group overflow-hidden">
           <div className="absolute top-4 right-4 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-full text-[10px] font-mono tracking-wider text-slate-400 z-10">
             Aperçu Technique Direct
           </div>
-
-          {/* Book Canvas Simulation */}
           <div className="flex-1 flex items-center justify-center my-4 relative">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:24px_24px] opacity-20 pointer-events-none" />
-
-            <div className={`relative transition-all duration-700 transform perspective-1000 ${
-              isGenerating ? 'scale-95 rotate-y-12 animate-pulse' : 'hover:rotate-y-3'
-            }`}>
-              {/* Simulated Book Skeleton */}
-              <div className={`bg-white rounded-r-md shadow-[20px_20px_40px_rgba(0,0,0,0.6)] border-l-4 border-slate-300 relative transition-all duration-500 ${
-                format === 'poche' ? 'w-44 h-68' : format === 'royal' ? 'w-56 h-80' : 'w-50 h-74'
-              }`}>
+            <div className={`relative transition-all duration-700 transform perspective-1000 ${isGenerating ? 'scale-95 rotate-y-12 animate-pulse' : 'hover:rotate-y-3'}`}>
+              <div className={`bg-white rounded-r-md shadow-[20px_20px_40px_rgba(0,0,0,0.6)] border-l-4 border-slate-300 relative transition-all duration-500 ${format === 'poche' ? 'w-44 h-68' : format === 'royal' ? 'w-56 h-80' : 'w-50 h-74'}`}>
                 <div className="absolute left-0 top-0 bottom-0 w-2.5 bg-gradient-to-r from-black/20 via-black/5 to-transparent" />
-                
-                {/* Book Content Preview lines */}
                 <div className="p-6 space-y-3 pt-10 opacity-80">
                   <div className="w-16 h-1 bg-slate-400 mx-auto mb-6" />
                   <div className="w-full h-1.5 bg-slate-200 rounded" />
@@ -218,18 +179,13 @@ export default function FreePrintGenerator() {
                   <div className="w-full h-1.5 bg-slate-200 rounded pt-4" />
                   <div className="w-5/12 h-1.5 bg-slate-200 rounded" />
                 </div>
-
-                {/* Print Alignment Marks */}
                 <div className="absolute -top-3 -left-3 w-5 h-[1px] bg-red-500/40 font-mono text-[6px] text-red-500 pl-6 pt-1">Fonds perdus 3mm</div>
                 <div className="absolute -top-3 -left-3 w-[1px] h-5 bg-red-500/40" />
                 <div className="absolute -bottom-3 -right-3 w-5 h-[1px] bg-red-500/40" />
                 <div className="absolute -bottom-3 -right-3 w-[1px] h-5 bg-red-500/40" />
-
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[9px] font-mono text-slate-400 font-bold">27</div>
               </div>
             </div>
-
-            {/* Overlays during processing */}
             {isGenerating && (
               <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center space-y-3 z-20">
                 <div className="w-9 h-9 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -237,8 +193,6 @@ export default function FreePrintGenerator() {
               </div>
             )}
           </div>
-
-          {/* Technical Specs Dashboard */}
           <div className="grid grid-cols-3 gap-2 pt-4 border-t border-slate-800/60 font-mono text-[10px] text-slate-400">
             <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-800/40">
               <span className="text-slate-500 block uppercase">Profil Couleur</span>
