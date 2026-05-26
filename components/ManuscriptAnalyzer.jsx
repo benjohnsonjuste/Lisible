@@ -1,166 +1,152 @@
 'use client';
-import React, { useState } from 'react';
-import { BookOpen, Shield, Cpu, Award, ArrowRight, Star, FileText, Sparkles, Database, Layers, Eye, Activity } from 'lucide-react';
-import ManuscriptAnalyzer from '@/components/ManuscriptAnalyzer';
-export default function PlumaiLandingPage() {
-  const [activeGenre, setActiveGenre] = useState('blanche');
-  const [simulationText, setSimulationText] = useState('');
-  const [quantumReport, setQuantumReport] = useState(null);
-  const genresSpecs = {
-    blanche: { name: 'Littérature Blanche / Générale', font: 'Georgia', size: '12pt', lineH: '1.8', margins: '3cm partout', advice: 'Marges larges pour corrections physiques. Police serif classique.' },
-    thriller: { name: 'Thriller / Roman Noir', font: 'Courier New', size: '11pt', lineH: '1.5', margins: '2.5cm partout', advice: 'Format compact favorisant le dynamisme visuel et le rythme des dialogues.' },
-    imaginaire: { name: 'SFFF (Sci-Fi, Fantasy)', font: 'Garamond', size: '11.5pt', lineH: '1.6', margins: '2.5cm partout', advice: 'Optimisé pour les gros volumes, grand confort de lecture sur pavés denses.' },
-    feelgood: { name: 'Romance / Feel-Good', font: 'Arial / Calibri', size: '12pt', lineH: '1.6', margins: '2.5cm partout', advice: 'Aéré, moderne, idéal pour une assimilation fluide et un grand confort visuel.' },
-  };
-  const handleQuantumSimulation = () => {
-    if (!simulationText.trim() || simulationText.length < 30) return;
-    const clean = simulationText.toLowerCase();
-    const wordCount = simulationText.split(/\s+/).length;
-    const temporalDisruptions = (clean.match(/(soudain|brusquement|tout à coup|téléphone|ordinateur|liaison)/g) || []).length;
-    const coherenceIndex = Math.max(58, Math.min(99, 100 - (temporalDisruptions * 4)));
-    let proximityAuthor = "Marguerite Duras (Style Minimaliste)";
-    if (wordCount / (simulationText.split(',').length || 1) > 15) {
-      proximityAuthor = "Marcel Proust (Périodes Amples / Introspection)";
-    } else if (clean.includes('!') || clean.includes('?')) {
-      proximityAuthor = "Louis-Ferdinand Céline (Rythme Projectif / Émotif)";
-    }
-    setQuantumReport({
-      coherenceIndex,
-      proximityAuthor,
-      cinematicContinuum: wordCount > 60 ? "Structure idéale pour un plan-séquence immersif. Densité narrative transposable en arcs de saison TV." : "Format hautement dramatique, idéal pour une transition en script de court-métrage.",
-      stylisticEntropy: (1.2 + (temporalDisruptions * 0.15)).toFixed(2) + " Nats",
-      acceptationMatrix: { hachette: Math.round(55 + (coherenceIndex * 0.35)), gallimard: Math.round(40 + (wordCount % 45)), indie: Math.round(70 + (temporalDisruptions * 5)) }
-    });
-  };
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-300 overflow-x-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-      <nav className="border-b border-slate-900 bg-slate-950/70 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md shadow-emerald-950/50"><BookOpen className="w-5 h-5 text-slate-950 stroke-[2.5]" /></div>
-            <span className="text-xl font-black tracking-tight bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">Plumai</span>
-          </div>
-          <div className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-400">
-            <a href="#analyzer" className="hover:text-slate-200 transition-colors">Console d'Audit</a>
-            <a href="#quantum-engine" className="hover:text-slate-200 transition-colors">Analyse Vectorielle</a>
-            <a href="#pao-norms" className="hover:text-slate-200 transition-colors">Mise en Page</a>
-          </div>
-          <button onClick={() => window.print()} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold tracking-wide uppercase rounded-full transition-all text-slate-200 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-emerald-400" /> Export PDF</button>
-        </div>
-      </nav>
-      <header className="relative max-w-5xl mx-auto pt-16 pb-12 px-6 text-center space-y-6">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-purple-950/40 to-emerald-950/40 border border-emerald-800/30 text-emerald-400 rounded-full text-xs font-mono tracking-wider"><Activity className="w-3 h-3 text-cyan-400 animate-pulse" /> <span>SYSTÈME QUANTIQUE LOCAL DÉCENTRALISÉ</span></div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1] bg-gradient-to-b from-slate-50 to-slate-400 bg-clip-text text-transparent max-w-4xl mx-auto">L'ingénierie littéraire du futur, sans cloud.</h1>
-        <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto font-normal leading-relaxed">Cartographiez la signature stylométrique profonde de vos textes. Évaluez la coherence structurelle et estimez votre indice d'assimilation transmédia en local.</p>
-      </header>
-      <main className="max-w-6xl mx-auto px-4 md:px-6 space-y-20 pb-24">
-        <section id="analyzer" className="scroll-mt-24">
-          <div className="relative rounded-3xl p-0.5 bg-gradient-to-b from-slate-800/50 to-transparent shadow-2xl">
-            <div className="absolute inset-0 bg-slate-950 rounded-3xl -z-10" />
-            <ManuscriptAnalyzer />
-          </div>
-        </section>
-        <section id="quantum-engine" className="scroll-mt-24 bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6 shadow-xl">
-          <div className="border-b border-slate-800 pb-4">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100"><Database className="w-5 h-5 text-cyan-400" /> Proximité Vectorielle & Continuum Transmédia</h2>
-            <p className="text-xs text-slate-400 mt-1">Projection géométrique de compatibilité et modélisation de la structure diégétique du récit.</p>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-5 space-y-3">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-slate-500 block">Matrice textuelle brute :</span>
-              <textarea value={simulationText} onChange={(e) => setSimulationText(e.target.value)} placeholder="Insérez votre texte (minimum 30 mots) pour générer l'empreinte biométrique..." className="w-full h-44 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 font-serif focus:outline-none focus:ring-1 focus:ring-cyan-500 leading-relaxed" />
-              <button onClick={handleQuantumSimulation} disabled={simulationText.trim().length < 30} className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-slate-950 font-bold rounded-lg text-xs transition-all flex items-center justify-center space-x-2 disabled:opacity-30"><span>Générer l'Empreinte Stylométrique</span></button>
-            </div>
-            <div className="lg:col-span-7 bg-slate-950/60 rounded-xl border border-slate-800/80 p-5 space-y-4 text-xs">
-              {quantumReport ? (
-                <div className="space-y-4 animate-fadeIn">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-lg text-center">
-                      <span className="text-[9px] font-mono text-slate-500 uppercase block">Cohérence Diégétique</span>
-                      <span className="font-mono text-lg font-black text-cyan-400">{quantumReport.coherenceIndex}%</span>
-                    </div>
-                    <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-lg text-center">
-                      <span className="text-[9px] font-mono text-slate-500 uppercase block">Entropie de Style</span>
-                      <span className="font-mono text-lg font-black text-purple-400">{quantumReport.stylisticEntropy}</span>
-                    </div>
-                    <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-lg text-center">
-                      <span className="text-[9px] font-mono text-slate-500 uppercase block">Proximité d'Auteur</span>
-                      <span className="font-sans text-[11px] font-bold text-amber-400 truncate block mt-1">{quantumReport.proximityAuthor.split(' ')[0]}</span>
-                    </div>
-                  </div>
-                  <div className="bg-slate-900/40 border border-slate-800 p-3 rounded-lg space-y-1">
-                    <span className="text-[10px] font-mono uppercase text-slate-400 flex items-center gap-1"><Eye className="w-3 h-3 text-emerald-400" /> Potentiel Transmédia & Adaptation :</span>
-                    <p className="text-slate-300 leading-relaxed text-[11px] font-serif">{quantumReport.cinematicContinuum}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-mono uppercase text-slate-500 block">Indice de pénétration des comités d'édition :</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-slate-900 p-2 rounded border border-slate-800/50 flex justify-between items-center"><span className="text-slate-400 text-[10px]">Major</span><span className="font-mono font-bold text-emerald-400">{quantumReport.acceptationMatrix.hachette}%</span></div>
-                      <div className="bg-slate-900 p-2 rounded border border-slate-800/50 flex justify-between items-center"><span className="text-slate-400 text-[10px]">Prestige</span><span className="font-mono font-bold text-cyan-400">{quantumReport.acceptationMatrix.gallimard}%</span></div>
-                      <div className="bg-slate-900 p-2 rounded border border-slate-800/50 flex justify-between items-center"><span className="text-slate-400 text-[10px]">Micro</span><span className="font-mono font-bold text-purple-400">{quantumReport.acceptationMatrix.indie}%</span></div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2 text-slate-600">
-                  <Activity className="w-8 h-8 text-slate-800 animate-pulse" />
-                  <p className="text-xs">Système en attente de flux syntaxique.<br />Collez votre extrait textuel pour démarrer le monitoring autonome.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-        <section id="pao-norms" className="scroll-mt-24 space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-100">Gabarits Métiers & Gabarits Typographiques</h2>
-            <p className="text-slate-400 text-xs max-w-xl mx-auto">Vérifiez la configuration géométrique optimale exigée par les imprimeurs et les services des manuscrits physiques.</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {Object.entries(genresSpecs).map(([key, value]) => (
-              <button key={key} onClick={() => setActiveGenre(key)} className={`p-3 text-left rounded-xl border transition-all flex flex-col justify-between space-y-2 ${activeGenre === key ? 'bg-gradient-to-b from-slate-900 to-slate-900/50 border-emerald-500 text-slate-200' : 'bg-slate-900/40 border-slate-900 text-slate-400 hover:border-slate-800'}`}>
-                <span className="text-xs font-bold block">{value.name}</span>
-                <span className="text-[10px] font-mono tracking-wider opacity-80 block">{value.font} / {value.size}</span>
-              </button>
-            ))}
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-900">
-              <span className="text-slate-500 font-mono text-[10px] block">CORPS DE POLICE</span>
-              <p className="font-bold text-slate-300 text-sm font-mono">{genresSpecs[activeGenre].font}</p>
-              <p className="text-slate-400 text-[11px]">Taille recommandée : {genresSpecs[activeGenre].size}</p>
-            </div>
-            <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-900">
-              <span className="text-slate-500 font-mono text-[10px] block">INTERLIGNAGE & ESPACEMENT</span>
-              <p className="font-bold text-cyan-400 text-sm font-mono">{genresSpecs[activeGenre].lineH} pt</p>
-              <p className="text-slate-400 text-[11px]">Marges requises : {genresSpecs[activeGenre].margins}</p>
-            </div>
-            <div className="space-y-1.5 bg-slate-950 p-3 rounded-xl border border-slate-900">
-              <span className="text-slate-500 font-mono text-[10px] block">DIRECTIVE MAISON D'ÉDITION</span>
-              <p className="text-slate-300 font-sans leading-relaxed">{genresSpecs[activeGenre].advice}</p>
-            </div>
-          </div>
-        </section>
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-          <div className="bg-slate-900/30 border border-slate-900 p-6 rounded-2xl space-y-4">
-            <div className="w-10 h-10 bg-emerald-950/50 border border-emerald-900/30 rounded-xl flex items-center justify-center"><Cpu className="w-5 h-5 text-emerald-400" /></div>
-            <h3 className="font-semibold text-slate-200 text-sm">Zéro télémétrie</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">Les algorithmes s'exécutent entièrement sur votre matériel. Votre propriété intellectuelle reste protégée.</p>
-          </div>
-          <div className="bg-slate-900/30 border border-slate-900 p-6 rounded-2xl space-y-4">
-            <div className="w-10 h-10 bg-cyan-950/50 border border-cyan-900/30 rounded-xl flex items-center justify-center"><Award className="w-5 h-5 text-cyan-400" /></div>
-            <h3 className="font-semibold text-slate-200 text-sm">Analyse Non-Invasive</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">Les structures narratives complexes sont découpées et indexées dynamiquement en local.</p>
-          </div>
-          <div className="bg-slate-900/30 border border-slate-900 p-6 rounded-2xl space-y-4">
-            <div className="w-10 h-10 bg-purple-950/50 border border-purple-900/30 rounded-xl flex items-center justify-center"><Layers className="w-5 h-5 text-purple-400" /></div>
-            <h3 className="font-semibold text-slate-200 text-sm">Rendus Multi-Formats</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">Générez des maquettes exploitables répondant directement aux critères exigeants de l'industrie du livre.</p>
-          </div>
-        </section>
-      </main>
-      <footer className="border-t border-slate-900 bg-slate-950 py-8 px-6 text-center text-xs font-mono text-slate-600 print:hidden"><p>&copy; 2026 Plumai. Station d'ingénierie littéraire souveraine.</p></footer>
-    </div>
-  );
+import React,{useState,useEffect} from 'react';
+import {Sparkles,ShieldCheck,Printer,Gauge,Activity,Compass,Clock,Construction,Wrench,Ban,Flame,AlertTriangle,Loader2,Brain,Palette,Scale,MessageSquareCode,FileText,Download} from 'lucide-react';
+export default function ManuscriptAnalyzer(){
+const[text,setText]=useState('');const[loading,setLoading]=useState(false);const[report,setReport]=useState(null);const[error,setError]=useState(null);const[scanStep,setScanStep]=useState(0);const[isFormatting,setIsFormatting]=useState(false);
+const steps=["Initialisation du scan spatial synoptique...","Extraction de la matrice syntaxique locale (RAM)...","Mesure du filtre d'érosion textuelle (chevilles syntaxiques)...","Calcul de l'indice d'ancrage mnésique structural...","Simulation vectorielle du comité Gallimard (Blanche)...","Analyse biomécanique de tension dramatique (XO Éditions)...","Cartographie du souffle et amplitude romanesque (Albin Michel)...","Calcul de la densité gravitationnelle et des clichés...","Compilation du bilan d'ingénierie éditoriale final..."];
+useEffect(()=>{if(!window.mammoth){const s=document.createElement('script');s.src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";s.async=true;document.body.appendChild(s);}},[]);
+useEffect(()=>{let iv;if(loading){setScanStep(0);iv=setInterval(()=>{setScanStep((p)=>(p<steps.length-1?p+1:p));},700);}return()=>clearInterval(iv);},[loading]);
+const handleFileUpload=(e)=>{const f=e.target.files[0];if(!f)return;setError(null);const ext=f.name.split('.').pop().toLowerCase();if(ext==='txt'){const r=new FileReader();r.onload=(evt)=>setText(evt.target.result);r.onerror=()=>setError("Erreur de lecture du fichier TXT.");r.readAsText(f);}else if(ext==='docx'){if(!window.mammoth){setError("Module Word en cours de chargement. Réessayez.");return;}const r=new FileReader();r.onload=(evt)=>{window.mammoth.extractRawText({arrayBuffer:evt.target.result}).then((res)=>setText(res.value)).catch(()=>setError("Erreur de conversion du fichier Word."));};r.onerror=()=>setError("Erreur de lecture du fichier Word.");r.readAsArrayBuffer(f);}else{setError("Seuls les formats .txt et .docx sont supportés.");}};
+const handleAnalyze=async()=>{if(!text||text.trim().length<10){setError("Veuillez entrer un texte suffisant pour lancer l'audit.");return;}setLoading(true);setError(null);setReport(null);try{const r=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({textChunk:text}),});const d=await r.json();if(!r.ok)throw new Error(d.error||"Une erreur est survenue.");setReport(d);}catch(err){setError(err.message);}finally{setLoading(false);}};
+const handleFormatAndDownload=async()=>{if(!text||text.trim().length<10)return;setIsFormatting(true);try{const blob=new Blob([text],{type:'application/msword'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='manuscrit_mise_en_page_impeccable.doc';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){setError("Erreur lors de la génération de la mise en page.");}finally{setIsFormatting(false);}};
+return(
+<div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900">
+<div className="max-w-5xl mx-auto space-y-8">
+<header className="border-b border-slate-800 pb-6">
+<h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
+PlumAI <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">v1.2 (Édition Pro)</span>
+</h1>
+<p className="text-slate-400 mt-2 text-sm">Soumettez votre texte pour un audit stylistique profond et découvrez votre indice d'acceptation en maison d'édition.</p>
+</header>
+<section className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4 print:hidden">
+<div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+<label className="block text-sm font-semibold text-slate-300">Collez votre extrait ou déposez un fichier (.txt, .docx)</label>
+<div className="flex items-center space-x-3">
+<input type="file" accept=".txt,.docx" onChange={handleFileUpload} disabled={loading||isFormatting} className="text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer" />
+<span className="text-xs font-mono text-slate-500">{text.length} caractères</span>
+</div>
+</div>
+<div className="relative overflow-hidden rounded-lg">
+<textarea className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all font-serif leading-relaxed text-base" placeholder="Le jour où la pluie cessa de tomber..." value={text} onChange={(e)=>setText(e.target.value)} disabled={loading||isFormatting} />
+{loading && (
+<div className="absolute inset-0 bg-emerald-950/10 pointer-events-none flex flex-col justify-end p-4">
+<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-[bounce_2s_infinite]" />
+<div className="bg-slate-950/90 border border-emerald-500/30 font-mono text-xs p-3 rounded shadow-lg text-emerald-400 max-w-md backdrop-blur-sm self-start space-y-1 animate-pulse">
+<div className="flex items-center space-x-2"><Loader2 className="w-3 h-3 text-emerald-500 animate-spin"/><span>[SYSTEM MONITOR] : IN PROGRESS</span></div>
+<div className="text-slate-400">&gt; {steps[scanStep]}</div>
+</div>
+</div>
+)}
+</div>
+{error && <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0" /> {error}</div>}
+<div className="flex flex-col sm:flex-row gap-4">
+<button onClick={handleAnalyze} disabled={loading||isFormatting||!text.trim()} className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-600 font-medium rounded-lg text-sm shadow-lg shadow-emerald-950/20 transition-all flex items-center justify-center space-x-2">
+{loading ?(<><Loader2 className="animate-spin h-4 w-4 text-emerald-400"/><span className="text-emerald-400 font-mono text-xs tracking-wider">SCAN SPATIAL EN COURS...</span></>):(<><Sparkles className="w-4 h-4"/><span>Lancer le diagnostic littéraire</span></>)}
+</button>
+<button onClick={handleFormatAndDownload} disabled={loading||isFormatting||!text.trim()} className="flex-1 px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:text-slate-600 text-slate-200 font-medium rounded-lg text-sm border border-slate-700 transition-all flex items-center justify-center space-x-2">
+{isFormatting ?(<><Loader2 className="animate-spin h-4 w-4 text-cyan-400"/><span className="font-mono text-xs text-cyan-400">MISE EN PAGE PRO AUTO...</span></>):(<><FileText className="w-4 h-4 text-cyan-400"/><span>Mise en page pro & Télécharger (.docx)</span></>)}
+</button>
+</div>
+<div className="p-4 bg-slate-950/60 border border-slate-800/80 rounded-lg flex items-start space-x-3 max-w-2xl">
+<ShieldCheck className="w-5 h-5 text-emerald-500/80 mt-0.5 flex-shrink-0" />
+<div className="text-xs text-slate-400 space-y-1">
+<p className="font-semibold text-slate-300">Garantie Souveraine de Confidentialité & Ingénierie Narrative</p>
+<p className="leading-relaxed">Votre œuvre est lue exclusivement en mémoire vive locale (RAM). Le module assure l'alignement des marges, polices canoniques et sauts de section standards selon le genre littéraire identifié pour une livraison impeccable au format Word.</p>
+</div>
+</div>
+</section>
+{report && (
+<div className="space-y-6">
+<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-8">
+<h2 className="text-xl font-bold tracking-tight text-slate-200">Tableau de bord de votre manuscrit</h2>
+<button onClick={()=>window.print()} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-slate-100 font-medium rounded-lg text-xs transition-all flex items-center space-x-2 shadow-sm print:hidden"><Printer className="w-4 h-4"/><span>Exporter le rapport en PDF</span></button>
+</div>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center space-y-2">
+<div className="flex items-center justify-center gap-1.5 text-slate-500"><Brain className="w-3.5 h-3.5 text-emerald-400"/><span className="text-xs uppercase font-mono tracking-wider block">Ancrage Mnésique</span></div>
+<span className="text-5xl font-black text-emerald-400 block">{report.metrics?.hookScore}%</span>
+<span className="text-xs text-slate-400 block">Capacité d'empreinte structurelle</span>
+</div>
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-1">
+<div className="flex items-center gap-1.5 text-slate-500 mb-1"><Palette className="w-3.5 h-3.5 text-cyan-400"/><span className="text-xs uppercase font-mono tracking-wider block">Synesthésie de la Prose</span></div>
+<p className="text-sm text-slate-200 font-medium leading-relaxed pt-1">{report.metrics?.rhythmStyle}</p>
+</div>
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-1">
+<div className="flex items-center gap-1.5 text-slate-500 mb-1"><Scale className="w-3.5 h-3.5 text-amber-400"/><span className="text-xs uppercase font-mono tracking-wider block">Densité Gravitationnelle</span></div>
+<p className="text-sm text-slate-200 font-medium leading-relaxed pt-1">{report.metrics?.adverbDensity}</p>
+</div>
+</div>
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+<h3 className="text-xs uppercase font-mono tracking-wider text-slate-500 mb-4">Indicateurs Quantitatifs de Calibre Professionnel</h3>
+<div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+<div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50"><span className="text-xs text-slate-400 block mb-1">Diversité lexicale</span><span className="text-xl font-bold text-cyan-400">{report.metrics?.vocabularyRichness||0}%</span><span className="text-[10px] text-slate-500 block mt-0.5">Mots uniques (TTR)</span></div>
+<div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50"><span className="text-xs text-slate-400 block mb-1">Force bio-mécanique</span><span className="text-xl font-bold text-amber-400">{report.metrics?.dynamicCoefficient||0}%</span><span className="text-[10px] text-slate-500 block mt-0.5">Force active des verbes</span></div>
+<div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50"><span className="text-xs text-slate-400 block mb-1">Scories de liaison</span><span className="text-xl font-bold text-rose-400">{report.metrics?.weakVerbsCount||0}</span><span className="text-[10px] text-slate-500 block mt-0.5">Chevilles syntaxiques</span></div>
+<div className="bg-slate-950 p-4 rounded-lg border border-slate-800/50"><span className="text-xs text-slate-400 block mb-1">Temps de lecture</span><span className="text-xl font-bold text-emerald-400">~{report.metrics?.readingTime||1} min</span><span className="text-[10px] text-slate-500 block mt-0.5">Vitesse humaine</span></div>
+</div>
+</div>
+{report.actionPlan && report.actionPlan.length > 0 && (
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+<h3 className="text-md font-bold text-slate-200 flex items-center space-x-2"><Wrench className="w-4 h-4 text-cyan-400"/><span>Feuille de route stratégique de réécriture</span></h3>
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+{report.actionPlan.map((step,index)=>(
+<div key={index} className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col justify-between space-y-2">
+<div className="flex justify-between items-center"><span className="text-[10px] font-mono uppercase font-semibold text-slate-500">{step.target}</span><span className={`text-[9px] font-mono uppercase font-bold px-1.5 py-0.5 rounded ${step.priority==='Haute'?'bg-rose-500/10 text-rose-400 border border-rose-500/20':step.priority==='Modérée'?'bg-amber-500/10 text-amber-400 border border-amber-500/20':'bg-slate-800 text-slate-400'}`}>{step.priority}</span></div>
+<p className="text-xs text-slate-300 leading-relaxed pt-1">{step.instruction}</p>
+</div>
+))}
+</div>
+</div>
+)}
+{report.publisherCompatibility && (
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+<h3 className="text-lg font-bold text-slate-200 flex items-center space-x-2"><Compass className="w-5 h-5 text-emerald-400"/><span>Indice de pénétration éditoriale</span></h3>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+{report.publisherCompatibility.map((pub,idx)=>(
+<div key={idx} className="bg-slate-950 p-4 rounded-lg border border-slate-800/60 space-y-3">
+<div className="flex justify-between items-center"><span className="font-semibold text-sm text-slate-200">{pub.name}</span><span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${pub.score>=70?'bg-emerald-500/10 text-emerald-400':pub.score>=50?'bg-amber-500/10 text-amber-400':'bg-rose-500/10 text-rose-400'}`}>{pub.score}%</span></div>
+<div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800"><div className={`h-full transition-all duration-500 ${pub.score>=70?'bg-emerald-500':pub.score>=50?'bg-amber-500':'bg-rose-500'}`} style={{width:`${pub.score}%`}}/></div>
+<p className="text-xs text-slate-400 leading-relaxed"><span className="text-slate-500 font-medium">Diagnostic :</span> {pub.reasons}</p>
+<p className="text-xs text-cyan-400 bg-cyan-950/30 p-2 rounded border border-cyan-900/30"><span className="text-cyan-500 font-semibold">Axe d'amélioration :</span> {pub.adjustmentsNeeded}</p>
+</div>
+))}
+</div>
+</div>
+)}
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+<div className="flex items-center gap-1.5 text-slate-500 mb-2"><MessageSquareCode className="w-4 h-4 text-emerald-500"/><span className="text-xs uppercase font-mono tracking-wider block">Synthèse Mécanique du Comité</span></div>
+<blockquote className="border-l-2 border-emerald-500 pl-4 text-slate-300 italic text-base leading-relaxed">"{report.editorialVerdict}"</blockquote>
+</div>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+<h3 className="text-md font-bold text-rose-400 flex items-center gap-2"><Ban className="w-4 h-4"/><span>Filtre d'Érosion : Lourdeurs ({report.heavyPhrases?.length||0})</span></h3>
+<div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+{report.heavyPhrases?.map((item,idx)=>(
+<div key={idx} className="bg-slate-950 p-4 rounded-lg border border-rose-500/10 space-y-2 text-sm">
+<p className="text-rose-300/90 font-serif italic">"{item.text}"</p>
+<p className="text-xs text-slate-400"><strong className="text-slate-300">Critique :</strong> {item.reason}</p>
+<p className="text-xs text-emerald-400 bg-emerald-500/5 p-2 rounded border border-emerald-500/10 mt-1"><strong className="text-emerald-500">Proposition :</strong> {item.suggestion}</p>
+</div>
+))}
+{(!report.heavyPhrases||report.heavyPhrases.length===0)&&<p className="text-xs text-slate-500">Fluidité parfaite. Aucune lourdeur majeure syntaxique.</p>}
+</div>
+</div>
+<div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+<h3 className="text-md font-bold text-amber-400 flex items-center gap-2"><Flame className="w-4 h-4"/><span>Indice de Cliché Historique ({report.clichesDetected?.length||0})</span></h3>
+<div className="space-y-3 max-h-[350px] overflow-y-auto pr-2">
+{report.clichesDetected?.map((item,idx)=>(
+<div key={idx} className="bg-slate-950 p-3 rounded-lg border border-amber-500/10 flex flex-col space-y-1 text-sm">
+<div className="flex justify-between items-start"><span className="line-through text-amber-300/70 font-mono text-xs">"{item.expression}"</span></div>
+<p className="text-xs text-emerald-400 pt-1"><strong className="text-slate-500 font-normal">Alternative originale :</strong> {item.alternative}</p>
+</div>
+))}
+{(!report.clichesDetected||report.clichesDetected.length===0)&&<p className="text-xs text-slate-500">Pureté singulière. Aucun cliché ou pléonasme détecté.</p>}
+</div>
+</div>
+</div>
+</div>
+)}
+</div>
+</div>
+);
 }
