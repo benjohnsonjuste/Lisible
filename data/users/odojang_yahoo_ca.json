@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1779856302671",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Minuit t'appelle\" !",
+      "date": "2026-05-27T04:31:42.671Z",
+      "read": false
+    },
+    {
       "id": "cert_1779770358772",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"AU BORD DU GOUFFRE (extrait)\" (+1 Li).",
