@@ -1,82 +1,156 @@
 'use client';
-import React from 'react';
-import { BookOpen, Shield, Cpu, Award, ArrowRight, Star } from 'lucide-react';
-import ManuscriptAnalyzer from '@/components/ManuscriptAnalyzer';
+import React, { useState, useEffect } from 'react';
+import { Printer } from 'lucide-react';
+import WorkspaceArea from '@/components/editorial/WorkspaceArea';
+import MetricsDashboard from '@/components/editorial/MetricsDashboard';
+import EditorialReport from '@/components/editorial/EditorialReport';
 
-export default function LandingPage() {
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-300 overflow-x-hidden">
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+export default function ManuscriptAnalyzer() {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [report, setReport] = useState(null);
+  const [marketingData, setMarketingData] = useState(null);
+  const [error, setError] = useState(null);
+  const [scanStep, setScanStep] = useState(0);
+
+  const steps = [
+    "Initialisation du scan spatial synoptique...",
+    "Extraction de la matrice syntaxique locale (RAM)...",
+    "Mesure du filtre d'érosion textuelle...",
+    "Calcul de l'indice d'ancrage mnésique structural...",
+    "Compilation du bilan d'ingénierie éditoriale final..."
+  ];
+
+  useEffect(() => {
+    if (!window.mammoth) {
+      const s = document.createElement('script');
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+      s.async = true;
+      document.body.appendChild(s);
+    }
+  }, []);
+
+  useEffect(() => {
+    let iv;
+    if (loading) {
+      setScanStep(0);
+      iv = setInterval(() => {
+        setScanStep((p) => (p < steps.length - 1 ? p + 1 : p));
+      }, 700);
+    }
+    return () => clearInterval(iv);
+  }, [loading]);
+
+  const handleFileUpload = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    setError(null);
+    const ext = f.name.split('.').pop().toLowerCase();
+    
+    if (ext === 'txt') {
+      const r = new FileReader();
+      r.onload = (evt) => setText(evt.target.result);
+      r.readAsText(f);
+    } else if (ext === 'docx') {
+      if (!window.mammoth) {
+        setError("Module Word en cours de chargement.");
+        return;
+      }
+      const r = new FileReader();
+      r.onload = (evt) => {
+        window.mammoth.extractRawText({ arrayBuffer: evt.target.result })
+          .then((res) => setText(res.value))
+          .catch(() => setError("Erreur de conversion du fichier Word."));
+      };
+      r.readAsArrayBuffer(f);
+    } else {
+      setError("Seuls les formats .txt et .docx sont supportés.");
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!text || text.trim().length < 10) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const rAnalyze = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      const dAnalyze = await rAnalyze.json();
+      if (!rAnalyze.ok) throw new Error(dAnalyze.error);
+      setReport(dAnalyze);
+
+      const rMarketing = await fetch('/api/marketing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rMarketing.ok) {
+        const dMarketing = await rMarketing.json();
+        setMarketingData(dMarketing);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFormatAndDownload = async () => {
+    if (!text || text.trim().length < 10) return;
+    setIsFormatting(true);
+    try {
+      const response = await fetch('/api/format-word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (!response.ok) throw new Error("Échec du formatage serveur.");
       
-      <nav className="border-b border-slate-900 bg-slate-950/70 backdrop-blur-md sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md shadow-emerald-950/50">
-              <BookOpen className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-            </div>
-            <span className="text-xl font-black tracking-tight bg-gradient-to-r from-slate-100 to-slate-300 bg-clip-text text-transparent">Plumai</span>
-          </div>
-          <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-400">
-            <a href="#analyzer" className="hover:text-slate-200 transition-colors">Audit Quantique</a>
-            <a href="#features" className="hover:text-slate-200 transition-colors">Matrice Éditoriale</a>
-          </div>
-          <a href="#analyzer" className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold tracking-wide uppercase rounded-full transition-all text-slate-200">Accès Console</a>
-        </div>
-      </nav>
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'manuscrit_mise_en_page_impeccable.doc';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setIsFormatting(false);
+    }
+  };
 
-      <header className="relative max-w-5xl mx-auto pt-20 pb-16 px-6 text-center space-y-6">
-        <div className="inline-flex items-center space-x-2 px-3 py-1 bg-emerald-950/40 border border-emerald-800/30 text-emerald-400 rounded-full text-xs font-mono tracking-wider animate-pulse">
-          <Star className="w-3 h-3 fill-emerald-400" /><span>INGÉNIERIE NARRATIVE</span>
-        </div>
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1] bg-gradient-to-b from-slate-50 to-slate-400 bg-clip-text text-transparent max-w-4xl mx-auto">Propulsez votre manuscrit au plus haut niveau.</h1>
-        <p className="text-slate-400 text-base md:text-xl max-w-2xl mx-auto font-normal leading-relaxed">Soumettez votre manuscrit à notre moteur d'audit macro-stylistique. Évaluez instantanément votre vélocité narrative, votre signature lexical et votre compatibilité avec les grands comités.</p>
-        <div className="flex justify-center pt-2">
-          <a href="#analyzer" className="px-6 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-medium rounded-xl text-sm text-slate-950 shadow-xl shadow-emerald-950/20 transition-all flex items-center space-x-2 group">
-            <span>Déployer la console d'analyse</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-          </a>
-        </div>
+  return (
+    <div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900 max-w-5xl mx-auto space-y-8">
+      <header className="border-b border-slate-800 pb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
+          PlumLocal <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">v2.1 (Arborescence Racine Directe)</span>
+        </h1>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-6 space-y-24 pb-24">
-        <section id="analyzer" className="scroll-mt-24">
-          <div className="relative rounded-3xl p-0.5 bg-gradient-to-b from-slate-800/50 to-transparent shadow-2xl">
-            <div className="absolute inset-0 bg-slate-950 rounded-3xl -z-10" />
-            <ManuscriptAnalyzer />
-          </div>
-        </section>
+      <WorkspaceArea 
+        text={text} setText={setText} loading={loading} isFormatting={isFormatting} error={error}
+        steps={steps} scanStep={scanStep} handleFileUpload={handleFileUpload}
+        handleAnalyze={handleAnalyze} handleFormatAndDownload={handleFormatAndDownload}
+      />
 
-        <section id="features" className="scroll-mt-24 space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-900/50 border border-slate-900 p-6 rounded-2xl space-y-4">
-              <div className="w-10 h-10 bg-emerald-950/50 border border-emerald-900/30 rounded-xl flex items-center justify-center">
-                <Cpu className="w-5 h-5 text-emerald-400" />
-              </div>
-              <h3 className="font-semibold text-slate-200">Moteur Sémantique</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Évaluation de la dynamique des structures narratives directement à l'échelle du navigateur pour garantir une fluidité de style.</p>
-            </div>
-            <div className="bg-slate-900/50 border border-slate-900 p-6 rounded-2xl space-y-4">
-              <div className="w-10 h-10 bg-cyan-950/50 border border-cyan-900/30 rounded-xl flex items-center justify-center">
-                <Award className="w-5 h-5 text-cyan-400" />
-              </div>
-              <h3 className="font-semibold text-slate-200">Calculateur Métrique</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Mesure immédiate de la densité lexicale et repérage automatique des formulations passives ou répétitives.</p>
-            </div>
-            <div className="bg-slate-900/50 border border-slate-900 p-6 rounded-2xl space-y-4">
-              <div className="w-10 h-10 bg-amber-950/50 border border-amber-900/30 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-amber-400" />
-              </div>
-              <h3 className="font-semibold text-slate-200">Zéro Stockage</h3>
-              <p className="text-xs text-slate-400 leading-relaxed">Aucun transfert de données vers des serveurs tiers. Votre texte reste confiné dans l'environnement d'exécution éphémère local.</p>
-            </div>
+      {report && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center mt-8">
+            <h2 className="text-xl font-bold tracking-tight text-slate-200">Tableau de bord de votre manuscrit</h2>
+            <button onClick={() => window.print()} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 font-medium rounded-lg text-xs flex items-center space-x-2 print:hidden">
+              <Printer className="w-4 h-4"/><span>Exporter le rapport</span>
+            </button>
           </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-slate-900 bg-slate-950 py-8 px-6 text-center text-xs font-mono text-slate-600">
-        <p>&copy; 2026 Plumai. Conçu pour tous les écrivains de la nouvelle ère.</p>
-      </footer>
+          <MetricsDashboard report={report} />
+          <EditorialReport report={report} marketingData={marketingData} />
+        </div>
+      )}
     </div>
   );
 }
