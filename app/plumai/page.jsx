@@ -4,6 +4,8 @@ import { Printer } from 'lucide-react';
 import WorkspaceArea from '@/components/editorial/WorkspaceArea';
 import MetricsDashboard from '@/components/editorial/MetricsDashboard';
 import EditorialReport from '@/components/editorial/EditorialReport';
+import CharacterAuditPanel from '@/components/editorial/CharacterAuditPanel';
+import TimelineContinuityPanel from '@/components/editorial/TimelineContinuityPanel';
 
 export default function ManuscriptAnalyzer() {
   const [text, setText] = useState('');
@@ -11,6 +13,8 @@ export default function ManuscriptAnalyzer() {
   const [isFormatting, setIsFormatting] = useState(false);
   const [report, setReport] = useState(null);
   const [marketingData, setMarketingData] = useState(null);
+  const [characterReport, setCharacterReport] = useState(null);
+  const [timelineReport, setTimelineReport] = useState(null);
   const [error, setError] = useState(null);
   const [scanStep, setScanStep] = useState(0);
 
@@ -83,6 +87,26 @@ export default function ManuscriptAnalyzer() {
       if (!rAnalyze.ok) throw new Error(dAnalyze.error);
       setReport(dAnalyze);
 
+      const rCharacter = await fetch('/api/character-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rCharacter.ok) {
+        const dChar = await rCharacter.json();
+        setCharacterReport(dChar);
+      }
+
+      const rTimeline = await fetch('/api/timeline-continuity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rTimeline.ok) {
+        const dTime = await rTimeline.json();
+        setTimelineReport(dTime);
+      }
+
       const rMarketing = await fetch('/api/marketing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,6 +172,10 @@ export default function ManuscriptAnalyzer() {
             </button>
           </div>
           <MetricsDashboard report={report} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CharacterAuditPanel data={characterReport} />
+            <TimelineContinuityPanel data={timelineReport} />
+          </div>
           <EditorialReport report={report} marketingData={marketingData} />
         </div>
       )}
