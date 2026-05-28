@@ -8,6 +8,9 @@ import CharacterAuditPanel from '@/components/editorial/CharacterAuditPanel';
 import TimelineContinuityPanel from '@/components/editorial/TimelineContinuityPanel';
 import BetaReadingPanel from '@/components/editorial/BetaReadingPanel';
 import InteractiveProofreader from '@/components/editorial/InteractiveProofreader';
+import NeuroSynesthesiaPanel from '@/components/editorial/NeuroSynesthesiaPanel';
+import StylisticMimicryPanel from '@/components/editorial/StylisticMimicryPanel';
+import ClassicalAncestryPanel from '@/components/editorial/ClassicalAncestryPanel';
 
 export default function ManuscriptAnalyzer() {
   const [text, setText] = useState('');
@@ -19,13 +22,17 @@ export default function ManuscriptAnalyzer() {
   const [timelineReport, setTimelineReport] = useState(null);
   const [betaReport, setBetaReport] = useState(null);
   const [proofreadReport, setProofreadReport] = useState(null);
+  const [synesthesiaReport, setSynesthesiaReport] = useState(null);
+  const [mimicryReport, setMimicryReport] = useState(null);
+  const [classicalReport, setClassicalReport] = useState(null);
   const [error, setError] = useState(null);
   const [scanStep, setScanStep] = useState(0);
 
   const steps = [
     "Initialisation du scan spatial synoptique...",
     "Extraction de la matrice syntaxique locale (RAM)...",
-    "Mesure du filtre d'érosion textuelle...",
+    "Excavation des structures classiques (XVIIe/XVIIIe)...",
+    "Cartographie des stimuli neuro-synesthésiques...",
     "Calcul de l'indice d'ancrage mnésique structural...",
     "Compilation du bilan d'ingénierie éditoriale final..."
   ];
@@ -82,7 +89,6 @@ export default function ManuscriptAnalyzer() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Audit quantitatif initial (Métriques de base)
       const rAnalyze = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,60 +98,63 @@ export default function ManuscriptAnalyzer() {
       if (!rAnalyze.ok) throw new Error(dAnalyze.error);
       setReport(dAnalyze);
 
-      // 2. Profiling et audit psychologique des personnages
+      // Exécutions parallèles des modules analytiques
       const rCharacter = await fetch('/api/character-audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ textChunk: text }),
       });
-      if (rCharacter.ok) {
-        const dChar = await rCharacter.json();
-        setCharacterReport(dChar);
-      }
+      if (rCharacter.ok) setCharacterReport(await rCharacter.json());
 
-      // 3. Extraction de la frise chronologique et alertes de continuité
       const rTimeline = await fetch('/api/timeline-continuity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ textChunk: text }),
       });
-      if (rTimeline.ok) {
-        const dTime = await rTimeline.json();
-        setTimelineReport(dTime);
-      }
+      if (rTimeline.ok) setTimelineReport(await rTimeline.json());
 
-      // 4. Lecture bêta simulée et courbes d'engagement
       const rBeta = await fetch('/api/beta-reading', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ textChunk: text }),
       });
-      if (rBeta.ok) {
-        const dBeta = await rBeta.json();
-        setBetaReport(dBeta);
-      }
+      if (rBeta.ok) setBetaReport(await rBeta.json());
 
-      // 5. Analyse micro-éditoriale et propositions de corrections stylistiques
       const rProofread = await fetch('/api/editorial-proofreader', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ textChunk: text }),
       });
-      if (rProofread.ok) {
-        const dProof = await rProofread.json();
-        setProofreadReport(dProof);
-      }
+      if (rProofread.ok) setProofreadReport(await rProofread.json());
 
-      // 6. Extraction et génération des métadonnées marketing commerciaux
+      const rSynesthesia = await fetch('/api/neuro-synesthesia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rSynesthesia.ok) setSynesthesiaReport(await rSynesthesia.json());
+
+      const rMimicry = await fetch('/api/stylistic-mimicry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rMimicry.ok) setMimicryReport(await rMimicry.json());
+
+      const rClassical = await fetch('/api/classical-ancestry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rClassical.ok) setClassicalReport(await rClassical.json());
+
       const rMarketing = await fetch('/api/marketing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ textChunk: text }),
       });
-      if (rMarketing.ok) {
-        const dMarketing = await rMarketing.json();
-        setMarketingData(dMarketing);
-      }
+      if (rMarketing.ok) setMarketingData(await rMarketing.json());
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -179,7 +188,6 @@ export default function ManuscriptAnalyzer() {
     }
   };
 
-  // Injection directe du remplacement textuel validé par l'auteur dans l'éditeur
   const acceptProofreadSuggestion = (suggestion) => {
     const updatedText = text.replace(suggestion.original, suggestion.corrected.split(' / ')[0]);
     setText(updatedText);
@@ -189,7 +197,6 @@ export default function ManuscriptAnalyzer() {
     }));
   };
 
-  // Retrait de la suggestion ignorée de l'interface
   const rejectProofreadSuggestion = (id) => {
     setProofreadReport(prev => ({
       ...prev,
@@ -201,18 +208,16 @@ export default function ManuscriptAnalyzer() {
     <div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900 max-w-5xl mx-auto space-y-8">
       <header className="border-b border-slate-800 pb-6">
         <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
-          PlumLocal <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">v2.5 (Édition & Bêta-lecture globale)</span>
+          PLUMAI <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">v3.2 (Moteur Généalogique & Neuro-Édition)</span>
         </h1>
       </header>
 
-      {/* Zone de saisie principale et importation de fichiers */}
       <WorkspaceArea 
         text={text} setText={setText} loading={loading} isFormatting={isFormatting} error={error}
         steps={steps} scanStep={scanStep} handleFileUpload={handleFileUpload}
         handleAnalyze={handleAnalyze} handleFormatAndDownload={handleFormatAndDownload}
       />
 
-      {/* Rendu dynamique conditionnel du tableau de bord d'analyse */}
       {report && (
         <div className="space-y-6">
           <div className="flex justify-between items-center mt-8">
@@ -222,10 +227,16 @@ export default function ManuscriptAnalyzer() {
             </button>
           </div>
           
-          {/* Métriques globales quantitatives */}
           <MetricsDashboard report={report} />
           
-          {/* Grille 1 : Immersion (Lecture Bêta) & Qualité Macro (Moteur de correction) */}
+          {/* Lignée Classique Pré-XIXe */}
+          <ClassicalAncestryPanel data={classicalReport} />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <NeuroSynesthesiaPanel data={synesthesiaReport} />
+            <StylisticMimicryPanel data={mimicryReport} />
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <BetaReadingPanel data={betaReport} />
             <InteractiveProofreader 
@@ -235,13 +246,11 @@ export default function ManuscriptAnalyzer() {
             />
           </div>
 
-          {/* Grille 2 : Continuité de l'univers (Chronologie) & Cohérence intra-diégétique (Personnages) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CharacterAuditPanel data={characterReport} />
             <TimelineContinuityPanel data={timelineReport} />
           </div>
           
-          {/* Rapports analytiques détaillés et fiches marketing */}
           <EditorialReport report={report} marketingData={marketingData} />
         </div>
       )}
