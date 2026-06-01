@@ -16,14 +16,14 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
       "date": "2026-06-01T07:58:04.639Z",
-      "read": false
+      "read": true
     },
     {
       "id": "cert_1780299086921",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Jusqu'à ce que la mort nous sépare\" (+1 Li).",
       "date": "2026-06-01T07:31:26.921Z",
-      "read": false
+      "read": true
     },
     {
       "id": "like_1780298760329",
