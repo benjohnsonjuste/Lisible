@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780298760329",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
+      "date": "2026-06-01T07:26:00.329Z",
+      "read": false
+    },
+    {
       "id": "like_1779856422568",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"AU BORD DU GOUFFRE (extrait)\" !",
