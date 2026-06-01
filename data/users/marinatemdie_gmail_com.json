@@ -1,9 +1,16 @@
 {
   "email": "marinatemdie@gmail.com",
   "name": "Marina Tem",
-  "li": 51,
+  "li": 52,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1780311675052",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Le murmure des martyrs\" (+1 Li).",
+      "date": "2026-06-01T11:01:15.052Z",
+      "read": false
+    },
     {
       "id": "like_1779851914104",
       "type": "like",
