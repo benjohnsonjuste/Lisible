@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780352939154",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
+      "date": "2026-06-01T22:28:59.154Z",
+      "read": false
+    },
+    {
       "id": "cert_1780301385203",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Jusqu'à ce que la mort nous sépare\" (+1 Li).",
