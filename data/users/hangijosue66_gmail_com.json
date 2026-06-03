@@ -1,9 +1,16 @@
 {
   "email": "hangijosue66@gmail.com",
   "name": "Hangi Josué",
-  "li": 52,
+  "li": 53,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1780472068312",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Les séquelles du passé\" (+1 Li).",
+      "date": "2026-06-03T07:34:28.312Z",
+      "read": false
+    },
     {
       "id": "like_1780471444734",
       "type": "like",
