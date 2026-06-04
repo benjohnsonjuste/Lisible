@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import dynamic from "next/dynamic";
-import Script from "next/script"; // 1. IMPORTATION DU COMPOSANT SCRIPT DE NEXT.JS
+import Script from "next/script"; // IMPORTATION DU COMPOSANT SCRIPT DE NEXT.JS
 
 // --- CHARGEMENT DYNAMIQUE (Client-side only) ---
 const ServiceWorkerRegistration = dynamic(() => import("@/components/ServiceWorkerRegistration"), { 
@@ -63,6 +63,7 @@ export const metadata = {
     statusBarStyle: "black-translucent",
     title: "Lisible",
   },
+  // La clé d'authentification Monetag originale reste préservée ici
   other: {
     monetag: "1de0443ac642abc60ec1f6ad3f4081b6",
   },
@@ -96,12 +97,18 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-blue-100 selection:text-blue-900">
         
-        {/* 2. INSERTION DU SCRIPT PUBLICITAIRE */}
-        <Script 
-          src="https://quge5.com/88/tag.min.js" 
-          data-zone="246262" 
+        {/* REPLACEMENT : ANCIEN SCRIPT MULTITAG SUPPRIMÉ ET REMPLACÉ PAR LE NOUVEAU CODE VIGNETTE */}
+        <Script
+          id="monetag-vignette"
           strategy="afterInteractive"
-          data-cfasync="false"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(s){
+                s.dataset.zone='11101900';
+                s.src='https://n6wxm.com/vignette.min.js';
+              })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+            `
+          }}
         />
 
         <AuthProvider>
