@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import CadeauLi from '@/components/CadeauLi';
+import AudioAd from '@/components/AudioAd'; // Importation du composant publicitaire adapté au format audio
 
 export default function PodcastPlayerPage() {
   const { id } = useParams();
@@ -231,7 +232,8 @@ export default function PodcastPlayerPage() {
                 </button>
               </div>
 
-              <div className="mt-8 min-h-[50px] w-full" />
+              {/* Remplacement de l'espace vide par le composant publicitaire AudioAd stylisé */}
+              <AudioAd />
             </div>
 
             <audio
