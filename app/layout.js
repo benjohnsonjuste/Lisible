@@ -8,7 +8,6 @@ import { Inter, Lora } from 'next/font/google';
 import dynamic from "next/dynamic";
 
 // --- CHARGEMENT DYNAMIQUE (Client-side only) ---
-// On force Next.js à ignorer ces composants lors du rendu serveur (SSR)
 const ServiceWorkerRegistration = dynamic(() => import("@/components/ServiceWorkerRegistration"), { 
   ssr: false 
 });
@@ -62,6 +61,10 @@ export const metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Lisible",
+  },
+  // Insertion propre de la balise meta de Monetag via l'API Next.js
+  other: {
+    monetag: "1de0443ac642abc60ec1f6ad3f4081b6",
   },
 };
 
