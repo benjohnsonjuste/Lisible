@@ -12,7 +12,7 @@ import SceauCertification from "@/components/reader/SceauCertification";
 import CommentSection from "@/components/reader/CommentSection";
 import SocialMargins from "@/components/reader/SocialMargins";
 import CadeauLi from "@/components/CadeauLi"; 
-import InTextAd from "@/components/InTextAd"; // <--- 1. IMPORTATION DU NOUVEAU COMPOSANT
+import InTextAd from "@/components/InTextAd"; // Importation du composant InTextAd
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
@@ -167,7 +167,7 @@ const TextContent = ({ id }) => {
             <React.Fragment key={i}>
               <p className="mb-6 leading-relaxed">{p}</p>
 
-              {/* 2. INJECTION DU COMPOSANT INTEXTAD TOUTES LES 4 LIGNES */}
+              {/* Rendu dynamique : Le composant InTextAd se charge de façon isolée entre les paragraphes tous les 4 paragraphes */}
               {(i + 1) % 4 === 0 && <InTextAd />}
             </React.Fragment>
           ))}
