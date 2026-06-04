@@ -1,6 +1,6 @@
 import React from "react";
 import TextContent from "./TextContent"; 
-import Script from "next/script"; // <--- IMPORTATION DU COMPOSANT DE SCRIPT RECOMMANDÉ
+import Script from "next/script";
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -68,7 +68,6 @@ export default async function Page({ params }) {
       >
         <div id="container-874a186feecd3e968c16a58bb085fd56"></div>
 
-        {/* Next.js optimisera automatiquement l'injection de ce script */}
         <Script
           async
           data-cfasync="false"
@@ -77,6 +76,7 @@ export default async function Page({ params }) {
         />
       </div>
 
+      {/* Rendu du contenu textuel avec les encarts publicitaires InTextAd imbriqués */}
       <TextContent id={id} />
     </div>
   );
