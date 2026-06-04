@@ -1,87 +1,58 @@
-import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-
-export const dynamic = 'force-dynamic';
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const dataPath = path.join(process.cwd(), 'data');
-    
-    const paths = {
-      texts: path.join(dataPath, 'texts'),
-      users: path.join(dataPath, 'users'),
-      publications: path.join(dataPath, 'publications'),
-      // Optionnel : chemin vers un fichier de tracking global si existant
-      analytics: path.join(dataPath, 'analytics.json') 
-    };
+    const baseUrl = "https://lisible.biz/api/realtime-data?folder=";
 
-    // 1. Lecture des répertoires pour les totaux de base
-    const [textsFiles, usersFiles] = await Promise.all([
-      fs.readdir(paths.texts).catch(() => []),
-      fs.readdir(paths.users).catch(() => [])
+    // 1. Récupération simultanée de toutes les collections clés (comme sur votre arborescence)
+    const [textsRes, usersRes, podcastsRes] = await Promise.all([
+      fetch(`${baseUrl}texts`, { cache: 'no-store' }),
+      fetch(`${baseUrl}users`, { cache: 'no-store' }),
+      fetch(`https://lisible.biz/api/podcasts/register`, { cache: 'no-store' })
     ]);
 
-    let totalPageViews = 0;
-    let totalUniqueLikes = 0;
-    let certifiedCount = 0;
+    const textsData = textsRes.ok ? await textsRes.json() : { content: [] };
+    const usersData = usersRes.ok ? await usersRes.json() : { content: [] };
+    const podcastsData = podcastsRes.ok ? await podcastsRes.json() : { content: [] };
 
-    // 2. Analyse profonde des textes (pour les pages vues cumulées)
-    const textsContents = await Promise.all(
-      textsFiles
-        .filter(f => f.endsWith('.json'))
-        .map(f => fs.readFile(path.join(paths.texts, f), 'utf-8'))
-    );
+    const allTexts = Array.isArray(textsData.content) ? textsData.content : [];
+    const allUsers = Array.isArray(usersData.content) ? usersData.content : [];
+    const allPodcasts = Array.isArray(podcastsData.content) ? podcastsData.content : [];
 
-    textsContents.forEach(content => {
-      const text = JSON.parse(content);
-      // On considère que chaque "vue" sur un texte contribue aux pages vues totales
-      totalPageViews += Number(text.views || 0);
-      totalUniqueLikes += Number(text.likes || 0);
-      if (text.certified || text.totalCertified) certifiedCount++;
+    // 2. Calcul des métriques réelles cumulées
+    let totalViews = 0;
+    let totalLikes = 0;
+    let totalCertified = 0;
+
+    // Accumulation depuis les manuscrits écrits (texts)
+    allTexts.forEach(text => {
+      totalViews += parseInt(text.views || 0, 10);
+      totalLikes += parseInt(text.likes || 0, 10);
+      totalCertified += parseInt(text.certified || 0, 10);
     });
 
-    // 3. Simulation/Récupération des Visiteurs Uniques
-    // Note : Dans un système de fichiers, le nombre de visiteurs est souvent corrélé 
-    // soit à une table de logs, soit estimé via le nombre d'utilisateurs + un facteur de trafic.
-    let totalVisitors = 0;
-    try {
-      const analyticsRaw = await fs.readFile(paths.analytics, 'utf-8');
-      const analytics = JSON.parse(analyticsRaw);
-      totalVisitors = analytics.totalUniqueVisitors || 0;
-    } catch {
-      // Si pas de fichier analytics, estimation basée sur l'activité (Vues / 2.5)
-      totalVisitors = Math.floor(totalPageViews / 2.5) + usersFiles.length;
-    }
+    // Accumulation depuis l'écoute des épisodes audios (podcasts.json)
+    allPodcasts.forEach(podcast => {
+      totalViews += parseInt(podcast.views || 0, 10);
+    });
 
     return NextResponse.json({
       success: true,
       metrics: {
-        // Nombre d'utilisateurs inscrits
-        registeredUsers: usersFiles.length,
-        
-        // Nombre de textes publiés
-        publishedTexts: textsFiles.length,
-        
-        // Nombre de visiteurs uniques (estimés ou réels)
-        uniqueVisitors: totalVisitors,
-        
-        // Nombre de pages vues (cumul des vues textes + navigation)
-        pageViews: totalPageViews,
-        
-        // Data additionnelle
+        pageViews: totalViews,
+        publishedTexts: allTexts.length,
+        registeredUsers: allUsers.length,
         engagement: {
-          likes: totalUniqueLikes,
-          certified: certifiedCount
-        },
-        timestamp: new Date().toISOString()
+          likes: totalLikes,
+          certified: totalCertified
+        }
       }
     });
 
   } catch (error) {
-    console.error("Stats API Error:", error);
+    console.error("Erreur API de télémétrie:", error);
     return NextResponse.json(
-      { success: false, error: "Erreur de traitement des données" },
+      { success: false, error: "Erreur lors du calcul des statistiques" },
       { status: 500 }
     );
   }
