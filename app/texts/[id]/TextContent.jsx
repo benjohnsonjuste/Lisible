@@ -12,6 +12,7 @@ import SceauCertification from "@/components/reader/SceauCertification";
 import CommentSection from "@/components/reader/CommentSection";
 import SocialMargins from "@/components/reader/SocialMargins";
 import CadeauLi from "@/components/CadeauLi"; 
+import InTextAd from "@/components/InTextAd"; // <--- 1. IMPORTATION DU NOUVEAU COMPOSANT
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
@@ -53,7 +54,6 @@ const TextContent = ({ id }) => {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
   
-  // TECHNIQUE VUES RÉELLES (Inspirée du composant A)
   const [liveViews, setLiveViews] = useState(0);
   const viewLogged = useRef(false);
 
@@ -88,7 +88,6 @@ const TextContent = ({ id }) => {
         const content = result.content;
         setData(content);
         
-        // Mise à jour des vues réelles
         setLiveViews(content.views || 0);
 
         const usersRes = await fetch(`/api/realtime-data?folder=users`);
@@ -168,14 +167,8 @@ const TextContent = ({ id }) => {
             <React.Fragment key={i}>
               <p className="mb-6 leading-relaxed">{p}</p>
 
-              {(i + 1) % 4 === 0 && (
-                <div className="flex justify-center my-10">
-                  <div
-                    id={`container-874a186feecd3e968c16a58bb085fd56-${i}`}
-                    className="w-full max-w-xl"
-                  />
-                </div>
-              )}
+              {/* 2. INJECTION DU COMPOSANT INTEXTAD TOUTES LES 4 LIGNES */}
+              {(i + 1) % 4 === 0 && <InTextAd />}
             </React.Fragment>
           ))}
         </div>
