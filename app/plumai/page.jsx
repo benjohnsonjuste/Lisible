@@ -11,6 +11,7 @@ import InteractiveProofreader from '@/components/editorial/InteractiveProofreade
 import NeuroSynesthesiaPanel from '@/components/editorial/NeuroSynesthesiaPanel';
 import StylisticMimicryPanel from '@/components/editorial/StylisticMimicryPanel';
 import ClassicalAncestryPanel from '@/components/editorial/ClassicalAncestryPanel';
+import PublisherMatchingPanel from '@/components/editorial/PublisherMatchingPanel';
 
 export default function ManuscriptAnalyzer() {
   const [text, setText] = useState('');
@@ -25,6 +26,7 @@ export default function ManuscriptAnalyzer() {
   const [synesthesiaReport, setSynesthesiaReport] = useState(null);
   const [mimicryReport, setMimicryReport] = useState(null);
   const [classicalReport, setClassicalReport] = useState(null);
+  const [publisherReport, setPublisherReport] = useState(null);
   const [error, setError] = useState(null);
   const [scanStep, setScanStep] = useState(0);
 
@@ -155,6 +157,13 @@ export default function ManuscriptAnalyzer() {
       });
       if (rMarketing.ok) setMarketingData(await rMarketing.json());
 
+      const rPublishers = await fetch('/api/publisher-matching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      if (rPublishers.ok) setPublisherReport(await rPublishers.json());
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -228,6 +237,8 @@ export default function ManuscriptAnalyzer() {
           </div>
           
           <MetricsDashboard report={report} />
+
+          <PublisherMatchingPanel data={publisherReport} />
           
           {/* Lignée Classique Pré-XIXe */}
           <ClassicalAncestryPanel data={classicalReport} />
