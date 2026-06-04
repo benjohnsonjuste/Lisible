@@ -1,5 +1,6 @@
 import React from "react";
 import TextContent from "./TextContent"; 
+import Script from "next/script"; // <--- IMPORTATION DU COMPOSANT DE SCRIPT RECOMMANDÉ
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
@@ -67,14 +68,15 @@ export default async function Page({ params }) {
       >
         <div id="container-874a186feecd3e968c16a58bb085fd56"></div>
 
-        <script
-          async={true}
+        {/* Next.js optimisera automatiquement l'injection de ce script */}
+        <Script
+          async
           data-cfasync="false"
           src="https://pl28554024.effectivecpmnetwork.com/874a186feecd3e968c16a58bb085fd56/invoke.js"
-        ></script>
+          strategy="afterInteractive"
+        />
       </div>
 
-      {/* On passe l'id ici pour que TextContent puisse l'utiliser pour le Like et le Share */}
       <TextContent id={id} />
     </div>
   );
