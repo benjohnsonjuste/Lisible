@@ -18,7 +18,7 @@ export default function GlobalStats() {
   useEffect(() => {
     async function fetchGlobalData() {
       try {
-        // Appel à l'API de statistiques centralisée pour une synchronisation réelle
+        // Interrogation de l'API temps réel calquée sur la structure de votre stockage
         const res = await fetch('/api/stats');
         const data = await res.json();
 
@@ -35,20 +35,21 @@ export default function GlobalStats() {
       } catch (e) {
         console.error("Erreur stats globales:", e);
       } finally {
-        setLoading(false);
+        setLoading(false); // S'exécute uniquement au premier appel
       }
     }
 
     fetchGlobalData();
-    // Synchronisation en temps réel toutes les 30 secondes
-    const interval = setInterval(fetchGlobalData, 30000);
+
+    // Fréquence d'actualisation calée sur 1 seconde (1000ms) pour un effet de monitoring en continu
+    const interval = setInterval(fetchGlobalData, 1000);
     return () => clearInterval(interval);
   }, []);
 
   const StatCard = ({ icon: Icon, label, value, color }) => (
-    <div className={`relative group p-6 rounded-[2rem] bg-white border border-slate-100 shadow-xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl`}>
+    <div className="relative group p-6 rounded-[2rem] bg-white border border-slate-100 shadow-xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl dark:bg-slate-900 dark:border-white/5">
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${color} -z-10`} />
-      <div className="absolute -right-4 -bottom-4 text-slate-50 group-hover:text-white group-hover:opacity-20 transition-all duration-500">
+      <div className="absolute -right-4 -bottom-4 text-slate-50 dark:text-slate-950 group-hover:text-white group-hover:opacity-20 transition-all duration-500">
         <Icon size={120} strokeWidth={1} />
       </div>
 
@@ -57,7 +58,7 @@ export default function GlobalStats() {
           <Icon size={24} />
         </div>
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">{label}</p>
-        <h3 className="text-4xl font-black italic tracking-tighter text-slate-900 leading-none">
+        <h3 className="text-4xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-none">
           {loading ? "---" : value.toLocaleString()}
         </h3>
       </div>
@@ -65,27 +66,31 @@ export default function GlobalStats() {
   );
 
   return (
-    <section className="py-20 px-6 max-w-7xl mx-auto">
+    <section className="py-20 px-4 md:px-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-teal-500 font-black text-[10px] uppercase tracking-[0.3em]">
             <Activity size={14} className="animate-pulse" /> Live Network Pulse
           </div>
-          <h2 className="text-6xl md:text-7xl font-black italic tracking-tighter text-slate-900 leading-[0.8]">Metrics.</h2>
+          <h2 className="text-6xl md:text-7xl font-black italic tracking-tighter text-slate-900 dark:text-white leading-[0.8]">Metrics<span className="text-blue-600">.</span></h2>
         </div>
-        <div className="hidden md:block text-right">
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Dernière mise à jour</p>
-          <p className="font-black text-slate-900">INSTANT TÉLÉMÉTRIE</p>
+        <div className="text-left md:text-right">
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Fréquence de synchronisation</p>
+          <div className="flex items-center md:justify-end gap-1.5 font-black text-slate-900 dark:text-white">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <span>TÉLÉMÉTRIE CONTINU (1S)</span>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         
+        {/* Encart Audience Globale (Vues combinées écrits + audios) */}
         <div className="md:col-span-2 md:row-span-2 relative group p-10 rounded-[3rem] bg-slate-950 text-white overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 p-8 opacity-20">
-            <Globe size={200} className="animate-[spin_20s_linear_infinite]" />
+          <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
+            <Globe size={200} className="animate-[spin_30s_linear_infinite]" />
           </div>
-          <div className="relative z-10 h-full flex flex-col justify-between">
+          <div className="relative z-10 h-full flex flex-col justify-between min-h-[220px]">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full w-fit">
               <TrendingUp size={16} className="text-teal-400" />
               <span className="text-[10px] font-black uppercase tracking-widest">Audience Globale</span>
@@ -94,7 +99,7 @@ export default function GlobalStats() {
               <p className="text-6xl md:text-8xl font-black italic tracking-tighter leading-none mb-4 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
                 {loading ? "..." : stats.views.toLocaleString()}
               </p>
-              <p className="text-teal-400 font-black uppercase tracking-[0.4em] text-xs">Lectures cumulées sur Lisible</p>
+              <p className="text-teal-400 font-black uppercase tracking-[0.4em] text-xs">Lectures & Écoutes cumulées</p>
             </div>
           </div>
         </div>
