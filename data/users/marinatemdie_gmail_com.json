@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780557836669",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Vie de poivrot mélancolique\" !",
+      "date": "2026-06-04T07:23:56.669Z",
+      "read": false
+    },
+    {
       "id": "cert_1780311675052",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Le murmure des martyrs\" (+1 Li).",
