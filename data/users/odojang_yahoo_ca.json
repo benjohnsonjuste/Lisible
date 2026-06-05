@@ -1,9 +1,16 @@
 {
   "email": "odojang@yahoo.ca",
   "name": "Ouellette André",
-  "li": 62,
+  "li": 63,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1780628435910",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Duel de Nouvelles: 1er tour\" (+1 Li).",
+      "date": "2026-06-05T03:00:35.911Z",
+      "read": false
+    },
     {
       "id": "like_1780526460706",
       "type": "like",
