@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780762703114",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
+      "date": "2026-06-06T16:18:23.114Z",
+      "read": false
+    },
+    {
       "id": "cert_1780628435910",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Duel de Nouvelles: 1er tour\" (+1 Li).",
