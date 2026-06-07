@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780807012263",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"La voix que la guerre n'a pas tuée\" !",
+      "date": "2026-06-07T04:36:52.263Z",
+      "read": false
+    },
+    {
       "id": "cert_1780472068312",
       "type": "certification",
       "message": "Sceau de Certification reçu pour \"Les séquelles du passé\" (+1 Li).",
