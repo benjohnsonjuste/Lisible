@@ -30,14 +30,14 @@
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
       "date": "2026-06-03T22:41:00.706Z",
-      "read": false
+      "read": true
     },
     {
       "id": "like_1780454623299",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
       "date": "2026-06-03T02:43:43.299Z",
-      "read": false
+      "read": true
     },
     {
       "id": "like_1780407214644",
