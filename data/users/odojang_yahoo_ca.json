@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780960169816",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le Dernier Prométhée\" !",
+      "date": "2026-06-08T23:09:29.816Z",
+      "read": false
+    },
+    {
       "id": "like_1780890628405",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
