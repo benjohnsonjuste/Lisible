@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780890628405",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
+      "date": "2026-06-08T03:50:28.405Z",
+      "read": false
+    },
+    {
       "id": "like_1780762703114",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Jusqu'à ce que la mort nous sépare\" !",
