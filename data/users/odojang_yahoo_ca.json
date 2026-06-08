@@ -1,9 +1,16 @@
 {
   "email": "odojang@yahoo.ca",
   "name": "Ouellette André",
-  "li": 63,
+  "li": 64,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1780960373771",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Le Dernier Prométhée\" (+1 Li).",
+      "date": "2026-06-08T23:12:53.771Z",
+      "read": false
+    },
     {
       "id": "like_1780960169816",
       "type": "like",
