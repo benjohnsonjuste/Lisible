@@ -1,9 +1,16 @@
 {
   "email": "marinatemdie@gmail.com",
   "name": "Marina Tem",
-  "li": 52,
+  "li": 53,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1780891576625",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Vie de poivrot mélancolique\" (+1 Li).",
+      "date": "2026-06-08T04:06:16.625Z",
+      "read": false
+    },
     {
       "id": "like_1780557836669",
       "type": "like",
