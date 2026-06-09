@@ -1,9 +1,16 @@
 {
   "email": "hangijosue66@gmail.com",
   "name": "Hangi Josué",
-  "li": 55,
+  "li": 56,
   "status": "active",
   "notifications": [
+    {
+      "id": "cert_1780990871526",
+      "type": "certification",
+      "message": "Sceau de Certification reçu pour \"Le feu prend sa fin\" (+1 Li).",
+      "date": "2026-06-09T07:41:11.526Z",
+      "read": false
+    },
     {
       "id": "like_1780990728061",
       "type": "like",
