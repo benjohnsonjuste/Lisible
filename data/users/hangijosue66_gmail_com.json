@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1780990728061",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Le feu prend sa fin\" !",
+      "date": "2026-06-09T07:38:48.061Z",
+      "read": false
+    },
+    {
       "id": "like_1780809511046",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"La voix que la guerre n'a pas tuée\" !",
