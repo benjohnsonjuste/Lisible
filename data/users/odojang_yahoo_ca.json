@@ -5,6 +5,13 @@
   "status": "active",
   "notifications": [
     {
+      "id": "like_1781001175959",
+      "type": "like",
+      "message": "Quelqu'un a aimé votre texte \"Toujours\" !",
+      "date": "2026-06-09T10:32:55.959Z",
+      "read": false
+    },
+    {
       "id": "like_1780968619134",
       "type": "like",
       "message": "Quelqu'un a aimé votre texte \"Le Dernier Prométhée\" !",
