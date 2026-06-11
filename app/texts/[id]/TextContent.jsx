@@ -5,14 +5,16 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords } from "lucide-react";
-import FloatingActions from "@/components/reader/FloatingActions";
-import SecurityLock from "@/components/SecurityLock";
-import ReportModal from "@/components/ReportModal";
-import SceauCertification from "@/components/reader/SceauCertification";
-import CommentSection from "@/components/reader/CommentSection";
-import SocialMargins from "@/components/reader/SocialMargins";
-import CadeauLi from "@/components/CadeauLi"; 
-import InTextAd from "@/components/InTextAd"; // Importation du composant InTextAd
+
+// --- IMPORTATIONS CORRIGÉES (RÉGULATION DES CHEMINS ET DE LA CASSE) ---
+import FloatingActions from "../../../components/FloatingActions";
+import SecurityLock from "../../../components/SecurityLock";
+import ReportModal from "../../../components/ReportModal";
+import SceauCertification from "../../../components/reader/SceauCertification";
+import CommentSection from "../../../components/reader/CommentSection";
+import SocialMargins from "../../../components/reader/SocialMargins";
+import CadeauLi from "../../../components/CadeauLi"; 
+import InTextAd from "../../../components/InTextAd"; 
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
