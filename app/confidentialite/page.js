@@ -1,7 +1,6 @@
-// app/confidentialite/page.js
 import React from "react";
 import Link from "next/link";
-import { ShieldCheck, Lock, Eye, Database, Mail, Facebook, ArrowLeft, Fingerprint } from "lucide-react";
+import { ShieldCheck, Lock, Eye, Database, Mail, FacebookIcon, ArrowLeft, Fingerprint } from "lucide-react";
 
 export const metadata = {
   title: "Confidentialité | Lisible",
@@ -26,7 +25,7 @@ export default function Confidentialite() {
         <div className="space-y-10 text-slate-600 dark:text-slate-300 leading-relaxed">
           
           <p className="text-lg font-medium text-slate-800 dark:text-slate-200 border-l-4 border-teal-500 pl-6 py-2">
-            Chez <span className="text-teal-600 dark:text-teal-400 font-black">Lisible</span>, la protection de vos données personnelles est une priorité. Cette page détaille comment nous traitons vos informations avec la plus grande transparence.
+            Chez <span className="text-teal-600 dark:text-teal-400 font-black">Lisible</span>, la protection de vos données personnelles is une priorité. Cette page détaille comment nous traitons vos informations avec la plus grande transparence.
           </p>
 
           <section>
@@ -94,7 +93,7 @@ export default function Confidentialite() {
                 <Mail size={20} /> cmo.lablitteraire7@gmail.com
               </a>
               <a href="https://www.facebook.com/labellelitteraire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-2xl font-bold text-sm flex-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all active:scale-95 no-underline">
-                <Facebook size={20} /> Messagerie officielle
+                <FacebookIcon size={20} /> Messagerie officielle
               </a>
             </div>
           </section>
