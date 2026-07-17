@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords } from "lucide-react";
 
-// --- IMPORTATIONS CORRIGÉES (RÉGULATION DES CHEMINS ET DE LA CASSE) ---
-import FloatingActions from "../../../components/reader/FloatingActions";
+// --- IMPORTATIONS CORRIGÉES (RÉGULATION DES CHEMINS ET DE LA CASSE DIRECTEMENT DANS /components/) ---
+import FloatingActions from "../../../components/FloatingActions";
 import SecurityLock from "../../../components/SecurityLock";
 import ReportModal from "../../../components/ReportModal";
-import SceauCertification from "../../../components/reader/SceauCertification";
-import CommentSection from "../../../components/reader/CommentSection";
-import SocialMargins from "../../../components/reader/SocialMargins";
+import SceauCertification from "../../../components/SceauCertification";
+import CommentSection from "../../../components/CommentSection";
+import SocialMargins from "../../../components/SocialMargins";
 import CadeauLi from "../../../components/CadeauLi"; 
 import InTextAd from "../../../components/InTextAd"; 
 
