@@ -1,3 +1,4 @@
+// app/confidentialite/page.js
 import React from "react";
 import Link from "next/link";
 import { ShieldCheck, Lock, Eye, Database, Mail, FacebookIcon, ArrowLeft, Fingerprint } from "lucide-react";
@@ -25,7 +26,7 @@ export default function Confidentialite() {
         <div className="space-y-10 text-slate-600 dark:text-slate-300 leading-relaxed">
           
           <p className="text-lg font-medium text-slate-800 dark:text-slate-200 border-l-4 border-teal-500 pl-6 py-2">
-            Chez <span className="text-teal-600 dark:text-teal-400 font-black">Lisible</span>, la protection de vos données personnelles is une priorité. Cette page détaille comment nous traitons vos informations avec la plus grande transparence.
+            Chez <span className="text-teal-600 dark:text-teal-400 font-black">Lisible</span>, la protection de vos données personnelles est une priorité. Cette page détaille comment nous traitons vos informations avec la plus grande transparence.
           </p>
 
           <section>
