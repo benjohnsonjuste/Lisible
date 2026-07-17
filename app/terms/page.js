@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { 
-  ShieldCheck, Scale, Mail, Facebook, 
+  ShieldCheck, Scale, Mail, FacebookIcon, 
   ArrowLeft, Coins, Zap, Star, Landmark, ShieldAlert 
 } from "lucide-react";
 
@@ -94,7 +94,7 @@ export default function Conditions() {
                 <ArrowLeft className="rotate-180 text-slate-300 group-hover:text-teal-500 transition-transform" size={16} />
               </a>
               <a href="https://www.facebook.com/labellelitteraire" target="_blank" className="flex items-center justify-between p-6 bg-blue-50/30 border border-blue-100 rounded-3xl font-black text-[10px] uppercase tracking-widest flex-1 hover:bg-blue-50 transition-all group">
-                <span className="flex items-center gap-3 text-blue-700"><Facebook /> La Belle Littéraire</span>
+                <span className="flex items-center gap-3 text-blue-700"><FacebookIcon /> La Belle Littéraire</span>
                 <ArrowLeft className="rotate-180 text-blue-300 group-hover:text-blue-500 transition-transform" size={16} />
               </a>
             </div>
