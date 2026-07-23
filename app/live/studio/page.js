@@ -1,10 +1,11 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import ChatEphemeral from '@/components/ChatEphemeral';
 import LikeBubbly from '@/components/LikeBubbly';
 
-export default function StudioPage() {
+// 1. Composant interne contenant la logique principale
+function StudioContent() {
   const searchParams = useSearchParams();
   const streamId = searchParams.get('id');
   const videoRef = useRef(null);
@@ -84,5 +85,18 @@ export default function StudioPage() {
       <ChatEphemeral messages={messages} onSendMessage={() => {}} />
       <LikeBubbly likes={likes} onSendLike={() => {}} />
     </div>
+  );
+}
+
+// 2. Export par défaut enveloppé dans Suspense
+export default function StudioPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full h-screen bg-black flex items-center justify-center text-white">
+        Chargement du studio...
+      </div>
+    }>
+      <StudioContent />
+    </Suspense>
   );
 }
