@@ -1,10 +1,10 @@
-"use client";
+'use client';
 import React, { useState, useEffect, useCallback } from "react";
 import { Sword, Timer, Trophy, Zap, Ghost, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-// Correction de l'importation : ajout des accolades si InTextAd n'est pas un export par défaut
-import { InTextAd } from "@/components/reader/InTextAd"; 
+// ✅ CORRECTION : Import par défaut sans accolades pour éviter l'erreur de build
+import InTextAd from "@/components/reader/InTextAd"; 
 
 const DuelArena = dynamic(() => import("@/components/DuelArena"), { 
   ssr: false,
