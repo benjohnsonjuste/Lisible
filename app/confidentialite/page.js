@@ -1,7 +1,7 @@
 // app/confidentialite/page.js
 import React from "react";
 import Link from "next/link";
-import { ShieldCheck, Lock, Eye, Database, Mail, FacebookIcon, ArrowLeft, Fingerprint } from "lucide-react";
+import { ShieldCheck, Lock, Eye, Database, Mail, Link2, ArrowLeft, Fingerprint } from "lucide-react";
 
 export const metadata = {
   title: "Confidentialité | Lisible",
@@ -94,7 +94,7 @@ export default function Confidentialite() {
                 <Mail size={20} /> cmo.lablitteraire7@gmail.com
               </a>
               <a href="https://www.facebook.com/labellelitteraire" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-2xl font-bold text-sm flex-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all active:scale-95 no-underline">
-                <FacebookIcon size={20} /> Messagerie officielle
+                <Link2 size={20} /> Messagerie officielle
               </a>
             </div>
           </section>
