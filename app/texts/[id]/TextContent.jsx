@@ -10,9 +10,9 @@ import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, M
 import FloatingActions from "../../../components/reader/FloatingActions";
 import SecurityLock from "../../../components/SecurityLock";
 import ReportModal from "../../../components/ReportModal";
-import SceauCertification from "../../../components/SceauCertification";
-import CommentSection from "../../../components/CommentSection";
-import SocialMargins from "../../../components/SocialMargins";
+import SceauCertification from "../../../components/reader/SceauCertification";
+import CommentSection from "../../../components/reader/CommentSection";
+import SocialMargins from "../../../components/reader/SocialMargins";
 import CadeauLi from "../../../components/CadeauLi"; 
 import InTextAd from "../../../components/InTextAd"; 
 
