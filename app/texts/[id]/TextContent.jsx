@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords } from "lucide-react";
 
 // --- IMPORTATIONS CORRIGÉES (RÉGULATION DES CHEMINS ET DE LA CASSE DIRECTEMENT DANS /components/) ---
-import FloatingActions from "../../../components/FloatingActions";
+import FloatingActions from "../../../components/reader/FloatingActions";
 import SecurityLock from "../../../components/SecurityLock";
 import ReportModal from "../../../components/ReportModal";
 import SceauCertification from "../../../components/SceauCertification";
