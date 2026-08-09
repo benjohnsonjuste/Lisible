@@ -3,13 +3,15 @@
 /.pnp
 .pnp.js
 
-# Build et Sortie
+# Build et sortie
 /.next/
+/.open-next/
 /out/
 /build
 /dist
 
-# Environnement (TRÈS IMPORTANT : Ne jamais partager tes clés API)
+# Environnement
+# TRÈS IMPORTANT : ne jamais partager les clés API
 .env
 .env.local
 .env.development.local
@@ -26,7 +28,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# PWA (Fichiers générés automatiquement par next-pwa)
+# PWA (fichiers générés automatiquement par next-pwa)
 public/sw.js
 public/sw.js.map
 public/workbox-*.js
