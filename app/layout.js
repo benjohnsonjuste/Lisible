@@ -5,25 +5,8 @@ import Footer from "../components/Footer";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
-import dynamic from "next/dynamic";
-import Script from "next/script"; // IMPORTATION DU COMPOSANT SCRIPT DE NEXT.JS
-
-// --- CHARGEMENT DYNAMIQUE (Client-side only) ---
-const ServiceWorkerRegistration = dynamic(() => import("@/components/ServiceWorkerRegistration"), { 
-  ssr: false 
-});
-
-const InstallPrompt = dynamic(() => import("@/components/InstallPrompt"), { 
-  ssr: false 
-});
-
-const LiveNotificationListener = dynamic(() => import("@/components/LiveNotificationListener"), { 
-  ssr: false 
-});
-
-const PushActivation = dynamic(() => import("@/components/PushActivation"), { 
-  ssr: false 
-});
+import Script from "next/script";
+import { ServiceWorkerRegistration, InstallPrompt, LiveNotificationListener, PushActivation } from "./ClientComponents";
 
 // --- POLICES ---
 const inter = Inter({ 
@@ -63,7 +46,6 @@ export const metadata = {
     statusBarStyle: "black-translucent",
     title: "Lisible",
   },
-  // La clé d'authentification Monetag originale reste préservée ici
   other: {
     monetag: "1de0443ac642abc60ec1f6ad3f4081b6",
   },
@@ -97,7 +79,6 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-blue-100 selection:text-blue-900">
         
-        {/* REPLACEMENT : ANCIEN SCRIPT MULTITAG SUPPRIMÉ ET REMPLACÉ PAR LE NOUVEAU CODE VIGNETTE */}
         <Script
           id="monetag-vignette"
           strategy="afterInteractive"
@@ -112,7 +93,6 @@ export default function RootLayout({ children }) {
         />
 
         <AuthProvider>
-          {/* Composants Clients isolés du SSR */}
           <ServiceWorkerRegistration />
           <LiveNotificationListener />
           <PushActivation />
