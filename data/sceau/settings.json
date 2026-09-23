@@ -1,0 +1,21 @@
+{
+  "manual": {
+    "natcash": {
+      "label": "Natcash",
+      "value": "+50935261703"
+    },
+    "moncash_direct": {
+      "label": "MonCash direct",
+      "value": "+50938803719"
+    },
+    "interac": {
+      "label": "Interac",
+      "value": "adm.lablitteraire7@gmail.com"
+    },
+    "virement": {
+      "label": "Virement bancaire",
+      "value": "Numéro institution : 010 ; Numéro transit : 30800 ; Numéro compte : 0119132579"
+    }
+  },
+  "htgRate": 95
+}
