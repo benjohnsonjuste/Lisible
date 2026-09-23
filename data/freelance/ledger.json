@@ -43,5 +43,14 @@
     "amount": 30,
     "currency": "CAD",
     "detail": "Séquestre — capture DEMO-CAP-1790174137940"
+  },
+  {
+    "at": "2026-09-23T14:39:47.978Z",
+    "type": "escrow_hold",
+    "taskId": "task_1790174373980_f4wily",
+    "actor": "test.ecrivain.freelance@example.com",
+    "amount": 40,
+    "currency": "CAD",
+    "detail": "Séquestre — capture DEMO-CAP-1790174385844"
   }
 ]
