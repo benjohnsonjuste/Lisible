@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174108998_gtu6e9",
+      "type": "freelance",
+      "message": "Prolongation acceptée pour « Mise en pages ebook (TEST) » : nouvelle échéance le 28 septembre 2026.",
+      "date": "2026-09-23T14:35:08.998Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174050576_9z03hl"
+    },
+    {
       "id": "notif_1790174084491_lb6zn0",
       "type": "freelance",
       "message": "Vous avez accepté « Mise en pages ebook (TEST) ». Remise prévue le 25 septembre 2026.",
