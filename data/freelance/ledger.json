@@ -61,5 +61,14 @@
     "amount": 40,
     "currency": "CAD",
     "detail": "Test automatisé."
+  },
+  {
+    "at": "2026-09-23T14:45:30.992Z",
+    "type": "escrow_hold",
+    "taskId": "task_1790174714706_5j0jlg",
+    "actor": "test.ecrivain.freelance@example.com",
+    "amount": 25,
+    "currency": "CAD",
+    "detail": "Séquestre — capture DEMO-CAP-1790174728154"
   }
 ]
