@@ -15,6 +15,12 @@
       "email": "test.pro2.freelance@example.com",
       "createdAt": "2026-09-23T14:31:27.565Z",
       "expiresAt": "2026-10-23T14:31:27.565Z"
+    },
+    {
+      "token": "f24a3d3e-9de2-4b0e-be56-3d0690b40995",
+      "email": "test.pro2.freelance@example.com",
+      "createdAt": "2026-09-23T14:31:48.473Z",
+      "expiresAt": "2026-10-23T14:31:48.473Z"
     }
   ]
 }
