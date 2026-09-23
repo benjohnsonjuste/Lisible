@@ -1,7 +1,7 @@
 // app/sitemap.xml/route.js
 
-// Configuration pour le Edge Runtime (Cloudflare Pages / Vercel Edge)
-export const runtime = 'edge';
+// Note : le Edge Runtime est incompatible avec le build Cloudflare (OpenNext).
+// Le sitemap fonctionne en runtime Node.js.
 
 /**
  * Génère dynamiquement le sitemap XML pour Lisible.biz
