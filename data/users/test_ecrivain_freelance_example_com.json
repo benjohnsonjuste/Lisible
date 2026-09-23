@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174758865_n70o68",
+      "type": "freelance",
+      "message": "Nouveau message de Pro Test pour « Correction poèmes (TEST litige 2) ».",
+      "date": "2026-09-23T14:45:58.865Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174714706_5j0jlg"
+    },
+    {
       "id": "notif_1790174742405_s8r227",
       "type": "freelance",
       "message": "Pro Test a accepté votre mission « Correction poèmes (TEST litige 2) ».",
