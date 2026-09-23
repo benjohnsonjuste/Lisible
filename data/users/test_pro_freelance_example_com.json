@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174413604_7sn1ip",
+      "type": "freelance",
+      "message": "Un litige a été ouvert pour « Relecture essai (TEST litige) ». Lisible va trancher.",
+      "date": "2026-09-23T14:40:13.604Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174373980_f4wily"
+    },
+    {
       "id": "notif_1790174397791_9b77ar",
       "type": "freelance",
       "message": "Vous avez accepté « Relecture essai (TEST litige) ». Remise prévue le 25 septembre 2026.",
