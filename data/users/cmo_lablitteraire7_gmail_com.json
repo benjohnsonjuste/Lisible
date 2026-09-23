@@ -4,6 +4,14 @@
   "li": 50000,
   "notifications": [
     {
+      "id": "notif_1790174778526_2loa1u",
+      "type": "freelance",
+      "message": "Nouveau litige sur « Correction poèmes (TEST litige 2) » (task_1790174714706_5j0jlg).",
+      "date": "2026-09-23T14:46:18.526Z",
+      "read": false,
+      "link": "/marketplace/admin"
+    },
+    {
       "id": "notif_1790174414764_tkbrsf",
       "type": "freelance",
       "message": "Nouveau litige sur « Relecture essai (TEST litige) » (task_1790174373980_f4wily).",
