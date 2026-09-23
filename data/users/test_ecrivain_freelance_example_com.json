@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174396914_9wkf2a",
+      "type": "freelance",
+      "message": "Pro Test a accepté votre mission « Relecture essai (TEST litige) ».",
+      "date": "2026-09-23T14:39:56.914Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174373980_f4wily"
+    },
+    {
       "id": "notif_1790174388975_etjfd0",
       "type": "freelance",
       "message": "Votre mission « Relecture essai (TEST litige) » est publiée : 40.00 CAD sont bloqués sous séquestre.",
