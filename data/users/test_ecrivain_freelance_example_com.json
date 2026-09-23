@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174733327_fnu6hw",
+      "type": "freelance",
+      "message": "Votre mission « Correction poèmes (TEST litige 2) » est publiée : 25.00 CAD sont bloqués sous séquestre.",
+      "date": "2026-09-23T14:45:33.327Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174714706_5j0jlg"
+    },
+    {
       "id": "notif_1790174443276_8eoaub",
       "type": "freelance",
       "message": "Le litige sur « Relecture essai (TEST litige) » a été tranché par Lisible.",
