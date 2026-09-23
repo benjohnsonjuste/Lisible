@@ -25,7 +25,16 @@
   "deliveredAt": null,
   "deliverable": null,
   "revisionCount": 0,
-  "extensions": [],
+  "extensions": [
+    {
+      "id": "ext_1790174091649_juk2te",
+      "days": 3,
+      "reason": "Besoin de relire les épreuves.",
+      "status": "pending",
+      "createdAt": "2026-09-23T14:34:51.649Z",
+      "decidedAt": null
+    }
+  ],
   "messages": [],
   "timeline": [
     {
@@ -51,6 +60,12 @@
       "actor": "test.pro.freelance@example.com",
       "event": "accept",
       "detail": "Pro Test accepte la mission. Remise prévue le 25 septembre 2026."
+    },
+    {
+      "at": "2026-09-23T14:34:51.649Z",
+      "actor": "test.pro.freelance@example.com",
+      "event": "extension",
+      "detail": "Prolongation de 3 jour(s) demandée."
     }
   ],
   "reviews": {},
