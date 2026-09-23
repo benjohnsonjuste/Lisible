@@ -1,0 +1,19 @@
+{
+  "email": "test.pro2.freelance@example.com",
+  "name": "Pro2 Test",
+  "bio": "Correcteur professionnel avec quinze ans d'expérience en édition.",
+  "specialties": [
+    "Correction"
+  ],
+  "languages": "",
+  "priceHint": "",
+  "paypalEmail": "pro2.paypal@example.com",
+  "portfolio": [],
+  "ratingAvg": 0,
+  "ratingCount": 0,
+  "completedCount": 0,
+  "missedDeadlines": 0,
+  "verified": false,
+  "createdAt": "2026-09-23T14:32:09.967Z",
+  "updatedAt": "2026-09-23T14:32:09.967Z"
+}
