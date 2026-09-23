@@ -1,0 +1,50 @@
+[
+  {
+    "id": "romanciers-aube",
+    "name": "Romanciers de l'aube",
+    "description": "Pour celles et ceux qui écrivent avant que le monde se réveille.",
+    "emoji": "🌅",
+    "members": [],
+    "createdAt": "2026-09-23T13:34:03.334Z"
+  },
+  {
+    "id": "poetes-nocturnes",
+    "name": "Poètes nocturnes",
+    "description": "La poésie s'écrit la nuit, entre deux silences.",
+    "emoji": "🌙",
+    "members": [],
+    "createdAt": "2026-09-23T13:34:03.334Z"
+  },
+  {
+    "id": "plumes-fantastiques",
+    "name": "Plumes fantastiques",
+    "description": "Fantasy, SF, merveilleux : les mondes imaginaires ont leur foyer.",
+    "emoji": "🐉",
+    "members": [],
+    "createdAt": "2026-09-23T13:34:03.334Z"
+  },
+  {
+    "id": "ecrivains-dimanche",
+    "name": "Écrivains du dimanche",
+    "description": "On écrit quand on peut, mais on écrit ensemble.",
+    "emoji": "☕",
+    "members": [],
+    "createdAt": "2026-09-23T13:34:03.334Z"
+  },
+  {
+    "id": "theatre-dialogues",
+    "name": "Théâtre & dialogues",
+    "description": "L'art du dialogue, de la scène et de la voix.",
+    "emoji": "🎭",
+    "members": [],
+    "createdAt": "2026-09-23T13:34:03.334Z"
+  },
+  {
+    "id": "memoires-recits",
+    "name": "Mémoires & récits vrais",
+    "description": "Raconter sa vie, témoigner, transmettre.",
+    "emoji": "📖",
+    "members": [],
+    "createdAt": "2026-09-23T13:34:03.334Z"
+  }
+]
