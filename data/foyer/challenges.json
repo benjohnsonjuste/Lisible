@@ -1,0 +1,33 @@
+[
+  {
+    "id": "saison-automne-2026",
+    "kind": "saison",
+    "title": "Saison d'automne 2026",
+    "description": "La grande saison d'écriture du Foyer : écrivez 50 000 mots entre le 1er octobre et le 31 décembre. Chaque jour compte, chaque mot rapproche du but.",
+    "goalWords": 50000,
+    "startDate": "2026-10-01",
+    "endDate": "2026-12-31",
+    "participants": [],
+    "createdAt": "2026-09-23T13:33:25.026Z"
+  },
+  {
+    "id": "defi-7-jours",
+    "kind": "defi",
+    "title": "Défi 7 jours — 500 mots par jour",
+    "description": "Sept jours, 500 mots par jour, zéro excuse. Le rituel parfait pour relancer une plume endormie.",
+    "goalWords": 3500,
+    "rollingDays": 7,
+    "participants": [],
+    "createdAt": "2026-09-23T13:33:25.026Z"
+  },
+  {
+    "id": "defi-premier-jet",
+    "kind": "defi",
+    "title": "Premier jet en 30 jours",
+    "description": "30 000 mots en 30 jours : un premier jet imparfait vaut mieux qu'une page blanche parfaite.",
+    "goalWords": 30000,
+    "rollingDays": 30,
+    "participants": [],
+    "createdAt": "2026-09-23T13:33:25.026Z"
+  }
+]
