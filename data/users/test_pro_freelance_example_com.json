@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174084491_lb6zn0",
+      "type": "freelance",
+      "message": "Vous avez accepté « Mise en pages ebook (TEST) ». Remise prévue le 25 septembre 2026.",
+      "date": "2026-09-23T14:34:44.491Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174050576_9z03hl"
+    },
+    {
       "id": "notif_1790173983741_ijww7v",
       "type": "freelance",
       "message": "« Correction roman 80k mots (TEST) » validé ! 85.00 CAD en cours de versement.",
