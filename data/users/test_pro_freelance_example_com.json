@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174791046_euzbck",
+      "type": "freelance",
+      "message": "Le litige sur « Correction poèmes (TEST litige 2) » a été tranché par Lisible.",
+      "date": "2026-09-23T14:46:31.046Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174714706_5j0jlg"
+    },
+    {
       "id": "notif_1790174777151_sc6jui",
       "type": "freelance",
       "message": "Un litige a été ouvert pour « Correction poèmes (TEST litige 2) ». Lisible va trancher.",
