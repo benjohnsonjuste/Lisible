@@ -8,5 +8,13 @@
   "following": [],
   "works": [],
   "created_at": "2026-09-23T14:29:44.162Z",
-  "password": "$2b$10$NqRaq57V35EuUAjb0u.uWuwi684GM4em4E/Px6RaKLPFHBbyWKPxu"
+  "password": "$2b$10$NqRaq57V35EuUAjb0u.uWuwi684GM4em4E/Px6RaKLPFHBbyWKPxu",
+  "sessions": [
+    {
+      "token": "0f68185a-c33d-4869-9077-74fe056a02fe",
+      "email": "test.ecrivain.freelance@example.com",
+      "createdAt": "2026-09-23T14:29:45.546Z",
+      "expiresAt": "2026-10-23T14:29:45.546Z"
+    }
+  ]
 }
