@@ -5,13 +5,13 @@
     "category": "Relecture",
     "budget": 40,
     "currency": "CAD",
-    "status": "open",
+    "status": "assigned",
     "writerEmail": "test.ecrivain.freelance@example.com",
     "writerName": "Écrivain Test",
-    "proEmail": null,
-    "proName": null,
+    "proEmail": "test.pro.freelance@example.com",
+    "proName": "Pro Test",
     "createdAt": "2026-09-23T14:39:33.980Z",
-    "deadline": null,
+    "deadline": "2026-09-25T00:00:00.000Z",
     "escrowStatus": "held"
   },
   {
