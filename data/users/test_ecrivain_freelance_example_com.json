@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174065667_ygenh7",
+      "type": "freelance",
+      "message": "Votre mission « Mise en pages ebook (TEST) » est publiée : 50.00 CAD sont bloqués sous séquestre.",
+      "date": "2026-09-23T14:34:25.667Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174050576_9z03hl"
+    },
+    {
       "id": "notif_1790173984964_3hadqy",
       "type": "freelance",
       "message": "Vous avez validé « Correction roman 80k mots (TEST) ». Merci !",
