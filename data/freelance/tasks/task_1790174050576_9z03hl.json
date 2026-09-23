@@ -1,0 +1,36 @@
+{
+  "id": "task_1790174050576_9z03hl",
+  "title": "Mise en pages ebook (TEST)",
+  "category": "Mise en pages",
+  "description": "Mise en pages complète d'un ebook de 200 pages.",
+  "wordCount": null,
+  "briefLink": null,
+  "budget": 50,
+  "currency": "CAD",
+  "writerEmail": "test.ecrivain.freelance@example.com",
+  "writerName": "Écrivain Test",
+  "status": "draft",
+  "createdAt": "2026-09-23T14:34:10.576Z",
+  "fundedAt": null,
+  "escrow": null,
+  "orderId": null,
+  "proEmail": null,
+  "proName": null,
+  "acceptedAt": null,
+  "deadline": null,
+  "deliveredAt": null,
+  "deliverable": null,
+  "revisionCount": 0,
+  "extensions": [],
+  "messages": [],
+  "timeline": [
+    {
+      "at": "2026-09-23T14:34:10.576Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "create",
+      "detail": "Mission créée (brouillon). En attente du paiement du budget."
+    }
+  ],
+  "reviews": {},
+  "dispute": null
+}
