@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790173983741_ijww7v",
+      "type": "freelance",
+      "message": "« Correction roman 80k mots (TEST) » validé ! 85.00 CAD en cours de versement.",
+      "date": "2026-09-23T14:33:03.741Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790173848222_tbi3gr"
+    },
+    {
       "id": "notif_1790173956082_nqom48",
       "type": "freelance",
       "message": "L'écrivain demande une révision pour « Correction roman 80k mots (TEST) ».",
