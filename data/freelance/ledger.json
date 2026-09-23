@@ -97,5 +97,14 @@
     "amount": 7.5,
     "currency": "CAD",
     "detail": "Commission Lisible (15 %)"
+  },
+  {
+    "at": "2026-09-23T14:47:22.208Z",
+    "type": "payout_sent",
+    "taskId": "task_1790173848222_tbi3gr",
+    "actor": "test.pro.freelance@example.com",
+    "amount": 85,
+    "currency": "CAD",
+    "detail": "Simulé (démo) — DEMO-BATCH-pay_1790173979544_7d44s4"
   }
 ]
