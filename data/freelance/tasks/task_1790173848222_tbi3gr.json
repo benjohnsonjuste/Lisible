@@ -1,0 +1,36 @@
+{
+  "id": "task_1790173848222_tbi3gr",
+  "title": "Correction roman 80k mots (TEST)",
+  "category": "Correction",
+  "description": "Correction complète.",
+  "wordCount": null,
+  "briefLink": null,
+  "budget": 100,
+  "currency": "CAD",
+  "writerEmail": "test.ecrivain.freelance@example.com",
+  "writerName": "Écrivain Test",
+  "status": "draft",
+  "createdAt": "2026-09-23T14:30:48.222Z",
+  "fundedAt": null,
+  "escrow": null,
+  "orderId": null,
+  "proEmail": null,
+  "proName": null,
+  "acceptedAt": null,
+  "deadline": null,
+  "deliveredAt": null,
+  "deliverable": null,
+  "revisionCount": 0,
+  "extensions": [],
+  "messages": [],
+  "timeline": [
+    {
+      "at": "2026-09-23T14:30:48.222Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "create",
+      "detail": "Mission créée (brouillon). En attente du paiement du budget."
+    }
+  ],
+  "reviews": {},
+  "dispute": null
+}
