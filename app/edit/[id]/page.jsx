@@ -4,8 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Loader2, Save, ArrowLeft, Edit3, Type, Tag, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-// Ajout pour la compatibilité Cloudflare Pages (Edge Runtime)
-export const runtime = 'edge';
+// Note : le Edge Runtime est incompatible avec le build Cloudflare (OpenNext).
+// Page cliente : aucun runtime serveur requis.
 
 export default function EditWorkPage() {
   const params = useParams();
