@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174230846_vusx5z",
+      "type": "freelance",
+      "message": "Délai dépassé pour « Traduction extrait (TEST délai) » : la mission a été rouverte aux autres professionnels.",
+      "date": "2026-09-23T14:37:10.846Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174122919_25v9rq"
+    },
+    {
       "id": "notif_1790174152704_9tj806",
       "type": "freelance",
       "message": "Vous avez accepté « Traduction extrait (TEST délai) ». Remise prévue le 24 septembre 2026.",
