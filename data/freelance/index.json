@@ -5,13 +5,13 @@
     "category": "Traduction",
     "budget": 30,
     "currency": "CAD",
-    "status": "assigned",
+    "status": "open",
     "writerEmail": "test.ecrivain.freelance@example.com",
     "writerName": "Écrivain Test",
-    "proEmail": "test.pro.freelance@example.com",
-    "proName": "Pro Test",
+    "proEmail": null,
+    "proName": null,
     "createdAt": "2026-09-23T14:35:22.919Z",
-    "deadline": "2026-09-24T00:00:00.000Z",
+    "deadline": null,
     "escrowStatus": "held"
   },
   {
