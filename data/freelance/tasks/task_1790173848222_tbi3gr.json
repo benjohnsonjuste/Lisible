@@ -9,7 +9,7 @@
   "currency": "CAD",
   "writerEmail": "test.ecrivain.freelance@example.com",
   "writerName": "Écrivain Test",
-  "status": "open",
+  "status": "assigned",
   "createdAt": "2026-09-23T14:30:48.222Z",
   "fundedAt": "2026-09-23T14:31:04.544Z",
   "escrow": {
@@ -18,10 +18,10 @@
     "captureId": "DEMO-CAP-1790173864544"
   },
   "orderId": "DEMO-ORDER-task_1790173848222_tbi3gr",
-  "proEmail": null,
-  "proName": null,
-  "acceptedAt": null,
-  "deadline": null,
+  "proEmail": "test.pro.freelance@example.com",
+  "proName": "Pro Test",
+  "acceptedAt": "2026-09-23T14:31:17.241Z",
+  "deadline": "2026-09-24T00:00:00.000Z",
   "deliveredAt": null,
   "deliverable": null,
   "revisionCount": 0,
@@ -45,6 +45,12 @@
       "actor": "test.ecrivain.freelance@example.com",
       "event": "fund",
       "detail": "Budget de 100.00 CAD capturé et placé sous séquestre (mode test)."
+    },
+    {
+      "at": "2026-09-23T14:31:17.241Z",
+      "actor": "test.pro.freelance@example.com",
+      "event": "accept",
+      "detail": "Pro Test accepte la mission. Remise prévue le 24 septembre 2026."
     }
   ],
   "reviews": {},
