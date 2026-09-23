@@ -9,12 +9,12 @@
   "currency": "CAD",
   "writerEmail": "test.ecrivain.freelance@example.com",
   "writerName": "Écrivain Test",
-  "status": "delivered",
+  "status": "completed",
   "createdAt": "2026-09-23T14:30:48.222Z",
   "fundedAt": "2026-09-23T14:31:04.544Z",
   "escrow": {
     "amount": 100,
-    "status": "held",
+    "status": "released",
     "captureId": "DEMO-CAP-1790173864544"
   },
   "orderId": "DEMO-ORDER-task_1790173848222_tbi3gr",
@@ -81,8 +81,24 @@
       "actor": "test.pro.freelance@example.com",
       "event": "deliver",
       "detail": "Travail livré. L'écrivain dispose de 7 jours pour valider ou demander une révision."
+    },
+    {
+      "at": "2026-09-23T14:32:56.788Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "validate",
+      "detail": "Travail validé par Écrivain Test. 85.00 CAD versés au professionnel, 15.00 CAD de commission."
     }
   ],
-  "reviews": {},
-  "dispute": null
+  "reviews": {
+    "pro": {
+      "rating": 5,
+      "comment": "Excellent travail.",
+      "at": "2026-09-23T14:33:00.362Z",
+      "authorEmail": "test.ecrivain.freelance@example.com",
+      "authorName": "Écrivain Test"
+    }
+  },
+  "dispute": null,
+  "_sha": "e22bb9fb35237085b5f84aae9ca7ceae5a7a59ab",
+  "completedAt": "2026-09-23T14:32:56.788Z"
 }
