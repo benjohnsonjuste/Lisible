@@ -9,10 +9,14 @@
   "currency": "CAD",
   "writerEmail": "test.ecrivain.freelance@example.com",
   "writerName": "Écrivain Test",
-  "status": "draft",
+  "status": "open",
   "createdAt": "2026-09-23T14:39:33.980Z",
-  "fundedAt": null,
-  "escrow": null,
+  "fundedAt": "2026-09-23T14:39:45.844Z",
+  "escrow": {
+    "amount": 40,
+    "status": "held",
+    "captureId": "DEMO-CAP-1790174385844"
+  },
   "orderId": "DEMO-ORDER-task_1790174373980_f4wily",
   "proEmail": null,
   "proName": null,
@@ -35,6 +39,12 @@
       "actor": "test.ecrivain.freelance@example.com",
       "event": "order",
       "detail": "Ordre de paiement créé (mode test)."
+    },
+    {
+      "at": "2026-09-23T14:39:45.844Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "fund",
+      "detail": "Budget de 40.00 CAD capturé et placé sous séquestre (mode test)."
     }
   ],
   "reviews": {},
