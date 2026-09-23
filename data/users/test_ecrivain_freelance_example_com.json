@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174811008_ytjnyr",
+      "type": "freelance",
+      "message": "Le travail pour « Mise en pages ebook (TEST) » a été livré. Validez-le ou demandez une révision.",
+      "date": "2026-09-23T14:46:51.008Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174050576_9z03hl"
+    },
+    {
       "id": "notif_1790174789696_2lgstk",
       "type": "freelance",
       "message": "Le litige sur « Correction poèmes (TEST litige 2) » a été tranché par Lisible.",
