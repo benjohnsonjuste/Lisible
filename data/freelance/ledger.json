@@ -25,5 +25,14 @@
     "amount": 15,
     "currency": "CAD",
     "detail": "Commission Lisible (15 %)"
+  },
+  {
+    "at": "2026-09-23T14:34:24.584Z",
+    "type": "escrow_hold",
+    "taskId": "task_1790174050576_9z03hl",
+    "actor": "test.ecrivain.freelance@example.com",
+    "amount": 50,
+    "currency": "CAD",
+    "detail": "Séquestre — capture DEMO-CAP-1790174062630"
   }
 ]
