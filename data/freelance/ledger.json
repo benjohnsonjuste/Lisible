@@ -70,5 +70,14 @@
     "amount": 25,
     "currency": "CAD",
     "detail": "Séquestre — capture DEMO-CAP-1790174728154"
+  },
+  {
+    "at": "2026-09-23T14:46:26.085Z",
+    "type": "dispute_refund",
+    "taskId": "task_1790174714706_5j0jlg",
+    "actor": "cmo.lablitteraire7@gmail.com",
+    "amount": 25,
+    "currency": "CAD",
+    "detail": "Test automatisé du correctif."
   }
 ]
