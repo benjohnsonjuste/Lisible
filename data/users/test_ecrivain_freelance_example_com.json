@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174151838_vd4a8i",
+      "type": "freelance",
+      "message": "Pro Test a accepté votre mission « Traduction extrait (TEST délai) ».",
+      "date": "2026-09-23T14:35:51.838Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174122919_25v9rq"
+    },
+    {
       "id": "notif_1790174142907_ds1crp",
       "type": "freelance",
       "message": "Votre mission « Traduction extrait (TEST délai) » est publiée : 30.00 CAD sont bloqués sous séquestre.",
