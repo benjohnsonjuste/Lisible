@@ -143,5 +143,13 @@
       "author": "Duclaire Dahana",
       "date": "2026-03-04T13:24:00.783Z"
     }
+  ],
+  "sessions": [
+    {
+      "token": "f676e54f-df92-4858-818b-1d55a641c787",
+      "email": "jb7management@gmail.com",
+      "createdAt": "2026-09-23T20:33:04.231Z",
+      "expiresAt": "2026-10-23T20:33:04.231Z"
+    }
   ]
 }
