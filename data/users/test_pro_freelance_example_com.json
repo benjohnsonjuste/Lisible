@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174830693_z4w6tf",
+      "type": "freelance",
+      "message": "« Mise en pages ebook (TEST) » validé ! 42.50 CAD en cours de versement.",
+      "date": "2026-09-23T14:47:10.693Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174050576_9z03hl"
+    },
+    {
       "id": "notif_1790174791046_euzbck",
       "type": "freelance",
       "message": "Le litige sur « Correction poèmes (TEST litige 2) » a été tranché par Lisible.",
