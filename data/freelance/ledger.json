@@ -88,5 +88,14 @@
     "amount": 42.5,
     "currency": "CAD",
     "detail": "Versement professionnel (Pro Test)"
+  },
+  {
+    "at": "2026-09-23T14:47:04.936Z",
+    "type": "platform_fee",
+    "taskId": "task_1790174050576_9z03hl",
+    "actor": "platform",
+    "amount": 7.5,
+    "currency": "CAD",
+    "detail": "Commission Lisible (15 %)"
   }
 ]
