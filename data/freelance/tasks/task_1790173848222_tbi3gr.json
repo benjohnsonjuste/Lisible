@@ -9,7 +9,7 @@
   "currency": "CAD",
   "writerEmail": "test.ecrivain.freelance@example.com",
   "writerName": "Écrivain Test",
-  "status": "delivered",
+  "status": "assigned",
   "createdAt": "2026-09-23T14:30:48.222Z",
   "fundedAt": "2026-09-23T14:31:04.544Z",
   "escrow": {
@@ -28,9 +28,17 @@
     "note": "Manuscrit corrigé.",
     "deliveredAt": "2026-09-23T14:32:25.615Z"
   },
-  "revisionCount": 0,
+  "revisionCount": 1,
   "extensions": [],
-  "messages": [],
+  "messages": [
+    {
+      "id": "msg_1790173953537_d3g6fa",
+      "at": "2026-09-23T14:32:33.537Z",
+      "authorEmail": "test.ecrivain.freelance@example.com",
+      "authorName": "Écrivain Test",
+      "text": "Revoir le chapitre 3 svp."
+    }
+  ],
   "timeline": [
     {
       "at": "2026-09-23T14:30:48.222Z",
@@ -61,6 +69,12 @@
       "actor": "test.pro.freelance@example.com",
       "event": "deliver",
       "detail": "Travail livré. L'écrivain dispose de 7 jours pour valider ou demander une révision."
+    },
+    {
+      "at": "2026-09-23T14:32:33.537Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "revision",
+      "detail": "Révision n°1 demandée."
     }
   ],
   "reviews": {},
