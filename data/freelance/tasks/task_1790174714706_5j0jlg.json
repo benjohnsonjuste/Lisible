@@ -1,0 +1,36 @@
+{
+  "id": "task_1790174714706_5j0jlg",
+  "title": "Correction poèmes (TEST litige 2)",
+  "category": "Correction",
+  "description": "Correction d'un recueil de poèmes de 60 pages pour test.",
+  "wordCount": null,
+  "briefLink": null,
+  "budget": 25,
+  "currency": "CAD",
+  "writerEmail": "test.ecrivain.freelance@example.com",
+  "writerName": "Écrivain Test",
+  "status": "draft",
+  "createdAt": "2026-09-23T14:45:14.706Z",
+  "fundedAt": null,
+  "escrow": null,
+  "orderId": null,
+  "proEmail": null,
+  "proName": null,
+  "acceptedAt": null,
+  "deadline": null,
+  "deliveredAt": null,
+  "deliverable": null,
+  "revisionCount": 0,
+  "extensions": [],
+  "messages": [],
+  "timeline": [
+    {
+      "at": "2026-09-23T14:45:14.706Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "create",
+      "detail": "Mission créée (brouillon). En attente du paiement du budget."
+    }
+  ],
+  "reviews": {},
+  "dispute": null
+}
