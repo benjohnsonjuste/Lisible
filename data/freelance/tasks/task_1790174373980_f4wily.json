@@ -13,7 +13,7 @@
   "createdAt": "2026-09-23T14:39:33.980Z",
   "fundedAt": null,
   "escrow": null,
-  "orderId": null,
+  "orderId": "DEMO-ORDER-task_1790174373980_f4wily",
   "proEmail": null,
   "proName": null,
   "acceptedAt": null,
@@ -29,6 +29,12 @@
       "actor": "test.ecrivain.freelance@example.com",
       "event": "create",
       "detail": "Mission créée (brouillon). En attente du paiement du budget."
+    },
+    {
+      "at": "2026-09-23T14:39:40.084Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "order",
+      "detail": "Ordre de paiement créé (mode test)."
     }
   ],
   "reviews": {},
