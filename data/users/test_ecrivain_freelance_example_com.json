@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174405592_goprh9",
+      "type": "freelance",
+      "message": "Le travail pour « Relecture essai (TEST litige) » a été livré. Validez-le ou demandez une révision.",
+      "date": "2026-09-23T14:40:05.592Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174373980_f4wily"
+    },
+    {
       "id": "notif_1790174396914_9wkf2a",
       "type": "freelance",
       "message": "Pro Test a accepté votre mission « Relecture essai (TEST litige) ».",
