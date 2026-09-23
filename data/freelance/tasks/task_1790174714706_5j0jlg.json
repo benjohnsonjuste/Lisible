@@ -26,7 +26,15 @@
   "deliverable": null,
   "revisionCount": 0,
   "extensions": [],
-  "messages": [],
+  "messages": [
+    {
+      "id": "msg_1790174750808_78ojof",
+      "at": "2026-09-23T14:45:50.808Z",
+      "authorEmail": "test.ecrivain.freelance@example.com",
+      "authorName": "Écrivain Test",
+      "text": "Bonjour, voici le manuscrit en pièce jointe fictive."
+    }
+  ],
   "timeline": [
     {
       "at": "2026-09-23T14:45:14.706Z",
