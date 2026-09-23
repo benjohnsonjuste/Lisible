@@ -3,7 +3,16 @@
   "name": "Pro Test",
   "li": 50,
   "status": "active",
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "notif_1790173880421_uwamqk",
+      "type": "freelance",
+      "message": "Vous avez accepté « Correction roman 80k mots (TEST) ». Remise prévue le 24 septembre 2026.",
+      "date": "2026-09-23T14:31:20.421Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790173848222_tbi3gr"
+    }
+  ],
   "followers": [],
   "following": [],
   "works": [],
