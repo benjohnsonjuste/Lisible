@@ -6,10 +6,11 @@
     "proPaypalEmail": "pro.paypal@example.com",
     "amount": 85,
     "currency": "CAD",
-    "status": "queued",
+    "status": "paid",
     "at": "2026-09-23T14:32:59.544Z",
-    "batchId": null,
-    "reference": null
+    "batchId": "DEMO-BATCH-pay_1790173979544_7d44s4",
+    "reference": null,
+    "paidAt": "2026-09-23T14:47:21.982Z"
   },
   {
     "id": "pay_1790174826146_yiqwxs",
@@ -18,9 +19,10 @@
     "proPaypalEmail": "pro.paypal@example.com",
     "amount": 42.5,
     "currency": "CAD",
-    "status": "queued",
+    "status": "paid",
     "at": "2026-09-23T14:47:06.146Z",
-    "batchId": null,
-    "reference": null
+    "batchId": "DEMO-BATCH-pay_1790174826146_yiqwxs",
+    "reference": null,
+    "paidAt": "2026-09-23T14:47:23.059Z"
   }
 ]
