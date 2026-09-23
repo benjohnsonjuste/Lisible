@@ -33,6 +33,13 @@
       "authorEmail": "test.ecrivain.freelance@example.com",
       "authorName": "Écrivain Test",
       "text": "Bonjour, voici le manuscrit en pièce jointe fictive."
+    },
+    {
+      "id": "msg_1790174757859_9bvz7t",
+      "at": "2026-09-23T14:45:57.859Z",
+      "authorEmail": "test.pro.freelance@example.com",
+      "authorName": "Pro Test",
+      "text": "Bien reçu, je commence aujourd'hui."
     }
   ],
   "timeline": [
