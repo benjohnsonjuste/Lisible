@@ -9,12 +9,12 @@
   "currency": "CAD",
   "writerEmail": "test.ecrivain.freelance@example.com",
   "writerName": "Écrivain Test",
-  "status": "disputed",
+  "status": "refunded",
   "createdAt": "2026-09-23T14:45:14.706Z",
   "fundedAt": "2026-09-23T14:45:28.154Z",
   "escrow": {
     "amount": 25,
-    "status": "held",
+    "status": "refunded",
     "captureId": "DEMO-CAP-1790174728154"
   },
   "orderId": "DEMO-ORDER-task_1790174714706_5j0jlg",
@@ -82,6 +82,12 @@
       "actor": "test.ecrivain.freelance@example.com",
       "event": "dispute",
       "detail": "Litige ouvert par Écrivain Test."
+    },
+    {
+      "at": "2026-09-23T14:46:26.986Z",
+      "actor": "cmo.lablitteraire7@gmail.com",
+      "event": "dispute",
+      "detail": "Litige tranché : remboursement intégral de l'écrivain (25.00 CAD)."
     }
   ],
   "reviews": {},
