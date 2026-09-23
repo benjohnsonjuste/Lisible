@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174388975_etjfd0",
+      "type": "freelance",
+      "message": "Votre mission « Relecture essai (TEST litige) » est publiée : 40.00 CAD sont bloqués sous séquestre.",
+      "date": "2026-09-23T14:39:48.975Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174373980_f4wily"
+    },
+    {
       "id": "notif_1790174232108_ydvmq6",
       "type": "freelance",
       "message": "Le professionnel n'a pas livré « Traduction extrait (TEST délai) » dans les délais : la mission est de nouveau ouverte.",
