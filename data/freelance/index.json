@@ -5,7 +5,7 @@
     "category": "Relecture",
     "budget": 40,
     "currency": "CAD",
-    "status": "delivered",
+    "status": "disputed",
     "writerEmail": "test.ecrivain.freelance@example.com",
     "writerName": "Écrivain Test",
     "proEmail": "test.pro.freelance@example.com",
