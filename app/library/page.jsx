@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import Head from "next/head";
+import { SceauHumainBadge } from "@/components/sceau/SceauHumain";
 
 export default function LibraryPage() {
   const [texts, setTexts] = useState([]);
@@ -26,15 +27,38 @@ export default function LibraryPage() {
   // 🔥 Technique inspirée de TextContent pour récupérer les données réelles par ID
   const loadLibraryData = useCallback(async () => {
     try {
-      // 1. Récupération des profils
-      const usersRes = await fetch(`/api/realtime-data?folder=users`);
+      // 1. Récupération des profils (liste des fichiers puis téléchargement direct,
+      // modèle de la page salon — contourne la limite de 50 sous-requêtes du Worker)
+      const usersRes = await fetch(`/api/realtime-data?folder=users&mode=list`);
       const usersJson = await usersRes.json();
-      const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
+      const userFiles = Array.isArray(usersJson.files) ? usersJson.files : [];
+      const allUsers = (
+        await Promise.all(
+          userFiles.map(async (f) => {
+            try {
+              const r = await fetch(f.download_url);
+              if (!r.ok) return null;
+              return await r.json();
+            } catch { return null; }
+          })
+        )
+      ).filter(Boolean);
 
-      // 2. Récupération de la liste des textes
-      const textsRes = await fetch(`/api/realtime-data?folder=texts`);
+      // 2. Récupération de la liste des textes (même modèle)
+      const textsRes = await fetch(`/api/realtime-data?folder=texts&mode=list`);
       const textsJson = await textsRes.json();
-      const rawTexts = Array.isArray(textsJson.content) ? textsJson.content : [];
+      const textFiles = Array.isArray(textsJson.files) ? textsJson.files : [];
+      const rawTexts = (
+        await Promise.all(
+          textFiles.map(async (f) => {
+            try {
+              const r = await fetch(f.download_url);
+              if (!r.ok) return null;
+              return await r.json();
+            } catch { return null; }
+          })
+        )
+      ).filter(Boolean);
 
       // 3. Pour chaque texte, on va chercher les datas réelles comme dans TextContent
       const parsedTexts = await Promise.all(rawTexts.map(async (data, index) => {
@@ -76,7 +100,8 @@ export default function LibraryPage() {
           category: data.category || data.genre || "Littérature",
           image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || index}`,
           isNovelDuel,
-          isBattlePoetique
+          isBattlePoetique,
+          humanSeal: data.humanSeal || liveStats.humanSeal || null
         };
       }));
 
@@ -166,6 +191,9 @@ export default function LibraryPage() {
                     <p className="text-[10px] font-black uppercase text-teal-600 tracking-wider italic">{text.authorName}</p>
                   </div>
                   <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-[1.1] group-hover:text-teal-600 transition-colors">{text.title}</h2>
+                  {text.humanSeal?.attested && (
+                    <div className="pt-1"><SceauHumainBadge /></div>
+                  )}
                 </div>
 
                 <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">

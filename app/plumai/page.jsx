@@ -1,6 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Printer } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Printer, Sparkles, BarChart3, MessageCircle, Megaphone, Lightbulb } from 'lucide-react';
 import WorkspaceArea from '@/components/editorial/WorkspaceArea';
 import MetricsDashboard from '@/components/editorial/MetricsDashboard';
 import EditorialReport from '@/components/editorial/EditorialReport';
@@ -12,9 +12,22 @@ import NeuroSynesthesiaPanel from '@/components/editorial/NeuroSynesthesiaPanel'
 import StylisticMimicryPanel from '@/components/editorial/StylisticMimicryPanel';
 import ClassicalAncestryPanel from '@/components/editorial/ClassicalAncestryPanel';
 import PublisherMatchingPanel from '@/components/editorial/PublisherMatchingPanel';
+import CritiquePanel from '@/components/plumai/CritiquePanel';
+import AssistantChat from '@/components/plumai/AssistantChat';
+import MarketingPanel from '@/components/plumai/MarketingPanel';
+import IdeesPanel from '@/components/plumai/IdeesPanel';
 
-export default function ManuscriptAnalyzer() {
+const TABS = [
+  { key: 'analyse', label: 'Analyse instantanée', icon: BarChart3, desc: 'Diagnostic heuristique immédiat : style, rythme, clichés, personnages, cohérence.' },
+  { key: 'critique', label: 'Critique IA', icon: Sparkles, desc: 'Une vraie critique d\u2019éditeur : notes, points forts, faiblesses et conseils.' },
+  { key: 'assistant', label: 'Assistant', icon: MessageCircle, desc: 'Dialoguez avec PlumAI au sujet de votre manuscrit.' },
+  { key: 'marketing', label: 'Kit marketing', icon: Megaphone, desc: 'Titres, 4e de couverture, synopsis, pitch et accroches.' },
+  { key: 'idees', label: 'Idées & Réécriture', icon: Lightbulb, desc: 'Inspiration, rebondissements et réécriture de passages.' },
+];
+
+export default function PlumAIPage() {
   const [text, setText] = useState('');
+  const [tab, setTab] = useState('analyse');
   const [loading, setLoading] = useState(false);
   const [isFormatting, setIsFormatting] = useState(false);
   const [report, setReport] = useState(null);
@@ -30,6 +43,17 @@ export default function ManuscriptAnalyzer() {
   const [error, setError] = useState(null);
   const [scanStep, setScanStep] = useState(0);
 
+  // IA states
+  const [critique, setCritique] = useState(null);
+  const [critiqueLoading, setCritiqueLoading] = useState(false);
+  const [critiqueError, setCritiqueError] = useState(null);
+  const [kit, setKit] = useState(null);
+  const [kitLoading, setKitLoading] = useState(false);
+  const [kitError, setKitError] = useState(null);
+  const [idees, setIdees] = useState(null);
+  const [ideesLoading, setIdeesLoading] = useState(false);
+  const [ideesError, setIdeesError] = useState(null);
+
   const steps = [
     "Initialisation du scan spatial synoptique...",
     "Extraction de la matrice syntaxique locale (RAM)...",
@@ -38,6 +62,19 @@ export default function ManuscriptAnalyzer() {
     "Calcul de l'indice d'ancrage mnésique structural...",
     "Compilation du bilan d'ingénierie éditoriale final..."
   ];
+
+  // Brouillon auto-sauvegardé
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem('plumai_draft');
+      if (draft) setText(draft);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      if (text) localStorage.setItem('plumai_draft', text);
+    } catch {}
+  }, [text]);
 
   useEffect(() => {
     if (!window.mammoth) {
@@ -64,7 +101,7 @@ export default function ManuscriptAnalyzer() {
     if (!f) return;
     setError(null);
     const ext = f.name.split('.').pop().toLowerCase();
-    
+
     if (ext === 'txt') {
       const r = new FileReader();
       r.onload = (evt) => setText(evt.target.result);
@@ -100,76 +137,95 @@ export default function ManuscriptAnalyzer() {
       if (!rAnalyze.ok) throw new Error(dAnalyze.error);
       setReport(dAnalyze);
 
-      // Exécutions parallèles des modules analytiques
-      const rCharacter = await fetch('/api/character-audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
+      const endpoints = [
+        ['/api/character-audit', setCharacterReport],
+        ['/api/timeline-continuity', setTimelineReport],
+        ['/api/beta-reading', setBetaReport],
+        ['/api/editorial-proofreader', setProofreadReport],
+        ['/api/neuro-synesthesia', setSynesthesiaReport],
+        ['/api/stylistic-mimicry', setMimicryReport],
+        ['/api/classical-ancestry', setClassicalReport],
+        ['/api/marketing', setMarketingData],
+        ['/api/publisher-matching', setPublisherReport],
+      ];
+      const results = await Promise.allSettled(
+        endpoints.map(([url]) =>
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ textChunk: text }),
+          }).then((r) => (r.ok ? r.json() : null))
+        )
+      );
+      results.forEach((res, i) => {
+        if (res.status === 'fulfilled' && res.value) endpoints[i][1](res.value);
       });
-      if (rCharacter.ok) setCharacterReport(await rCharacter.json());
-
-      const rTimeline = await fetch('/api/timeline-continuity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rTimeline.ok) setTimelineReport(await rTimeline.json());
-
-      const rBeta = await fetch('/api/beta-reading', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rBeta.ok) setBetaReport(await rBeta.json());
-
-      const rProofread = await fetch('/api/editorial-proofreader', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rProofread.ok) setProofreadReport(await rProofread.json());
-
-      const rSynesthesia = await fetch('/api/neuro-synesthesia', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rSynesthesia.ok) setSynesthesiaReport(await rSynesthesia.json());
-
-      const rMimicry = await fetch('/api/stylistic-mimicry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rMimicry.ok) setMimicryReport(await rMimicry.json());
-
-      const rClassical = await fetch('/api/classical-ancestry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rClassical.ok) setClassicalReport(await rClassical.json());
-
-      const rMarketing = await fetch('/api/marketing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rMarketing.ok) setMarketingData(await rMarketing.json());
-
-      const rPublishers = await fetch('/api/publisher-matching', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textChunk: text }),
-      });
-      if (rPublishers.ok) setPublisherReport(await rPublishers.json());
-
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const launchCritique = useCallback(async () => {
+    if (!text.trim() || critiqueLoading) return;
+    setCritiqueLoading(true);
+    setCritiqueError(null);
+    try {
+      const res = await fetch('/api/plumai/critique', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'La critique a échoué.');
+      setCritique(data);
+    } catch (e) {
+      setCritiqueError(e.message);
+    } finally {
+      setCritiqueLoading(false);
+    }
+  }, [text, critiqueLoading]);
+
+  const launchKit = useCallback(async () => {
+    if (!text.trim() || kitLoading) return;
+    setKitLoading(true);
+    setKitError(null);
+    try {
+      const res = await fetch('/api/plumai/marketing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'La génération a échoué.');
+      setKit(data);
+    } catch (e) {
+      setKitError(e.message);
+    } finally {
+      setKitLoading(false);
+    }
+  }, [text, kitLoading]);
+
+  const launchIdees = useCallback(async () => {
+    if (!text.trim() || ideesLoading) return;
+    setIdeesLoading(true);
+    setIdeesError(null);
+    try {
+      const res = await fetch('/api/plumai/idees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textChunk: text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'La génération a échoué.');
+      setIdees(data);
+    } catch (e) {
+      setIdeesError(e.message);
+    } finally {
+      setIdeesLoading(false);
+    }
+  }, [text, ideesLoading]);
 
   const handleFormatAndDownload = async () => {
     if (!text || text.trim().length < 10) return;
@@ -181,7 +237,7 @@ export default function ManuscriptAnalyzer() {
         body: JSON.stringify({ textChunk: text }),
       });
       if (!response.ok) throw new Error("Échec du formatage serveur.");
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -213,57 +269,115 @@ export default function ManuscriptAnalyzer() {
     }));
   };
 
+  const hasText = text.trim().length >= 200;
+  const activeTab = TABS.find((t) => t.key === tab);
+
   return (
-    <div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900 max-w-5xl mx-auto space-y-8">
+    <div className="bg-slate-950 text-slate-100 p-6 md:p-12 font-sans rounded-2xl border border-slate-900 max-w-6xl mx-auto space-y-8">
       <header className="border-b border-slate-800 pb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
-          PLUMAI <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">v3.2 (Moteur Généalogique & Neuro-Édition)</span>
+        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-fuchsia-400 to-amber-300 bg-clip-text text-transparent flex items-center gap-3">
+          PlumAI
+          <span className="text-xs font-mono px-2 py-1 bg-slate-800 text-slate-400 rounded-full">L'atelier d'écriture intelligent</span>
         </h1>
+        <p className="text-sm text-slate-400 mt-3 max-w-3xl leading-relaxed">
+          Votre critique littéraire, votre coach d'écriture et votre attaché de presse réunis :
+          analyse instantanée de votre manuscrit, critique approfondie par IA, assistant conversationnel,
+          kit marketing complet et aide contre la page blanche. Votre texte reste confidentiel.
+        </p>
       </header>
 
-      <WorkspaceArea 
+      <WorkspaceArea
         text={text} setText={setText} loading={loading} isFormatting={isFormatting} error={error}
         steps={steps} scanStep={scanStep} handleFileUpload={handleFileUpload}
         handleAnalyze={handleAnalyze} handleFormatAndDownload={handleFormatAndDownload}
       />
 
-      {report && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center mt-8">
-            <h2 className="text-xl font-bold tracking-tight text-slate-200">Tableau de bord de votre manuscrit</h2>
-            <button onClick={() => window.print()} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 font-medium rounded-lg text-xs flex items-center space-x-2 print:hidden">
-              <Printer className="w-4 h-4"/><span>Exporter le rapport</span>
+      {/* Onglets */}
+      <nav className="flex gap-2 overflow-x-auto pb-1 print:hidden" role="tablist">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all border ${
+                active
+                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 border-transparent text-white shadow-lg'
+                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {t.label}
             </button>
-          </div>
-          
-          <MetricsDashboard report={report} />
+          );
+        })}
+      </nav>
+      <p className="text-xs text-slate-500 -mt-4 print:hidden">{activeTab?.desc}</p>
 
-          <PublisherMatchingPanel data={publisherReport} />
-          
-          {/* Lignée Classique Pré-XIXe */}
-          <ClassicalAncestryPanel data={classicalReport} />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <NeuroSynesthesiaPanel data={synesthesiaReport} />
-            <StylisticMimicryPanel data={mimicryReport} />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <BetaReadingPanel data={betaReport} />
-            <InteractiveProofreader 
-              data={proofreadReport}
-              onAcceptSuggestion={acceptProofreadSuggestion}
-              onRejectSuggestion={rejectProofreadSuggestion}
-            />
-          </div>
+      {/* Contenu des onglets */}
+      {tab === 'analyse' && (
+        report ? (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mt-2">
+              <h2 className="text-xl font-bold tracking-tight text-slate-200">Tableau de bord de votre manuscrit</h2>
+              <button onClick={() => window.print()} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 font-medium rounded-lg text-xs flex items-center space-x-2 print:hidden">
+                <Printer className="w-4 h-4" /><span>Exporter le rapport</span>
+              </button>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CharacterAuditPanel data={characterReport} />
-            <TimelineContinuityPanel data={timelineReport} />
+            <MetricsDashboard report={report} />
+            <PublisherMatchingPanel data={publisherReport} />
+            <ClassicalAncestryPanel data={classicalReport} />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <NeuroSynesthesiaPanel data={synesthesiaReport} />
+              <StylisticMimicryPanel data={mimicryReport} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <BetaReadingPanel data={betaReport} />
+              <InteractiveProofreader
+                data={proofreadReport}
+                onAcceptSuggestion={acceptProofreadSuggestion}
+                onRejectSuggestion={rejectProofreadSuggestion}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CharacterAuditPanel data={characterReport} />
+              <TimelineContinuityPanel data={timelineReport} />
+            </div>
+
+            <EditorialReport report={report} marketingData={marketingData} />
           </div>
-          
-          <EditorialReport report={report} marketingData={marketingData} />
-        </div>
+        ) : (
+          <div className="bg-slate-900 border border-dashed border-slate-700 rounded-xl p-10 text-center">
+            <BarChart3 className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+            <p className="text-sm text-slate-400 max-w-md mx-auto">
+              Collez votre texte ci-dessus puis cliquez sur « Lancer le diagnostic littéraire »
+              pour obtenir l'analyse instantanée : métriques de style, clichés, personnages, cohérence…
+            </p>
+          </div>
+        )
+      )}
+
+      {tab === 'critique' && (
+        <CritiquePanel data={critique} loading={critiqueLoading} error={critiqueError} onLaunch={launchCritique} hasText={hasText} />
+      )}
+
+      {tab === 'assistant' && (
+        <AssistantChat text={text} />
+      )}
+
+      {tab === 'marketing' && (
+        <MarketingPanel data={kit} loading={kitLoading} error={kitError} onLaunch={launchKit} hasText={hasText} />
+      )}
+
+      {tab === 'idees' && (
+        <IdeesPanel idees={idees} ideesLoading={ideesLoading} ideesError={ideesError} onLaunchIdees={launchIdees} hasText={hasText} />
       )}
     </div>
   );

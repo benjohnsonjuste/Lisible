@@ -8,7 +8,7 @@ export function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // 1. Définir les routes qui nécessitent une connexion
-  const protectedRoutes = ['/dashboard', '/account', '/publier', '/edit'];
+  const protectedRoutes = ['/dashboard', '/account', '/publier', '/edit', '/marketplace/nouvelle', '/marketplace/tableau-de-bord', '/marketplace/admin', '/marketplace/devenir-pro'];
 
   // 2. Si l'utilisateur tente d'accéder à une route protégée sans être connecté
   if (protectedRoutes.some(route => pathname.startsWith(route))) {
@@ -30,5 +30,9 @@ export const config = {
     '/account/:path*',
     '/publier/:path*',
     '/edit/:path*',
+    '/marketplace/nouvelle/:path*',
+    '/marketplace/tableau-de-bord/:path*',
+    '/marketplace/admin/:path*',
+    '/marketplace/devenir-pro/:path*',
   ],
 };

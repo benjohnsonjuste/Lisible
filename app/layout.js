@@ -2,6 +2,8 @@ import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import CookieConsent from "../components/CookieConsent";
+import AdSenseLoader from "../components/AdSenseLoader";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
@@ -55,12 +57,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${inter.variable} ${lora.variable} h-full`} suppressHydrationWarning>
       <head>
-        <script 
-          async 
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7644995408680119"
-          crossOrigin="anonymous"
-        ></script>
-        
+        {/* Le script Google AdSense n'est chargé qu'après consentement explicite
+            de l'utilisateur (voir components/AdSenseLoader.js + bandeau cookies).
+            Les annonces automatiques (Auto ads) suffisent pour l'approbation. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -79,6 +78,14 @@ export default function RootLayout({ children }) {
       </head>
       <body className="antialiased bg-[#fcfbf9] text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-500 font-sans flex flex-col min-h-screen selection:bg-blue-100 selection:text-blue-900">
         
+        {/*
+          Vignette publicitaire Monetag (zone 11101900) DÉSACTIVÉE le 2026-09-23
+          à la demande de Ben : les popups plein écran agressifs (« Download is
+          ready ») bloquaient le bandeau de consentement cookies et nuisaient à
+          l'approbation Google AdSense (expériences publicitaires trompeuses).
+          Pour réactiver : décommenter le bloc <Script> ci-dessous.
+        */}
+        {/*
         <Script
           id="monetag-vignette"
           strategy="afterInteractive"
@@ -91,6 +98,7 @@ export default function RootLayout({ children }) {
             `
           }}
         />
+        */}
 
         <AuthProvider>
           <ServiceWorkerRegistration />
@@ -105,6 +113,8 @@ export default function RootLayout({ children }) {
           
           <InstallPrompt />
           <Footer />
+          <CookieConsent />
+          <AdSenseLoader />
           
           <Toaster 
             position="top-center" 

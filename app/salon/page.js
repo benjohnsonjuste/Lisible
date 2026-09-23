@@ -6,8 +6,28 @@ ShieldCheck, Sparkles, Globe, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+function AuthorAvatar({ photo, name }) {
+const [broken, setBroken] = useState(false);
+if (photo && !broken) {
+return (
+<img
+src={photo}
+alt={name || "Auteur"}
+onError={() => setBroken(true)}
+className="w-12 h-12 rounded-2xl object-cover bg-slate-100"
+/>
+);
+}
+return (
+<div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">
+<User size={20} />
+</div>
+);
+}
+
 export default function ForumPage() {
 const [messages, setMessages] = useState([]);
+const [photos, setPhotos] = useState({});
 const [user, setUser] = useState(null);
 const [newMsg, setNewMsg] = useState("");
 const [loading, setLoading] = useState(true);
@@ -42,7 +62,24 @@ if (res.ok) {
 const files = await res.json();
 const lastFiles = files.filter(f => f.name.endsWith('.json')).slice(-20);
 const contents = await Promise.all(lastFiles.map(f => fetch(f.download_url).then(r => r.json())));
-setMessages(contents.sort((a, b) => b.id - a.id));
+const sorted = contents.sort((a, b) => b.id - a.id);
+setMessages(sorted);
+// Charger les photos de profil enregistrées par chaque auteur
+try {
+const emails = [...new Set(sorted.map(m => (m.email || "").toLowerCase()).filter(Boolean))];
+const entries = await Promise.all(emails.map(async (email) => {
+try {
+const r = await fetch(`/api/github-db?type=user&id=${encodeURIComponent(email)}`);
+if (r.ok) {
+const data = await r.json();
+const pic = data.content?.profilePic || data.content?.image || "";
+return [email, pic];
+}
+} catch (e) {}
+return [email, ""];
+}));
+setPhotos(Object.fromEntries(entries));
+} catch (e) { console.error("photos", e); }
 }
 } catch (e) { console.error(e); }
 setLoading(false);
@@ -150,9 +187,7 @@ return (
           <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-100 group-hover:bg-teal-500 transition-colors" />  
           <div className="flex justify-between items-start mb-6">  
             <div className="flex items-center gap-4">  
-              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400">  
-                <User size={20} />  
-              </div>  
+              <AuthorAvatar photo={m.email ? (photos[(m.email || "").toLowerCase()] || "") : ""} name={m.author} />  
               <div>  
                 <h4 className="font-black italic text-slate-900 tracking-tight">{m.author}</h4>  
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-teal-600">Compte Certifié</p>  

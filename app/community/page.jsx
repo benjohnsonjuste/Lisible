@@ -3,12 +3,13 @@ import React, { useEffect, useState, useMemo } from "react";
 import { 
   Users as UsersIcon, ArrowRight, Search, Loader2, 
   ShieldCheck, Crown, ChevronDown, TrendingUp, Star, Settings, 
-  Briefcase, HeartHandshake, Feather, Mail, Gift, X
+  Briefcase, HeartHandshake, Feather, Mail, Gift, X, Flame
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import MessageModal from "@/components/MessageModal";
 import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
+import FoyerHub from "@/components/foyer/FoyerHub";
 
 export default function CommunautePage() {
   const [authors, setAuthors] = useState([]);
@@ -20,9 +21,14 @@ export default function CommunautePage() {
   const [mounted, setMounted] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [giftRecipient, setGiftRecipient] = useState(null); // État pour le cadeau
+  const [onglet, setOnglet] = useState("cercle"); // "cercle" | "foyer"
 
   useEffect(() => {
     setMounted(true);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "foyer" || params.get("onglet") === "foyer") setOnglet("foyer");
+    } catch {}
     const loggedUser = localStorage.getItem("lisible_user");
     if (loggedUser) {
       try { setCurrentUser(JSON.parse(loggedUser)); } catch (e) {}
@@ -32,15 +38,39 @@ export default function CommunautePage() {
 
   async function loadAuthorsData() {
     try {
-      const usersRes = await fetch(`/api/realtime-data?folder=users`);
+      // Liste des fichiers via l'API (1 sous-requête), puis téléchargement direct
+      // de chaque profil (modèle de la page salon — contourne la limite de 50
+      // sous-requêtes par invocation du Worker).
+      const usersRes = await fetch(`/api/realtime-data?folder=users&mode=list`);
       const usersJson = await usersRes.json();
-      
-      const rawUsers = Array.isArray(usersJson.content) ? usersJson.content.flat() : [];
+      const userFiles = Array.isArray(usersJson.files) ? usersJson.files : [];
+      const rawUsers = (
+        await Promise.all(
+          userFiles.map(async (f) => {
+            try {
+              const r = await fetch(f.download_url);
+              if (!r.ok) return null;
+              return await r.json();
+            } catch { return null; }
+          })
+        )
+      ).filter(Boolean).flat();
       const allUsers = rawUsers.filter(u => u && (u.email || u.id));
 
-      const libRes = await fetch(`/api/realtime-data?folder=publications`);
+      const libRes = await fetch(`/api/realtime-data?folder=publications&mode=list`);
       const libJson = await libRes.json();
-      const publications = Array.isArray(libJson.content) ? libJson.content.flat() : [];
+      const pubFiles = Array.isArray(libJson.files) ? libJson.files : [];
+      const publications = (
+        await Promise.all(
+          pubFiles.map(async (f) => {
+            try {
+              const r = await fetch(f.download_url);
+              if (!r.ok) return null;
+              return await r.json();
+            } catch { return null; }
+          })
+        )
+      ).filter(Boolean).flat();
 
       const community = allUsers.map(user => {
         const email = (user.email || "").toLowerCase().trim();
@@ -129,7 +159,7 @@ export default function CommunautePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-20 bg-[#FCFBF9] min-h-screen">
-      <header className="flex flex-col lg:flex-row justify-between mb-24 gap-8 items-end">
+      <header className="flex flex-col lg:flex-row justify-between mb-10 gap-8 items-end">
         <h1 className="text-8xl md:text-9xl font-black italic tracking-tighter text-slate-900 leading-[0.75]">Cercle.</h1>
         <div className="relative w-full lg:w-96">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -142,6 +172,27 @@ export default function CommunautePage() {
         </div>
       </header>
 
+      {/* Onglets : Le Cercle / Le Foyer */}
+      <div className="flex gap-3 mb-12">
+        <button
+          onClick={() => setOnglet("cercle")}
+          className={`flex items-center gap-2.5 px-7 py-4 rounded-[1.75rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all ${onglet === "cercle" ? "bg-slate-950 text-white shadow-2xl" : "bg-white text-slate-500 border-2 border-slate-100 hover:border-teal-300 hover:text-teal-600"}`}
+        >
+          <UsersIcon size={17} /> Le Cercle
+        </button>
+        <button
+          onClick={() => setOnglet("foyer")}
+          className={`flex items-center gap-2.5 px-7 py-4 rounded-[1.75rem] text-[11px] font-black uppercase tracking-[0.2em] transition-all relative ${onglet === "foyer" ? "bg-slate-950 text-white shadow-2xl" : "bg-white text-slate-500 border-2 border-slate-100 hover:border-orange-300 hover:text-orange-600"}`}
+        >
+          <Flame size={17} className={onglet === "foyer" ? "text-amber-400" : ""} /> Le Foyer
+          <span className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-lg">Nouveau</span>
+        </button>
+      </div>
+
+      {onglet === "foyer" ? (
+        <FoyerHub authors={authors} />
+      ) : (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {filteredAuthors.slice(0, visibleCount).map((a) => (
           <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-hover hover:border-teal-200">
@@ -236,6 +287,8 @@ export default function CommunautePage() {
           recipient={selectedRecipient} 
           sender={currentUser} 
         />
+      )}
+      </>
       )}
     </div>
   );

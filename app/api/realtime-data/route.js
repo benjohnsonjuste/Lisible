@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
   repo: "Lisible",
-  token: process.env.GITHUB_TOKEN
+  token: process.env.GITHUB_TOKEN || process.env.GITHUB_PERSONAL_ACCES_TOKEN
 };
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
-  const folder = searchParams.get('folder'); 
+  const folder = searchParams.get('folder');
+  const debug = searchParams.get('debug') === '1';
+  const listOnly = searchParams.get('mode') === 'list';
 
   if (!folder) {
     return NextResponse.json({ error: "Spécifiez un dossier (folder)" }, { status: 400 });
@@ -16,47 +21,90 @@ export async function GET(req) {
 
   try {
     // 1. Récupérer la liste des fichiers avec désactivation stricte du cache
+    const headers = {
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'Lisible-App',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    };
+    // Le dépôt est public : on tente avec le token, sinon sans (repli gracieux)
+    if (GITHUB_CONFIG.token) headers['Authorization'] = `Bearer ${GITHUB_CONFIG.token}`;
     const listRes = await fetch(
       `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/${folder}`,
       {
-        headers: { 
-          'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        },
+        headers,
         // Force Next.js à ne pas mettre en cache cette route API
         cache: 'no-store'
       }
     );
 
-    if (!listRes.ok) return NextResponse.json({ content: [] });
+    if (!listRes.ok) {
+      if (debug) {
+        let bodySnippet = "";
+        try { bodySnippet = (await listRes.text()).slice(0, 200); } catch {}
+        return NextResponse.json({
+          debug: {
+            hasToken: !!GITHUB_CONFIG.token,
+            tokenLen: (GITHUB_CONFIG.token || "").length,
+            tokenStart: (GITHUB_CONFIG.token || "").slice(0, 4),
+            upstreamStatus: listRes.status,
+            upstreamBody: bodySnippet
+          },
+          content: []
+        });
+      }
+      return NextResponse.json({ content: [] });
+    }
 
     const files = await listRes.json();
-    
-    // 2. Lire le contenu de chaque fichier JSON en parallèle
-    const dataPromises = files
-      .filter(file => file.name.endsWith('.json'))
-      .map(async (file) => {
-        try {
-          // On ajoute un timestamp unique à l'URL de téléchargement pour bypasser le CDN GitHub si nécessaire
-          const nocacheUrl = `${file.download_url}?t=${Date.now()}`;
-          const fileRes = await fetch(nocacheUrl, { cache: 'no-store' });
-          if (!fileRes.ok) return null;
-          return await fileRes.json();
-        } catch { return null; }
+
+    // Mode "list" : on ne renvoie que la liste des fichiers (1 seule sous-requête).
+    // Le client télécharge ensuite chaque fichier via son download_url (même
+    // modèle que la page salon). Cela contourne la limite de 50 sous-requêtes
+    // par invocation du Worker.
+    if (listOnly) {
+      const list = files
+        .filter(file => file.name.endsWith('.json'))
+        .map(file => ({ name: file.name, download_url: file.download_url, size: file.size }));
+      return NextResponse.json({ folder, total: list.length, files: list }, {
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Content-Type': 'application/json' }
       });
+    }
 
-    const results = await Promise.all(dataPromises);
-    
+    // 2. Lire le contenu de chaque fichier JSON, par petits lots avec réessai
+    const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+    const failures = [];
+    async function fetchOne(file, attempt) {
+      try {
+        const nocacheUrl = `${file.download_url}?t=${Date.now()}`;
+        const fileRes = await fetch(nocacheUrl, { cache: 'no-store' });
+        if (!fileRes.ok) throw new Error('HTTP ' + fileRes.status);
+        return await fileRes.json();
+      } catch (e) {
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 400 * attempt));
+          return fetchOne(file, attempt + 1);
+        }
+        failures.push({ name: file.name, error: String(e && e.message || e).slice(0, 120) });
+        return null;
+      }
+    }
+    const cleanResults = [];
+    const BATCH = 8;
+    for (let i = 0; i < jsonFiles.length; i += BATCH) {
+      const batch = await Promise.all(jsonFiles.slice(i, i + BATCH).map(f => fetchOne(f, 1)));
+      for (const r of batch) if (r !== null) cleanResults.push(r);
+    }
+
     // 3. Retourner les données propres
-    const cleanResults = results.filter(r => r !== null);
-
-    return NextResponse.json({ 
+    const body = {
       folder: folder,
       total: cleanResults.length,
-      content: cleanResults 
-    }, {
+      content: cleanResults
+    };
+    if (debug) body.debugFiles = { listed: jsonFiles.length, failures };
+
+    return NextResponse.json(body, {
       // Headers de réponse pour empêcher le navigateur de mettre en cache la liste
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',

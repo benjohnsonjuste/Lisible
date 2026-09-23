@@ -32,4 +32,6 @@ Thumbs.db
 public/sw.js
 public/sw.js.map
 public/workbox-*.js
-public/workbox-*.js.map
+public/workbox-*.js.map.vercel_env_pull.json
+
+.vercel_env_pull.json

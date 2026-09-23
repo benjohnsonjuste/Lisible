@@ -14,7 +14,8 @@ import SceauCertification from "../../../components/reader/SceauCertification";
 import CommentSection from "../../../components/reader/CommentSection";
 import SocialMargins from "../../../components/reader/SocialMargins";
 import CadeauLi from "../../../components/CadeauLi"; 
-import InTextAd from "../../../components/InTextAd"; 
+import InTextAd from "../../../components/InTextAd";
+import { SceauHumainDetail, SceauHumainDemande } from "../../../components/sceau/SceauHumain";
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
@@ -238,6 +239,18 @@ const TextContent = ({ id }) => {
           </div>
 
           <h1 className={`text-5xl sm:text-7xl font-serif font-black italic leading-[1.1] tracking-tight ${mood.title}`}>{data.title}</h1>
+
+          {!isFocusMode && (
+            <div className="flex flex-wrap items-center gap-4">
+              {data.humanSeal?.attested ? (
+                <SceauHumainDetail seal={data.humanSeal} />
+              ) : (
+                user && data.authorEmail && user.email?.toLowerCase().trim() === data.authorEmail?.toLowerCase().trim() && (
+                  <SceauHumainDemande textId={id} onSealed={() => loadContent()} />
+                )
+              )}
+            </div>
+          )}
           
           <div className="flex items-center gap-5 pt-8 border-t border-slate-200/50">
             <div className="w-14 h-14 rounded-2xl bg-slate-200 border-2 border-white shadow-xl overflow-hidden shrink-0">

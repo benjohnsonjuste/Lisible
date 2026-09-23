@@ -10,7 +10,8 @@ import ThemeToggle from "./ThemeToggle";
 import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, X, Sparkles,
-  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, Mic2, Clapperboard, Gift, Trophy, ShoppingBag
+  ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, Mic2, Clapperboard, Gift, Trophy, ShoppingBag,
+  Newspaper, Briefcase
 } from "lucide-react";
 
 export default function Navbar() {
@@ -129,7 +130,16 @@ export default function Navbar() {
   }, [router, pathname]);
 
   const handleLogout = () => {
+    const token = localStorage.getItem("lisible_session");
+    if (token) {
+      fetch("/api/github-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "logout", sessionToken: token })
+      }).catch(() => {});
+    }
     localStorage.removeItem("lisible_user");
+    localStorage.removeItem("lisible_session");
     localStorage.removeItem("unread_notifs");
     setUser(null);
     setUnreadCount(0);
@@ -144,10 +154,13 @@ export default function Navbar() {
     { href: "/arena", label: "Arène d'écriture", icon: <Trophy size={20} /> },
     { href: "/salon", label: "Salon Lisible", icon: <MessageSquare size={20} /> },
     { href: "/shop", label: "Réserve de Li", icon: <ShoppingBag size={20} /> },
-    { href: "/studio/podcast", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
+    { href: "/studio", label: "Studio Lisible", icon: <Clapperboard size={20} /> },
+    { href: "/plumai", label: "PlumAI", icon: <Sparkles size={20} /> },
+    { href: "/marketplace", label: "Freelance", icon: <Briefcase size={20} /> },
     { href: "/dashboard", label: "Tableau de bord", icon: <LayoutDashboard size={20} />, authRequired: true },
     { href: "/community", label: "Communauté", icon: <Users size={20} /> },
     { href: "/evenements", label: "Événements", icon: <Calendar size={20} /> },
+    { href: "/actualites", label: "Actualités", icon: <Newspaper size={20} /> },
     { href: "/contact", label: "Contact", icon: <MessageCircle size={20} /> },
   ];
 

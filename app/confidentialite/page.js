@@ -1,7 +1,7 @@
 // app/confidentialite/page.js
 import React from "react";
 import Link from "next/link";
-import { ShieldCheck, Lock, Eye, Database, Mail, Link2, ArrowLeft, Fingerprint } from "lucide-react";
+import { ShieldCheck, Lock, Eye, Database, Mail, Link2, ArrowLeft, Fingerprint, Megaphone, Cookie } from "lucide-react";
 
 export const metadata = {
   title: "Confidentialité | Lisible",
@@ -61,13 +61,68 @@ export default function Confidentialite() {
               <li>Vous notifier des nouveautés si vous avez activé les alertes.</li>
             </ul>
             <blockquote className="bg-teal-50 dark:bg-teal-900/10 border-none rounded-2xl p-6 text-teal-800 dark:text-teal-400 font-bold italic mt-4">
-              "Lisible ne vend, ne loue, ni ne partage jamais vos données personnelles à des régies publicitaires ou des tiers commerciaux."
+              "Lisible ne vend ni ne loue jamais vos données personnelles (nom, email, profil). Les données techniques liées à la publicité sont traitées comme décrit dans la section « Cookies publicitaires » ci-dessous, selon vos choix de consentement."
             </blockquote>
+          </section>
+
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-wider">
+              <span className="text-teal-500 dark:text-teal-400"><Megaphone size={24} /></span> 03. Cookies publicitaires & Google AdSense
+            </h2>
+            <div className="space-y-4 text-sm font-medium">
+              <p>
+                Pour financer la gratuité de la plateforme, Lisible affiche des publicités gérées par des
+                <strong> régies publicitaires tierces</strong>, dont <strong>Google AdSense</strong>
+                (Google LLC / Google Ireland Limited).
+              </p>
+              <p>
+                Ces fournisseurs tiers, y compris Google, utilisent des <strong>cookies publicitaires</strong> pour
+                diffuser des annonces en fonction de vos visites précédentes sur Lisible et sur d'autres sites web.
+                L'utilisation par Google de cookies publicitaires lui permet, ainsi qu'à ses partenaires, de diffuser
+                des annonces auprès des utilisateurs sur la base de leur visite sur notre site et sur d'autres sites
+                sur Internet.
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>
+                  <strong>Aucun script publicitaire n'est chargé sans votre consentement.</strong> Lors de votre
+                  première visite, un bandeau vous propose d'accepter ou de refuser les cookies publicitaires.
+                  Votre choix est mémorisé sur votre appareil ; si vous refusez, aucune publicité personnalisée
+                  n'est chargée.
+                </li>
+                <li>
+                  Vous pouvez désactiver la publicité personnalisée de Google à tout moment depuis la page{" "}
+                  <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-teal-600 dark:text-teal-400 font-bold underline underline-offset-2">
+                    Paramètres des annonces Google
+                  </a>.
+                </li>
+                <li>
+                  Vous pouvez également désactiver les cookies publicitaires de nombreux fournisseurs tiers via la
+                  page de désactivation de la Digital Advertising Alliance :{" "}
+                  <a href="https://optout.aboutads.info" target="_blank" rel="noopener noreferrer" className="text-teal-600 dark:text-teal-400 font-bold underline underline-offset-2">
+                    optout.aboutads.info
+                  </a>.
+                </li>
+                <li>
+                  Pour en savoir plus sur la manière dont Google traite les données, consultez la{" "}
+                  <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-teal-600 dark:text-teal-400 font-bold underline underline-offset-2">
+                    Politique de confidentialité de Google
+                  </a>.
+                </li>
+              </ul>
+              <p className="flex items-start gap-2 bg-slate-50 dark:bg-white/5 p-4 rounded-2xl">
+                <Cookie size={18} className="text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+                <span>
+                  Vous pouvez modifier votre choix de consentement à tout moment en effaçant les données de
+                  navigation de votre navigateur pour ce site : le bandeau de consentement réapparaîtra lors de
+                  votre prochaine visite.
+                </span>
+              </p>
+            </div>
           </section>
 
           <section className="bg-slate-900 dark:bg-black p-8 rounded-[2.5rem] text-white border border-white/5">
             <h2 className="flex items-center gap-3 text-xl font-black mb-4 uppercase tracking-wider text-teal-400">
-              03. Vos Droits
+              04. Vos Droits
             </h2>
             <p className="text-slate-300 mb-6">
               Conformément aux bonnes pratiques numériques, vous disposez d'un contrôle total sur votre compte :
@@ -84,7 +139,7 @@ export default function Confidentialite() {
 
           <section>
             <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-wider">
-              <span className="text-teal-500 dark:text-teal-400"><Mail size={24} /></span> 04. Contact DPO
+              <span className="text-teal-500 dark:text-teal-400"><Mail size={24} /></span> 05. Contact DPO
             </h2>
             <p className="mb-6">
               Pour toute question concernant vos données ou pour demander la suppression de votre compte, contactez notre responsable de la protection des données :

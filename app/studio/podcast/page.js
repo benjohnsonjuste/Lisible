@@ -34,11 +34,13 @@ export default function PodcastStudioPage() {
             <span className="text-sm font-bold uppercase tracking-widest">Retour</span>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-              Studio d'enregistrement
-            </span>
+          <div className="flex items-center gap-2">
+            <Link href="/studio/podcast" className="px-4 py-2 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em]">
+              Podcast
+            </Link>
+            <Link href="/studio/live" className="px-4 py-2 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] transition-colors">
+              Live
+            </Link>
           </div>
         </div>
       </nav>

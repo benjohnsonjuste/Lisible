@@ -60,7 +60,10 @@ export default function Conditions() {
               Confidentialité & Données
             </h2>
             <p className="text-sm">
-              Les données collectées (nom, email, informations de profil, coordonnées de paiement) sont utilisées exclusivement par <strong>La Belle Littéraire</strong> pour faciliter la navigation et assurer les versements. Vos informations ne sont jamais partagées à des fins commerciales tierces.
+              Les données collectées (nom, email, informations de profil, coordonnées de paiement) sont utilisées exclusivement par <strong>La Belle Littéraire</strong> pour faciliter la navigation et assurer les versements. Vos données de compte ne sont jamais vendues ni louées à des tiers.
+            </p>
+            <p className="text-sm mt-3">
+              Pour financer la gratuité du service, le site affiche des publicités via des régies tierces, dont <strong>Google AdSense</strong>. Ces partenaires utilisent des cookies publicitaires conformément à notre <Link href="/confidentialite" className="text-teal-600 font-bold underline underline-offset-2">Politique de Confidentialité</Link> (section « Cookies publicitaires ») et uniquement après votre consentement, que vous pouvez retirer à tout moment.
             </p>
           </section>
 
@@ -85,7 +88,36 @@ export default function Conditions() {
 
           <section>
             <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
-              <span className="bg-slate-900 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">05</span> 
+              <span className="bg-teal-600 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">05</span>
+              Espace Freelance
+            </h2>
+            <div className="space-y-4">
+              <p>
+                L'<strong>Espace Freelance</strong> permet aux écrivains de confier des missions (relecture, correction, mise en pages, couverture, traduction, etc.) à des professionnels du livre inscrits sur Lisible.
+              </p>
+              <div className="p-6 bg-teal-50 rounded-2xl border border-teal-100 flex flex-col gap-2">
+                <span className="text-[10px] font-black uppercase text-teal-600 tracking-widest">Commission de la plateforme</span>
+                <span className="text-xl font-black text-slate-900">15 % du budget — 85 % reversés au professionnel</span>
+              </div>
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>Séquestre :</strong> l'écrivain paie le budget de la mission via PayPal dès sa publication. Les fonds sont capturés sur le compte PayPal de la plateforme et restent <strong>bloqués</strong> jusqu'à la livraison et la validation du travail.</li>
+                <li><strong>Acceptation :</strong> un professionnel accepte une mission en fixant lui-même son délai de remise. Une mission acceptée n'est plus disponible pour les autres professionnels.</li>
+                <li><strong>Délais :</strong> si le délai est dépassé sans livraison, le professionnel peut demander jusqu'à <strong>2 prolongations de 1 à 7 jours</strong>, chacune soumise à l'accord de l'écrivain. Sans accord ni livraison, la mission est automatiquement rouverte aux autres professionnels et le retard est comptabilisé sur le profil du professionnel.</li>
+                <li><strong>Validation :</strong> l'écrivain valide le travail reçu (avec une note facultative de 1 à 5). Sans réponse ni litige <strong>7 jours après la livraison</strong>, la validation est automatique. La validation libère le séquestre : 85 % du budget sont versés au professionnel (via PayPal, sur l'adresse déclarée dans son profil), 15 % reviennent à Lisible.</li>
+                <li><strong>Révisions :</strong> l'écrivain peut demander jusqu'à <strong>3 révisions</strong> avant de valider ou d'ouvrir un litige.</li>
+                <li><strong>Litiges :</strong> en cas de désaccord, l'écrivain ou le professionnel peut ouvrir un litige. Lisible tranche souverainement : remboursement de l'écrivain, paiement du professionnel, ou partage entre les deux parties.</li>
+                <li><strong>Annulation :</strong> l'écrivain peut annuler une mission non démarrée ; le séquestre est alors intégralement remboursé.</li>
+                <li><strong>Professionnels :</strong> chaque professionnel déclare une adresse PayPal valide où recevoir ses gains. Lisible peut vérifier ou suspendre un profil en cas d'abus.</li>
+              </ul>
+              <p className="text-sm italic font-medium">
+                Note : en l'absence d'identifiants PayPal configurés, l'Espace Freelance fonctionne en « mode test » : aucun argent réel ne circule et les paiements sont simulés.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
+              <span className="bg-slate-900 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">06</span> 
               Contact & Support
             </h2>
             <div className="flex flex-col md:flex-row gap-4">

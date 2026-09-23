@@ -62,6 +62,14 @@ export default function Footer() {
             </div>
 
             <nav className="flex items-center gap-4 flex-wrap justify-center" aria-label="Liens légaux">
+              <Link href="/a-propos" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+                À propos
+              </Link>
+              <div className="w-1 h-1 bg-slate-200 rounded-full" aria-hidden="true" />
+              <Link href="/contact" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+                Contact
+              </Link>
+              <div className="w-1 h-1 bg-slate-200 rounded-full" aria-hidden="true" />
               <Link href="/terms" className="text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
                 CGU
               </Link>

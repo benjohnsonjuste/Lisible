@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import Link from "next/link";
+import { SceauHumainChoix } from "@/components/sceau/SceauHumain";
 
 export default function PublishPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function PublishPage() {
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [sceauHumain, setSceauHumain] = useState(false);
 
   const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
 
@@ -103,7 +105,14 @@ export default function PublishPage() {
         views: 0,
         likes: 0,
         comments: [],
-        certified: 0
+        certified: 0,
+        humanSeal: sceauHumain
+          ? {
+              attested: true,
+              date: new Date().toISOString(),
+              authorName: user.penName || user.name || "Une Plume",
+            }
+          : null
       };
 
       const resPublish = await fetch("/api/github-db", {
@@ -287,6 +296,8 @@ export default function PublishPage() {
               className="w-full min-h-[500px] text-xl md:text-2xl font-serif leading-[1.8] outline-none placeholder:text-slate-100 resize-none text-slate-800"
             />
           </div>
+
+          <SceauHumainChoix checked={sceauHumain} onChange={setSceauHumain} />
 
           <button
             type="submit"

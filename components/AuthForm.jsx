@@ -122,6 +122,7 @@ export default function AuthForm() {
       await checkAndNotifyBirthday(userData);
       
       localStorage.setItem("lisible_user", JSON.stringify(userData));
+      if (result.sessionToken) localStorage.setItem("lisible_session", result.sessionToken);
       document.cookie = "lisible_session=true; path=/; max-age=86400; SameSite=Lax";
       
       toast.success(`Heureux de vous voir, ${userData.penName || userData.name || "Auteur"}`);
