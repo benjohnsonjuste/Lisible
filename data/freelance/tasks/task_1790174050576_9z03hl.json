@@ -1,1 +1,98 @@
-{"id": "task_1790174050576_9z03hl", "title": "Mise en pages ebook (TEST)", "category": "Mise en pages", "description": "Mise en pages complète d'un ebook de 200 pages.", "wordCount": null, "briefLink": null, "budget": 50, "currency": "CAD", "writerEmail": "test.ecrivain.freelance@example.com", "writerName": "Écrivain Test", "status": "delivered", "createdAt": "2026-09-23T14:34:10.576Z", "fundedAt": "2026-09-23T14:34:22.630Z", "escrow": {"amount": 50, "status": "held", "captureId": "DEMO-CAP-1790174062630"}, "orderId": "DEMO-ORDER-task_1790174050576_9z03hl", "proEmail": "test.pro.freelance@example.com", "proName": "Pro Test", "acceptedAt": "2026-09-23T14:34:38.145Z", "deadline": "2026-09-28T00:00:00.000Z", "deliveredAt": "2026-09-15T14:46:51.672399+00:00", "deliverable": {"link": "https://example.com/ebook.pdf", "note": "Ebook mis en pages.", "deliveredAt": "2026-09-23T14:46:48.708Z"}, "revisionCount": 0, "extensions": [{"id": "ext_1790174091649_juk2te", "days": 3, "reason": "Besoin de relire les épreuves.", "status": "approved", "createdAt": "2026-09-23T14:34:51.649Z", "decidedAt": "2026-09-23T14:35:07.034Z"}], "messages": [], "timeline": [{"at": "2026-09-23T14:34:10.576Z", "actor": "test.ecrivain.freelance@example.com", "event": "create", "detail": "Mission créée (brouillon). En attente du paiement du budget."}, {"at": "2026-09-23T14:34:16.699Z", "actor": "test.ecrivain.freelance@example.com", "event": "order", "detail": "Ordre de paiement créé (mode test)."}, {"at": "2026-09-23T14:34:22.630Z", "actor": "test.ecrivain.freelance@example.com", "event": "fund", "detail": "Budget de 50.00 CAD capturé et placé sous séquestre (mode test)."}, {"at": "2026-09-23T14:34:38.145Z", "actor": "test.pro.freelance@example.com", "event": "accept", "detail": "Pro Test accepte la mission. Remise prévue le 25 septembre 2026."}, {"at": "2026-09-23T14:34:51.649Z", "actor": "test.pro.freelance@example.com", "event": "extension", "detail": "Prolongation de 3 jour(s) demandée."}, {"at": "2026-09-23T14:35:07.034Z", "actor": "test.ecrivain.freelance@example.com", "event": "extension", "detail": "Prolongation acceptée (3 jour(s))."}, {"at": "2026-09-23T14:46:48.708Z", "actor": "test.pro.freelance@example.com", "event": "deliver", "detail": "Travail livré. L'écrivain dispose de 7 jours pour valider ou demander une révision."}], "reviews": {}, "dispute": null, "extensionReminderSent": false}
+{
+  "id": "task_1790174050576_9z03hl",
+  "title": "Mise en pages ebook (TEST)",
+  "category": "Mise en pages",
+  "description": "Mise en pages complète d'un ebook de 200 pages.",
+  "wordCount": null,
+  "briefLink": null,
+  "budget": 50,
+  "currency": "CAD",
+  "writerEmail": "test.ecrivain.freelance@example.com",
+  "writerName": "Écrivain Test",
+  "status": "completed",
+  "createdAt": "2026-09-23T14:34:10.576Z",
+  "fundedAt": "2026-09-23T14:34:22.630Z",
+  "escrow": {
+    "amount": 50,
+    "status": "released",
+    "captureId": "DEMO-CAP-1790174062630"
+  },
+  "orderId": "DEMO-ORDER-task_1790174050576_9z03hl",
+  "proEmail": "test.pro.freelance@example.com",
+  "proName": "Pro Test",
+  "acceptedAt": "2026-09-23T14:34:38.145Z",
+  "deadline": "2026-09-28T00:00:00.000Z",
+  "deliveredAt": "2026-09-15T14:46:51.672399+00:00",
+  "deliverable": {
+    "link": "https://example.com/ebook.pdf",
+    "note": "Ebook mis en pages.",
+    "deliveredAt": "2026-09-23T14:46:48.708Z"
+  },
+  "revisionCount": 0,
+  "extensions": [
+    {
+      "id": "ext_1790174091649_juk2te",
+      "days": 3,
+      "reason": "Besoin de relire les épreuves.",
+      "status": "approved",
+      "createdAt": "2026-09-23T14:34:51.649Z",
+      "decidedAt": "2026-09-23T14:35:07.034Z"
+    }
+  ],
+  "messages": [],
+  "timeline": [
+    {
+      "at": "2026-09-23T14:34:10.576Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "create",
+      "detail": "Mission créée (brouillon). En attente du paiement du budget."
+    },
+    {
+      "at": "2026-09-23T14:34:16.699Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "order",
+      "detail": "Ordre de paiement créé (mode test)."
+    },
+    {
+      "at": "2026-09-23T14:34:22.630Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "fund",
+      "detail": "Budget de 50.00 CAD capturé et placé sous séquestre (mode test)."
+    },
+    {
+      "at": "2026-09-23T14:34:38.145Z",
+      "actor": "test.pro.freelance@example.com",
+      "event": "accept",
+      "detail": "Pro Test accepte la mission. Remise prévue le 25 septembre 2026."
+    },
+    {
+      "at": "2026-09-23T14:34:51.649Z",
+      "actor": "test.pro.freelance@example.com",
+      "event": "extension",
+      "detail": "Prolongation de 3 jour(s) demandée."
+    },
+    {
+      "at": "2026-09-23T14:35:07.034Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "extension",
+      "detail": "Prolongation acceptée (3 jour(s))."
+    },
+    {
+      "at": "2026-09-23T14:46:48.708Z",
+      "actor": "test.pro.freelance@example.com",
+      "event": "deliver",
+      "detail": "Travail livré. L'écrivain dispose de 7 jours pour valider ou demander une révision."
+    },
+    {
+      "at": "2026-09-23T14:47:03.289Z",
+      "actor": "system",
+      "event": "validate",
+      "detail": "Travail validé par validation automatique. 42.50 CAD versés au professionnel, 7.50 CAD de commission."
+    }
+  ],
+  "reviews": {},
+  "dispute": null,
+  "extensionReminderSent": false,
+  "_sha": "19a0c8bd90eb8df0be29e68bfaedb7b1d74a0090",
+  "completedAt": "2026-09-23T14:47:03.289Z"
+}
