@@ -5,7 +5,7 @@
     "category": "Correction",
     "budget": 100,
     "currency": "CAD",
-    "status": "assigned",
+    "status": "delivered",
     "writerEmail": "test.ecrivain.freelance@example.com",
     "writerName": "Écrivain Test",
     "proEmail": "test.pro.freelance@example.com",
