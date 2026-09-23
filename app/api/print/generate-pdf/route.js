@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-// Activation du Edge Runtime pour éviter les plantages ou timeouts sur les longs manuscrits
-export const runtime = 'edge';
+// Note : le Edge Runtime est incompatible avec le build Cloudflare (OpenNext).
+// pdf-lib est du pur JavaScript et fonctionne en runtime Node.js.
 
 const FORMATS = {
   roman: { width: 419.53, height: 595.28, margin: 56.69, fontSize: 10, leading: 14 },
