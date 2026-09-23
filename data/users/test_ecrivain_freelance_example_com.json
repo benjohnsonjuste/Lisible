@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174232108_ydvmq6",
+      "type": "freelance",
+      "message": "Le professionnel n'a pas livré « Traduction extrait (TEST délai) » dans les délais : la mission est de nouveau ouverte.",
+      "date": "2026-09-23T14:37:12.108Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174122919_25v9rq"
+    },
+    {
       "id": "notif_1790174151838_vd4a8i",
       "type": "freelance",
       "message": "Pro Test a accepté votre mission « Traduction extrait (TEST délai) ».",
