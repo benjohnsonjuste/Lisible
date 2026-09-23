@@ -5,6 +5,14 @@
   "status": "active",
   "notifications": [
     {
+      "id": "notif_1790174751804_tx7p06",
+      "type": "freelance",
+      "message": "Nouveau message de Écrivain Test pour « Correction poèmes (TEST litige 2) ».",
+      "date": "2026-09-23T14:45:51.804Z",
+      "read": false,
+      "link": "/marketplace/missions/task_1790174714706_5j0jlg"
+    },
+    {
       "id": "notif_1790174743513_kaorlz",
       "type": "freelance",
       "message": "Vous avez accepté « Correction poèmes (TEST litige 2) ». Remise prévue le 25 septembre 2026.",
