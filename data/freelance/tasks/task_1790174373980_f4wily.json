@@ -9,7 +9,7 @@
   "currency": "CAD",
   "writerEmail": "test.ecrivain.freelance@example.com",
   "writerName": "Écrivain Test",
-  "status": "delivered",
+  "status": "disputed",
   "createdAt": "2026-09-23T14:39:33.980Z",
   "fundedAt": "2026-09-23T14:39:45.844Z",
   "escrow": {
@@ -61,8 +61,20 @@
       "actor": "test.pro.freelance@example.com",
       "event": "deliver",
       "detail": "Travail livré. L'écrivain dispose de 7 jours pour valider ou demander une révision."
+    },
+    {
+      "at": "2026-09-23T14:40:11.541Z",
+      "actor": "test.ecrivain.freelance@example.com",
+      "event": "dispute",
+      "detail": "Litige ouvert par Écrivain Test."
     }
   ],
   "reviews": {},
-  "dispute": null
+  "dispute": {
+    "reason": "Travail non conforme à la demande.",
+    "openedBy": "test.ecrivain.freelance@example.com",
+    "openedByName": "Écrivain Test",
+    "at": "2026-09-23T14:40:11.541Z",
+    "resolved": null
+  }
 }
