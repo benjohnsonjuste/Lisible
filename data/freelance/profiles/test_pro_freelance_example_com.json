@@ -1,0 +1,20 @@
+{
+  "email": "test.pro.freelance@example.com",
+  "name": "Pro Test",
+  "bio": "Correctrice pro depuis 10 ans.",
+  "specialties": [
+    "Correction",
+    "Relecture"
+  ],
+  "languages": "",
+  "priceHint": "0,05 $/mot",
+  "paypalEmail": "pro.paypal@example.com",
+  "portfolio": [],
+  "ratingAvg": 0,
+  "ratingCount": 0,
+  "completedCount": 0,
+  "missedDeadlines": 0,
+  "verified": false,
+  "createdAt": "2026-09-23T14:30:42.007Z",
+  "updatedAt": "2026-09-23T14:30:42.007Z"
+}
