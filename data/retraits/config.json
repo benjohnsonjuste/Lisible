@@ -1,0 +1,7 @@
+{
+  "actif": true,
+  "commissionPct": 10,
+  "fraisPaypalPct": 2,
+  "seuilMinLi": 25000,
+  "tauxUsdParLi": 0.0002
+}
