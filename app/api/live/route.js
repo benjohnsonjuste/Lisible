@@ -20,8 +20,7 @@ export async function GET() {
       headers: { 
         Authorization: `Bearer ${TOKEN}`,
         "Cache-Control": "no-cache",
-        "Accept": "application/vnd.github.v3+json"
-      },
+        "Accept": "application/vnd.github.v3+json", 'User-Agent': 'Lisible-App' },
       next: { revalidate: 0 } 
     });
 
@@ -44,8 +43,7 @@ async function updateFile(content, message) {
     headers: { 
       Authorization: `Bearer ${TOKEN}`, 
       "Cache-Control": "no-cache",
-      "Accept": "application/vnd.github.v3+json"
-    },
+      "Accept": "application/vnd.github.v3+json", 'User-Agent': 'Lisible-App' },
   });
   
   let sha = null;
@@ -61,8 +59,7 @@ async function updateFile(content, message) {
     headers: { 
       Authorization: `Bearer ${TOKEN}`, 
       "Content-Type": "application/json",
-      "Accept": "application/vnd.github.v3+json"
-    },
+      "Accept": "application/vnd.github.v3+json", 'User-Agent': 'Lisible-App' },
     body: JSON.stringify({
       message,
       content: b64Content,
@@ -106,7 +103,7 @@ export async function POST(req) {
       if (!ADMINS.includes(admin?.toLowerCase())) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
       const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
-        headers: { Authorization: `Bearer ${TOKEN}` }, cache: 'no-store'
+        headers: { Authorization: `Bearer ${TOKEN}`, 'User-Agent': 'Lisible-App' }, cache: 'no-store'
       });
       
       if (!res.ok) return NextResponse.json({ error: "File not found" }, { status: 404 });
@@ -129,7 +126,7 @@ export async function POST(req) {
     // 3. Action : COMMENTAIRE OU COEUR
     if (action === "comment" || action === "heart") {
       const res = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
-        headers: { Authorization: `Bearer ${TOKEN}` }, cache: 'no-store'
+        headers: { Authorization: `Bearer ${TOKEN}`, 'User-Agent': 'Lisible-App' }, cache: 'no-store'
       });
       if (!res.ok) return NextResponse.json({ error: "Live not found" }, { status: 404 });
       
