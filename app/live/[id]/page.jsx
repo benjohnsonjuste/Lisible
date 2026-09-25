@@ -9,6 +9,7 @@ import { LivepeerProvider, PUSHER_KEY, PUSHER_CLUSTER, formatCountdown } from "@
 import LiveComments from "@/components/live/LiveComments";
 import GiftPanel from "@/components/economie/GiftPanel";
 import GiftAnimation from "@/components/economie/GiftAnimation";
+import AdBanner, { useAdPlacements } from "@/components/AdBanner";
 
 function AudioCover({ title, hostName, avatar }) {
   return (
@@ -44,6 +45,7 @@ function WatchInner({ liveId }) {
   const [giftOpen, setGiftOpen] = useState(false);
   const [giftEvent, setGiftEvent] = useState(null);
   const [chatPausedUntil, setChatPausedUntil] = useState(0);
+  const adPlacements = useAdPlacements("strip");
 
   const fetchLive = useCallback(async () => {
     try {
@@ -242,6 +244,9 @@ function WatchInner({ liveId }) {
         <p className="text-center text-xs text-slate-600 mt-6">
           Aucune inscription requise pour assister à ce live. Les commentaires s'effacent automatiquement.
         </p>
+
+        {/* Bannière publicitaire discrète (se replie si vide). */}
+        {adPlacements && <AdBanner placement={adPlacements[0]} className="mt-2" />}
       </div>
 
       {/* Modale cadeaux */}
