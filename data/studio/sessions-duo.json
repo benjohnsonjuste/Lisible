@@ -8,10 +8,11 @@
         "nom": "Testeur"
       },
       "instrumentalId": "aube-douce",
-      "statut": "attente",
+      "statut": "terminee",
       "invites": [],
       "createdAt": "2026-09-25T06:49:42.423Z",
-      "episode": null
+      "episode": null,
+      "endedAt": "2026-09-25T06:49:48.794Z"
     }
   }
 }
