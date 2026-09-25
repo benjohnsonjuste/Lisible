@@ -6,9 +6,23 @@ import {
   captureSmartOrder,
   getSmartOrder,
 } from "./paypal.js";
+import { getSessionUser } from "../_lib/session.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// Vérifie le jeton de session client et retourne l'utilisateur connecté,
+// ou null si le jeton est absent, invalide ou expiré.
+async function requireUser(sessionToken) {
+  if (!sessionToken) return null;
+  try {
+    const s = await getSessionUser(sessionToken);
+    return s && s.email ? s : null;
+  } catch {
+    return null;
+  }
+}
+const SESSION_REQUISE = { error: "Session requise. Reconnectez-vous." };
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -198,7 +212,10 @@ export async function GET(req) {
     }
 
     if (action === "solde") {
-      const userEmail = searchParams.get("userEmail");
+      // L'identité vient de la session serveur vérifiée, jamais du client.
+      const session = await requireUser(searchParams.get("sessionToken"));
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const userEmail = session.email;
       const f = await getFile(getSafePath(userEmail));
       if (!f) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       return NextResponse.json({
@@ -212,7 +229,10 @@ export async function GET(req) {
     }
 
     if (action === "historique") {
-      const userEmail = (searchParams.get("userEmail") || "").toLowerCase().trim();
+      // L'identité vient de la session serveur vérifiée, jamais du client.
+      const session = await requireUser(searchParams.get("sessionToken"));
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const userEmail = (session.email || "").toLowerCase().trim();
       const out = [];
       const now = new Date();
       for (let i = 0; i < 3; i++) {
@@ -283,17 +303,24 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     if (!GITHUB_CONFIG.token) throw new Error("GITHUB_TOKEN manquant");
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Corps de requête invalide" }, { status: 400 });
+    }
     const { action, userEmail, adminToken, ...data } = body;
     const cfg = await getConfig();
     if (!cfg) return NextResponse.json({ error: "Config économie introuvable" }, { status: 500 });
 
     // ===== Envoyer un cadeau =====
     if (action === "envoyer-cadeau") {
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const fromEmail = (session.email || "").toLowerCase().trim();
       const cadeau = (cfg.cadeaux || []).find((c) => c.id === data.cadeauId);
       if (!cadeau) return NextResponse.json({ error: "Cadeau inconnu" }, { status: 400 });
       const destEmail = (data.destinataireEmail || "").toLowerCase().trim();
-      const fromEmail = (userEmail || "").toLowerCase().trim();
       if (!destEmail || !fromEmail) return NextResponse.json({ error: "Emails manquants" }, { status: 400 });
       if (destEmail === fromEmail) return NextResponse.json({ error: "Vous ne pouvez pas vous offrir un cadeau à vous-même" }, { status: 400 });
 
@@ -373,7 +400,9 @@ export async function POST(req) {
       if (!payCfg) return NextResponse.json({ error: "Moyen de paiement inconnu" }, { status: 400 });
       if (!payCfg.actif)
         return NextResponse.json({ error: `Le paiement par ${payCfg.label} n'est pas encore activé` }, { status: 400 });
-      const fromEmail = (userEmail || "").toLowerCase().trim();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const fromEmail = (session.email || "").toLowerCase().trim();
       const sender = await getFile(getSafePath(fromEmail));
       if (!sender) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
@@ -414,9 +443,11 @@ export async function POST(req) {
     if (action === "paypal-creer-ordre") {
       if (!paypalEnabled())
         return NextResponse.json({ error: "Le paiement en ligne sera activé très bientôt." }, { status: 400 });
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const fromEmail = (session.email || "").toLowerCase().trim();
       const pack = (cfg.packs || []).find((p) => p.id === data.packId);
       if (!pack) return NextResponse.json({ error: "Pack inconnu" }, { status: 400 });
-      const fromEmail = (userEmail || "").toLowerCase().trim();
       const sender = await getFile(getSafePath(fromEmail));
       if (!sender) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
@@ -448,11 +479,16 @@ export async function POST(req) {
     // ===== PayPal : capturer après approbation (crédit automatique) =====
     if (action === "paypal-capturer") {
       if (!paypalEnabled()) return NextResponse.json({ error: "Paiement en ligne indisponible" }, { status: 400 });
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
       const paypalOrderId = data.paypalOrderId;
       if (!paypalOrderId) return NextResponse.json({ error: "Commande PayPal manquante" }, { status: 400 });
       const commandes = await listerCommandes(120);
       const found = commandes.find((o) => o.paypalOrderId === paypalOrderId);
       if (!found) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
+      // La commande ne peut être capturée que par son propre acheteur.
+      if ((found.userEmail || "").toLowerCase() !== (session.email || "").toLowerCase())
+        return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
       if (found.statut !== "en_attente") {
         const uf = await getFile(getSafePath(found.userEmail));
         return NextResponse.json({ success: true, dejaTraitee: true, nouveauSolde: uf ? Number(uf.content.li || 0) : 0 });
@@ -574,7 +610,9 @@ export async function POST(req) {
 
     // ===== Demande de retrait (auteur) =====
     if (action === "demande-retrait") {
-      const fromEmail = (userEmail || "").toLowerCase().trim();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const fromEmail = (session.email || "").toLowerCase().trim();
       const uf = await getFile(getSafePath(fromEmail));
       if (!uf) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       const kyc = uf.content.kyc || { statut: "non_verifie" };
@@ -623,7 +661,9 @@ export async function POST(req) {
 
     // ===== KYC : soumission =====
     if (action === "kyc-soumettre") {
-      const fromEmail = (userEmail || "").toLowerCase().trim();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const fromEmail = (session.email || "").toLowerCase().trim();
       const uf = await getFile(getSafePath(fromEmail));
       if (!uf) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
       uf.content.kyc = {
