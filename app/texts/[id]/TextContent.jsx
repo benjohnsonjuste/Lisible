@@ -95,10 +95,9 @@ const TextContent = ({ id }) => {
         
         setLiveViews(content.views || 0);
 
-        const usersRes = await fetch(`/api/realtime-data?folder=users`);
+        const usersRes = await fetch(`/api/realtime-data?folder=users&email=${encodeURIComponent(content.authorEmail || "")}`);
         const usersJson = await usersRes.json();
-        const allUsers = Array.isArray(usersJson.content) ? usersJson.content : [];
-        const author = allUsers.find(u => (u.email || "").toLowerCase().trim() === (content.authorEmail || "").toLowerCase().trim());
+        const author = Array.isArray(usersJson.content) ? usersJson.content[0] : null;
         if (author) setAuthorProfile(author.profilePic || author.image || null);
       }
     } catch (error) { 
