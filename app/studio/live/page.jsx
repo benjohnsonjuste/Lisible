@@ -6,7 +6,7 @@ import {
   Users, Loader2, ArrowLeft, Copy, Check, Clock, UserPlus, X, Search, PhoneOff, Sparkles,
 } from "lucide-react";
 import Pusher from "pusher-js";
-import { Broadcast, useCreateStream, Player } from "@livepeer/react";
+import { Broadcast, Player } from "@livepeer/react";
 import { toast } from "sonner";
 import {
   LivepeerProvider, PUSHER_KEY, PUSHER_CLUSTER, sanitizeChannel,
@@ -121,10 +121,22 @@ function StudioLiveInner() {
   const [copied, setCopied] = useState(false);
   const [myInvites, setMyInvites] = useState([]);
   const [startError, setStartError] = useState(null);
+  const [hostStream, setHostStream] = useState(null);
+  const [guestStream, setGuestStream] = useState(null);
   const warnedRef = useRef(false);
 
-  const { mutate: createStream, data: hostStream, status: hostStatus, error: hostError, internal: hostInternal } = useCreateStream();
-  const { mutate: createGuestStream, data: guestStream, status: guestStatus, error: guestError, internal: guestInternal } = useCreateStream();
+  // Crée le flux via le serveur (la clé Livepeer reste secrète côté serveur)
+  const createStreamViaServer = async (name) => {
+    const res = await fetch("/api/lives", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "create-stream", name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Service de live indisponible");
+    if (!data.streamKey || !data.playbackId) throw new Error("Réponse invalide du service de live");
+    return data;
+  };
 
   // Auth
   useEffect(() => {
@@ -254,34 +266,23 @@ function StudioLiveInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, live?.endsAt]);
 
-  const startLive = () => {
+  const startLive = async () => {
     if (!user?.email) return toast.error("Connectez-vous pour lancer un live.");
     warnedRef.current = false;
     setStartError(null);
-    hostInternal?.reset();
+    setHostStream(null);
     setMode("starting");
-    createStream({ name: `Live-${user.email}-${Date.now()}`, record: false });
-  };
-
-  // Erreur de création du flux hôte : on ne reste jamais bloqué sur l'écran de chargement
-  useEffect(() => {
-    if (mode === "starting" && hostStatus === "error") {
-      const msg = hostError?.message || "Le service de live est indisponible pour le moment.";
-      setStartError(`Impossible de préparer l'antenne : ${msg}`);
+    try {
+      const s = await createStreamViaServer(`Live-${user.email}-${Date.now()}`);
+      if (modeRef.current !== "starting") return;
+      setHostStream(s);
+    } catch (e) {
+      if (modeRef.current !== "starting") return;
+      setStartError(`Impossible de préparer l'antenne : ${e.message}`);
       setMode("idle");
       toast.error("Échec du démarrage du live.");
     }
-  }, [mode, hostStatus, hostError]);
-
-  // Erreur de création du flux invité
-  useEffect(() => {
-    if (mode === "guest-join" && guestStatus === "error") {
-      const msg = guestError?.message || "Le service de live est indisponible pour le moment.";
-      setStartError(`Impossible de rejoindre l'antenne : ${msg}`);
-      setMode("idle");
-      toast.error("Échec de la connexion à l'antenne.");
-    }
-  }, [mode, guestStatus, guestError]);
+  };
 
   // Sécurité : si la préparation dépasse 25 s, on affiche une erreur au lieu de tourner en boucle
   useEffect(() => {
@@ -356,13 +357,22 @@ function StudioLiveInner() {
   const joinInviteRef = useRef(null);
   const [activeInvite, setActiveInvite] = useState(null);
 
-  const joinAsGuest = (inv) => {
+  const joinAsGuest = async (inv) => {
     setActiveInvite(inv);
     joinInviteRef.current = inv;
     setStartError(null);
-    guestInternal?.reset();
+    setGuestStream(null);
     setMode("guest-join");
-    createGuestStream({ name: `Live-Invite-${user.email}-${Date.now()}`, record: false });
+    try {
+      const s = await createStreamViaServer(`Live-Invite-${user.email}-${Date.now()}`);
+      if (modeRef.current !== "guest-join") return;
+      setGuestStream(s);
+    } catch (e) {
+      if (modeRef.current !== "guest-join") return;
+      setStartError(`Impossible de rejoindre l'antenne : ${e.message}`);
+      setMode("idle");
+      toast.error("Échec de la connexion à l'antenne.");
+    }
   };
 
   const leaveAsGuest = async () => {

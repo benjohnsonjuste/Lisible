@@ -185,6 +185,36 @@ export async function POST(req) {
   try {
     const body = await req.json();
     const { action } = body;
+
+    // ---- Créer un flux Livepeer côté serveur (la clé API ne quitte jamais le serveur) ----
+    if (action === "create-stream") {
+      const key = process.env.LIVEPEER_API_KEY;
+      if (!key) {
+        return NextResponse.json(
+          { error: "Service de live non configuré. L'administrateur doit ajouter la clé Livepeer." },
+          { status: 503 }
+        );
+      }
+      try {
+        const r = await fetch("https://livepeer.studio/api/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          body: JSON.stringify({ name: body.name || `Live-${Date.now()}`, record: false }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const msg = data?.errors?.[0] || data?.error || "Service de live indisponible";
+          return NextResponse.json({ error: msg }, { status: 502 });
+        }
+        if (!data.streamKey || !data.playbackId) {
+          return NextResponse.json({ error: "Réponse invalide du service de live" }, { status: 502 });
+        }
+        return NextResponse.json({ streamKey: data.streamKey, playbackId: data.playbackId });
+      } catch {
+        return NextResponse.json({ error: "Service de live injoignable" }, { status: 502 });
+      }
+    }
+
     const { sha, lives } = await readStore();
 
     // ---- Créer un live ----
