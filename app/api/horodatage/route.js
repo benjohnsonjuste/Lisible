@@ -11,13 +11,18 @@ export const runtime = "nodejs";
 // ---------------------------------------------------------------------------
 // Coffre-Fort d'Horodatage — Certificat d'Ancrage Littéraire (Lisible.biz)
 // Service GRATUIT : scelle l'antériorité d'une œuvre en 1 clic.
-//  - Empreinte cryptographique SHA-256 unique du texte déposé
+//  - Textes publiés sur Lisible OU fichiers PDF / Word (.doc, .docx) téléversés
+//  - Empreinte cryptographique SHA-256 unique de l'œuvre déposée
 //  - Horodatage certifié et infalsifiable (date + heure UTC exactes)
 //  - Certificat PDF officiel, sceau d'encre Lisible, vérifiable en ligne
+//  - Les fichiers téléversés ne sont JAMAIS conservés : seule leur empreinte
+//    est archivée. La vérification d'un document se fait en le téléversant
+//    à nouveau (action "verifier-fichier").
 // ---------------------------------------------------------------------------
 
 const DIR = "data/horodatage";
 const INDEX_PATH = `${DIR}/index.json`;
+const TAILLE_MAX_FICHIER = 20 * 1024 * 1024; // 20 Mo
 
 // --- Utilitaires ------------------------------------------------------------
 
@@ -34,6 +39,49 @@ function canonical(title, authorName, authorEmail, content) {
 }
 
 const sha256 = (s) => createHash("sha256").update(s, "utf8").digest("hex");
+const sha256Bytes = (buf) => createHash("sha256").update(buf).digest("hex");
+
+function tailleLisible(octets) {
+  const o = Number(octets) || 0;
+  if (o >= 1024 * 1024) return `${(o / (1024 * 1024)).toFixed(2)} Mo`;
+  if (o >= 1024) return `${(o / 1024).toFixed(1)} Ko`;
+  return `${o} o`;
+}
+
+// Détection du format par signature magique (jamais par le seul Content-Type
+// ou la seule extension, tous deux falsifiables).
+function detecterFormatFichier(bytes, nom) {
+  if (!bytes || bytes.length < 8) return null;
+  const ext = String(nom || "").toLowerCase().split(".").pop();
+  const b = bytes;
+  // PDF : %PDF-
+  if (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d)
+    return { format: "PDF", mime: "application/pdf", ext: "pdf" };
+  // DOCX : conteneur ZIP (PK\x03\x04) contenant word/document.xml
+  if (b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04 && ext === "docx") {
+    const echantillon = b.subarray(0, Math.min(b.length, 131072)).toString("latin1");
+    if (echantillon.includes("word/document.xml"))
+      return {
+        format: "Word (.docx)",
+        mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ext: "docx",
+      };
+    return null;
+  }
+  // DOC binaire (Word 97-2003) : signature OLE
+  if (
+    b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0 &&
+    b[4] === 0xa1 && b[5] === 0xb1 && b[6] === 0x1a && b[7] === 0xe1 && ext === "doc"
+  )
+    return { format: "Word (.doc)", mime: "application/msword", ext: "doc" };
+  return null;
+}
+
+function nomFichierPropre(nom) {
+  let n = String(nom || "").split(/[\\/]/).pop().replace(/[\0-\x1f\x7f]/g, "").trim();
+  if (n.length > 120) n = n.slice(0, 117) + "…";
+  return n;
+}
 
 function nouveauId() {
   const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -48,10 +96,15 @@ function nouveauId() {
 const publicCert = (c) => ({
   id: c.id,
   textId: c.textId,
+  type: c.type || "texte",
   titre: c.titre,
   auteur: c.auteur,
   auteurEmail: c.auteurEmail,
   hash: c.hash,
+  hashFichier: c.hashFichier,
+  nomFichier: c.nomFichier,
+  tailleOctets: c.tailleOctets,
+  format: c.format,
   algorithme: c.algorithme,
   mots: c.mots,
   caracteres: c.caracteres,
@@ -82,12 +135,18 @@ function heureFr(iso) {
   }
 }
 
-// --- POST : sceller / pdf ---------------------------------------------------
+// --- POST : sceller / sceller-fichier / verifier-fichier / pdf ---------------
 
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { action } = body;
+    const ct = req.headers.get("content-type") || "";
+    const isForm = ct.includes("multipart/form-data");
+    const form = isForm ? await req.formData() : null;
+    const body = isForm ? {} : await req.json();
+    const action = isForm ? String(form.get("action") || "") : body.action;
+    // Lecture unifiée d'un champ texte, en JSON comme en multipart
+    const champ = (n) => (isForm ? String(form.get(n) ?? "") : body[n]);
+    const cguAccepte = (v) => v === true || v === "true" || v === "1";
 
     // ----- Génération du PDF (publique : le certificat est vérifiable par tous)
     if (action === "pdf") {
@@ -179,6 +238,110 @@ export async function POST(req) {
       await updateFile(textPath, t, textFile.sha, `🔏 Scellement ${id}`);
 
       return NextResponse.json({ success: true, certificat: publicCert(record) });
+    }
+
+    // ----- Scellement d'un fichier PDF / Word (réservé à l'auteur connecté)
+    // Le fichier est hashé en mémoire puis OUBLIÉ : il n'est jamais conservé.
+    if (action === "sceller-fichier") {
+      if (!cguAccepte(champ("cgu")))
+        return NextResponse.json({ error: "Vous devez accepter les conditions du Coffre-Fort." }, { status: 400 });
+
+      let user = null;
+      try {
+        const sessionToken = champ("sessionToken");
+        user = sessionToken ? await getSessionUser(sessionToken) : null;
+      } catch {
+        user = null;
+      }
+      if (!user?.email)
+        return NextResponse.json({ error: "Session requise. Reconnectez-vous." }, { status: 401 });
+
+      const fichier = isForm ? form.get("file") : null;
+      if (!fichier || typeof fichier.arrayBuffer !== "function")
+        return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
+      const bytes = Buffer.from(await fichier.arrayBuffer());
+      if (!bytes.length)
+        return NextResponse.json({ error: "Le fichier est vide." }, { status: 400 });
+      if (bytes.length > TAILLE_MAX_FICHIER)
+        return NextResponse.json(
+          { error: `Fichier trop volumineux (maximum ${tailleLisible(TAILLE_MAX_FICHIER)}).` },
+          { status: 413 }
+        );
+
+      const fmt = detecterFormatFichier(bytes, fichier.name);
+      if (!fmt)
+        return NextResponse.json(
+          { error: "Format non pris en charge. Seuls les fichiers PDF et Word (.doc, .docx) sont acceptés." },
+          { status: 415 }
+        );
+
+      const auteurEmail = norm(user.email).toLowerCase();
+      const auteur = norm(user.name) || "Une Plume";
+      const nomFichier = nomFichierPropre(fichier.name) || `document.${fmt.ext}`;
+      const titreSaisi = norm(champ("titre"));
+      const titre = titreSaisi || nomFichier.replace(/\.[^.]+$/, "") || "Document sans titre";
+      const hashFichier = sha256Bytes(bytes);
+
+      const canon = canonical(titre, auteur, auteurEmail, `FICHIER|${hashFichier}|${bytes.length}|${nomFichier}`);
+      const hash = sha256(canon);
+      const id = nouveauId();
+      const deposeLe = new Date().toISOString();
+
+      const record = {
+        id,
+        type: "fichier",
+        titre,
+        auteur,
+        auteurEmail,
+        hash,
+        hashFichier,
+        nomFichier,
+        tailleOctets: bytes.length,
+        format: fmt.format,
+        mime: fmt.mime,
+        algorithme: "SHA-256",
+        deposeLe,
+        declaration: {
+          cguVersion: CGU_VERSION,
+          accepteLe: deposeLe,
+          texte: CGU_TEXTE,
+        },
+        snapshot: canon,
+      };
+
+      // 1. Fichier certificat complet (empreinte seule, jamais le document)
+      const putCert = await updateFile(`${DIR}/certificats/${id}.json`, record, null, `🔏 Certificat fichier ${id}`);
+      if (!putCert.ok) throw new Error("Échec d'enregistrement du certificat.");
+
+      // 2. Index léger
+      const idx = await getFile(INDEX_PATH);
+      const arr = Array.isArray(idx?.content?.certificats) ? idx.content.certificats : [];
+      arr.unshift({ id, type: "fichier", titre, auteur, deposeLe, hash });
+      await updateFile(INDEX_PATH, { certificats: arr }, idx?.sha || null, `🔏 Index horodatage ${id}`);
+
+      return NextResponse.json({ success: true, certificat: publicCert(record) });
+    }
+
+    // ----- Vérification d'un document face à son certificat (public)
+    // On téléverse le document à contrôler : son empreinte est recalculée
+    // et comparée à celle scellée dans l'archive.
+    if (action === "verifier-fichier") {
+      const id = String(champ("id") || "").toUpperCase();
+      if (!id) return NextResponse.json({ error: "Identifiant manquant." }, { status: 400 });
+      const f = await getFile(`${DIR}/certificats/${id}.json`);
+      if (!f) return NextResponse.json({ error: "Certificat introuvable." }, { status: 404 });
+      const c = f.content;
+      if (c.type !== "fichier" || !c.hashFichier)
+        return NextResponse.json({ error: "Ce certificat concerne un texte publié, pas un fichier." }, { status: 400 });
+      const fichier = isForm ? form.get("file") : null;
+      if (!fichier || typeof fichier.arrayBuffer !== "function")
+        return NextResponse.json({ error: "Aucun fichier reçu." }, { status: 400 });
+      const bytes = Buffer.from(await fichier.arrayBuffer());
+      if (!bytes.length)
+        return NextResponse.json({ error: "Le fichier est vide." }, { status: 400 });
+      const hashFichier = sha256Bytes(bytes);
+      const correspond = hashFichier === c.hashFichier;
+      return NextResponse.json({ success: true, correspond, certificat: publicCert(c) });
     }
 
     return NextResponse.json({ error: "Action inconnue." }, { status: 400 });
@@ -287,7 +450,10 @@ async function genererPDF(c) {
   y -= 34;
 
   // Attestation
-  const att = `L'archive Lisible atteste que l'œuvre « ${c.titre} », de la plume de ${c.auteur}, a été déposée au Coffre-Fort d'Horodatage le ${dateFr(c.deposeLe)} à ${heureFr(c.deposeLe)} UTC. L'empreinte cryptographique ci-dessous garantit l'intégrité du texte tel que déposé et témoigne de son antériorité.`;
+  const estFichier = c.type === "fichier";
+  const att = estFichier
+    ? `L'archive Lisible atteste que le document « ${c.titre} », de la plume de ${c.auteur}, a été déposé au Coffre-Fort d'Horodatage le ${dateFr(c.deposeLe)} à ${heureFr(c.deposeLe)} UTC. L'empreinte cryptographique ci-dessous garantit l'intégrité du document tel que déposé et témoigne de son antériorité.`
+    : `L'archive Lisible atteste que l'œuvre « ${c.titre} », de la plume de ${c.auteur}, a été déposée au Coffre-Fort d'Horodatage le ${dateFr(c.deposeLe)} à ${heureFr(c.deposeLe)} UTC. L'empreinte cryptographique ci-dessous garantit l'intégrité du texte tel que déposé et témoigne de son antériorité.`;
   for (const ln of wrap(att, times, 12.5, W - 170)) {
     page.drawText(ln, { x: cx - times.widthOfTextAtSize(ln, 12.5) / 2, y, size: 12.5, font: times, color: ENCRE });
     y -= 19;
@@ -313,11 +479,16 @@ async function genererPDF(c) {
   };
 
   champ("N° de certificat", c.id);
-  champ("Œuvre", `« ${c.titre} »`);
+  champ(estFichier ? "Document" : "Œuvre", `« ${c.titre} »`);
   champ("Auteur", c.auteur);
   champ("Déposé le", `${dateFr(c.deposeLe)} à ${heureFr(c.deposeLe)} UTC`);
-  champ("Empreinte cryptographique (SHA-256)", c.hash, true);
-  champ("Volume", `${c.mots} mots · ${c.caracteres} caractères`);
+  if (estFichier) {
+    champ("Fichier scellé", `${c.nomFichier || "?"} · ${c.format || "?"} · ${tailleLisible(c.tailleOctets)}`);
+    champ("Empreinte du document (SHA-256)", c.hashFichier || c.hash, true);
+  } else {
+    champ("Empreinte cryptographique (SHA-256)", c.hash, true);
+    champ("Volume", `${c.mots} mots · ${c.caracteres} caractères`);
+  }
 
   // Sceau d'encre rouge
   const sx = cx;

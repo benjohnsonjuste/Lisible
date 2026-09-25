@@ -177,8 +177,17 @@ export default function CertificatPage() {
                 <div className="grid sm:grid-cols-2 gap-4 text-left mt-10">
                   <Detail icone={FileText} label="N° de certificat" valeur={cert.id} mono />
                   <Detail icone={Clock3} label="Déposé le" valeur={`${dateFr(cert.deposeLe)} à ${heureFr(cert.deposeLe)}`} />
-                  <Detail icone={Hash} label="Empreinte SHA-256" valeur={cert.hash} mono petite />
-                  <Detail icone={Fingerprint} label="Volume" valeur={`${cert.mots} mots · ${cert.caracteres} caractères`} />
+                  {cert.type === "fichier" ? (
+                    <>
+                      <Detail icone={Fingerprint} label="Document scellé" valeur={`${cert.nomFichier || "?"} · ${cert.format || "?"}`} />
+                      <Detail icone={Hash} label="Empreinte du document (SHA-256)" valeur={cert.hashFichier || cert.hash} mono petite />
+                    </>
+                  ) : (
+                    <>
+                      <Detail icone={Hash} label="Empreinte SHA-256" valeur={cert.hash} mono petite />
+                      <Detail icone={Fingerprint} label="Volume" valeur={`${cert.mots} mots · ${cert.caracteres} caractères`} />
+                    </>
+                  )}
                 </div>
 
                 {/* Sceau d'encre */}
@@ -197,6 +206,9 @@ export default function CertificatPage() {
                 </p>
               </div>
             </div>
+
+            {/* Vérification d'un document par re-téléversement */}
+            {cert.type === "fichier" && <VerificationFichier certId={cert.id} />}
 
             {/* Actions */}
             <div className="flex flex-wrap gap-3 mt-8">
@@ -224,6 +236,62 @@ export default function CertificatPage() {
         )}
       </div>
     </main>
+  );
+}
+
+// Re-téléversement d'un document pour vérifier qu'il correspond au certificat.
+// Le fichier n'est jamais conservé : son empreinte est recalculée et comparée.
+function VerificationFichier({ certId }) {
+  const [resultat, setResultat] = useState(null); // null | true | false
+  const [loading, setLoading] = useState(false);
+
+  const verifier = async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setLoading(true);
+    setResultat(null);
+    try {
+      const fd = new FormData();
+      fd.append("action", "verifier-fichier");
+      fd.append("id", certId);
+      fd.append("file", f);
+      const res = await fetch("/api/horodatage", { method: "POST", body: fd });
+      const j = await res.json();
+      if (!res.ok || !j.success) throw new Error(j.error || "Vérification impossible.");
+      setResultat(!!j.correspond);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-8 bg-white border-2 border-dashed border-amber-300 rounded-[1.8rem] p-6 sm:p-8">
+      <p className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-700 mb-2 flex items-center gap-2">
+        <Fingerprint size={14} /> Vérifier l'authenticité d'un document
+      </p>
+      <p className="text-sm text-slate-500 leading-relaxed mb-5">
+        Vous détenez le document d'origine ? Téléversez-le : son empreinte sera recalculée
+        et comparée à celle scellée dans ce certificat. Le fichier n'est jamais conservé.
+      </p>
+      <label className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-950 text-white text-xs font-black uppercase tracking-widest hover:bg-amber-700 transition-all cursor-pointer">
+        {loading ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+        {loading ? "Vérification…" : "Choisir le document à vérifier"}
+        <input type="file" accept=".pdf,.doc,.docx" onChange={verifier} className="hidden" disabled={loading} />
+      </label>
+      {resultat === true && (
+        <p className="mt-4 inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-sm rounded-2xl px-5 py-3.5">
+          <ShieldCheck size={18} /> Document authentique : identique à celui scellé.
+        </p>
+      )}
+      {resultat === false && (
+        <p className="mt-4 inline-flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 font-bold text-sm rounded-2xl px-5 py-3.5">
+          <ShieldAlert size={18} /> Ce fichier ne correspond pas au document scellé.
+        </p>
+      )}
+    </div>
   );
 }
 

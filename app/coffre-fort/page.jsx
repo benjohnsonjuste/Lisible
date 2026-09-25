@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ScellementFichier from "@/components/coffre-fort/ScellementFichier";
 import {
   Vault,
   Fingerprint,
@@ -21,9 +22,9 @@ export const metadata = {
 const ETAPES = [
   {
     n: "01",
-    titre: "Déposez votre texte",
+    titre: "Déposez votre texte ou votre document",
     texte:
-      "Poème, chapitre, synopsis ou manuscrit complet : publiez-le sur Lisible et scellez-le en 1 clic, au moment de la publication ou après.",
+      "Poème, chapitre, synopsis, manuscrit… ou fichier PDF / Word : publiez votre texte sur Lisible ou téléversez votre document, puis scellez-le en 1 clic.",
   },
   {
     n: "02",
@@ -68,8 +69,12 @@ const FAQ = [
     r: "Oui, à 100 %. Le scellement, le certificat PDF et la vérification publique sont gratuits, sans limite.",
   },
   {
+    q: "Puis-je sceller un fichier PDF ou Word ?",
+    r: "Oui. En plus des textes publiés sur Lisible, vous pouvez téléverser un document PDF ou Word (.doc, .docx — 20 Mo maximum) directement depuis cette page. Seule l'empreinte cryptographique du fichier est archivée : le fichier lui-même n'est jamais conservé.",
+  },
+  {
     q: "Que dois-je déclarer pour sceller une œuvre ?",
-    r: "En scellant, vous déclarez sur l'honneur être l'auteur du texte, l'avoir écrit vous-même sans génération intégrale par une IA, et qu'il ne s'agit pas d'un plagiat.",
+    r: "En scellant, vous déclarez sur l'honneur être l'auteur du texte ou du document, l'avoir écrit vous-même sans génération intégrale par une IA, et qu'il ne s'agit pas d'un plagiat.",
   },
   {
     q: "Le certificat remplace-t-il un dépôt légal ?",
@@ -206,6 +211,23 @@ export default function CoffreFortPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* SCELLER UN DOCUMENT */}
+      <section className="relative max-w-4xl mx-auto px-6 py-14 border-t border-white/10">
+        <p className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-400 mb-3">
+          Documents
+        </p>
+        <h2 className="font-serif font-black italic text-3xl sm:text-4xl tracking-tight mb-4">
+          Scellez aussi vos fichiers PDF et Word
+        </h2>
+        <p className="text-slate-300/90 leading-relaxed max-w-3xl mb-8">
+          Manuscrit mis en page, contrat d'édition, synopsis confidentiel… téléversez votre
+          document : son empreinte SHA-256 est scellée et certifiée en quelques secondes.
+          Le fichier lui-même n'est <span className="text-white font-semibold">jamais conservé</span> —
+          seule son empreinte rejoint l'archive.
+        </p>
+        <ScellementFichier />
       </section>
 
       {/* FAQ */}
