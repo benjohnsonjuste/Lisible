@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
 import GiftModal from "@/components/economie/GiftModal";
+import AdBanner, { useAdPlacements } from "@/components/AdBanner";
 
 const GITHUB = { owner: "benjohnsonjuste", repo: "Lisible" };
 
@@ -16,6 +17,7 @@ export default function BattlePoetique() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [giftRecipient, setGiftRecipient] = useState(null); // État pour la modale cadeau
+  const adPlacements = useAdPlacements("strip");
 
   const sortBattleTexts = useCallback((data) => {
     return data
@@ -99,6 +101,9 @@ export default function BattlePoetique() {
             <Link href="/battle/close" className="flex items-center justify-center gap-3 bg-teal-600 text-white px-8 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-2xl shadow-teal-600/30"><PenTool size={18} /> Déposer un défi</Link>
           </div>
         </header>
+
+        {/* Bannière publicitaire discrète (se replie si vide). */}
+        {adPlacements && <AdBanner placement={adPlacements[0]} className="mt-8" />}
 
         <main className="mt-12 md:mt-20">
           {texts.length > 0 ? (
