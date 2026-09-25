@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSessionUser } from "../../_lib/session.js";
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -52,10 +53,15 @@ async function updateFile(path, content, sha, message) {
 
 export async function POST(req) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { action, podcastData } = body;
 
     if (action === 'addPodcast') {
+      // Publication réservée aux utilisateurs connectés (session vérifiée).
+      const session = await getSessionUser(body.sessionToken).catch(() => null);
+      if (!session || !session.email) {
+        return NextResponse.json({ error: "Session requise. Reconnectez-vous." }, { status: 401 });
+      }
       const path = `data/podcasts.json`;
       
       // 1. Récupérer l'index actuel
