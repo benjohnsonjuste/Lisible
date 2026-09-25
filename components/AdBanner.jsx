@@ -12,15 +12,9 @@ import {
  * - La bannière tourne dans une iframe srcDoc isolée : le script Adsterra
  *   (atOptions + invoke.js, document.write) ne peut ni effacer la page
  *   React ni entrer en conflit avec les autres bannières.
- * - SÉCURITÉ : l'iframe est "sandboxée" (sans allow-same-origin) : une créa
- *   agressive ne peut PAS toucher la page parente (pas d'overlay plein écran
- *   injecté, pas de détournement du titre, pas de redirection). Les clics
- *   publicitaires restent possibles (ouverture dans un nouvel onglet).
  * - Discrète : mention "Sponsorisé" minuscule au-dessus.
- * - Auto-repli : si aucune publicité ne remplit l'iframe après ~9 s,
- *   l'encart disparaît complètement (aucun vide disgracieux). La détection
- *   passe par postMessage (le sandbox interdit l'inspection directe du DOM
- *   de l'iframe) ; chaque instance a un identifiant unique.
+ * - Auto-repli : si aucune publicité ne remplit l'iframe après 7 s,
+ *   l'encart disparaît complètement (aucun vide disgracieux).
  *
  * Contrainte Adsterra : un code = UN SEUL slot par page. Chaque clé ne doit
  * donc être utilisée qu'une fois par page rendue.
@@ -30,9 +24,7 @@ import {
  */
 export default function AdBanner({ placement, className = "" }) {
   const [visible, setVisible] = useState(true);
-  const slotId = useRef(
-    "adslot-" + Math.random().toString(36).slice(2, 10)
-  ).current;
+  const iframeRef = useRef(null);
 
   const srcDoc = useMemo(() => {
     if (!placement) return "";
@@ -44,38 +36,25 @@ export default function AdBanner({ placement, className = "" }) {
       "<script>atOptions={'key':'" + key + "','format':'iframe','height':" + height +
       ",'width':" + width + ",'params':{}};</script>" +
       "<script src=\"" + ADSTERRA_INVOKE_BASE + "/" + key + "/invoke.js\"></script>" +
-      // Sonde de remplissage : signale au parent si une créa s'est affichée.
-      // (postMessage fonctionne même avec une iframe sandboxée d'origine opaque.)
-      // Scrutation : certaines créas chargent leurs éléments en asynchrone,
-      // on vérifie toutes les 1,5 s pendant 9 s avant de conclure.
-      "<script>(function(){var tries=0,slot='" + slotId + "';" +
-      "function notify(f){try{parent.postMessage({lisibleAdFill:f,slot:slot},'*');}catch(e){}}" +
-      "var iv=setInterval(function(){tries++;var found=false;" +
-      "try{found=!!document.querySelector('iframe,img,object,embed,video,canvas,a[href]');}catch(e){}" +
-      "if(found||tries>=6){clearInterval(iv);notify(found);}},1500);})();</script>" +
       "</body></html>"
     );
-  }, [placement, slotId]);
+  }, [placement]);
 
   useEffect(() => {
     if (!placement) return;
-    let settled = false;
-    const onMessage = (e) => {
-      const d = e && e.data;
-      if (!d || d.slot !== slotId || typeof d.lisibleAdFill === "undefined") return;
-      settled = true;
-      if (!d.lisibleAdFill) setVisible(false);
-    };
-    window.addEventListener("message", onMessage);
-    // Sécurité : aucun signal après 12 s → on replie l'encart.
     const t = setTimeout(() => {
-      if (!settled) setVisible(false);
-    }, 12000);
-    return () => {
-      window.removeEventListener("message", onMessage);
-      clearTimeout(t);
-    };
-  }, [placement, slotId]);
+      try {
+        const doc = iframeRef.current && iframeRef.current.contentDocument;
+        // Une bannière servie injecte iframe / img / objet média dans le document.
+        const rempli =
+          doc && doc.querySelector("iframe, img, object, embed, video, canvas, a[href]");
+        if (!rempli) setVisible(false);
+      } catch (e) {
+        setVisible(false);
+      }
+    }, 7000);
+    return () => clearTimeout(t);
+  }, [placement]);
 
   if (!placement || !visible) return null;
 
@@ -89,12 +68,12 @@ export default function AdBanner({ placement, className = "" }) {
         Sponsorisé
       </span>
       <iframe
+        ref={iframeRef}
         title="Publicité"
         srcDoc={srcDoc}
         width={placement.width}
         height={placement.height}
         scrolling="no"
-        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
         style={{ border: 0, maxWidth: "100%", display: "block", overflow: "hidden" }}
       />
     </div>
