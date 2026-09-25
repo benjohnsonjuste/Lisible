@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords } from "lucide-react";
+import { Maximize2, Minimize2, ArrowLeft, Eye, Clock, Sun, Zap, Coffee, Ghost, Megaphone, Trophy, Sparkles, Gift, X, Swords, Clapperboard } from "lucide-react";
 
 // --- IMPORTATIONS CORRIGÉES (RÉGULATION DES CHEMINS ET DE LA CASSE DIRECTEMENT DANS /components/) ---
 import FloatingActions from "../../../components/reader/FloatingActions";
@@ -250,6 +251,16 @@ const TextContent = ({ id }) => {
                 user && data.authorEmail && user.email?.toLowerCase().trim() === data.authorEmail?.toLowerCase().trim() && (
                   <HorodatageDemande textId={id} onSealed={() => loadContent()} />
                 )
+              )}
+              {user && data.authorEmail && user.email?.toLowerCase().trim() === data.authorEmail?.toLowerCase().trim() && (
+                <Link
+                  href={`/studio/video?textId=${id}`}
+                  className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.18em] hover:from-amber-400 hover:to-amber-500 transition-all shadow-lg"
+                  title="Transformez ce texte en vidéo verticale pour TikTok, Reels et Shorts"
+                >
+                  <Clapperboard size={15} />
+                  Créer une vidéo
+                </Link>
               )}
             </div>
           )}
