@@ -11,9 +11,10 @@ export async function GET() {
     // 1. Récupérer l'index des publications proprement
     const pubRes = await fetch(
       `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/publications/index.json`,
-      { 
-        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
-        cache: 'no-store' 
+      {
+        // L'API GitHub exige un header User-Agent, sinon 403 « Request forbidden by administrative rules ».
+        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Lisible-App' },
+        cache: 'no-store'
       }
     );
 
@@ -41,7 +42,7 @@ export async function GET() {
     // 2. Récupérer la liste des fichiers utilisateurs
     const usersListRes = await fetch(
       `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`,
-      { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }, cache: 'no-store' }
+      { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'User-Agent': 'Lisible-App' }, cache: 'no-store' }
     );
     const userFiles = await usersListRes.json();
 
