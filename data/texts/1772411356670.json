@@ -13,5 +13,10 @@
   "views": 5,
   "likes": 1,
   "comments": [],
-  "certified": 0
+  "certified": 0,
+  "horodatage": {
+    "id": "LIS-2026-SHH7W8",
+    "deposeLe": "2026-09-25T10:17:50.389Z",
+    "hash": "5bf103e2c5c9af699ebd88c1581595dc80db1f6ed3136b97ac8d02d5d9744122"
+  }
 }
