@@ -46,11 +46,13 @@ export default function AdBanner({ placement, className = "" }) {
       "<script src=\"" + ADSTERRA_INVOKE_BASE + "/" + key + "/invoke.js\"></script>" +
       // Sonde de remplissage : signale au parent si une créa s'est affichée.
       // (postMessage fonctionne même avec une iframe sandboxée d'origine opaque.)
-      "<script>setTimeout(function(){try{" +
-      "var rempli=!!document.querySelector('iframe,img,object,embed,video,canvas,a[href]');" +
-      "parent.postMessage({lisibleAdFill:rempli,slot:'" + slotId + "'},'*');" +
-      "}catch(e){try{parent.postMessage({lisibleAdFill:false,slot:'" + slotId + "'},'*');}catch(_){}}" +
-      "},4000);</script>" +
+      // Scrutation : certaines créas chargent leurs éléments en asynchrone,
+      // on vérifie toutes les 1,5 s pendant 9 s avant de conclure.
+      "<script>(function(){var tries=0,slot='" + slotId + "';" +
+      "function notify(f){try{parent.postMessage({lisibleAdFill:f,slot:slot},'*');}catch(e){}}" +
+      "var iv=setInterval(function(){tries++;var found=false;" +
+      "try{found=!!document.querySelector('iframe,img,object,embed,video,canvas,a[href]');}catch(e){}" +
+      "if(found||tries>=6){clearInterval(iv);notify(found);}},1500);})();</script>" +
       "</body></html>"
     );
   }, [placement, slotId]);
@@ -65,10 +67,10 @@ export default function AdBanner({ placement, className = "" }) {
       if (!d.lisibleAdFill) setVisible(false);
     };
     window.addEventListener("message", onMessage);
-    // Sécurité : aucun signal après 9 s → on replie l'encart.
+    // Sécurité : aucun signal après 12 s → on replie l'encart.
     const t = setTimeout(() => {
       if (!settled) setVisible(false);
-    }, 9000);
+    }, 12000);
     return () => {
       window.removeEventListener("message", onMessage);
       clearTimeout(t);
