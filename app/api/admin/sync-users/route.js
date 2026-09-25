@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSessionUser } from "../../_lib/session.js";
 
 const GITHUB_CONFIG = {
   owner: "benjohnsonjuste",
@@ -6,8 +7,18 @@ const GITHUB_CONFIG = {
   token: process.env.GITHUB_TOKEN
 };
 
-export async function GET() {
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "cmo.lablitteraire7@gmail.com")
+  .split(",")
+  .map((e) => e.trim().toLowerCase());
+
+export async function GET(req) {
   try {
+    // Réservé à l'administration : session vérifiée requise.
+    const { searchParams } = new URL(req.url);
+    const session = await getSessionUser(searchParams.get("sessionToken")).catch(() => null);
+    if (!session || !ADMIN_EMAILS.includes((session.email || "").toLowerCase())) {
+      return NextResponse.json({ error: "Accès réservé à l'administration." }, { status: 403 });
+    }
     // 1. Lister tous les fichiers dans data/users
     const listRes = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`, {
       headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
