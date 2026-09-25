@@ -120,7 +120,7 @@ async function getCompactUsers() {
     );
     if (!listRes.ok) return usersCache.list;
     const files = await listRes.json();
-    const batch = files.filter((f) => f.name.endsWith(".json")).slice(0, 200);
+    const batch = files.filter((f) => f.name.endsWith(".json")).slice(0, 40);
     const results = await Promise.all(
       batch.map(async (f) => {
         try {
