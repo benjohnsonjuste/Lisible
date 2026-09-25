@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Gift, Loader2, Coins, ArrowLeft, Check, Wallet } from "lucide-react";
 import { toast } from "sonner";
+import { getSessionToken } from "../../lib/session-client.js";
 
 /**
  * Panneau d'envoi de cadeaux animés (les 7 cadeaux Li).
@@ -45,7 +46,7 @@ export default function GiftPanel({ destinataire, contexte, onSent, theme = "lig
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "envoyer-cadeau",
-          userEmail: user.email,
+          sessionToken: getSessionToken(),
           destinataireEmail: destinataire.email,
           cadeauId: selected.id,
           contexte: contexte || null,
