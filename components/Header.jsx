@@ -11,6 +11,7 @@ export default function Header() {
   const navLinks = [
     { name: "Accueil", href: "/" },
     { name: "Bibliothèque", href: "/texts" },
+    { name: "Livres", href: "/livres" },
     { name: "Publier", href: "/publish" },
   ];
 
