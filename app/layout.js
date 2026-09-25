@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 import { Inter, Lora } from 'next/font/google';
 import Script from "next/script";
 import { ServiceWorkerRegistration, InstallPrompt, LiveNotificationListener, PushActivation } from "./ClientComponents";
+import ActivityPing from "../components/ActivityPing";
 
 // --- POLICES ---
 const inter = Inter({ 
@@ -115,6 +116,7 @@ export default function RootLayout({ children }) {
           <Footer />
           <CookieConsent />
           <AdSenseLoader />
+          <ActivityPing />
           
           <Toaster 
             position="top-center" 

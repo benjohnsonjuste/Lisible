@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import { 
   ShieldCheck, Scale, Mail, Link2, 
-  ArrowLeft, Coins, Zap, Star, Landmark, ShieldAlert 
+  ArrowLeft, Coins, Zap, Star, Landmark, ShieldAlert, HandCoins 
 } from "lucide-react";
 
 export default function Conditions() {
@@ -18,7 +18,7 @@ export default function Conditions() {
           Conditions d’utilisation
         </h1>
         <p className="text-[10px] font-black uppercase tracking-[0.4em] text-teal-600">
-          Mise à jour : Février 2026
+          Mise à jour : Septembre 2026
         </p>
       </header>
 
@@ -28,6 +28,7 @@ export default function Conditions() {
           <p className="text-lg font-medium text-slate-800 border-l-8 border-teal-500 pl-8 py-2 italic bg-slate-50 rounded-r-3xl">
             Bienvenue sur <span className="text-teal-600 font-black">Lisible</span>, plateforme de streaming littéraire produite par le label littéraire <span className="font-bold">La Belle Littéraire</span>, structure légale reconnue par l'État haïtien.
           </p>
+
 
           <section>
             <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
@@ -136,9 +137,39 @@ export default function Conditions() {
             </div>
           </section>
 
+          <section className="bg-amber-50 p-8 rounded-[2.5rem] border border-amber-100">
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
+              <span className="bg-amber-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">07</span>
+              <HandCoins size={24} /> Coproduction participative & partage de revenus
+            </h2>
+            <div className="space-y-4">
+              <div className="p-6 bg-rose-50 rounded-2xl border border-rose-200">
+                <span className="text-[10px] font-black uppercase text-rose-600 tracking-widest">Avertissement sur les risques</span>
+                <p className="text-sm font-bold text-rose-950/80 mt-2">
+                  La coproduction n'est ni un placement financier garanti, ni un prêt, ni un produit d'épargne. <strong>Aucun rendement n'est promis et aucun taux d'intérêt n'est versé.</strong> Seul le chiffre d'affaires réellement encaissé sur les ventes du livre est partagé. Si le livre ne génère pas de ventes, rien n'est versé et vous pouvez perdre tout ou partie de votre mise.
+                </p>
+              </div>
+              <ul className="list-disc pl-6 space-y-2 text-sm">
+                <li><strong>Principe :</strong> les utilisateurs inscrits peuvent soutenir financièrement la publication d'un livre (correction, couverture, marketing) en contribuant à sa campagne depuis leur Solde Lisible (Li).</li>
+                <li><strong>Frais de dossier :</strong> des frais non remboursables de <strong>2,5 %</strong> sont prélevés sur chaque contribution (traitement bancaire et gestion). Ils restent acquis à Lisible même si la campagne échoue.</li>
+                <li><strong>Campagne non financée :</strong> si l'objectif n'est pas atteint à 100 % à la fin de la campagne, votre mise nette (hors frais) vous est <strong>automatiquement recréditée en Li</strong> sur votre Solde Lisible. Aucun remboursement sur carte bancaire n'est effectué : les Li recrédités peuvent être réinvestis sur d'autres projets ou utilisés pour les cadeaux.</li>
+                <li><strong>Partage des revenus :</strong> pendant <strong>12 mois maximum</strong> à compter de la sortie officielle du livre, le chiffre d'affaires réellement encaissé est réparti ainsi : <strong>60 %</strong> aux coproducteurs (au prorata de leur mise nette), <strong>20 %</strong> à l'auteur dès la première vente, <strong>20 %</strong> à Lisible (gestion, suivi, plateforme).</li>
+                <li><strong>Plafond :</strong> la redistribution à chaque coproducteur s'arrête dès qu'il a perçu <strong>115 %</strong> de sa mise nette, ou à l'expiration des 12 mois. Le reliquat éventuel revient à l'auteur.</li>
+                <li><strong>Encaissement définitif :</strong> les revenus ne sont redistribués qu'après encaissement définitif des ventes (délai anti-annulation de 30 jours), afin d'éviter tout risque lié aux annulations de paiement.</li>
+                <li><strong>Pool Lisible (Fonds des Auteurs) :</strong> vous pouvez aussi acheter des parts du Pool (25 $ CA / part). Le comité éditorial de Lisible sélectionne 3 à 5 livres par trimestre et y répartit le capital du Pool. Les gains sont redistribués aux détenteurs de parts au prorata, après des <strong>frais de gestion de 17,5 %</strong> prélevés par Lisible (sélection, accompagnement éditorial, promotion).</li>
+              </ul>
+              <div className="p-6 bg-slate-900 rounded-2xl text-white">
+                <span className="text-[10px] font-black uppercase text-amber-400 tracking-widest">Clause de solde inactif</span>
+                <p className="text-sm mt-2 text-slate-300">
+                  Si votre Solde Lisible reste <strong>inutilisé pendant plus de 12 mois consécutifs</strong> sans aucune activité enregistrée (connexion, achat, contribution, retrait…), des <strong>frais de gestion de 2 $ CA par mois</strong> seront déduits de votre solde jusqu'à épuisement. Un préavis vous est envoyé au 11<sup>e</sup> mois d'inactivité. Toute activité sur votre compte interrompt le compteur d'inactivité.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section>
             <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
-              <span className="bg-slate-900 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">07</span> 
+              <span className="bg-slate-900 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">08</span> 
               Contact & Support
             </h2>
             <div className="flex flex-col md:flex-row gap-4">
