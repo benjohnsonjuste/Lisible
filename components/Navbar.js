@@ -11,7 +11,7 @@ import {
   Menu, Home, Library, LayoutDashboard, LogOut, LogIn,
   Users, MessageCircle, Calendar, X, Sparkles,
   ChevronRight, Radio, Coins, Zap, MessageSquare, Bell, Mic2, Clapperboard, Gift, Trophy, ShoppingBag,
-  Newspaper, Briefcase, Wallet
+  Newspaper, Briefcase, Wallet, BookOpen
 } from "lucide-react";
 
 export default function Navbar() {
@@ -150,6 +150,7 @@ export default function Navbar() {
   const menuItems = [
     { href: "/", label: "Accueil", icon: <Home size={20} /> },
     { href: "/library", label: "Bibliothèque", icon: <Library size={20} /> },
+    { href: "/livres", label: "Livres", icon: <BookOpen size={20} /> },
     { href: "/auditorium", label: "Auditorium", icon: <Mic2 size={20} /> },
     { href: "/arena", label: "Arène d'écriture", icon: <Trophy size={20} /> },
     { href: "/salon", label: "Salon Lisible", icon: <MessageSquare size={20} /> },
