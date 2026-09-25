@@ -17,7 +17,10 @@ export async function GET() {
       }
     );
 
-    if (!pubRes.ok) throw new Error(`GitHub contents API: HTTP ${pubRes.status}`);
+    if (!pubRes.ok) {
+      const errText = await pubRes.text().catch(() => "");
+      throw new Error(`GitHub contents API: HTTP ${pubRes.status} — ${errText.slice(0, 200)}`);
+    }
     
     const pubFileData = await pubRes.json();
     // L'API Contents ne renvoie pas le contenu base64 des fichiers > 1 Mo :
