@@ -16,7 +16,7 @@ export default function StudioHubPage() {
           </p>
         </header>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {/* Podcast */}
           <Link href="/studio/podcast" className="group bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-white/10 p-8 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all">
             <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-500/15 flex items-center justify-center mb-6">
@@ -27,6 +27,29 @@ export default function StudioHubPage() {
             <span className="inline-flex items-center gap-2 text-sm font-black text-rose-600">
               Ouvrir le studio <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </span>
+          </Link>
+
+          {/* Podcast Duo */}
+          <Link href="/studio/duo" className="group relative overflow-hidden bg-slate-950 rounded-[2rem] p-8 shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all border border-rose-500/20">
+            <div className="absolute -top-20 -right-20 w-64 h-64 bg-rose-500/20 blur-[100px] rounded-full" />
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-rose-500/15 flex items-center justify-center mb-6">
+                <Users size={28} className="text-rose-400" />
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <h2 className="text-2xl font-black text-white">Podcast Duo</h2>
+                <span className="bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">Nouveau</span>
+              </div>
+              <p className="text-sm text-slate-400 mb-6">Enregistrez à deux : invitez jusqu'à 2 personnes, fond musical et mixage en direct.</p>
+              <ul className="space-y-2 mb-6 text-xs text-slate-500">
+                <li className="flex items-center gap-2"><Share2 size={14} className="text-rose-400" /> Lien d'invitation : sans compte requis</li>
+                <li className="flex items-center gap-2"><Mic2 size={14} className="text-rose-400" /> 10 instrumentals avec pré-écoute</li>
+                <li className="flex items-center gap-2"><Clock size={14} className="text-rose-400" /> 30 minutes, mixage voix + musique</li>
+              </ul>
+              <span className="inline-flex items-center gap-2 text-sm font-black text-rose-400">
+                Enregistrer à deux <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </span>
+            </div>
           </Link>
 
           {/* Live */}
