@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import AdBanner, { useAdPlacements } from "@/components/AdBanner";
 import {
   BookOpen,
   Plus,
@@ -17,6 +18,7 @@ export default function LivresCatalogue() {
   const [livres, setLivres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const adPlacements = useAdPlacements("strip");
 
   useEffect(() => {
     (async () => {
@@ -64,7 +66,7 @@ export default function LivresCatalogue() {
           </Link>
         </header>
 
-        <div className="max-w-md mx-auto mb-12">
+        <div className="max-w-md mx-auto mb-6">
           <div className="relative">
             <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" />
             <input
@@ -76,6 +78,9 @@ export default function LivresCatalogue() {
             />
           </div>
         </div>
+
+        {/* Bannière publicitaire discrète (se replie si vide). */}
+        {adPlacements && <AdBanner placement={adPlacements[0]} className="mb-10" />}
 
         {loading ? (
           <div className="flex flex-col items-center gap-4 py-20">
