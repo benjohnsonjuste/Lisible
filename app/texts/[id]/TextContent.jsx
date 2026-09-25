@@ -18,6 +18,7 @@ import CadeauLi from "../../../components/CadeauLi";
 import GiftModal from "../../../components/economie/GiftModal";
 import GiftBar from "../../../components/economie/GiftBar";
 import InTextAd from "../../../components/InTextAd";
+import { INTEXT_MOBILE, INTEXT_DESKTOP } from "../../../components/adsterraPlacements";
 import HorodatageDemande from "../../../components/coffre-fort/HorodatageDemande";
 import CertificatHorodatage from "../../../components/coffre-fort/CertificatHorodatage";
 
@@ -60,6 +61,8 @@ const TextContent = ({ id }) => {
   const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  // Mobile (<640px) ou desktop — connu uniquement côté client (null au 1er rendu).
+  const [isMobile, setIsMobile] = useState(null);
   
   const [liveViews, setLiveViews] = useState(0);
   const viewLogged = useRef(false);
@@ -121,6 +124,27 @@ const TextContent = ({ id }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [loadContent]);
 
+  // Détection mobile/desktop (choix des tailles de bannières in-text).
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Tag Monetag "Lisible In-Text" (zone 11888115, In-Page Push Banner) —
+  // injecté UNE SEULE FOIS par page (les doublons ne servent à rien).
+  useEffect(() => {
+    if (document.querySelector('script[data-zone="11888115"]')) return;
+    const s = document.createElement("script");
+    s.src = "https://nap5k.com/tag.min.js";
+    s.setAttribute("data-zone", "11888115");
+    s.async = true;
+    s.setAttribute("data-cfasync", "false");
+    document.body.appendChild(s);
+  }, []);
+
   const handleLike = async () => {
     if (!user) return toast.error("Connectez-vous pour aimer ce texte");
     if (isLiking) return;
@@ -166,6 +190,19 @@ const TextContent = ({ id }) => {
   const renderedContent = useMemo(() => {
     if (!data?.content) return null;
     const paragraphs = data.content.split('\n').filter(p => p.trim() !== "");
+    // Positions candidates : tous les 2 paragraphes (indices impairs en base 0).
+    const slots = [];
+    paragraphs.forEach((_, i) => { if ((i + 1) % 2 === 0) slots.push(i); });
+    // Bannières réellement câblées selon l'appareil.
+    // Contrainte Adsterra : un code = UN SEUL slot par page → on répartit
+    // les placements uniformément sur le texte (2 sur mobile, 3 sur desktop).
+    const placements = isMobile === null ? [] : (isMobile ? INTEXT_MOBILE : INTEXT_DESKTOP);
+    const n = Math.min(placements.length, slots.length);
+    const adMap = new Map(); // indice de paragraphe -> indice de placement
+    for (let j = 0; j < n; j++) {
+      const sIdx = n === 1 ? 0 : Math.round((j * (slots.length - 1)) / (n - 1));
+      adMap.set(slots[sIdx], j);
+    }
     return (
       <div className="space-y-8">
         <div className="whitespace-pre-wrap">
@@ -173,15 +210,15 @@ const TextContent = ({ id }) => {
             <React.Fragment key={i}>
               <p className="mb-6 leading-relaxed">{p}</p>
 
-              {/* Encart publicitaire discret tous les 2 paragraphes.
-                  Le composant se replie automatiquement s'il reste vide. */}
-              {(i + 1) % 2 === 0 && <InTextAd />}
+              {/* Bannière in-text discrète. Le composant se replie
+                  automatiquement si la bannière reste vide. */}
+              {adMap.has(i) && <InTextAd placement={placements[adMap.get(i)]} />}
             </React.Fragment>
           ))}
         </div>
       </div>
     );
-  }, [data?.content]);
+  }, [data?.content, isMobile]);
 
   if (loading) return <div className="flex justify-center items-center min-h-screen font-serif animate-pulse">Immersion en cours...</div>;
   if (!data) return null;
