@@ -1,8 +1,13 @@
 import LivreReader from "@/components/LivreReader";
 
+const baseUrl = "https://lisible.biz";
+
 export async function generateMetadata({ params }) {
+  const resolvedParams = await params;
+  const id = resolvedParams && resolvedParams.id;
+  if (!id) return { title: "Livre — Lisible" };
   try {
-    const res = await fetch(`https://lisible.biz/api/livres?id=${params.id}`, { cache: "no-store" });
+    const res = await fetch(`${baseUrl}/api/livres?id=${id}`, { cache: "no-store" });
     if (res.ok) {
       const j = await res.json();
       const b = j.content || {};
@@ -15,6 +20,8 @@ export async function generateMetadata({ params }) {
   return { title: "Livre — Lisible" };
 }
 
-export default function LivrePage({ params }) {
-  return <LivreReader id={params.id} />;
+export default async function LivrePage({ params }) {
+  const resolvedParams = await params;
+  const id = resolvedParams && resolvedParams.id;
+  return <LivreReader id={id} />;
 }
