@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+import typography from "@tailwindcss/typography";
 export default {
   darkMode: "class", // <--- AJOUTE CETTE LIGNE
   content: [
@@ -12,5 +13,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [typography],
 };
