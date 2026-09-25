@@ -12,9 +12,15 @@ import {
  * - La bannière tourne dans une iframe srcDoc isolée : le script Adsterra
  *   (atOptions + invoke.js, document.write) ne peut ni effacer la page
  *   React ni entrer en conflit avec les autres bannières.
+ * - SÉCURITÉ : l'iframe est "sandboxée" (sans allow-same-origin) : une créa
+ *   agressive ne peut PAS toucher la page parente (pas d'overlay plein écran
+ *   injecté, pas de détournement du titre, pas de redirection). Les clics
+ *   publicitaires restent possibles (ouverture dans un nouvel onglet).
  * - Discrète : mention "Sponsorisé" minuscule au-dessus.
- * - Auto-repli : si aucune publicité ne remplit l'iframe après 7 s,
- *   l'encart disparaît complètement (aucun vide disgracieux).
+ * - Auto-repli : si aucune publicité ne remplit l'iframe après ~9 s,
+ *   l'encart disparaît complètement (aucun vide disgracieux). La détection
+ *   passe par postMessage (le sandbox interdit l'inspection directe du DOM
+ *   de l'iframe) ; chaque instance a un identifiant unique.
  *
  * Contrainte Adsterra : un code = UN SEUL slot par page. Chaque clé ne doit
  * donc être utilisée qu'une fois par page rendue.
@@ -24,7 +30,9 @@ import {
  */
 export default function AdBanner({ placement, className = "" }) {
   const [visible, setVisible] = useState(true);
-  const iframeRef = useRef(null);
+  const slotId = useRef(
+    "adslot-" + Math.random().toString(36).slice(2, 10)
+  ).current;
 
   const srcDoc = useMemo(() => {
     if (!placement) return "";
@@ -36,25 +44,36 @@ export default function AdBanner({ placement, className = "" }) {
       "<script>atOptions={'key':'" + key + "','format':'iframe','height':" + height +
       ",'width':" + width + ",'params':{}};</script>" +
       "<script src=\"" + ADSTERRA_INVOKE_BASE + "/" + key + "/invoke.js\"></script>" +
+      // Sonde de remplissage : signale au parent si une créa s'est affichée.
+      // (postMessage fonctionne même avec une iframe sandboxée d'origine opaque.)
+      "<script>setTimeout(function(){try{" +
+      "var rempli=!!document.querySelector('iframe,img,object,embed,video,canvas,a[href]');" +
+      "parent.postMessage({lisibleAdFill:rempli,slot:'" + slotId + "'},'*');" +
+      "}catch(e){try{parent.postMessage({lisibleAdFill:false,slot:'" + slotId + "'},'*');}catch(_){}}" +
+      "},4000);</script>" +
       "</body></html>"
     );
-  }, [placement]);
+  }, [placement, slotId]);
 
   useEffect(() => {
     if (!placement) return;
+    let settled = false;
+    const onMessage = (e) => {
+      const d = e && e.data;
+      if (!d || d.slot !== slotId || typeof d.lisibleAdFill === "undefined") return;
+      settled = true;
+      if (!d.lisibleAdFill) setVisible(false);
+    };
+    window.addEventListener("message", onMessage);
+    // Sécurité : aucun signal après 9 s → on replie l'encart.
     const t = setTimeout(() => {
-      try {
-        const doc = iframeRef.current && iframeRef.current.contentDocument;
-        // Une bannière servie injecte iframe / img / objet média dans le document.
-        const rempli =
-          doc && doc.querySelector("iframe, img, object, embed, video, canvas, a[href]");
-        if (!rempli) setVisible(false);
-      } catch (e) {
-        setVisible(false);
-      }
-    }, 7000);
-    return () => clearTimeout(t);
-  }, [placement]);
+      if (!settled) setVisible(false);
+    }, 9000);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      clearTimeout(t);
+    };
+  }, [placement, slotId]);
 
   if (!placement || !visible) return null;
 
@@ -68,12 +87,12 @@ export default function AdBanner({ placement, className = "" }) {
         Sponsorisé
       </span>
       <iframe
-        ref={iframeRef}
         title="Publicité"
         srcDoc={srcDoc}
         width={placement.width}
         height={placement.height}
         scrolling="no"
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
         style={{ border: 0, maxWidth: "100%", display: "block", overflow: "hidden" }}
       />
     </div>
