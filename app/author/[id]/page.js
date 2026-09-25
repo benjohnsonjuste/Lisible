@@ -23,14 +23,14 @@ export default function AuthorProfile() {
         const cleanEmail = authorEmail.toLowerCase().trim();
         
         const [userRes, libraryRes] = await Promise.all([
-          fetch(`/api/realtime-data?folder=users`),
+          fetch(`/api/realtime-data?folder=users&email=${encodeURIComponent(authorEmail)}`),
           fetch(`/api/realtime-data?folder=publications`)
         ]);
 
         const userData = await userRes.json();
         const libraryData = await libraryRes.json();
 
-        const targetAuthor = userData.content?.find(u => u.email?.toLowerCase().trim() === cleanEmail);
+        const targetAuthor = userData.content?.[0];
         if (targetAuthor) {
           setAuthor(targetAuthor);
         }
