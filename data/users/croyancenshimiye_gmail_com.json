@@ -21,5 +21,9 @@
   "guestBonus": 0,
   "penName": "Croyance Nshimiye",
   "birthday": "2009-06-22",
-  "profilePic": "/api/media/avatars/886da22a1e6eae79.jpg"
+  "profilePic": "/api/media/avatars/886da22a1e6eae79.jpg",
+  "totalLikes": 0,
+  "totalCertifications": 0,
+  "totalFollowers": 0,
+  "lastStatsUpdate": "2026-09-25T07:37:23.925Z"
 }
