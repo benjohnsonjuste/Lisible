@@ -35,24 +35,11 @@ const [isSending, setIsSending] = useState(false);
 const [adVisible, setAdVisible] = useState(true);
 
 useEffect(() => {
-// Intégration directe du script Social Bar
-const script = document.createElement('script');
-script.src = "https://pl28594689.profitablecpmratenetwork.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-script.async = true;
-document.body.appendChild(script);
-
 const loggedUser = localStorage.getItem("lisible_user");
 if (loggedUser) {
 try { setUser(JSON.parse(loggedUser)); } catch(e) {}
 }
 loadMessages();
-
-// Nettoyage lors du changement de page
-return () => {
-if (document.body.contains(script)) {
-document.body.removeChild(script);
-}
-};
 }, []);
 
 async function loadMessages() {
