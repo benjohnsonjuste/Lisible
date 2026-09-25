@@ -5,11 +5,13 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import AdBanner, { useAdPlacements } from '@/components/AdBanner';
 
 export default function Auditorium() {
   const [podcasts, setPodcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPlayingUrl, setCurrentPlayingUrl] = useState(null);
+  const adPlacements = useAdPlacements("strip");
 
   useEffect(() => {
     // Intégration du script Social Bar
@@ -69,6 +71,9 @@ export default function Auditorium() {
           </div>  
         </Link>  
       </div>  
+
+      {/* Bannière publicitaire discrète (se replie si vide). */}
+      {adPlacements && <AdBanner placement={adPlacements[0]} className="mb-8" />}
 
       {loading ? (  
         <div className="flex flex-col items-center py-20">  
