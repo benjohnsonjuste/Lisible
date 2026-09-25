@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -11,12 +9,15 @@ export async function GET(request) {
   }
 
   try {
-    // Chemin vers le fichier JSON des publications
-    const filePath = path.join(process.cwd(), 'data', 'publications', 'texts.json');
-    
-    // Lecture du fichier
-    const fileData = await fs.readFile(filePath, 'utf8');
-    const publications = JSON.parse(fileData);
+    // Index des publications sur GitHub (le système de fichiers local n'existe
+    // pas dans l'environnement Cloudflare Workers).
+    const res = await fetch(
+      'https://raw.githubusercontent.com/benjohnsonjuste/Lisible/main/data/publications/index.json',
+      { cache: 'no-store' }
+    );
+    if (!res.ok) throw new Error(`Index des publications inaccessible (HTTP ${res.status})`);
+    const publications = await res.json();
+    const list = Array.isArray(publications) ? publications : [];
 
     // Initialisation des compteurs
     let stats = {
@@ -27,11 +28,12 @@ export async function GET(request) {
     };
 
     // Filtrage et calcul des données de l'auteur
-    publications.forEach((item) => {
-      if (item.authorEmail === email) {
-        stats.totalViews += (item.views || 0);
-        stats.totalLikes += (item.likes || 0);
-        stats.totalCertified += (item.certified || 0);
+    const cleanEmail = email.toLowerCase().trim();
+    list.forEach((item) => {
+      if ((item.authorEmail || "").toLowerCase().trim() === cleanEmail) {
+        stats.totalViews += Number(item.views || 0);
+        stats.totalLikes += Number(item.likes || 0);
+        stats.totalCertified += Number(item.certified || 0);
         stats.textCount += 1;
       }
     });
@@ -44,9 +46,9 @@ export async function GET(request) {
 
   } catch (error) {
     console.error("Erreur calcul stats auteur:", error);
-    return NextResponse.json({ 
-      success: false, 
-      error: "Impossible de récupérer les statistiques" 
+    return NextResponse.json({
+      success: false,
+      error: "Impossible de récupérer les statistiques"
     }, { status: 500 });
   }
 }
