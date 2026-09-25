@@ -37,5 +37,9 @@
   "works": [],
   "created_at": "2026-02-23T17:47:48.731Z",
   "password": "$2b$10$tb61Pz1xdtrM2Z1yHP9d5uikAtkEv6xG8vepJun9Xkxc8xvEzljNK",
-  "referralCode": null
+  "referralCode": null,
+  "totalLikes": 0,
+  "totalCertifications": 0,
+  "totalFollowers": 0,
+  "lastStatsUpdate": "2026-09-25T07:37:29.540Z"
 }
