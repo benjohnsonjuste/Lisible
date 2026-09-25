@@ -16,14 +16,14 @@ export async function POST(req) {
     const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${filePath}`;
 
     // Vérifier si déjà abonné
-    const check = await fetch(url, { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` } });
+    const check = await fetch(url, { headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'User-Agent': 'Lisible-App' } });
     
     if (check.ok) {
       // Déjà existe -> Supprimer (Désabonnement)
       const fileData = await check.json();
       await fetch(url, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
         body: JSON.stringify({ message: `Unsub: ${userEmail}`, sha: fileData.sha })
       });
       return NextResponse.json({ status: "unsubscribed" });
@@ -31,7 +31,7 @@ export async function POST(req) {
       // Créer (Abonnement)
       await fetch(url, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
         body: JSON.stringify({
           message: `Sub: ${userEmail}`,
           content: btoa(JSON.stringify({ email: userEmail, date: new Date().toISOString() }))
@@ -49,7 +49,7 @@ export async function POST(req) {
 
     await fetch(url, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
       body: JSON.stringify({
         message: `New forum message from ${userName}`,
         content: btoa(JSON.stringify({ 
