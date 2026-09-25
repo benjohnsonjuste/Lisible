@@ -14,6 +14,7 @@ import {
   Lock,
 } from "lucide-react";
 import SecurityLock from "./SecurityLock";
+import GiftBar from "./economie/GiftBar";
 
 export default function LivreReader({ id }) {
   const [livre, setLivre] = useState(null);
@@ -191,6 +192,14 @@ export default function LivreReader({ id }) {
         <p className="text-center mt-8 text-[10px] uppercase tracking-[0.2em] text-slate-300 font-black">
           Utilisez les flèches du clavier pour tourner les pages
         </p>
+
+        {/* Soutenir l'auteur */}
+        {livre.authorEmail && (
+          <GiftBar
+            destinataire={{ email: livre.authorEmail, nom: livre.authorName || "l'auteur" }}
+            contexte={{ type: "lecture", refId: id, refTitre: livre.title }}
+          />
+        )}
       </div>
     </div>
   );

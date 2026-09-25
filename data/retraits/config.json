@@ -1,7 +1,1 @@
-{
-  "actif": true,
-  "commissionPct": 10,
-  "fraisPaypalPct": 2,
-  "seuilMinLi": 25000,
-  "tauxUsdParLi": 0.0002
-}
+{"actif":true,"commissionPct":15,"fraisBancairesDeduitDeAuteur":true,"note":"Taux officiel : 1 Li = 0,01 $ US sur toute la plateforme. 85 % auteur / 15 % plateforme. Réserve chargeback 5 %.","reserveChargebackPct":5,"seuilMinLi":25000,"tauxUsdParLi":0.01}

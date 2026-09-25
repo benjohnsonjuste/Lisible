@@ -14,6 +14,8 @@ import SceauCertification from "../../../components/reader/SceauCertification";
 import CommentSection from "../../../components/reader/CommentSection";
 import SocialMargins from "../../../components/reader/SocialMargins";
 import CadeauLi from "../../../components/CadeauLi"; 
+import GiftModal from "../../../components/economie/GiftModal";
+import GiftBar from "../../../components/economie/GiftBar";
 import InTextAd from "../../../components/InTextAd";
 import { SceauHumainDetail, SceauHumainDemande } from "../../../components/sceau/SceauHumain";
 
@@ -288,6 +290,14 @@ const TextContent = ({ id }) => {
             />
           )}
           <CommentSection textId={id} comments={data.comments || []} user={user} onCommented={() => loadContent()} />
+
+          {/* Soutenir l'auteur — en bas du texte */}
+          {data.authorEmail && (
+            <GiftBar
+              destinataire={{ email: data.authorEmail, nom: data.authorName || "l'auteur" }}
+              contexte={{ type: "lecture", refId: id, refTitre: data.title }}
+            />
+          )}
         </section>
       </main>
 
@@ -302,17 +312,11 @@ const TextContent = ({ id }) => {
       />
 
       {isGiftModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-6">
-          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
-            <button 
-              onClick={() => setIsGiftModalOpen(false)}
-              className="absolute -top-12 right-0 p-2 text-white/50 hover:text-white transition-colors"
-            >
-              <X size={32} />
-            </button>
-            <CadeauLi />
-          </div>
-        </div>
+        <GiftModal
+          destinataire={{ email: data.authorEmail, nom: data.authorName || "l'auteur" }}
+          contexte={{ type: "lecture", refId: id, refTitre: data.title }}
+          onClose={() => setIsGiftModalOpen(false)}
+        />
       )}
 
       <ReportModal isOpen={isReportModalOpen} onClose={() => setReportModalOpen(false)} textId={id} textTitle={data.title} />

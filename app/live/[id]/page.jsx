@@ -1,12 +1,14 @@
 "use client";
 import { use, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Radio, Loader2, Share2, Check, Users, Mic, Clock } from "lucide-react";
+import { Radio, Loader2, Share2, Check, Users, Mic, Clock, Gift, X, Pause } from "lucide-react";
 import Pusher from "pusher-js";
 import { Player } from "@livepeer/react";
 import { toast } from "sonner";
 import { LivepeerProvider, PUSHER_KEY, PUSHER_CLUSTER, formatCountdown } from "@/components/live/livekit";
 import LiveComments from "@/components/live/LiveComments";
+import GiftPanel from "@/components/economie/GiftPanel";
+import GiftAnimation from "@/components/economie/GiftAnimation";
 
 function AudioCover({ title, hostName, avatar }) {
   return (
@@ -39,6 +41,9 @@ function WatchInner({ liveId }) {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [remaining, setRemaining] = useState(null);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftEvent, setGiftEvent] = useState(null);
+  const [chatPausedUntil, setChatPausedUntil] = useState(0);
 
   const fetchLive = useCallback(async () => {
     try {
@@ -70,6 +75,16 @@ function WatchInner({ liveId }) {
     });
     channel.bind("live-ended", () => {
       setLive((prev) => (prev ? { ...prev, status: "ended" } : prev));
+    });
+    // Cadeaux Li en temps réel : tout le monde voit l'animation
+    channel.bind("gift", (data) => {
+      setGiftEvent(data);
+      if (data.pauseChat) {
+        setChatPausedUntil(Date.now() + 12000);
+        toast("⏸️ Chat en pause — Grimoire d'Or !", { description: `${data.deNom} met ${data.versNom || "l'hôte"} à l'honneur.` });
+      } else {
+        toast.success(`${data.icone} ${data.deNom} a offert ${data.cadeauNom} !`);
+      }
     });
     return () => {
       channel.unbind_all();
@@ -169,10 +184,16 @@ function WatchInner({ liveId }) {
               </p>
             </div>
           </div>
-          <button onClick={copyLink} className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-            {copied ? <Check size={16} className="text-teal-400" /> : <Share2 size={16} />}
-            {copied ? "Copié !" : "Partager"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setGiftOpen(true)} className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-amber-500/25">
+              <Gift size={16} />
+              Offrir
+            </button>
+            <button onClick={copyLink} className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-black text-xs uppercase tracking-widest flex items-center gap-2">
+              {copied ? <Check size={16} className="text-teal-400" /> : <Share2 size={16} />}
+              {copied ? "Copié !" : "Partager"}
+            </button>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-[1fr_340px] gap-5">
@@ -201,13 +222,20 @@ function WatchInner({ liveId }) {
           </div>
 
           {/* Commentaires éphémères */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-[1.75rem] overflow-hidden h-[420px] lg:h-auto flex flex-col">
+          <div className="bg-white/[0.03] border border-white/10 rounded-[1.75rem] overflow-hidden h-[420px] lg:h-auto flex flex-col relative">
             <div className="px-5 py-3.5 border-b border-white/10">
               <p className="text-xs font-black uppercase tracking-widest text-slate-400">Réactions en direct</p>
             </div>
             <div className="flex-1 min-h-0">
               <LiveComments liveId={live.id} />
             </div>
+            {chatPausedUntil > Date.now() && (
+              <div className="absolute inset-0 z-10 bg-black/70 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center px-6">
+                <Pause size={28} className="text-amber-300" />
+                <p className="text-amber-200 font-black text-sm uppercase tracking-widest">Chat en pause</p>
+                <p className="text-white/60 text-xs">Le Grimoire d'Or met le mécène à l'honneur…</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -215,6 +243,26 @@ function WatchInner({ liveId }) {
           Aucune inscription requise pour assister à ce live. Les commentaires s'effacent automatiquement.
         </p>
       </div>
+
+      {/* Modale cadeaux */}
+      {giftOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setGiftOpen(false)} />
+          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setGiftOpen(false)} className="absolute -top-1 right-1 z-10 p-2 rounded-full bg-white/10 text-white">
+              <X size={18} />
+            </button>
+            <GiftPanel
+              theme="dark"
+              destinataire={{ email: live.hostEmail, nom: live.hostName }}
+              contexte={{ type: "live", refId: live.id, refTitre: live.title }}
+              onSent={(ev) => { setGiftOpen(false); setGiftEvent(ev); if (ev.pauseChat) setChatPausedUntil(Date.now() + 12000); }}
+            />
+          </div>
+        </div>
+      )}
+
+      <GiftAnimation event={giftEvent} onDone={() => setGiftEvent(null)} />
     </main>
   );
 }

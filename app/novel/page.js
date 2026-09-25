@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
+import GiftModal from "@/components/economie/GiftModal";
 
 const GITHUB = { owner: "benjohnsonjuste", repo: "Lisible" };
 
@@ -192,17 +193,11 @@ export default function DuelDesNouvelles() {
 
       {/* MODALE CADEAU */}
       {giftRecipient && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6">
-          <div className="relative w-full max-w-md animate-in zoom-in-95 duration-200">
-            <button 
-              onClick={() => setGiftRecipient(null)}
-              className="absolute -top-12 right-0 p-2 text-white hover:text-teal-400 transition-colors"
-            >
-              <X size={32} />
-            </button>
-            <CadeauLi />
-          </div>
-        </div>
+        <GiftModal
+          destinataire={giftRecipient}
+          contexte={{ type: "battle", refId: "novel", refTitre: "Concours Novel" }}
+          onClose={() => setGiftRecipient(null)}
+        />
       )}
 
       <footer className="mt-32 text-center pb-10"><p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 flex items-center justify-center gap-4"><span className="w-8 h-px bg-slate-100"></span>Lisible • Concours Officiel • {new Date().getFullYear()}<span className="w-8 h-px bg-slate-100"></span></p></footer>

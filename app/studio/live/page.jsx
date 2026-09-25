@@ -209,6 +209,13 @@ function StudioLiveInner() {
       setMode("idle");
       toast.info("Le live est terminé.");
     });
+    // Cadeaux reçus en temps réel
+    channel.bind("gift", (data) => {
+      toast.success(`${data.icone} ${data.cadeauNom} reçu !`, {
+        description: `${data.deNom} vous a offert ${Number(data.li).toLocaleString("fr-FR")} Li.`,
+        duration: 6000,
+      });
+    });
     return () => {
       channel.unbind_all();
       pusher.unsubscribe(`live-room-${live.id}`);

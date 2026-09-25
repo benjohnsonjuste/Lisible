@@ -88,7 +88,28 @@ export default function Conditions() {
 
           <section>
             <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
-              <span className="bg-teal-600 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">05</span>
+              <span className="bg-amber-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">05</span>
+              <Coins size={24} /> Monnaie virtuelle Li & Cadeaux
+            </h2>
+            <div className="p-6 bg-amber-50 rounded-2xl border border-amber-200 flex flex-col gap-2 mb-6">
+              <span className="text-[10px] font-black uppercase text-amber-700 tracking-widest">Taux officiel unique</span>
+              <span className="text-xl font-black text-slate-900">1 Li = 0,01 $ US — sur toute la plateforme, sans exception</span>
+            </div>
+            <ul className="list-disc pl-6 space-y-2 text-sm">
+              <li><strong>Nature des Li :</strong> les Li sont des jetons d'usage internes (points utilitaires). Ils ne constituent ni une monnaie électronique, ni une cryptomonnaie, ni une réserve de valeur.</li>
+              <li><strong>Achat :</strong> les lecteurs achètent des packs de Li en une seule transaction (carte bancaire, PayPal ou Interac). Les frais bancaires sont groupés sur cette transaction unique afin d'éviter les micro-frais sur chaque don.</li>
+              <li><strong>Non-remboursables :</strong> une fois achetés, les Li ne peuvent pas être reconvertis en argent réel ni remboursés au lecteur (hors droit de rétractation légal applicable aux contenus numériques non consommés).</li>
+              <li><strong>Cadeaux :</strong> les lecteurs offrent des cadeaux virtuels animés (Gomme, Crayon, Feuille, Encrier, Plume d'Or, Parchemin, Grimoire d'Or) aux auteurs lors des lives, des jeux en direct et au bas des textes et livres publiés. Chaque cadeau a une valeur fixe en Li.</li>
+              <li><strong>Répartition :</strong> sur chaque cadeau, <strong>85 %</strong> de la valeur en Li revient à l'auteur sous forme de gains, <strong>15 %</strong> reviennent à Lisible (serveurs, flux vidéo, fonctionnement). Les frais bancaires liés aux retraits sont déduits de la part de l'auteur.</li>
+              <li><strong>Retraits des auteurs :</strong> l'auteur accumule ses gains en Li et peut demander un retrait à partir de <strong>25 000 Li</strong> (250 $ US). Une <strong>réserve de 5 %</strong> est retenue temporairement sur chaque retrait pour couvrir d'éventuels litiges bancaires (chargebacks) ; elle est libérée après 60 jours sans litige.</li>
+              <li><strong>Vérification d'identité (KYC) :</strong> avant tout versement en argent réel, l'auteur doit faire vérifier son identité (pièce d'identité et informations fiscales), conformément aux règles de lutte contre le blanchiment d'argent (AML). Lisible peut refuser ou suspendre un retrait en cas de doute.</li>
+              <li><strong>Transferts :</strong> tout envoi de cadeau est définitif et enregistré. Les tentatives de fraude, de contournement ou de manipulation du système de cadeaux entraînent le blocage du compte et l'annulation des gains (voir clause anti-fraude).</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
+              <span className="bg-teal-600 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">06</span>
               Espace Freelance
             </h2>
             <div className="space-y-4">
@@ -117,7 +138,7 @@ export default function Conditions() {
 
           <section>
             <h2 className="flex items-center gap-3 text-xl font-black text-slate-900 mb-6 uppercase tracking-wider">
-              <span className="bg-slate-900 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">06</span> 
+              <span className="bg-slate-900 text-white w-8 h-8 rounded-lg flex items-center justify-center text-[10px]">07</span> 
               Contact & Support
             </h2>
             <div className="flex flex-col md:flex-row gap-4">

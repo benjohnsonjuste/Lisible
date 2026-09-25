@@ -10,7 +10,7 @@ export const dynamic='force-dynamic';
 export const runtime='nodejs'; 
 
 const GITHUB_CONFIG={owner:"benjohnsonjuste",repo:"Lisible",token:process.env.GITHUB_TOKEN};
-const ECONOMY={MIN_TRANSFER:1000,WITHDRAWAL_THRESHOLD:25000,REQUIRED_FOLLOWERS:250,LI_VALUE_USD:0.0002};
+const ECONOMY={MIN_TRANSFER:1000,WITHDRAWAL_THRESHOLD:25000,REQUIRED_FOLLOWERS:250,LI_VALUE_USD:0.01};
 
 async function getFile(path){const now=Date.now();const cached=localCache.get(path);if(cached&&(now-cached.timestamp<CACHE_TTL)){return cached.data;}
 try{const res=await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,{headers:{'Authorization':`Bearer ${GITHUB_CONFIG.token}`,'Accept':'application/vnd.github.v3+json','User-Agent':'Lisible-App'},cache:'no-store'});if(res.status===404)return null;if(!res.ok)return null;const data=await res.json();if(Array.isArray(data))return{content:data,isDir:true};if(!data.content)return null;const b64=data.content.replace(/\s/g,'');const binString=atob(b64);const bytes=Uint8Array.from(binString,(m)=>m.codePointAt(0));const decodedContent=new TextDecoder().decode(bytes);const result={content:JSON.parse(decodedContent),sha:data.sha};if(CACHE_TTL>0)localCache.set(path,{data:result,timestamp:now});return result;}catch(err){console.error(`Fetch error [${path}]:`,err.message);return null;}}
