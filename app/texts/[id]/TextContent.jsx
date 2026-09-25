@@ -173,8 +173,9 @@ const TextContent = ({ id }) => {
             <React.Fragment key={i}>
               <p className="mb-6 leading-relaxed">{p}</p>
 
-              {/* Rendu dynamique : Le composant InTextAd se charge de façon isolée entre les paragraphes tous les 4 paragraphes */}
-              {(i + 1) % 4 === 0 && <InTextAd />}
+              {/* Encart publicitaire discret tous les 2 paragraphes.
+                  Le composant se replie automatiquement s'il reste vide. */}
+              {(i + 1) % 2 === 0 && <InTextAd />}
             </React.Fragment>
           ))}
         </div>
