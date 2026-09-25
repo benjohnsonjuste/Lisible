@@ -8,10 +8,11 @@
         "nom": "Ben Johnson Juste"
       },
       "instrumentalId": "voyage",
-      "statut": "attente",
+      "statut": "terminee",
       "invites": [],
       "createdAt": "2026-09-25T21:40:48.879Z",
-      "episode": null
+      "episode": null,
+      "endedAt": "2026-09-25T21:41:06.668Z"
     }
   }
 }
