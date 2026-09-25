@@ -59,7 +59,8 @@ async function parsePdf(arrayBuffer) {
 }
 
 async function parseEpub(arrayBuffer) {
-  const JSZip = (await import("jszip")).default;
+  const zipMod = await import("jszip");
+  const JSZip = zipMod.default || zipMod;
   const zip = await JSZip.loadAsync(arrayBuffer);
   const containerFile = zip.file("META-INF/container.xml");
   if (!containerFile) throw new Error("EPUB invalide");
@@ -91,7 +92,8 @@ async function parseEpub(arrayBuffer) {
 }
 
 async function parseDocx(arrayBuffer) {
-  const mammoth = await import("mammoth");
+  const mMod = await import("mammoth");
+  const mammoth = mMod.default || mMod;
   const res = await mammoth.convertToHtml({ arrayBuffer });
   const tmp = document.createElement("div");
   tmp.innerHTML = res.value || "";
