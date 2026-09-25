@@ -1,1 +1,17 @@
-{"sessions":{}}
+{
+  "sessions": {
+    "MUGLP3X3A0DNOZ": {
+      "id": "MUGLP3X3A0DNOZ",
+      "titre": "Test token 3",
+      "hote": {
+        "email": "test@lisible.biz",
+        "nom": "Testeur"
+      },
+      "instrumentalId": null,
+      "statut": "attente",
+      "invites": [],
+      "createdAt": "2026-09-25T06:49:42.423Z",
+      "episode": null
+    }
+  }
+}
