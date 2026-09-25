@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "../_lib/session.js";
 
 const GITHUB_API_URL = "https://api.github.com/repos";
-const REPO = process.env.GITHUB_REPO;
+const REPO = process.env.GITHUB_REPO || "benjohnsonjuste/Lisible";
 const TOKEN = process.env.GITHUB_TOKEN;
 const FILE_PATH = "data/lives.json";
 
@@ -120,7 +120,7 @@ async function getCompactUsers() {
     );
     if (!listRes.ok) return usersCache.list;
     const files = await listRes.json();
-    const batch = files.filter((f) => f.name.endsWith(".json")).slice(0, 10);
+    const batch = files.filter((f) => f.name.endsWith(".json")).slice(0, 40);
     const results = await Promise.all(
       batch.map(async (f) => {
         try {
@@ -153,25 +153,6 @@ export async function GET(req) {
 
   if (wantUsers) {
     const list = await getCompactUsers();
-    if (searchParams.get("debug") === "1") {
-      let diag = { users: list.length };
-      try {
-        const lr = await fetch(`${GITHUB_API_URL}/${REPO}/contents/data/users`, {
-          headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json", "User-Agent": "Lisible-Studio/1.0" },
-          cache: "no-store"
-        });
-        diag.listStatus = lr.status;
-        diag.repo = REPO;
-        diag.hasToken = !!TOKEN;
-        if (lr.ok) {
-          const fs = await lr.json();
-          diag.filesCount = Array.isArray(fs) ? fs.length : typeof fs;
-        } else {
-          diag.listBody = (await lr.text()).slice(0, 150);
-        }
-      } catch (e) { diag.error = e.message; }
-      return NextResponse.json({ users: list, _debug: diag });
-    }
     return NextResponse.json({ users: list });
   }
 
