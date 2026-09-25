@@ -9,7 +9,16 @@ const GITHUB_CONFIG = {
 
 export async function POST(req) {
   try {
-    const { reportData } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Corps de requête invalide" }, { status: 400 });
+    }
+    const { reportData } = body || {};
+    if (!reportData || typeof reportData !== "object" || !reportData.reason || !reportData.textId) {
+      return NextResponse.json({ error: "Données de signalement incomplètes" }, { status: 400 });
+    }
     const isForum = reportData.reason === "FORUM_POST";
     const isDirectMessage = reportData.reason === "DIRECT_MESSAGE";
     const isPodcast = reportData.reason === "PODCAST_ISSUE" || (reportData.textId && reportData.textId.startsWith("POD-"));
