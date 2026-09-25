@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 // Le tag Monetag ne doit être injecté QU'UNE SEULE FOIS par page,
 // même si plusieurs encarts sont rendus (un tag par page suffit,
 // les doublons ne servent à rien et alourdissent le chargement).
+// Zone "Lisible In-Text" (ID 11888115) — format In-Page Push (Banner),
+// créée le 2026-09-25 : s'affiche comme une bannière native discrète.
 let monetagTagInjecte = false;
 
 function injecterTagMonetag() {
@@ -12,7 +14,7 @@ function injecterTagMonetag() {
   if (typeof document === "undefined") return;
   const s = document.createElement("script");
   s.src = "https://nap5k.com/tag.min.js";
-  s.setAttribute("data-zone", "11101873");
+  s.setAttribute("data-zone", "11888115");
   s.async = true;
   s.setAttribute("data-cfasync", "false");
   document.body.appendChild(s);
@@ -49,7 +51,7 @@ export default function InTextAd() {
       <span className="text-[9px] uppercase tracking-widest text-stone-400 select-none">
         Sponsorisé
       </span>
-      <div className="w-full flex justify-center" data-ad-zone="11101873" />
+      <div className="w-full flex justify-center" data-ad-zone="11888115" />
     </div>
   );
 }
