@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Square, Upload, Loader2, Radio, Headphones, Lock, Award, Sparkles, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import ContactModal from '@/components/ContactModal';
+import { getSessionToken } from '@/lib/session-client.js';
 
 // Composant interne pour les ondes de voix
 const AudioVisualizer = ({ isRecording }) => {
@@ -94,6 +95,7 @@ export default function PodcastStudio({ currentUser }) {
       
       const formData = new FormData();
       formData.append('file', audioBlob, `podcast-${Date.now()}.mp3`);
+      formData.append('sessionToken', getSessionToken() || '');
 
       const uploadRes = await fetch('/api/podcasts/upload', {
         method: 'POST',
@@ -111,6 +113,7 @@ export default function PodcastStudio({ currentUser }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'addPodcast',
+          sessionToken: getSessionToken(),
           podcastData: {
             id: crypto.randomUUID(),
             title: podcastTitle,
