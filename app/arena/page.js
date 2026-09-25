@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import AdBanner, { useAdPlacements } from "@/components/AdBanner";
 import { 
   Trophy, 
   Sparkles, 
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 export default function ArenaPage() {
+  const adPlacements = useAdPlacements("strip");
   const concours = [
     {
       id: "battle",
@@ -73,6 +75,9 @@ export default function ArenaPage() {
         </header>
 
         <hr className="my-20 border-slate-100" />
+
+        {/* Bannière publicitaire discrète (se replie si vide). */}
+        {adPlacements && <AdBanner placement={adPlacements[0]} className="mb-4" />}
 
         {/* GALLERIES SECTION */}
         <section className="space-y-12">
