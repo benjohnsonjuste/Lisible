@@ -58,6 +58,22 @@ export async function GET(req) {
 
     const files = await listRes.json();
 
+    // Mode "email" : un seul profil utilisateur (2 sous-requêtes max).
+    // Le nom du fichier est dérivé de l'email : minuscules, tout caractère
+    // non alphanumérique remplacé par "_". Contourne la limite de 50
+    // sous-requêtes par invocation du Worker (63 profils à ce jour).
+    const emailParam = searchParams.get('email');
+    if (emailParam && folder === 'users') {
+      const fileName = emailParam.toLowerCase().trim().replace(/[^a-z0-9]/g, '_') + '.json';
+      const fileRes = await fetch(
+        `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/main/data/users/${fileName}`,
+        { cache: 'no-store' }
+      );
+      if (!fileRes.ok) return NextResponse.json({ folder, total: 0, content: [] });
+      const user = await fileRes.json();
+      return NextResponse.json({ folder, total: 1, content: [user] });
+    }
+
     // Mode "list" : on ne renvoie que la liste des fichiers (1 seule sous-requête).
     // Le client télécharge ensuite chaque fichier via son download_url (même
     // modèle que la page salon). Cela contourne la limite de 50 sous-requêtes
