@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, HandCoins, ShieldAlert, PieChart, CalendarClock } from "lucide-react";
+import { getSessionToken } from "../../../lib/session-client.js";
 
 function user() {
   try { return JSON.parse(localStorage.getItem("lisible_user") || "null"); } catch { return null; }
@@ -37,7 +38,7 @@ export default function CampagneDetailPage() {
     setMsg("Contribution en cours…");
     const res = await fetch("/api/coproduction", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "contribuer", campagneId: id, userEmail: me.email, montantCAD: Number(montant) }),
+      body: JSON.stringify({ action: "contribuer", campagneId: id, sessionToken: getSessionToken(), montantCAD: Number(montant) }),
     }).then((r) => r.json());
     if (res.success) { setMsg(`✅ Contribution enregistrée ! Mise nette : ${res.montantNetCAD.toFixed(2)} $ CA. Nouveau solde : ${res.nouveauSolde.toLocaleString("fr-FR")} Li.`); charger(); }
     else setMsg(`❌ ${res.error}`);
