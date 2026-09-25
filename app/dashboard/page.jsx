@@ -40,7 +40,7 @@ export default function AuthorDashboard() {
         }
         
         const [userRes, statsRes, libraryRes] = await Promise.all([
-          fetch(`/api/realtime-data?folder=users`),
+          fetch(`/api/realtime-data?folder=users&email=${encodeURIComponent(email)}`),
           fetch(`/api/stats/author?email=${encodeURIComponent(email)}`),
           fetch(`/api/realtime-data?folder=publications`)
         ]);
@@ -49,7 +49,7 @@ export default function AuthorDashboard() {
         const statsData = await statsRes.json();
         const libraryData = await libraryRes.json();
 
-        const currentUserFile = userData.content?.find(u => u.email?.toLowerCase().trim() === email);
+        const currentUserFile = userData.content?.[0];
         if (currentUserFile) {
           setUser(currentUserFile);
           localStorage.setItem("lisible_user", JSON.stringify(currentUserFile));
