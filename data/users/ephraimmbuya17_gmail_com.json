@@ -207,5 +207,9 @@
   "referralCode": null,
   "penName": "",
   "birthday": "",
-  "profilePic": "/api/media/avatars/d49bbee72388e38c.jpg"
+  "profilePic": "/api/media/avatars/d49bbee72388e38c.jpg",
+  "totalLikes": 6,
+  "totalCertifications": 2,
+  "totalFollowers": 0,
+  "lastStatsUpdate": "2026-09-25T07:37:30.204Z"
 }
