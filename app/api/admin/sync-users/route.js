@@ -21,7 +21,7 @@ export async function GET(req) {
     }
     // 1. Lister tous les fichiers dans data/users
     const listRes = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/data/users`, {
-      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Lisible-App' },
       cache: 'no-store'
     });
 
@@ -44,7 +44,7 @@ export async function GET(req) {
     
     // On vérifie si l'index existe déjà pour avoir son SHA (nécessaire pour l'update)
     const existingIndex = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${indexPath}`, {
-      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'User-Agent': 'Lisible-App' }
     });
     const indexData = existingIndex.ok ? await existingIndex.json() : null;
 
@@ -52,7 +52,7 @@ export async function GET(req) {
 
     await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${indexPath}`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
       body: JSON.stringify({
         message: "Initialisation de l'index des utilisateurs",
         content: contentBase64,
