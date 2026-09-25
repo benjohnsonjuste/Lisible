@@ -19,5 +19,9 @@
   "referralCode": null,
   "penName": "Valérie Guilbert",
   "birthday": "1975-10-09",
-  "profilePic": ""
+  "profilePic": "",
+  "totalLikes": 0,
+  "totalCertifications": 0,
+  "totalFollowers": 0,
+  "lastStatsUpdate": "2026-09-25T07:37:33.294Z"
 }
