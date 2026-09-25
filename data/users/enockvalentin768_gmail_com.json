@@ -12,5 +12,9 @@
   "created_at": "2026-04-17T18:11:37.445Z",
   "password": "$2b$10$s5Ta72KnISYAzh2Ny7PflO/LW2raSD1kYgTRe3yLvX7VqiQLACv4O",
   "referralCode": null,
-  "guestBonus": 0
+  "guestBonus": 0,
+  "totalLikes": 0,
+  "totalCertifications": 0,
+  "totalFollowers": 0,
+  "lastStatsUpdate": "2026-09-25T07:37:28.633Z"
 }
