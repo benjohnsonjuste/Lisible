@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import MessageModal from "@/components/MessageModal";
 import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
 import FoyerHub from "@/components/foyer/FoyerHub";
+import AdBanner, { useAdPlacements } from "@/components/AdBanner";
 
 export default function CommunautePage() {
   const [authors, setAuthors] = useState([]);
@@ -22,6 +23,8 @@ export default function CommunautePage() {
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [giftRecipient, setGiftRecipient] = useState(null); // État pour le cadeau
   const [onglet, setOnglet] = useState("cercle"); // "cercle" | "foyer"
+  const adStrip = useAdPlacements("strip"); // bannière sous les onglets
+  const adBox = useAdPlacements("box"); // bannière insérée dans la grille
 
   useEffect(() => {
     setMounted(true);
@@ -189,13 +192,17 @@ export default function CommunautePage() {
         </button>
       </div>
 
+      {/* Bannière publicitaire discrète (se replie si vide). */}
+      {adStrip && <AdBanner placement={adStrip[0]} className="mb-12" />}
+
       {onglet === "foyer" ? (
         <FoyerHub authors={authors} />
       ) : (
       <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {filteredAuthors.slice(0, visibleCount).map((a) => (
-          <div key={a.email} className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-hover hover:border-teal-200">
+        {filteredAuthors.slice(0, visibleCount).map((a, idx) => (
+          <React.Fragment key={a.email}>
+          <div className="group bg-white rounded-[3.5rem] p-10 border border-slate-100 shadow-xl relative overflow-hidden transition-hover hover:border-teal-200">
             <div className="absolute top-8 right-8 flex flex-col items-end gap-2 z-10">
               {getBadges(a).map((b, i) => (
                 <div key={i} className={`${b.color} px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 mb-1`}>{b.icon} {b.label}</div>
@@ -253,6 +260,13 @@ export default function CommunautePage() {
               </div>
             </div>
           </div>
+          {/* Bannière discrète insérée dans la grille tous les 8 auteurs. */}
+          {(idx + 1) % 8 === 0 && adBox && (
+            <div className="md:col-span-2">
+              <AdBanner placement={adBox[0]} />
+            </div>
+          )}
+          </React.Fragment>
         ))}
       </div>
 
