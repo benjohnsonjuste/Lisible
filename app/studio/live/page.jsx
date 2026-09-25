@@ -12,6 +12,7 @@ import {
   LivepeerProvider, PUSHER_KEY, PUSHER_CLUSTER, sanitizeChannel,
   getStoredUser, formatCountdown, LIVE_DURATION_MS,
 } from "@/components/live/livekit";
+import { getSessionToken } from "../../../lib/session-client.js";
 
 function InviteModal({ liveId, hostEmail, onClose, onInvited }) {
   const [users, setUsers] = useState([]);
@@ -44,7 +45,7 @@ function InviteModal({ liveId, hostEmail, onClose, onInvited }) {
       const res = await fetch("/api/lives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "invite-guest", liveId, email: hostEmail, guestEmail: u.email }),
+        body: JSON.stringify({ action: "invite-guest", liveId, sessionToken: getSessionToken(), guestEmail: u.email }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur");
@@ -130,7 +131,7 @@ function StudioLiveInner() {
     const res = await fetch("/api/lives", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "create-stream", name }),
+      body: JSON.stringify({ action: "create-stream", sessionToken: getSessionToken(), name }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "Service de live indisponible");
@@ -233,7 +234,7 @@ function StudioLiveInner() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "create",
-              email: user.email,
+              sessionToken: getSessionToken(),
               name: user.penName || user.name,
               avatar: user.avatar || user.photoURL || null,
               title: title.trim() || `Live de ${user.penName || user.name}`,
@@ -310,7 +311,7 @@ function StudioLiveInner() {
       await fetch("/api/lives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "end", liveId: live.id, email: user.email }),
+        body: JSON.stringify({ action: "end", liveId: live.id, sessionToken: getSessionToken() }),
       });
     } catch {}
     setLive(null);
@@ -344,7 +345,7 @@ function StudioLiveInner() {
             body: JSON.stringify({
               action: "guest-start",
               liveId: inv.id,
-              email: user.email,
+              sessionToken: getSessionToken(),
               playbackId: guestStream.playbackId,
               streamKey: guestStream.streamKey,
             }),
@@ -388,7 +389,7 @@ function StudioLiveInner() {
         await fetch("/api/lives", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "guest-end", liveId: activeInvite.id, email: user.email }),
+          body: JSON.stringify({ action: "guest-end", liveId: activeInvite.id, sessionToken: getSessionToken() }),
         });
       } catch {}
     }
@@ -589,7 +590,7 @@ function StudioLiveInner() {
                     <p className="font-bold">{live.guest.name}</p>
                     <p className="text-xs text-slate-500 uppercase tracking-widest mt-1">Invitation envoyée — en attente…</p>
                     <button onClick={async () => {
-                      await fetch("/api/lives", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel-invite", liveId: live.id, email: user.email }) });
+                      await fetch("/api/lives", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel-invite", liveId: live.id, sessionToken: getSessionToken() }) });
                       setLive({ ...live, guest: null });
                     }} className="mt-4 text-xs text-slate-500 hover:text-rose-400 underline">Annuler l'invitation</button>
                   </div>
