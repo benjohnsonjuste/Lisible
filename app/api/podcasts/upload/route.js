@@ -2,6 +2,7 @@
 // Remplace l'ancien stockage Vercel Blob afin de ne plus dépendre des quotas Vercel.
 import { NextResponse } from "next/server";
 import { getMediaBucket } from "../../_lib/r2.js";
+import { getSessionUser } from "../../_lib/session.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,6 +12,11 @@ const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
 export async function POST(request) {
   try {
     const formData = await request.formData();
+    // Téléversement réservé aux utilisateurs connectés (session vérifiée).
+    const session = await getSessionUser(formData.get("sessionToken")).catch(() => null);
+    if (!session || !session.email) {
+      return NextResponse.json({ error: "Session requise. Reconnectez-vous." }, { status: 401 });
+    }
     const file = formData.get("file");
 
     if (!file) {
