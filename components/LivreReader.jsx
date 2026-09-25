@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -15,12 +15,15 @@ import {
 } from "lucide-react";
 import SecurityLock from "./SecurityLock";
 import GiftBar from "./economie/GiftBar";
+import AdBanner from "./AdBanner";
+import { INTEXT_MOBILE, INTEXT_DESKTOP } from "./adsterraPlacements";
 
 export default function LivreReader({ id }) {
   const [livre, setLivre] = useState(null);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
+  const [isMobile, setIsMobile] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +63,15 @@ export default function LivreReader({ id }) {
     return () => window.removeEventListener("keydown", h);
   }, [go]);
 
+  // Détection mobile/desktop (choix des tailles de bannières in-text).
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   const like = async () => {
     if (liked || !livre) return;
     setLiked(true);
@@ -76,6 +88,28 @@ export default function LivreReader({ id }) {
       }
     } catch {}
   };
+
+  const paragraphs = String((livre && livre.pages[page]) || "")
+    .split(/\n\s*\n/)
+    .filter(Boolean);
+  const progress = total > 0 ? ((page + 1) / total) * 100 : 0;
+
+  // Bannières in-text discrètes, réparties uniformément sur la page du livre.
+  // Contrainte Adsterra : un code = UN SEUL slot par page.
+  // (useMemo placé avant les returns précoces — règle des hooks.)
+  const adMap = useMemo(() => {
+    const map = new Map();
+    if (isMobile === null) return map;
+    const slots = [];
+    paragraphs.forEach((_, i) => { if ((i + 1) % 2 === 0) slots.push(i); });
+    const placements = isMobile ? INTEXT_MOBILE : INTEXT_DESKTOP;
+    const n = Math.min(placements.length, slots.length);
+    for (let j = 0; j < n; j++) {
+      const sIdx = n === 1 ? 0 : Math.round((j * (slots.length - 1)) / (n - 1));
+      map.set(slots[sIdx], placements[j]);
+    }
+    return map;
+  }, [paragraphs, isMobile]);
 
   if (loading) {
     return (
@@ -102,11 +136,6 @@ export default function LivreReader({ id }) {
       </div>
     );
   }
-
-  const paragraphs = String(livre.pages[page] || "")
-    .split(/\n\s*\n/)
-    .filter(Boolean);
-  const progress = total > 0 ? ((page + 1) / total) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-[#FDFCF8]">
@@ -160,7 +189,12 @@ export default function LivreReader({ id }) {
           <article className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-8 md:p-14 min-h-[60vh]">
             <div className="prose-lisible font-serif text-lg leading-loose text-slate-800">
               {paragraphs.map((p, i) => (
-                <p key={i} className="mb-6 text-justify">{p}</p>
+                <React.Fragment key={`${page}-${i}`}>
+                  <p className="mb-6 text-justify">{p}</p>
+                  {/* Bannière in-text discrète. Le composant se replie
+                      automatiquement si la bannière reste vide. */}
+                  {adMap.has(i) && <AdBanner placement={adMap.get(i)} className="my-3" />}
+                </React.Fragment>
               ))}
             </div>
             <p className="text-center mt-10 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">
