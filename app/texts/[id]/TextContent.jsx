@@ -17,7 +17,8 @@ import CadeauLi from "../../../components/CadeauLi";
 import GiftModal from "../../../components/economie/GiftModal";
 import GiftBar from "../../../components/economie/GiftBar";
 import InTextAd from "../../../components/InTextAd";
-import { SceauHumainDetail, SceauHumainDemande } from "../../../components/sceau/SceauHumain";
+import HorodatageDemande from "../../../components/coffre-fort/HorodatageDemande";
+import CertificatHorodatage from "../../../components/coffre-fort/CertificatHorodatage";
 
 // --- COMPOSANTS DE BADGES ---
 function BadgeConcours() {
@@ -243,11 +244,11 @@ const TextContent = ({ id }) => {
 
           {!isFocusMode && (
             <div className="flex flex-wrap items-center gap-4">
-              {data.humanSeal?.attested ? (
-                <SceauHumainDetail seal={data.humanSeal} />
+              {data.horodatage?.id ? (
+                <CertificatHorodatage certificat={data.horodatage} titre={data.title} auteur={data.authorName} />
               ) : (
                 user && data.authorEmail && user.email?.toLowerCase().trim() === data.authorEmail?.toLowerCase().trim() && (
-                  <SceauHumainDemande textId={id} onSealed={() => loadContent()} />
+                  <HorodatageDemande textId={id} onSealed={() => loadContent()} />
                 )
               )}
             </div>

@@ -16,7 +16,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import Head from "next/head";
-import { SceauHumainBadge } from "@/components/sceau/SceauHumain";
+import { CertificatBadge } from "@/components/coffre-fort/HorodatageDemande";
 
 export default function LibraryPage() {
   const [texts, setTexts] = useState([]);
@@ -101,7 +101,7 @@ export default function LibraryPage() {
           image: realImage || `https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=${email || index}`,
           isNovelDuel,
           isBattlePoetique,
-          humanSeal: data.humanSeal || liveStats.humanSeal || null
+          horodatage: data.horodatage || liveStats.horodatage || null
         };
       }));
 
@@ -191,8 +191,8 @@ export default function LibraryPage() {
                     <p className="text-[10px] font-black uppercase text-teal-600 tracking-wider italic">{text.authorName}</p>
                   </div>
                   <h2 className="text-3xl font-black italic text-slate-900 tracking-tighter leading-[1.1] group-hover:text-teal-600 transition-colors">{text.title}</h2>
-                  {text.humanSeal?.attested && (
-                    <div className="pt-1"><SceauHumainBadge /></div>
+                  {text.horodatage?.id && (
+                    <div className="pt-1"><CertificatBadge /></div>
                   )}
                 </div>
 

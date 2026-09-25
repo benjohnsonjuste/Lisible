@@ -14,7 +14,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import Link from "next/link";
-import { SceauHumainChoix } from "@/components/sceau/SceauHumain";
+import CoffreFortChoix from "@/components/coffre-fort/CoffreFortChoix";
 
 export default function PublishPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function PublishPage() {
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
-  const [sceauHumain, setSceauHumain] = useState(false);
+  const [coffreFort, setCoffreFort] = useState(false);
 
   const categories = ["Poésie", "Nouvelle", "Roman", "Essai", "Chronique", "Article"];
 
@@ -106,13 +106,6 @@ export default function PublishPage() {
         likes: 0,
         comments: [],
         certified: 0,
-        humanSeal: sceauHumain
-          ? {
-              attested: true,
-              date: new Date().toISOString(),
-              authorName: user.penName || user.name || "Une Plume",
-            }
-          : null
       };
 
       const resPublish = await fetch("/api/github-db", {
@@ -162,10 +155,37 @@ export default function PublishPage() {
         }
       }
 
-      toast.success("Publié ! Vos abonnés ont été notifiés. ✨", { id: toastId });
+      // 3. Scellement au Coffre-Fort (si demandé) — n'échoue jamais la publication
+      let certificatId = null;
+      if (coffreFort) {
+        try {
+          const resScel = await fetch("/api/horodatage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "sceller",
+              textId: id,
+              sessionToken: localStorage.getItem("lisible_session"),
+              cgu: true,
+            }),
+          });
+          const jScel = await resScel.json();
+          if (resScel.ok && jScel.success) certificatId = jScel.certificat.id;
+          else toast.warning("Publié, mais le scellement a échoué : " + (jScel.error || "réessayez depuis la page de lecture."));
+        } catch {
+          toast.warning("Publié, mais le scellement a échoué : réessayez depuis la page de lecture.");
+        }
+      }
+
+      toast.success(
+        certificatId
+          ? `Publié et scellé ! Certificat ${certificatId} 🏛️`
+          : "Publié ! Vos abonnés ont été notifiés. ✨",
+        { id: toastId }
+      );
       localStorage.removeItem("atelier_draft_title");
       localStorage.removeItem("atelier_draft_content");
-      router.push(`/texts/${id}`);
+      router.push(certificatId ? `/certificat/${certificatId}` : `/texts/${id}`);
 
     } catch (err) {
       toast.error(err.message, { id: toastId });
@@ -297,7 +317,7 @@ export default function PublishPage() {
             />
           </div>
 
-          <SceauHumainChoix checked={sceauHumain} onChange={setSceauHumain} />
+          <CoffreFortChoix checked={coffreFort} onChange={setCoffreFort} />
 
           <button
             type="submit"
