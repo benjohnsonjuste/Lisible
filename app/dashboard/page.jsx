@@ -3,12 +3,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import { 
   Loader2, Sparkles, Plus, FileText, Trash2, Edit3, ExternalLink,
   ShieldCheck, Swords, ArrowRight, Award, Share2, Download, Link as LinkIcon, Settings as SettingsIcon,
-  ShoppingBag, Gift, X
+  ShoppingBag, Gift, X, Clapperboard, BadgeCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import CadeauLi from '@/components/CadeauLi'; // Import du composant cadeau
+import HorodatageDemande from '@/components/coffre-fort/HorodatageDemande';
 
 export default function AuthorDashboard() {
   const router = useRouter();
@@ -365,12 +366,27 @@ export default function AuthorDashboard() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Link href={`/texts/${work.id}`} target="_blank" className="p-4 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-900 hover:text-white transition-all" title="Voir l'œuvre">
                     <ExternalLink size={18} />
                   </Link>
                   <Link href={`/edit/${work.id}`} className="p-4 bg-teal-50 text-teal-600 rounded-2xl hover:bg-teal-600 hover:text-white transition-all" title="Modifier">
                     <Edit3 size={18} />
+                  </Link>
+                  {work.horodatage?.id ? (
+                    <Link href={`/certificat/${work.horodatage.id}`} className="inline-flex items-center gap-2 px-5 py-3.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] hover:bg-amber-100 transition-all" title="Voir le certificat du Coffre-Fort">
+                      <BadgeCheck size={15} />
+                      Certificat
+                    </Link>
+                  ) : (
+                    <HorodatageDemande
+                      textId={work.id}
+                      onSealed={(certId) => setWorks((prev) => prev.map((w) => w.id === work.id ? { ...w, horodatage: { ...(w.horodatage || {}), id: certId || w.horodatage?.id || true } } : w))}
+                    />
+                  )}
+                  <Link href={`/studio/video?textId=${work.id}`} className="inline-flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] hover:from-amber-400 hover:to-amber-500 transition-all shadow" title="Transformer ce texte en vidéo verticale pour TikTok, Reels et Shorts">
+                    <Clapperboard size={15} />
+                    Créer une vidéo
                   </Link>
                   <button onClick={() => handleDelete(work.id, work.title)} className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-500 hover:text-white transition-all" title="Supprimer">
                     <Trash2 size={18} />
