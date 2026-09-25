@@ -43,8 +43,7 @@ export async function POST(req) {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${GITHUB_CONFIG.token}`,
-          'Content-Type': 'application/json' 
-        },
+          'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
         body: JSON.stringify({
           message: `Forum: ${messageContent.author}`,
           content: btoa(JSON.stringify(messageContent, null, 2))
