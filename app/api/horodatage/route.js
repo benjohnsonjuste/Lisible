@@ -154,7 +154,13 @@ export async function POST(req) {
       if (!id) return NextResponse.json({ error: "Identifiant manquant." }, { status: 400 });
       const f = await getFile(`${DIR}/certificats/${String(id).toUpperCase()}.json`);
       if (!f) return NextResponse.json({ error: "Certificat introuvable." }, { status: 404 });
-      const pdfBytes = await genererPDF(f.content);
+      let pdfBytes;
+      try {
+        pdfBytes = await genererPDF(f.content);
+      } catch (e) {
+        console.error("genererPDF:", e?.message);
+        return NextResponse.json({ error: "La génération du PDF a échoué." }, { status: 500 });
+      }
       return new Response(Buffer.from(pdfBytes), {
         status: 200,
         headers: {
@@ -370,6 +376,32 @@ export async function GET(req) {
 
 // --- Génération du PDF haute qualité ----------------------------------------
 
+// pdf-lib n'encode que Windows-1252 avec les polices standard : le moindre
+// caractère hors plage (ex. ★, emoji dans un titre) fait échouer drawText ET
+// widthOfTextAtSize. On assainit tous les champs dynamiques pour une
+// génération infaillible.
+const WIN1252_SUP = new Set([
+  0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030,
+  0x0160, 0x2039, 0x0152, 0x017d, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022,
+  0x2013, 0x2014, 0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0x017e, 0x0178,
+]);
+function pdfSafe(s) {
+  return String(s ?? "")
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[—–]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/★/g, "*")
+    .split("")
+    .filter((ch) => {
+      const cp = ch.codePointAt(0);
+      if (cp === 0x0a || cp === 0x0d) return true;
+      if (cp < 0x20 || (cp >= 0x7f && cp <= 0x9f)) return false;
+      return cp <= 0xff || WIN1252_SUP.has(cp);
+    })
+    .join("");
+}
+
 function wrap(text, font, size, maxWidth) {
   const words = String(text).split(/\s+/);
   const lines = [];
@@ -387,14 +419,25 @@ function wrap(text, font, size, maxWidth) {
   return lines;
 }
 
-async function genererPDF(c) {
+async function genererPDF(cert) {
+  // Assainit les champs dynamiques (titres/auteurs avec emoji, etc.)
+  const c = {
+    ...cert,
+    id: pdfSafe(cert.id),
+    titre: pdfSafe(cert.titre),
+    auteur: pdfSafe(cert.auteur),
+    nomFichier: pdfSafe(cert.nomFichier),
+    format: pdfSafe(cert.format),
+    hash: pdfSafe(cert.hash),
+    hashFichier: pdfSafe(cert.hashFichier),
+  };
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([595.28, 841.89]);
   const W = 595.28;
   const H = 841.89;
 
   const times = await pdf.embedFont(StandardFonts.TimesRoman);
-  const timesB = await pdf.embedFont(StandardFonts.TimesBold);
+  const timesB = await pdf.embedFont(StandardFonts.TimesRomanBold);
   const helv = await pdf.embedFont(StandardFonts.Helvetica);
   const helvB = await pdf.embedFont(StandardFonts.HelveticaBold);
 
@@ -499,7 +542,7 @@ async function genererPDF(c) {
     page.drawText(txt, { x: sx - font.widthOfTextAtSize(txt, size) / 2, y: sy + dy, size, font, color: ROUGE_SCEAU });
   };
   sceauTxt("LISIBLE", 12, 15, helvB);
-  sceauTxt("★ ★ ★", -6, 9, helv);
+  sceauTxt("· · ·", -6, 9, helv);
   sceauTxt("HORODATAGE", -22, 8.5, helvB);
   sceauTxt("CERTIFIÉ", -34, 8.5, helvB);
 
