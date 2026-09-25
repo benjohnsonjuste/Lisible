@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import {
+  paymentsEnabled as paypalEnabled,
+  paypalClientIdPublic,
+  createSmartOrder,
+  captureSmartOrder,
+  getSmartOrder,
+} from "./paypal.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -115,6 +122,57 @@ async function appendLedger(entry) {
 const isAdmin = (adminToken) =>
   !!process.env.ADMIN_PASSWORD && adminToken === process.env.ADMIN_PASSWORD;
 
+// Secret partagé avec le script de surveillance (cron) — jamais exposé au client.
+const isCron = (s) =>
+  !!process.env.ECONOMIE_CRON_SECRET && s === process.env.ECONOMIE_CRON_SECRET;
+
+// Crédite les Li d'une commande en attente (idempotent).
+// Utilisé par : validation admin, capture PayPal, validation auto Interac.
+async function crediterCommande(order, sha) {
+  if (!order || order.statut !== "en_attente") return { ok: false, error: "Commande déjà traitée" };
+  const uf = await getFile(getSafePath(order.userEmail));
+  if (!uf) return { ok: false, error: "Utilisateur introuvable" };
+  uf.content.li = Number(uf.content.li || 0) + Number(order.li);
+  uf.content.notifications = [
+    {
+      id: `achat_${Date.now()}`,
+      type: "purchase",
+      message: `✅ Achat confirmé : +${Number(order.li).toLocaleString("fr-FR")} Li (${order.packNom}). Bonnes lectures !`,
+      date: new Date().toISOString(),
+      read: false,
+    },
+    ...(uf.content.notifications || []),
+  ].slice(0, 100);
+  await updateFile(getSafePath(order.userEmail), uf.content, uf.sha, `💰 Li crédités: ${order.id}`);
+  order.statut = "payee";
+  order.traiteeLe = new Date().toISOString();
+  await updateFile(`data/economie/commandes/${order.id}.json`, order, sha, `✅ Commande validée ${order.id}`);
+  await appendLedger({
+    type: "achat",
+    de: "plateforme",
+    vers: order.userEmail,
+    versNom: order.userNom,
+    li: order.li,
+    usd: order.prixUsd,
+    methode: order.methode,
+    commandeId: order.id,
+    paypalCaptureId: order.paypalCaptureId || undefined,
+  });
+  return { ok: true, nouveauSolde: uf.content.li };
+}
+
+// Liste les commandes récentes (pour réconciliation / auto-validation).
+async function listerCommandes(limit = 80) {
+  const dir = await getFile("data/economie/commandes");
+  const files = dir && dir.isDir ? dir.content.filter((x) => x.name.endsWith(".json")) : [];
+  const items = [];
+  for (const fl of files.slice(-limit)) {
+    const f = await getFile(`data/economie/commandes/${fl.name}`);
+    if (f) items.push({ ...f.content, _sha: f.sha });
+  }
+  return items;
+}
+
 // ---------- GET ----------
 export async function GET(req) {
   try {
@@ -125,7 +183,18 @@ export async function GET(req) {
     if (action === "config") {
       const cfg = await getConfig();
       if (!cfg) return NextResponse.json({ error: "Config introuvable" }, { status: 500 });
-      return NextResponse.json({ success: true, config: cfg });
+      const ppActif = paypalEnabled();
+      // Les paiements en ligne sont actifs uniquement si les identifiants PayPal sont configurés.
+      cfg.paiements = cfg.paiements || {};
+      if (cfg.paiements.paypal) cfg.paiements.paypal.actif = ppActif;
+      if (cfg.paiements.carte) cfg.paiements.carte.actif = ppActif;
+      return NextResponse.json({
+        success: true,
+        config: cfg,
+        paypalActif: ppActif,
+        // Identifiant public PayPal (nécessaire au widget de paiement côté client).
+        paypalClientId: ppActif ? paypalClientIdPublic() : null,
+      });
     }
 
     if (action === "solde") {
@@ -292,10 +361,14 @@ export async function POST(req) {
     }
 
     // ===== Créer une commande d'achat de Li =====
+    // Interac : crée une commande en attente (validation automatique par courriel).
+    // PayPal / carte : passer par paypal-creer-ordre (boutons intelligents, 100 % automatique).
     if (action === "creer-commande") {
       const pack = (cfg.packs || []).find((p) => p.id === data.packId);
       if (!pack) return NextResponse.json({ error: "Pack inconnu" }, { status: 400 });
       const methode = data.methode;
+      if (methode === "paypal" || methode === "carte")
+        return NextResponse.json({ error: "Utilisez le paiement PayPal / carte automatique", usePaypalSmart: true }, { status: 400 });
       const payCfg = (cfg.paiements || {})[methode];
       if (!payCfg) return NextResponse.json({ error: "Moyen de paiement inconnu" }, { status: 400 });
       if (!payCfg.actif)
@@ -305,8 +378,10 @@ export async function POST(req) {
       if (!sender) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
 
       const orderId = `cmd_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+      const reference = `LI-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
       const order = {
         id: orderId,
+        reference,
         userEmail: fromEmail,
         userNom: sender.content.name,
         packId: pack.id,
@@ -324,14 +399,157 @@ export async function POST(req) {
         instructions = {
           titre: "Virement Interac",
           lignes: [
-            `Envoyez ${pack.prixUsd.toFixed(2)} $ US par virement Interac à :`,
+            `Envoyez ${pack.prixUsd.toFixed(2)} $ US (ou l'équivalent en $ CA) par virement Interac à :`,
             cfg.interacCourriel || "(courriel à configurer)",
-            `Référence à indiquer : ${orderId}`,
-            "Vos Li seront crédités après validation par notre équipe (sous 24 h).",
+            `Référence OBLIGATOIRE à indiquer dans le message : ${reference}`,
+            "Vos Li seront crédités automatiquement dès réception du virement.",
           ],
+          reference,
         };
       }
       return NextResponse.json({ success: true, commande: order, instructions });
+    }
+
+    // ===== PayPal : créer une commande (boutons intelligents) =====
+    if (action === "paypal-creer-ordre") {
+      if (!paypalEnabled())
+        return NextResponse.json({ error: "Le paiement en ligne sera activé très bientôt." }, { status: 400 });
+      const pack = (cfg.packs || []).find((p) => p.id === data.packId);
+      if (!pack) return NextResponse.json({ error: "Pack inconnu" }, { status: 400 });
+      const fromEmail = (userEmail || "").toLowerCase().trim();
+      const sender = await getFile(getSafePath(fromEmail));
+      if (!sender) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+
+      const orderId = `cmd_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+      let pp;
+      try {
+        pp = await createSmartOrder(pack.prixUsd, `${pack.nom} — ${pack.li} Li (Lisible)`, orderId);
+      } catch (e) {
+        console.error("[economie] PayPal create:", e.message);
+        return NextResponse.json({ error: "Paiement indisponible pour le moment, réessayez." }, { status: 502 });
+      }
+      const order = {
+        id: orderId,
+        paypalOrderId: pp.orderId,
+        userEmail: fromEmail,
+        userNom: sender.content.name,
+        packId: pack.id,
+        packNom: pack.nom,
+        li: pack.li,
+        prixUsd: pack.prixUsd,
+        methode: "paypal",
+        statut: "en_attente",
+        date: new Date().toISOString(),
+      };
+      await updateFile(`data/economie/commandes/${orderId}.json`, order, null, `🧾 Commande PayPal ${orderId}`);
+      return NextResponse.json({ success: true, paypalOrderId: pp.orderId, commandeId: orderId });
+    }
+
+    // ===== PayPal : capturer après approbation (crédit automatique) =====
+    if (action === "paypal-capturer") {
+      if (!paypalEnabled()) return NextResponse.json({ error: "Paiement en ligne indisponible" }, { status: 400 });
+      const paypalOrderId = data.paypalOrderId;
+      if (!paypalOrderId) return NextResponse.json({ error: "Commande PayPal manquante" }, { status: 400 });
+      const commandes = await listerCommandes(120);
+      const found = commandes.find((o) => o.paypalOrderId === paypalOrderId);
+      if (!found) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
+      if (found.statut !== "en_attente") {
+        const uf = await getFile(getSafePath(found.userEmail));
+        return NextResponse.json({ success: true, dejaTraitee: true, nouveauSolde: uf ? Number(uf.content.li || 0) : 0 });
+      }
+      let capture;
+      try {
+        capture = await captureSmartOrder(paypalOrderId);
+      } catch (e) {
+        console.error("[economie] PayPal capture:", e.message);
+        return NextResponse.json({ error: "La capture du paiement a échoué. Vous n'avez pas été débité." }, { status: 502 });
+      }
+      // Vérifications anti-fraude : statut, devise, montant exact du pack.
+      if (capture.status !== "COMPLETED" || capture.currency !== "USD" || Math.abs(capture.amount - Number(found.prixUsd)) > 0.01) {
+        console.error("[economie] Capture suspecte:", JSON.stringify({ capture, attendu: found.prixUsd }));
+        return NextResponse.json({ error: "Paiement non conforme, contactez le support." }, { status: 400 });
+      }
+      found.paypalCaptureId = capture.captureId;
+      const res = await crediterCommande(found, found._sha);
+      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+      return NextResponse.json({ success: true, nouveauSolde: res.nouveauSolde, li: found.li });
+    }
+
+    // ===== Cron : réconcilier les commandes PayPal approuvées mais non capturées =====
+    if (action === "paypal-reconcilier") {
+      if (!isCron(data.cronSecret)) return NextResponse.json({ error: "Accès refusé" }, { status: 401 });
+      if (!paypalEnabled()) return NextResponse.json({ success: true, reconcilees: 0, note: "PayPal non configuré" });
+      const commandes = await listerCommandes(120);
+      const enAttente = commandes.filter((o) => o.statut === "en_attente" && o.paypalOrderId);
+      const resultat = { verifiees: 0, creditees: 0, expirees: 0 };
+      for (const o of enAttente) {
+        try {
+          const info = await getSmartOrder(o.paypalOrderId);
+          resultat.verifiees++;
+          if (info.status === "APPROVED") {
+            const capture = await captureSmartOrder(o.paypalOrderId);
+            if (capture.status === "COMPLETED" && capture.currency === "USD" && Math.abs(capture.amount - Number(o.prixUsd)) <= 0.01) {
+              o.paypalCaptureId = capture.captureId;
+              const r = await crediterCommande(o, o._sha);
+              if (r.ok) resultat.creditees++;
+            }
+          } else if (info.status === "COMPLETED") {
+            // Déjà capturée côté PayPal mais non créditée ici : on crédite après vérification.
+            if (info.currency === "USD" && Math.abs(info.amount - Number(o.prixUsd)) <= 0.01) {
+              const r = await crediterCommande(o, o._sha);
+              if (r.ok) resultat.creditees++;
+            }
+          } else if (info.status === "VOIDED" || Date.now() - new Date(o.date).getTime() > 72 * 3600 * 1000) {
+            o.statut = "expiree";
+            o.traiteeLe = new Date().toISOString();
+            await updateFile(`data/economie/commandes/${o.id}.json`, o, o._sha, `⌛ Commande expirée ${o.id}`);
+            resultat.expirees++;
+          }
+        } catch (e) {
+          console.error("[economie] Réconciliation", o.id, e.message);
+        }
+      }
+      return NextResponse.json({ success: true, ...resultat });
+    }
+
+    // ===== Cron : validation automatique des virements Interac =====
+    // Reçoit la liste des notifications de virement détectées dans la boîte
+    // courriel et crédite les commandes correspondantes (référence + montant).
+    if (action === "interac-auto-valider") {
+      if (!isCron(data.cronSecret)) return NextResponse.json({ error: "Accès refusé" }, { status: 401 });
+      const virements = Array.isArray(data.virements) ? data.virements : [];
+      const traitesPath = "data/economie/interac-traites.json";
+      const tf = await getFile(traitesPath);
+      const traites = tf && Array.isArray(tf.content) ? tf.content : [];
+      const traitesSet = new Set(traites);
+      const commandes = await listerCommandes(150);
+      const enAttente = commandes.filter((o) => o.statut === "en_attente" && o.methode === "interac");
+      const resultat = { examines: virements.length, valides: [], dejaTraites: 0 };
+      for (const v of virements) {
+        const vid = String(v.id || `${v.date}_${v.montant}`);
+        if (traitesSet.has(vid)) { resultat.dejaTraites++; continue; }
+        const message = String(v.message || "").toUpperCase();
+        const montant = Number(v.montant || 0);
+        const match = enAttente.find((o) => {
+          const refOk = (o.reference && message.includes(String(o.reference).toUpperCase())) || message.includes(o.id.toUpperCase());
+          if (!refOk) return false;
+          const tolerance = Math.max(1, Number(o.prixUsd) * 0.08);
+          return Math.abs(montant - Number(o.prixUsd)) <= tolerance;
+        });
+        if (match) {
+          const r = await crediterCommande(match, match._sha);
+          if (r.ok) {
+            resultat.valides.push({ commande: match.id, reference: match.reference, li: match.li });
+            enAttente.splice(enAttente.indexOf(match), 1);
+          }
+        }
+        traites.push(vid);
+        traitesSet.add(vid);
+      }
+      if (virements.length) {
+        await updateFile(traitesPath, traites.slice(-2000), tf ? tf.sha : null, "📥 Notifications Interac traitées");
+      }
+      return NextResponse.json({ success: true, ...resultat });
     }
 
     // ===== Admin : valider / rejeter une commande =====
@@ -344,34 +562,9 @@ export async function POST(req) {
         return NextResponse.json({ error: "Commande déjà traitée" }, { status: 400 });
 
       if (action === "valider-commande") {
-        const uf = await getFile(getSafePath(of.content.userEmail));
-        if (!uf) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-        uf.content.li = Number(uf.content.li || 0) + Number(of.content.li);
-        uf.content.notifications = [
-          {
-            id: `achat_${Date.now()}`,
-            type: "purchase",
-            message: `✅ Achat confirmé : +${of.content.li} Li (${of.content.packNom}). Bonnes lectures !`,
-            date: new Date().toISOString(),
-            read: false,
-          },
-          ...(uf.content.notifications || []),
-        ].slice(0, 100);
-        await updateFile(getSafePath(of.content.userEmail), uf.content, uf.sha, `💰 Li crédités: ${orderId}`);
-        of.content.statut = "payee";
-        of.content.traiteeLe = new Date().toISOString();
-        await updateFile(`data/economie/commandes/${orderId}.json`, of.content, of.sha, `✅ Commande validée ${orderId}`);
-        await appendLedger({
-          type: "achat",
-          de: "plateforme",
-          vers: of.content.userEmail,
-          versNom: of.content.userNom,
-          li: of.content.li,
-          usd: of.content.prixUsd,
-          methode: of.content.methode,
-          commandeId: orderId,
-        });
-        return NextResponse.json({ success: true });
+        const r = await crediterCommande(of.content, of.sha);
+        if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 });
+        return NextResponse.json({ success: true, nouveauSolde: r.nouveauSolde });
       }
       of.content.statut = "annulee";
       of.content.traiteeLe = new Date().toISOString();

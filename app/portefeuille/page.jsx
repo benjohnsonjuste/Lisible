@@ -1,8 +1,110 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Wallet, Coins, History, Banknote, ShieldCheck, Loader2, CreditCard, ArrowLeft, Check, AlertCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
+
+// Paiement automatique via boutons intelligents PayPal.
+// methode "paypal" → bouton PayPal ; methode "carte" → bouton carte bancaire
+// (sans compte PayPal requis). Le crédit des Li est instantané après capture.
+function PaypalSmartCheckout({ pack, methode, paypalClientId, userEmail, onSuccess }) {
+  const [sdkReady, setSdkReady] = useState(false);
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [processing, setProcessing] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!paypalClientId) return;
+    if (window.paypal) { setSdkReady(true); return; }
+    const s = document.createElement("script");
+    s.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&currency=USD&components=buttons&enable-funding=card&locale=fr_CA`;
+    s.onload = () => setSdkReady(true);
+    s.onerror = () => toast.error("Paiement en ligne indisponible pour le moment.");
+    document.body.appendChild(s);
+  }, [paypalClientId]);
+
+  const demarrer = async () => {
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/economie", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "paypal-creer-ordre", userEmail, packId: pack.id }),
+      });
+      const j = await res.json();
+      if (!res.ok) return toast.error(j.error || "Paiement impossible.");
+      setPaypalOrderId(j.paypalOrderId);
+    } catch {
+      toast.error("Erreur réseau.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!sdkReady || !paypalOrderId || !containerRef.current || !window.paypal) return;
+    containerRef.current.innerHTML = "";
+    const fundingSource = methode === "carte" ? window.paypal.FUNDING.CARD : window.paypal.FUNDING.PAYPAL;
+    try {
+      window.paypal.Buttons({
+        fundingSource,
+        style: { layout: "vertical", shape: "pill", label: "pay", height: 48 },
+        createOrder: () => paypalOrderId,
+        onApprove: async () => {
+          setCapturing(true);
+          try {
+            const res = await fetch("/api/economie", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "paypal-capturer", userEmail, paypalOrderId }),
+            });
+            const j = await res.json();
+            if (!res.ok) return toast.error(j.error || "Paiement non confirmé.");
+            toast.success(`Paiement accepté : +${Number(j.li || pack.li).toLocaleString("fr-FR")} Li crédités ! 🎉`);
+            onSuccess(j.nouveauSolde);
+          } catch {
+            toast.error("Erreur réseau pendant la confirmation.");
+          } finally {
+            setCapturing(false);
+          }
+        },
+        onError: () => toast.error("Le paiement a échoué, réessayez."),
+        onCancel: () => toast.info("Paiement annulé."),
+      }).render(containerRef.current);
+    } catch {
+      toast.error("Paiement indisponible pour le moment.");
+    }
+  }, [sdkReady, paypalOrderId]);
+
+  if (capturing) {
+    return (
+      <div className="py-8 text-center">
+        <Loader2 className="animate-spin mx-auto mb-3 text-teal-600" size={28} />
+        <p className="text-sm font-bold text-slate-600">Confirmation du paiement, crédit de vos Li…</p>
+      </div>
+    );
+  }
+
+  if (!paypalOrderId) {
+    return (
+      <button onClick={demarrer} disabled={processing || !sdkReady}
+        className="w-full py-4 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2">
+        {processing || !sdkReady ? <Loader2 className="animate-spin" size={16} /> : <CreditCard size={16} />}
+        {processing ? "Préparation..." : !sdkReady ? "Chargement du paiement..." : `Payer ${pack.prixUsd.toFixed(2)} $ US`}
+      </button>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-[11px] font-bold text-slate-500 text-center mb-3">
+        {methode === "carte" ? "Payez par carte bancaire (sans compte PayPal) :" : "Finalisez avec votre compte PayPal :"}
+      </p>
+      <div ref={containerRef} className="min-h-[60px]" />
+    </div>
+  );
+}
 
 const TABS = [
   { id: "acheter", label: "Acheter des Li", icon: Coins },
@@ -13,6 +115,7 @@ const TABS = [
 export default function PortefeuillePage() {
   const [user, setUser] = useState(null);
   const [config, setConfig] = useState(null);
+  const [paypalClientId, setPaypalClientId] = useState(null);
   const [tab, setTab] = useState("acheter");
   const [solde, setSolde] = useState(null);
   const [historique, setHistorique] = useState([]);
@@ -21,7 +124,7 @@ export default function PortefeuillePage() {
   const [order, setOrder] = useState(null);
   const [instructions, setInstructions] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [kycForm, setKycForm] = useState({ nom: "", prenom: "", dateNaissance: "", pays: "Canada", pieceType: "Passeport", pieceNumero: "", moyenPaiement: "paypal", coordonnees: "" });
+  const [kycForm, setKycForm] = useState({ nom: "", prenom: "", dateNaissance: "", pays: "Canada", pieceType: "Passeport", pieceNumero: "", moyenPaiement: "PayPal", coordonnees: "" });
   const [kycSending, setKycSending] = useState(false);
   const [montantRetrait, setMontantRetrait] = useState("");
   const [retraitSending, setRetraitSending] = useState(false);
@@ -37,7 +140,7 @@ export default function PortefeuillePage() {
     } catch {}
     fetch("/api/economie?action=config", { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => j.success && setConfig(j.config))
+      .then((j) => { if (j.success) { setConfig(j.config); if (j.paypalClientId) setPaypalClientId(j.paypalClientId); } })
       .catch(() => {});
   }, []);
 
@@ -210,12 +313,29 @@ export default function PortefeuillePage() {
                         </button>
                       ))}
                     </div>
-                    <button onClick={creerCommande} disabled={creating}
-                      className="w-full py-4 rounded-2xl bg-slate-950 hover:bg-teal-700 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2">
-                      {creating ? <Loader2 className="animate-spin" size={16} /> : <Coins size={16} />}
-                      {creating ? "Création..." : `Acheter ${packSel.li.toLocaleString("fr-FR")} Li — ${packSel.prixUsd.toFixed(2)} $ US`}
-                    </button>
-                    <p className="text-[10px] text-slate-400 text-center mt-3">Paiement unique • les frais bancaires sont groupés • Li non remboursables (<Link href="/terms" className="underline">CGU</Link>)</p>
+                    {(methode === "paypal" || methode === "carte") ? (
+                      paypalClientId ? (
+                        <PaypalSmartCheckout
+                          key={packSel.id + methode}
+                          pack={packSel}
+                          methode={methode}
+                          paypalClientId={paypalClientId}
+                          userEmail={user.email}
+                          onSuccess={() => { setPackSel(null); setMethode("interac"); refreshSolde(); }}
+                        />
+                      ) : (
+                        <p className="text-center text-xs font-bold text-amber-600 py-4">Activation du paiement en ligne en cours…</p>
+                      )
+                    ) : (
+                      <>
+                        <button onClick={creerCommande} disabled={creating}
+                          className="w-full py-4 rounded-2xl bg-slate-950 hover:bg-teal-700 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2">
+                          {creating ? <Loader2 className="animate-spin" size={16} /> : <Coins size={16} />}
+                          {creating ? "Création..." : `Acheter ${packSel.li.toLocaleString("fr-FR")} Li — ${packSel.prixUsd.toFixed(2)} $ US`}
+                        </button>
+                        <p className="text-[10px] text-slate-400 text-center mt-3">Paiement unique • les frais bancaires sont groupés • Li non remboursables (<Link href="/terms" className="underline">CGU</Link>)</p>
+                      </>
+                    )}
                   </div>
                 )}
               </>
@@ -294,9 +414,17 @@ export default function PortefeuillePage() {
                   </select>
                   <input required placeholder="N° de pièce" value={kycForm.pieceNumero} onChange={(e) => setKycForm({ ...kycForm, pieceNumero: e.target.value })} className="bg-slate-50 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-teal-500/30" />
                   <select value={kycForm.moyenPaiement} onChange={(e) => setKycForm({ ...kycForm, moyenPaiement: e.target.value })} className="bg-slate-50 rounded-2xl px-4 py-3 text-sm font-bold outline-none">
-                    <option value="paypal">PayPal</option><option value="virement">Virement bancaire</option>
+                    {(config?.moyensRetrait || ["PayPal"]).map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
                   </select>
-                  <input required placeholder="PayPal ou IBAN" value={kycForm.coordonnees} onChange={(e) => setKycForm({ ...kycForm, coordonnees: e.target.value })} className="bg-slate-50 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-teal-500/30" />
+                  <input required placeholder={
+                    kycForm.moyenPaiement === "PayPal" ? "Courriel PayPal" :
+                    kycForm.moyenPaiement === "Interac" ? "Courriel Interac" :
+                    (kycForm.moyenPaiement === "MonCash" || kycForm.moyenPaiement === "NatCash") ? "Numéro de téléphone" :
+                    kycForm.moyenPaiement === "Virement bancaire" ? "IBAN / coordonnées bancaires" :
+                    "Nom complet + pays"
+                  } value={kycForm.coordonnees} onChange={(e) => setKycForm({ ...kycForm, coordonnees: e.target.value })} className="bg-slate-50 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-teal-500/30" />
                   <button disabled={kycSending} className="sm:col-span-2 py-4 rounded-2xl bg-slate-950 text-white font-black text-xs uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2">
                     {kycSending ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
                     {kycSending ? "Envoi..." : "Soumettre ma vérification"}
