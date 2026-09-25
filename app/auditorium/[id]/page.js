@@ -24,11 +24,6 @@ export default function PodcastPlayerPage() {
   const hasIncrementedView = useRef(false);
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "https://pl28594689.profitablecpmratenetwork.com/62/bc/8f/62bc8f4d06d16b0f6d6297a4e94cfdfd.js";
-    script.async = true;
-    document.body.appendChild(script);
-
     const fetchPodcast = async () => {
       try {
         const res = await fetch('/api/podcasts/register');
@@ -49,12 +44,6 @@ export default function PodcastPlayerPage() {
       }
     };
     fetchPodcast();
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
   }, [id, router]);
 
   const togglePlay = async () => {
