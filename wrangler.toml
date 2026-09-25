@@ -5,3 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = ".open-next/assets"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "lisible-media"
