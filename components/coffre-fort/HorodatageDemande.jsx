@@ -29,7 +29,7 @@ export default function HorodatageDemande({ textId, onSealed }) {
           : `Œuvre scellée ! Certificat ${j.certificat.id} émis.`,
         { id: t }
       );
-      if (onSealed) onSealed();
+      if (onSealed) onSealed(j.certificat?.id);
     } catch (e) {
       toast.error(e.message, { id: t });
     } finally {
