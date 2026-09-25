@@ -120,10 +120,11 @@ function StudioLiveInner() {
   const [showInvite, setShowInvite] = useState(false);
   const [copied, setCopied] = useState(false);
   const [myInvites, setMyInvites] = useState([]);
+  const [startError, setStartError] = useState(null);
   const warnedRef = useRef(false);
 
-  const { mutate: createStream, data: hostStream } = useCreateStream();
-  const { mutate: createGuestStream, data: guestStream } = useCreateStream();
+  const { mutate: createStream, data: hostStream, status: hostStatus, error: hostError, internal: hostInternal } = useCreateStream();
+  const { mutate: createGuestStream, data: guestStream, status: guestStatus, error: guestError, internal: guestInternal } = useCreateStream();
 
   // Auth
   useEffect(() => {
@@ -256,9 +257,44 @@ function StudioLiveInner() {
   const startLive = () => {
     if (!user?.email) return toast.error("Connectez-vous pour lancer un live.");
     warnedRef.current = false;
+    setStartError(null);
+    hostInternal?.reset();
     setMode("starting");
     createStream({ name: `Live-${user.email}-${Date.now()}`, record: false });
   };
+
+  // Erreur de création du flux hôte : on ne reste jamais bloqué sur l'écran de chargement
+  useEffect(() => {
+    if (mode === "starting" && hostStatus === "error") {
+      const msg = hostError?.message || "Le service de live est indisponible pour le moment.";
+      setStartError(`Impossible de préparer l'antenne : ${msg}`);
+      setMode("idle");
+      toast.error("Échec du démarrage du live.");
+    }
+  }, [mode, hostStatus, hostError]);
+
+  // Erreur de création du flux invité
+  useEffect(() => {
+    if (mode === "guest-join" && guestStatus === "error") {
+      const msg = guestError?.message || "Le service de live est indisponible pour le moment.";
+      setStartError(`Impossible de rejoindre l'antenne : ${msg}`);
+      setMode("idle");
+      toast.error("Échec de la connexion à l'antenne.");
+    }
+  }, [mode, guestStatus, guestError]);
+
+  // Sécurité : si la préparation dépasse 25 s, on affiche une erreur au lieu de tourner en boucle
+  useEffect(() => {
+    if (mode !== "starting" && mode !== "guest-join") return;
+    const t = setTimeout(() => {
+      if (modeRef.current === "starting" || modeRef.current === "guest-join") {
+        setStartError("Le service de live met trop de temps à répondre. Vérifiez votre connexion puis réessayez.");
+        setMode("idle");
+        toast.error("Délai dépassé pour la préparation de l'antenne.");
+      }
+    }, 25000);
+    return () => clearTimeout(t);
+  }, [mode]);
 
   const endLive = useCallback(async () => {
     if (!live) return;
@@ -323,6 +359,8 @@ function StudioLiveInner() {
   const joinAsGuest = (inv) => {
     setActiveInvite(inv);
     joinInviteRef.current = inv;
+    setStartError(null);
+    guestInternal?.reset();
     setMode("guest-join");
     createGuestStream({ name: `Live-Invite-${user.email}-${Date.now()}`, record: false });
   };
@@ -400,6 +438,18 @@ function StudioLiveInner() {
         {/* ---- Formulaire de lancement ---- */}
         {mode === "idle" && (
           <div className="max-w-2xl mx-auto">
+            {startError && (
+              <div className="mb-6 rounded-2xl bg-rose-500/10 border border-rose-500/40 p-5">
+                <p className="font-bold text-rose-300 text-sm mb-1">Le live n'a pas pu démarrer</p>
+                <p className="text-xs text-slate-400 mb-4">{startError}</p>
+                <button
+                  onClick={() => setStartError(null)}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black uppercase tracking-widest"
+                >
+                  Réessayer
+                </button>
+              </div>
+            )}
             <h1 className="text-4xl font-black italic tracking-tighter mb-2">Lancer un <span className="text-teal-400">live</span></h1>
             <p className="text-slate-400 text-sm mb-8">Vidéo ou audio, 15 minutes d'antenne. Votre lien est partageable : même les non-inscrits peuvent vous écouter et vous voir.</p>
 

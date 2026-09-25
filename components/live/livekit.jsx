@@ -5,8 +5,10 @@ export const LIVE_DURATION_MS = 15 * 60 * 1000; // 15 minutes pour l'instant
 export const PUSHER_KEY = "1da55287e2911ceb01dd";
 export const PUSHER_CLUSTER = "us2";
 
+const LIVEPEER_API_KEY = process.env.NEXT_PUBLIC_LIVEPEER_KEY || "";
+
 const livepeerClient = createReactClient({
-  provider: studioProvider({ apiKey: "f15e0657-3f95-46f3-8b77-59f0f909162c" }),
+  provider: studioProvider({ apiKey: LIVEPEER_API_KEY }),
 });
 
 export function LivepeerProvider({ children }) {
