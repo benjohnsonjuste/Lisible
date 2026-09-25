@@ -3,11 +3,12 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Wallet, Coins, History, Banknote, ShieldCheck, Loader2, CreditCard, ArrowLeft, Check, AlertCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { getSessionToken } from "../../lib/session-client.js";
 
 // Paiement automatique via boutons intelligents PayPal.
 // methode "paypal" → bouton PayPal ; methode "carte" → bouton carte bancaire
 // (sans compte PayPal requis). Le crédit des Li est instantané après capture.
-function PaypalSmartCheckout({ pack, methode, paypalClientId, userEmail, onSuccess }) {
+function PaypalSmartCheckout({ pack, methode, paypalClientId, onSuccess }) {
   const [sdkReady, setSdkReady] = useState(false);
   const [paypalOrderId, setPaypalOrderId] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -30,7 +31,7 @@ function PaypalSmartCheckout({ pack, methode, paypalClientId, userEmail, onSucce
       const res = await fetch("/api/economie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "paypal-creer-ordre", userEmail, packId: pack.id }),
+        body: JSON.stringify({ action: "paypal-creer-ordre", sessionToken: getSessionToken(), packId: pack.id }),
       });
       const j = await res.json();
       if (!res.ok) return toast.error(j.error || "Paiement impossible.");
@@ -57,7 +58,7 @@ function PaypalSmartCheckout({ pack, methode, paypalClientId, userEmail, onSucce
             const res = await fetch("/api/economie", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "paypal-capturer", userEmail, paypalOrderId }),
+              body: JSON.stringify({ action: "paypal-capturer", sessionToken: getSessionToken(), paypalOrderId }),
             });
             const j = await res.json();
             if (!res.ok) return toast.error(j.error || "Paiement non confirmé.");
@@ -146,11 +147,11 @@ export default function PortefeuillePage() {
 
   useEffect(() => {
     if (!user?.email) return;
-    fetch(`/api/economie?action=solde&userEmail=${encodeURIComponent(user.email)}`, { cache: "no-store" })
+    fetch(`/api/economie?action=solde&sessionToken=${encodeURIComponent(getSessionToken() || "")}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => j.success && setSolde(j.solde))
       .catch(() => {});
-    fetch(`/api/economie?action=historique&userEmail=${encodeURIComponent(user.email)}`, { cache: "no-store" })
+    fetch(`/api/economie?action=historique&sessionToken=${encodeURIComponent(getSessionToken() || "")}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => j.success && setHistorique(j.historique))
       .catch(() => {});
@@ -158,7 +159,7 @@ export default function PortefeuillePage() {
 
   const refreshSolde = () => {
     if (!user?.email) return;
-    fetch(`/api/economie?action=solde&userEmail=${encodeURIComponent(user.email)}`, { cache: "no-store" })
+    fetch(`/api/economie?action=solde&sessionToken=${encodeURIComponent(getSessionToken() || "")}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => j.success && setSolde(j.solde))
       .catch(() => {});
@@ -171,7 +172,7 @@ export default function PortefeuillePage() {
       const res = await fetch("/api/economie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "creer-commande", userEmail: user.email, packId: packSel.id, methode }),
+        body: JSON.stringify({ action: "creer-commande", sessionToken: getSessionToken(), packId: packSel.id, methode }),
       });
       const j = await res.json();
       if (!res.ok) return toast.error(j.error || "Commande impossible.");
@@ -192,7 +193,7 @@ export default function PortefeuillePage() {
       const res = await fetch("/api/economie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "kyc-soumettre", userEmail: user.email, ...kycForm }),
+        body: JSON.stringify({ action: "kyc-soumettre", sessionToken: getSessionToken(), ...kycForm }),
       });
       const j = await res.json();
       if (!res.ok) return toast.error(j.error || "Envoi impossible.");
@@ -212,7 +213,7 @@ export default function PortefeuillePage() {
       const res = await fetch("/api/economie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "demande-retrait", userEmail: user.email, montantLi: montantRetrait, moyen: kycForm.moyenPaiement, coordonnees: kycForm.coordonnees }),
+        body: JSON.stringify({ action: "demande-retrait", sessionToken: getSessionToken(), montantLi: montantRetrait, moyen: kycForm.moyenPaiement, coordonnees: kycForm.coordonnees }),
       });
       const j = await res.json();
       if (!res.ok) return toast.error(j.error || "Demande impossible.");
@@ -320,7 +321,6 @@ export default function PortefeuillePage() {
                           pack={packSel}
                           methode={methode}
                           paypalClientId={paypalClientId}
-                          userEmail={user.email}
                           onSuccess={() => { setPackSel(null); setMethode("interac"); refreshSolde(); }}
                         />
                       ) : (
