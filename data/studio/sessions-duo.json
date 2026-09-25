@@ -1,3 +1,17 @@
 {
-  "sessions": {}
+  "sessions": {
+    "MUHHJ2WF93QYIA": {
+      "id": "MUHHJ2WF93QYIA",
+      "titre": "Duo de Ben Johnson Juste",
+      "hote": {
+        "email": "jb7management@gmail.com",
+        "nom": "Ben Johnson Juste"
+      },
+      "instrumentalId": null,
+      "statut": "attente",
+      "invites": [],
+      "createdAt": "2026-09-25T21:40:48.879Z",
+      "episode": null
+    }
+  }
 }
