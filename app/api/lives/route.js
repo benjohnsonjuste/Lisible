@@ -50,6 +50,7 @@ async function readStore() {
         Authorization: `Bearer ${TOKEN}`,
         "Cache-Control": "no-cache",
         Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Lisible-Studio/1.0",
       },
       next: { revalidate: 0 },
     });
@@ -66,7 +67,7 @@ async function readStore() {
 
 async function writeStore(lives, sha, message) {
   const getRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
-    headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json" },
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json", "User-Agent": "Lisible-Studio/1.0" },
     cache: "no-store",
   });
   let currentSha = sha;
@@ -79,6 +80,7 @@ async function writeStore(lives, sha, message) {
       Authorization: `Bearer ${TOKEN}`,
       "Content-Type": "application/json",
       Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Lisible-Studio/1.0",
     },
     body: JSON.stringify({ message, content: b64, sha: currentSha || undefined }),
   });
@@ -100,7 +102,7 @@ async function getCompactUsers() {
   try {
     const listRes = await fetch(
       `${GITHUB_API_URL}/${REPO}/contents/data/users`,
-      { headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json" }, cache: "no-store" }
+      { headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json", "User-Agent": "Lisible-Studio/1.0" }, cache: "no-store" }
     );
     if (!listRes.ok) return usersCache.list;
     const files = await listRes.json();

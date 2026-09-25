@@ -33,6 +33,7 @@ async function readStore() {
         Authorization: `Bearer ${TOKEN}`,
         "Cache-Control": "no-cache",
         Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Lisible-Studio/1.0",
       },
       next: { revalidate: 0 },
     });
@@ -49,7 +50,7 @@ async function readStore() {
 
 async function writeStore(sessions, sha, message) {
   const getRes = await fetch(`${GITHUB_API_URL}/${REPO}/contents/${FILE_PATH}`, {
-    headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json" },
+    headers: { Authorization: `Bearer ${TOKEN}`, Accept: "application/vnd.github.v3+json", "User-Agent": "Lisible-Studio/1.0" },
     cache: "no-store",
   });
   let currentSha = sha;
@@ -62,6 +63,7 @@ async function writeStore(sessions, sha, message) {
       Authorization: `Bearer ${TOKEN}`,
       "Content-Type": "application/json",
       Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Lisible-Studio/1.0",
     },
     body: JSON.stringify({ message, content: b64, sha: currentSha || undefined }),
   });
