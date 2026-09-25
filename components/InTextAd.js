@@ -1,40 +1,55 @@
 "use client";
+import { useEffect, useRef } from "react";
 
-import React, { useEffect, useRef } from "react";
+// Le tag Monetag ne doit être injecté QU'UNE SEULE FOIS par page,
+// même si plusieurs encarts sont rendus (un tag par page suffit,
+// les doublons ne servent à rien et alourdissent le chargement).
+let monetagTagInjecte = false;
 
-const InTextAd = () => {
-  const containerRef = useRef(null);
-  const initialized = useRef(false);
+function injecterTagMonetag() {
+  if (monetagTagInjecte) return;
+  monetagTagInjecte = true;
+  if (typeof document === "undefined") return;
+  const s = document.createElement("script");
+  s.src = "https://nap5k.com/tag.min.js";
+  s.setAttribute("data-zone", "11101873");
+  s.async = true;
+  s.setAttribute("data-cfasync", "false");
+  document.body.appendChild(s);
+}
+
+/**
+ * Encart publicitaire discret entre les paragraphes.
+ * - Compact : marges réduites, mention "Sponsorisé" minuscule et discrète.
+ * - Auto-repli : si aucune publicité ne remplit l'encart après 6 s,
+ *   il se masque complètement pour ne laisser aucun vide disgracieux.
+ */
+export default function InTextAd() {
+  const ref = useRef(null);
 
   useEffect(() => {
-    // Évite la double initialisation en mode Strict Mode de React
-    if (initialized.current || !containerRef.current) return;
-    initialized.current = true;
-
-    try {
-      const script = document.createElement("script");
-      
-      // Injection de la fonction exigée par le script publicitaire
-      script.innerHTML = `
-        (function(s){
-          s.dataset.zone='11101873';
-          s.src='https://nap5k.com/tag.min.js';
-        })([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
-      `;
-
-      containerRef.current.appendChild(script);
-    } catch (error) {
-      console.error("Erreur lors de l'injection du script InTextAd:", error);
-    }
+    injecterTagMonetag();
+    const el = ref.current;
+    if (!el) return;
+    const t = setTimeout(() => {
+      // Une publicité effectivement affichée injecte iframe / img / ins / lien.
+      const rempli = el.querySelector("iframe, img, ins, object, embed, a[href]");
+      if (!rempli) el.style.display = "none";
+    }, 6000);
+    return () => clearTimeout(t);
   }, []);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="w-full flex justify-center my-8 min-h-[100px] clear-both"
-      data-ad-zone="11101873"
-    />
+    <div
+      ref={ref}
+      data-ad-slot="intext"
+      className="w-full flex flex-col items-center my-3 clear-both"
+      aria-hidden="true"
+    >
+      <span className="text-[9px] uppercase tracking-widest text-stone-400 select-none">
+        Sponsorisé
+      </span>
+      <div className="w-full flex justify-center" data-ad-zone="11101873" />
+    </div>
   );
-};
-
-export default InTextAd;
+}
