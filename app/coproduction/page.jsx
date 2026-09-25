@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { HandCoins, TrendingUp, Landmark, Wallet, ArrowLeft, Info } from "lucide-react";
+import { getSessionToken } from "../../lib/session-client.js";
 
 const STATUT_LABEL = {
   en_cours: "En collecte", financee: "Financée", en_vente: "En vente",
@@ -31,12 +32,12 @@ export default function CoproductionPage() {
     try {
       const [rc, rp] = await Promise.all([
         fetch("/api/coproduction?action=campagnes", { cache: "no-store" }).then((r) => r.json()),
-        fetch(`/api/coproduction?action=pool${me ? `&userEmail=${encodeURIComponent(me.email)}` : ""}`, { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/coproduction?action=pool${getSessionToken() ? `&sessionToken=${encodeURIComponent(getSessionToken())}` : ""}`, { cache: "no-store" }).then((r) => r.json()),
       ]);
       if (rc.success) setCampagnes(rc.campagnes);
       if (rp.success) setPool(rp.pool);
       if (me) {
-        const rm = await fetch(`/api/coproduction?action=mes-contributions&userEmail=${encodeURIComponent(me.email)}`, { cache: "no-store" }).then((r) => r.json());
+        const rm = await fetch(`/api/coproduction?action=mes-contributions&sessionToken=${encodeURIComponent(getSessionToken() || "")}`, { cache: "no-store" }).then((r) => r.json());
         if (rm.success) setMesContribs(rm.contributions);
       }
     } catch { setMsg("Erreur de chargement."); }
@@ -50,7 +51,7 @@ export default function CoproductionPage() {
     setMsg("Achat en cours…");
     const res = await fetch("/api/coproduction", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "acheter-part-pool", userEmail: me.email, nbParts }),
+      body: JSON.stringify({ action: "acheter-part-pool", sessionToken: getSessionToken(), nbParts }),
     }).then((r) => r.json());
     if (res.success) { setMsg(`✅ ${nbParts} part(s) achetée(s) ! Nouveau solde : ${res.nouveauSolde.toLocaleString("fr-FR")} Li.`); charger(); }
     else setMsg(`❌ ${res.error}`);
