@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
+import { getSessionUser } from "../_lib/session.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// Vérifie le jeton de session client et retourne l'utilisateur connecté,
+// ou null si le jeton est absent, invalide ou expiré.
+async function requireUser(sessionToken) {
+  if (!sessionToken) return null;
+  try {
+    const s = await getSessionUser(sessionToken);
+    return s && s.email ? s : null;
+  } catch {
+    return null;
+  }
+}
+const SESSION_REQUISE = { error: "Session requise. Reconnectez-vous." };
 
 // ---------------------------------------------------------------------------
 // Module Coproduction participative & partage de revenus — Lisible.biz
@@ -227,7 +241,9 @@ export async function GET(req) {
     }
 
     if (action === "mes-contributions") {
-      const userEmail = (searchParams.get("userEmail") || "").toLowerCase().trim();
+      const session = await requireUser(searchParams.get("sessionToken"));
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const userEmail = (session.email || "").toLowerCase().trim();
       const { list } = await getCampagnes();
       const out = [];
       for (const c of list) {
@@ -247,8 +263,12 @@ export async function GET(req) {
     if (action === "pool") {
       const pf = await getFile("data/coproduction/pool.json");
       const pool = pf ? pf.content : { parts: [], deploiements: [], distributions: [] };
-      const userEmail = (searchParams.get("userEmail") || "").toLowerCase().trim();
-      const mesParts = pool.parts.filter((p) => (p.userEmail || "").toLowerCase() === userEmail);
+      // La partie personnelle (mesParts) n'est visible qu'au propriétaire de la session.
+      const session = await requireUser(searchParams.get("sessionToken"));
+      const userEmail = session ? (session.email || "").toLowerCase().trim() : null;
+      const mesParts = userEmail
+        ? pool.parts.filter((p) => (p.userEmail || "").toLowerCase() === userEmail)
+        : [];
       const totalParts = pool.parts.reduce((s, p) => s + Number(p.nbParts || 0), 0);
       return NextResponse.json({
         success: true,
@@ -292,7 +312,9 @@ export async function POST(req) {
 
     // --- Ping d'activité (limité côté client à 1/jour) ---
     if (action === "toucher-activite") {
-      const email = (body.userEmail || "").toLowerCase().trim();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const email = (session.email || "").toLowerCase().trim();
       if (email) await toucherActivite(email);
       return NextResponse.json({ success: true });
     }
@@ -348,7 +370,9 @@ export async function POST(req) {
 
     // --- Contribution d'un utilisateur (débit du Solde Lisible) ---
     if (action === "contribuer") {
-      const userEmail = (body.userEmail || "").toLowerCase().trim();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const userEmail = (session.email || "").toLowerCase().trim();
       const montantCAD = arr2(body.montantCAD);
       if (!userEmail || !(montantCAD >= cfg.contributionMinCAD)) {
         return NextResponse.json({ error: `Contribution minimale : ${cfg.contributionMinCAD} $ CA` }, { status: 400 });
@@ -428,7 +452,9 @@ export async function POST(req) {
 
     // --- Achat de parts du Pool (débit du Solde Lisible) ---
     if (action === "acheter-part-pool") {
-      const userEmail = (body.userEmail || "").toLowerCase().trim();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const userEmail = (session.email || "").toLowerCase().trim();
       const nbParts = Math.floor(Number(body.nbParts) || 0);
       if (!userEmail || nbParts < 1) return NextResponse.json({ error: "Nombre de parts invalide" }, { status: 400 });
       const coutCAD = arr2(nbParts * cfg.pool.prixPartCAD);
