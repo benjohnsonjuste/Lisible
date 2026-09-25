@@ -8,6 +8,7 @@ import {
 import Pusher from "pusher-js";
 import { toast } from "sonner";
 import { INSTRUMENTALS, instrumentalById } from "@/components/studio/instrumentals";
+import { getSessionToken } from "../../../lib/session-client.js";
 
 const PUSHER_KEY = "1da55287e2911ceb01dd";
 const PUSHER_CLUSTER = "us2";
@@ -471,6 +472,7 @@ function StudioStep({ session, instrumentalId, user }) {
       const blob = new Blob(chunksRef.current, { type: recorderRef.current?.mimeType || "audio/webm" });
       const formData = new FormData();
       formData.append("file", blob, `duo-${sess.id}.webm`);
+      formData.append("sessionToken", getSessionToken() || "");
       const upRes = await fetch("/api/podcasts/upload", { method: "POST", body: formData });
       if (!upRes.ok) throw new Error("Échec du téléversement audio");
       const { url } = await upRes.json();
@@ -481,6 +483,7 @@ function StudioStep({ session, instrumentalId, user }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "addPodcast",
+          sessionToken: getSessionToken(),
           podcastData: {
             id: crypto.randomUUID(),
             title: `${sess.titre} — Duo${guestNames ? ` avec ${guestNames}` : ""}`,
