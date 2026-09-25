@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import CadeauLi from "@/components/CadeauLi"; // Import du composant cadeau
 import GiftModal from "@/components/economie/GiftModal";
+import AdBanner, { useAdPlacements } from "@/components/AdBanner";
 
 const GITHUB = { owner: "benjohnsonjuste", repo: "Lisible" };
 
@@ -16,6 +17,7 @@ export default function DuelDesNouvelles() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [giftRecipient, setGiftRecipient] = useState(null); // État pour le cadeau
+  const adPlacements = useAdPlacements("strip");
 
   const sortDuelTexts = useCallback((data) => {
     return data
@@ -130,6 +132,9 @@ export default function DuelDesNouvelles() {
             </div>
           </div>
         </header>
+
+        {/* Bannière publicitaire discrète (se replie si vide). */}
+        {adPlacements && <AdBanner placement={adPlacements[0]} className="mt-8" />}
 
         <main className="mt-12 md:mt-20">
           {texts.length > 0 ? (
