@@ -1,57 +1,75 @@
 "use client";
-import { useEffect, useRef } from "react";
-
-// Le tag Monetag ne doit être injecté QU'UNE SEULE FOIS par page,
-// même si plusieurs encarts sont rendus (un tag par page suffit,
-// les doublons ne servent à rien et alourdissent le chargement).
-// Zone "Lisible In-Text" (ID 11888115) — format In-Page Push (Banner),
-// créée le 2026-09-25 : s'affiche comme une bannière native discrète.
-let monetagTagInjecte = false;
-
-function injecterTagMonetag() {
-  if (monetagTagInjecte) return;
-  monetagTagInjecte = true;
-  if (typeof document === "undefined") return;
-  const s = document.createElement("script");
-  s.src = "https://nap5k.com/tag.min.js";
-  s.setAttribute("data-zone", "11888115");
-  s.async = true;
-  s.setAttribute("data-cfasync", "false");
-  document.body.appendChild(s);
-}
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ADSTERRA_INVOKE_BASE, INTEXT_MOBILE } from "./adsterraPlacements";
 
 /**
- * Encart publicitaire discret entre les paragraphes.
- * - Compact : marges réduites, mention "Sponsorisé" minuscule et discrète.
- * - Auto-repli : si aucune publicité ne remplit l'encart après 6 s,
- *   il se masque complètement pour ne laisser aucun vide disgracieux.
+ * Bannière publicitaire in-text (Adsterra, format "Banner" display).
+ *
+ * - La bannière tourne dans une iframe srcDoc isolée : le script Adsterra
+ *   (atOptions + invoke.js, document.write) ne peut ni effacer la page
+ *   React ni entrer en conflit avec les autres bannières.
+ * - Discrète : marges réduites, mention "Sponsorisé" minuscule.
+ * - Auto-repli : si aucune publicité ne remplit l'iframe après 7 s,
+ *   l'encart disparaît complètement (aucun vide disgracieux).
+ *
+ * @param {{key:string,width:number,height:number}} placement - le placement
+ *   Adsterra à afficher. Sans placement (défaut), affiche le 300x250 mobile,
+ *   une taille sûre sur tous les écrans.
  */
-export default function InTextAd() {
-  const ref = useRef(null);
+export default function InTextAd({ placement = INTEXT_MOBILE[1] }) {
+  const [visible, setVisible] = useState(true);
+  const iframeRef = useRef(null);
+
+  const srcDoc = useMemo(() => {
+    if (!placement) return "";
+    const { key, width, height } = placement;
+    return (
+      "<!DOCTYPE html><html><head><meta charset=\"utf-8\">" +
+      "<style>html,body{margin:0;padding:0;background:transparent}</style>" +
+      "</head><body>" +
+      "<script>atOptions={'key':'" + key + "','format':'iframe','height':" + height +
+      ",'width':" + width + ",'params':{}};</script>" +
+      "<script src=\"" + ADSTERRA_INVOKE_BASE + "/" + key + "/invoke.js\"></script>" +
+      "</body></html>"
+    );
+  }, [placement]);
 
   useEffect(() => {
-    injecterTagMonetag();
-    const el = ref.current;
-    if (!el) return;
+    if (!placement) return;
     const t = setTimeout(() => {
-      // Une publicité effectivement affichée injecte iframe / img / ins / lien.
-      const rempli = el.querySelector("iframe, img, ins, object, embed, a[href]");
-      if (!rempli) el.style.display = "none";
-    }, 6000);
+      try {
+        const doc = iframeRef.current && iframeRef.current.contentDocument;
+        // Une bannière servie injecte iframe / img / objet média dans le document.
+        const rempli =
+          doc && doc.querySelector("iframe, img, object, embed, video, canvas, a[href]");
+        if (!rempli) setVisible(false);
+      } catch (e) {
+        setVisible(false);
+      }
+    }, 7000);
     return () => clearTimeout(t);
-  }, []);
+  }, [placement]);
+
+  if (!placement || !visible) return null;
 
   return (
     <div
-      ref={ref}
-      data-ad-slot="intext"
+      data-ad-slot="intext-adsterra"
       className="w-full flex flex-col items-center my-3 clear-both"
       aria-hidden="true"
     >
       <span className="text-[9px] uppercase tracking-widest text-stone-400 select-none">
         Sponsorisé
       </span>
-      <div className="w-full flex justify-center" data-ad-zone="11888115" />
+      <iframe
+        ref={iframeRef}
+        title="Publicité"
+        srcDoc={srcDoc}
+        width={placement.width}
+        height={placement.height}
+        scrolling="no"
+        style={{ border: 0, maxWidth: "100%", display: "block", overflow: "hidden" }}
+      />
     </div>
   );
 }
