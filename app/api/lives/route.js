@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getSessionUser } from "../_lib/session.js";
 
 const GITHUB_API_URL = "https://api.github.com/repos";
 const REPO = process.env.GITHUB_REPO;
@@ -6,6 +7,19 @@ const TOKEN = process.env.GITHUB_TOKEN;
 const FILE_PATH = "data/lives.json";
 
 const LIVE_DURATION_MS = 15 * 60 * 1000; // 15 minutes pour l'instant
+
+// Vérifie le jeton de session client et retourne l'utilisateur connecté,
+// ou null si le jeton est absent, invalide ou expiré.
+async function requireUser(sessionToken) {
+  if (!sessionToken) return null;
+  try {
+    const s = await getSessionUser(sessionToken);
+    return s && s.email ? s : null;
+  } catch {
+    return null;
+  }
+}
+const SESSION_REQUISE = { error: "Session requise. Reconnectez-vous." };
 
 const PUSHER_APP_ID = process.env.PUSHER_APP_ID;
 const PUSHER_KEY = process.env.NEXT_PUBLIC_PUSHER_KEY;
@@ -185,11 +199,13 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { action } = body;
 
     // ---- Créer un flux Livepeer côté serveur (la clé API ne quitte jamais le serveur) ----
     if (action === "create-stream") {
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
       const key = process.env.LIVEPEER_API_KEY;
       if (!key) {
         return NextResponse.json(
@@ -221,9 +237,11 @@ export async function POST(req) {
 
     // ---- Créer un live ----
     if (action === "create") {
-      const { email, name, avatar, title, type, playbackId, streamKey } = body;
-      if (!email || !playbackId) return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
-      const clean = email.toLowerCase();
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const { name, avatar, title, type, playbackId, streamKey } = body;
+      if (!playbackId) return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
+      const clean = (session.email || "").toLowerCase();
       const existing = Object.values(lives).find((l) => l.hostEmail === clean && l.status === "live");
       if (existing) return NextResponse.json({ error: "Vous avez déjà un live en cours", live: existing }, { status: 409 });
 
@@ -252,10 +270,12 @@ export async function POST(req) {
 
     // ---- Terminer un live (hôte) ----
     if (action === "end") {
-      const { liveId, email } = body;
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const { liveId } = body;
       const live = lives[liveId];
       if (!live) return NextResponse.json({ error: "Live introuvable" }, { status: 404 });
-      if (live.hostEmail !== String(email).toLowerCase())
+      if (live.hostEmail !== (session.email || "").toLowerCase())
         return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
       live.status = "ended";
       live.endedAt = new Date().toISOString();
@@ -266,10 +286,12 @@ export async function POST(req) {
 
     // ---- Inviter un utilisateur comme invité ----
     if (action === "invite-guest") {
-      const { liveId, email, guestEmail } = body;
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const { liveId, guestEmail } = body;
       const live = lives[liveId];
       if (!live) return NextResponse.json({ error: "Live introuvable" }, { status: 404 });
-      if (live.hostEmail !== String(email).toLowerCase())
+      if (live.hostEmail !== (session.email || "").toLowerCase())
         return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
       if (live.status !== "live") return NextResponse.json({ error: "Live terminé" }, { status: 400 });
 
@@ -310,10 +332,12 @@ export async function POST(req) {
 
     // ---- Annuler une invitation ----
     if (action === "cancel-invite") {
-      const { liveId, email } = body;
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const { liveId } = body;
       const live = lives[liveId];
       if (!live) return NextResponse.json({ error: "Live introuvable" }, { status: 404 });
-      if (live.hostEmail !== String(email).toLowerCase())
+      if (live.hostEmail !== (session.email || "").toLowerCase())
         return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
       live.guest = null;
       await writeStore(lives, sha, `🚫 Invitation annulée sur : ${live.title}`);
@@ -322,10 +346,12 @@ export async function POST(req) {
 
     // ---- L'invité passe à l'antenne ----
     if (action === "guest-start") {
-      const { liveId, email, playbackId, streamKey } = body;
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const { liveId, playbackId, streamKey } = body;
       const live = lives[liveId];
       if (!live) return NextResponse.json({ error: "Live introuvable" }, { status: 404 });
-      if (!live.guest || live.guest.email !== String(email).toLowerCase() || live.guest.status !== "invited")
+      if (!live.guest || live.guest.email !== (session.email || "").toLowerCase() || live.guest.status !== "invited")
         return NextResponse.json({ error: "Invitation invalide" }, { status: 403 });
       if (live.status !== "live") return NextResponse.json({ error: "Live terminé" }, { status: 400 });
       live.guest.status = "live";
@@ -342,10 +368,12 @@ export async function POST(req) {
 
     // ---- L'invité quitte l'antenne ----
     if (action === "guest-end") {
-      const { liveId, email } = body;
+      const session = await requireUser(body.sessionToken);
+      if (!session) return NextResponse.json(SESSION_REQUISE, { status: 401 });
+      const { liveId } = body;
       const live = lives[liveId];
       if (!live) return NextResponse.json({ error: "Live introuvable" }, { status: 404 });
-      const clean = String(email).toLowerCase();
+      const clean = (session.email || "").toLowerCase();
       const isGuest = live.guest && live.guest.email === clean;
       const isHost = live.hostEmail === clean;
       if (!isGuest && !isHost) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
