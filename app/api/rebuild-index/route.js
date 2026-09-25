@@ -11,7 +11,7 @@ const GITHUB_CONFIG = {
 // Helper pour récupérer la liste des fichiers d'un dossier
 async function getDirectoryFiles(path) {
   const res = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`, {
-    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
+    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Lisible-App' },
     cache: 'no-store'
   });
   return res.ok ? await res.json() : [];
@@ -20,7 +20,7 @@ async function getDirectoryFiles(path) {
 // Helper pour lire un fichier spécifique
 async function getFileContent(url) {
   const res = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json' },
+    headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Lisible-App' },
     cache: 'no-store'
   });
   if (!res.ok) return null;
@@ -74,14 +74,14 @@ export async function GET(req) {
     // 4. Sauvegarder l'index sur GitHub
     const indexPath = 'data/publications/index.json';
     const existingIndex = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${indexPath}`, {
-        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}` }
+        headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'User-Agent': 'Lisible-App' }
     }).then(r => r.json());
 
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(newIndex, null, 2))));
     
     await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${indexPath}`, {
       method: 'PUT',
-      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Content-Type': 'application/json', 'User-Agent': 'Lisible-App' },
       body: JSON.stringify({
         message: "🔧 Rebuild Index [skip ci]",
         content: encoded,
