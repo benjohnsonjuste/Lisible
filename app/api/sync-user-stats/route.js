@@ -17,7 +17,7 @@ export async function GET() {
       }
     );
 
-    if (!pubRes.ok) throw new Error("Impossible de lire l'index des publications.");
+    if (!pubRes.ok) throw new Error(`GitHub contents API: HTTP ${pubRes.status}`);
     
     const pubFileData = await pubRes.json();
     // L'API Contents ne renvoie pas le contenu base64 des fichiers > 1 Mo :
@@ -27,10 +27,10 @@ export async function GET() {
       pubJsonText = Buffer.from(pubFileData.content, 'base64').toString();
     } else if (pubFileData.download_url) {
       const dlRes = await fetch(pubFileData.download_url, { cache: 'no-store' });
-      if (!dlRes.ok) throw new Error("Impossible de télécharger l'index des publications.");
+      if (!dlRes.ok) throw new Error(`Téléchargement index publications: HTTP ${dlRes.status}`);
       pubJsonText = await dlRes.text();
     } else {
-      throw new Error("Impossible de lire l'index des publications.");
+      throw new Error("Réponse GitHub sans contenu ni download_url pour l'index des publications.");
     }
     const pubContent = JSON.parse(pubJsonText);
     const allPublications = Array.isArray(pubContent) ? pubContent : [];
