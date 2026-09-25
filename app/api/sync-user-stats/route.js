@@ -20,7 +20,19 @@ export async function GET() {
     if (!pubRes.ok) throw new Error("Impossible de lire l'index des publications.");
     
     const pubFileData = await pubRes.json();
-    const pubContent = JSON.parse(Buffer.from(pubFileData.content, 'base64').toString());
+    // L'API Contents ne renvoie pas le contenu base64 des fichiers > 1 Mo :
+    // on bascule alors sur download_url (contenu brut), sinon JSON.parse("") lève.
+    let pubJsonText;
+    if (pubFileData.content && String(pubFileData.content).trim()) {
+      pubJsonText = Buffer.from(pubFileData.content, 'base64').toString();
+    } else if (pubFileData.download_url) {
+      const dlRes = await fetch(pubFileData.download_url, { cache: 'no-store' });
+      if (!dlRes.ok) throw new Error("Impossible de télécharger l'index des publications.");
+      pubJsonText = await dlRes.text();
+    } else {
+      throw new Error("Impossible de lire l'index des publications.");
+    }
+    const pubContent = JSON.parse(pubJsonText);
     const allPublications = Array.isArray(pubContent) ? pubContent : [];
 
     // 2. Récupérer la liste des fichiers utilisateurs
