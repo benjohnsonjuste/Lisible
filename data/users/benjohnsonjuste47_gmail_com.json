@@ -175,5 +175,13 @@
   "totalCertifications": 3,
   "totalFollowers": 0,
   "lastSync": "2026-04-29T10:15:58.978Z",
-  "lastStatsUpdate": "2026-09-25T07:37:19.822Z"
+  "lastStatsUpdate": "2026-09-25T07:37:19.822Z",
+  "sessions": [
+    {
+      "token": "c8abed38-b44e-4697-a18b-9adb69f2a45f",
+      "email": "benjohnsonjuste47@gmail.com",
+      "createdAt": "2026-09-26T15:57:09.621Z",
+      "expiresAt": "2026-10-26T15:57:09.621Z"
+    }
+  ]
 }
