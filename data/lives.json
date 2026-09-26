@@ -1,0 +1,19 @@
+{
+  "lives": {
+    "live_muil1033gldbm": {
+      "id": "live_muil1033gldbm",
+      "hostEmail": "jb7management@gmail.com",
+      "hostName": "Ben Johnson Juste",
+      "hostAvatar": null,
+      "title": "Test",
+      "type": "video",
+      "playbackId": "9b23bpodp6c3pxi5",
+      "streamKey": "9b23-ofrm-xjus-awkm",
+      "status": "live",
+      "startedAt": "2026-09-26T16:06:30.063Z",
+      "endsAt": "2026-09-26T16:21:30.063Z",
+      "guest": null,
+      "endedAt": null
+    }
+  }
+}
